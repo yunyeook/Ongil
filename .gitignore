@@ -1,0 +1,316 @@
+# ============================================
+# Ongil Project Root .gitignore
+# 백엔드(Spring Boot) + 안드로이드(모바일+워치) 통합
+# ============================================
+
+# ============================================
+# 공통 (Common)
+# ============================================
+
+# OS 관련
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# 에디터/IDE 공통
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+*.temp
+
+# 환경 변수 파일
+.env
+.env.local
+.env.*.local
+*.env
+
+# 로그 파일
+*.log
+logs/
+log/
+
+# ============================================
+# 백엔드 (Spring Boot / Gradle)
+# ============================================
+
+# Gradle
+BE/.gradle/
+BE/build/
+BE/out/
+BE/gradle-app.setting
+BE/!gradle/wrapper/gradle-wrapper.jar
+BE/!**/src/main/**/build/
+BE/!**/src/test/**/build/
+
+# IntelliJ IDEA
+BE/.idea/
+BE/*.iws
+BE/*.iml
+BE/*.ipr
+BE/out/
+BE/!**/src/main/**/out/
+BE/!**/src/test/**/out/
+
+# Eclipse
+BE/.apt_generated
+BE/.classpath
+BE/.factorypath
+BE/.project
+BE/.settings
+BE/.springBeans
+BE/.sts4-cache
+BE/bin/
+BE/!**/src/main/**/bin/
+BE/!**/src/test/**/bin/
+
+# VS Code
+BE/.vscode/
+
+# Spring Boot
+BE/application-secret.yml
+BE/application-local.yml
+
+# 데이터베이스
+BE/*.db
+BE/*.sqlite
+BE/*.sqlite3
+
+# Firebase 인증 파일
+BE/src/main/resources/firebase-credentials.json
+BE/firebase-credentials.json
+
+# QueryDSL 생성 파일
+BE/src/main/generated/
+
+# ============================================
+# 안드로이드 (Android / Gradle)
+# ============================================
+
+# Gradle
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+android/gradle-wrapper.jar
+android/.gradle
+android/captures/
+android/.externalNativeBuild
+android/.cxx
+
+# Android Studio
+android/.idea/
+android/*.iml
+android/*.ipr
+android/*.iws
+android/.idea/workspace.xml
+android/.idea/tasks.xml
+android/.idea/gradle.xml
+android/.idea/assetWizardSettings.xml
+android/.idea/dictionaries
+android/.idea/libraries
+android/.idea/caches
+android/.idea/modules.xml
+android/.idea/.name
+android/.idea/compiler.xml
+android/.idea/copyright/profiles_settings.xml
+android/.idea/encodings.xml
+android/.idea/misc.xml
+android/.idea/vcs.xml
+android/.navigation/
+android/*.apk
+android/output.json
+
+# Keystore 파일 (절대 커밋하지 말 것!)
+android/*.jks
+android/*.keystore
+android/keystore.properties
+android/release.jks
+android/debug.jks
+
+# NDK
+android/obj/
+android/.externalNativeBuild
+
+# 빌드 산출물
+android/app/release/
+android/app/debug/
+android/wear/release/
+android/wear/debug/
+android/*.ap_
+android/*.dex
+
+# Generated files
+android/bin/
+android/gen/
+android/out/
+
+# Signing files
+android/.signing/
+
+# Google Services
+android/google-services.json
+android/app/google-services.json
+android/wear/google-services.json
+
+# Firebase
+android/app/src/debug/google-services.json
+android/app/src/release/google-services.json
+
+# Local configuration
+android/local.properties
+
+# Proguard
+android/proguard/
+android/app/proguard-rules.pro
+
+# Profiler
+android/*.hprof
+
+# Lint
+android/lint/
+android/lint-report.html
+android/lint-report.xml
+
+# Android Profiling
+android/*.trace
+
+# Freeline
+android/freeline.py
+android/freeline/
+android/freeline_project_description.json
+
+# fastlane
+android/fastlane/report.xml
+android/fastlane/Preview.html
+android/fastlane/screenshots
+android/fastlane/test_output
+android/fastlane/readme.md
+
+# Version control
+android/vcs.xml
+
+# Room Database
+android/schemas/
+
+# ============================================
+# 문서 및 임시 파일
+# ============================================
+
+# 문서 임시 파일
+docs/*.pdf
+docs/*.docx
+docs/.~*
+
+# 설계 파일 임시본
+*.backup
+*.autosave
+
+# ============================================
+# 의존성 및 패키지
+# ============================================
+
+# Node modules (만약 프론트 추가시)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (AI/ML 스크립트용)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# ============================================
+# 배포 및 운영
+# ============================================
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes
+k8s/secrets/
+k8s/configmaps/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ============================================
+# 테스트 및 커버리지
+# ============================================
+
+# 테스트 결과
+test-results/
+coverage/
+.coverage
+htmlcov/
+*.cover
+
+# JUnit
+TEST-*.xml
+
+# ============================================
+# 보안 및 민감 정보 (절대 커밋 금지!)
+# ============================================
+
+# API 키 및 시크릿
+*secret*
+*SECRET*
+*.pem
+*.key
+*.cert
+*.p12
+
+# AWS 인증
+.aws/
+aws-credentials.json
+
+# 데이터베이스 덤프
+*.sql
+*.dump
+
+# 백업 파일
+*.backup
+*.bak
+
+# ============================================
+# 기타
+# ============================================
+
+# 압축 파일
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 미디어 파일 (큰 용량)
+*.mp4
+*.mov
+*.avi
+*.mp3
+*.wav
+
+# 대용량 데이터
+*.csv
+*.json.gz
+*.parquet
+
+# 임시 스크립트
+temp/
+tmp/
+scratch/
+test_*.sh
+debug_*.sh
