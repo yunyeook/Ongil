@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "kr.co.ongil.wear"
-    compileSdk = 34  // Wear OS 5 기준
+    compileSdk = 36  // Wear OS 6 기준
 
     defaultConfig {
         applicationId = "kr.co.ongil"  // 모바일과 동일
         minSdk = 30     // Wear OS 3.0 (Watch 4 이상 호환)
-        targetSdk = 34  // Wear OS 5 (Watch 7)
+        targetSdk = 36  // Wear OS 6 (One UI Watch 8)
         versionCode = 1
         versionName = "1.0"
 
