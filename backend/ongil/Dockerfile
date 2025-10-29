@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk-slim as build
+FROM gradle:8.14.3-jdk21 AS build
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ COPY src src
 RUN ./gradlew bootJar --no-daemon
 
 
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
