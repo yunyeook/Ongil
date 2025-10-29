@@ -8,4 +8,4 @@ services:
     env_file:
       - .env
     volumes:
-      - ./build:/app/build
+      - ./ongil/build:/app/build
