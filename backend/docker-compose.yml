@@ -8,6 +8,4 @@ services:
       target: build
     env_file:
       - .env
-    volumes:
-      - ./ongil/build:/app/build
     command: tail -f /dev/null
