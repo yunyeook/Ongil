@@ -2,9 +2,6 @@ spring:
   application:
     name: ongil
 
-  # ?? ?? ? .env? ???? ??? (Spring Boot 2.4+)
-  config:
-    import: optional:file:.env[.properties]
 
   # PostgreSQL (AWS RDS)
   datasource:
