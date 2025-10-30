@@ -1,4 +1,4 @@
-package kr.co.ongil.ui.theme
+package kr.co.ongil.presentation.theme
 
 import android.app.Activity
 import android.os.Build
