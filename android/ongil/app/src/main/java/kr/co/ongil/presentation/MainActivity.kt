@@ -1,4 +1,4 @@
-package kr.co.ongil
+package kr.co.ongil.presentation
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
