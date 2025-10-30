@@ -6,6 +6,7 @@ services:
       context: ./ongil
       dockerfile: Dockerfile
       target: build
+    image: rabent0207/ongil:latest
     env_file:
       - .env
     command: tail -f /dev/null
