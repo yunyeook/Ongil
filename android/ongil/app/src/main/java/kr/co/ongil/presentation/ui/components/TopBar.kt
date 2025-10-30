@@ -1,36 +1,47 @@
 package kr.co.ongil.presentation.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview  // 👈 Preview import 추가
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kr.co.ongil.R
+
 
 /**
  * 공통 TopBar 컴포넌트
- * 두 가지 버전을 지원합니다:
- * 1. 뒤로가기 + 제목 + 알림 (showBackButton = true)
- * 2. 프로필 + 제목 + 토글 + 알림 (showProfile = true)
+ *
+ * 버전 1 (서브 페이지): 뒤로가기 + 제목(선택)
+ * 버전 2 (메인): 로고 + 사용자 이미지 + 알림
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar(
-    title: String,
+    // 공통
+    title: String? = null,  // null이면 제목 안 보임
+
+    // 버전 1: 서브 페이지
     showBackButton: Boolean = false,
-    showProfile: Boolean = false,
-    showToggle: Boolean = false,
-    showNotification: Boolean = true,
     onBackClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {},
-    onToggleChange: (Boolean) -> Unit = {},
+
+    // 버전 2: 메인 헤더
+    showMainHeader: Boolean = false,
+    logoResId: Int? = null,  // 로고 이미지 리소스 ID
+    userImageResId: Int? = null,  // 사용자 이미지 리소스 ID
+    onUserImageClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
+
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -41,83 +52,86 @@ fun TopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)  // 👈 높이 증가: 56dp → 64dp
-                .padding(horizontal = 20.dp),  // 👈 여백 증가
+                .height(64.dp)
+                .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 왼쪽 영역
             when {
-                // 버전 1: 뒤로가기 버튼
+                // ===== 버전 1: 서브 페이지 =====
                 showBackButton -> {
+                    // 뒤로가기 버튼
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "뒤로가기",
                             tint = Color.Black,
-                            modifier = Modifier.size(28.dp)  // 👈 아이콘 크기 증가
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    // 제목 (있을 때만)
+                    if (title != null) {
+                        Text(
+                            text = title,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            modifier = Modifier.padding(start = 12.dp)
                         )
                     }
                 }
-                // 버전 2: 프로필 아이콘
-                showProfile -> {
-                    IconButton(onClick = onProfileClick) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "프로필",
-                            tint = Color(0xFF9E9E9E),
-                            modifier = Modifier.size(32.dp)
+
+                // ===== 버전 2: 메인 헤더 =====
+                showMainHeader -> {
+                    // 로고 (로고에 글자 포함되어 있음)
+                    if (logoResId != null) {
+                        Image(
+                            painter = painterResource(id = logoResId),
+                            contentDescription = "온길 로고",
+                            modifier = Modifier
+                                .height(36.dp)  // 높이 고정, 너비는 비율 유지
                         )
                     }
-                }
-                // 아무것도 없으면 공간만 차지
-                else -> {
-                    Spacer(modifier = Modifier.width(48.dp))
-                }
-            }
 
-            // 중앙 제목
-            Text(
-                text = title,
-                fontSize = 24.sp,  // 👈 크기 증가: 20sp → 24sp
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                modifier = Modifier.padding(start = 12.dp)  // 👈 여백 증가
-            )
+                    // 오른쪽으로 밀기
+                    Spacer(modifier = Modifier.weight(1f))
 
-            // 오른쪽으로 밀기
-            Spacer(modifier = Modifier.weight(1f))
+                    // 사용자 이미지 (있을 때만)
+                    if (userImageResId != null) {
+                        IconButton(
+                            onClick = onUserImageClick,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = userImageResId),
+                                contentDescription = "사용자 프로필",
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
 
-            // 오른쪽 영역
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // 토글 스위치 (버전 2에만)
-                if (showToggle) {
-                    var checked by remember { mutableStateOf(false) }
-                    Switch(
-                        checked = checked,
-                        onCheckedChange = {
-                            checked = it
-                            onToggleChange(it)
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFFFFD54F),
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color(0xFFE0E0E0)
-                        )
-                    )
-                }
-
-                // 알림 아이콘
-                if (showNotification) {
+                    // 알림 아이콘
                     IconButton(onClick = onNotificationClick) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "알림",
                             tint = Color.Black,
-                            modifier = Modifier.size(28.dp)  // 👈 아이콘 크기 증가
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                // ===== 제목만 있는 경우 =====
+                else -> {
+                    if (title != null) {
+                        Text(
+                            text = title,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
                         )
                     }
                 }
@@ -128,30 +142,43 @@ fun TopBar(
 
 // ===== Preview =====
 
-@Preview(showBackground = true, name = "내 정보 수정 헤더")
+@Preview(showBackground = true, name = "1. 뒤로가기 + 제목")
 @Composable
 fun TopBarPreview1() {
-    kr.co.ongil.presentation.theme.OngilTheme {
-        TopBar(
-            title = "내 정보 수정",
-            showBackButton = true,
-            onBackClick = { },
-            onNotificationClick = { }
-        )
-    }
+    TopBar(
+        title = "내 정보 수정",
+        showBackButton = true,
+        onBackClick = { }
+    )
 }
 
-@Preview(showBackground = true, name = "온길 메인 헤더")
+@Preview(showBackground = true, name = "2. 뒤로가기만 (제목 없음)")
 @Composable
 fun TopBarPreview2() {
-    kr.co.ongil.presentation.theme.OngilTheme {
-        TopBar(
-            title = "온길",
-            showProfile = true,
-            showToggle = true,
-            onProfileClick = { },
-            onToggleChange = { },
-            onNotificationClick = { }
-        )
-    }
+    TopBar(
+        showBackButton = true,
+        onBackClick = { }
+    )
+}
+
+@Preview(showBackground = true, name = "3. 메인 헤더 (로고만)")
+@Composable
+fun TopBarPreview3() {
+    TopBar(
+        showMainHeader = true,
+         logoResId = R.drawable.logo_ongil,  // 실제 사용 시 주석 해제
+        onNotificationClick = { }
+    )
+}
+
+@Preview(showBackground = true, name = "4. 메인 헤더 (전체)")
+@Composable
+fun TopBarPreview4() {
+    TopBar(
+        showMainHeader = true,
+        logoResId = R.drawable.logo_ongil,  // 실제 사용 시 주석 해제
+         //userImageResId = R.drawable.user_profile,  // 실제 사용 시 주석 해제
+        onUserImageClick = { },
+        onNotificationClick = { }
+    )
 }
