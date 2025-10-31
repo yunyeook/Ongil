@@ -77,3 +77,8 @@ logging:
   level:
     root: INFO
     org.hibernate.SQL: WARN
+
+tmap:
+  app-key: ${TMAP_APP_KEY}
+  api:
+    base-url: https://apis.openapi.sk.com

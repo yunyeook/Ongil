@@ -1,10 +1,65 @@
 package kr.co.ongil.domain.map.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.co.ongil.domain.map.dto.response.AddressResponse;
+import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
+import kr.co.ongil.domain.map.service.MapService;
+import kr.co.ongil.global.common.response.ApiResponse;
+import kr.co.ongil.global.common.response.ResponseMessage;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
+@Validated
 @RestController
+@RequestMapping("/api/v1/map")
+@RequiredArgsConstructor
+@Tag(name = "Map API", description = "지도 관련 API")
 public class MapController {
 
+    private final MapService mapService;
+
+    @GetMapping("/address")
+    @Operation(summary = "좌표로 주소 조회", description = "GPS 좌표를 받아 주소로 변환합니다.")
+    public ResponseEntity<ApiResponse<AddressResponse>> getAddress(
+        @Parameter(description = "위도", example = "37.5665", required = true)
+        @RequestParam Double latitude,
+
+        @Parameter(description = "경도", example = "126.9780", required = true)
+        @RequestParam Double longitude
+    ) {
+        AddressResponse response = mapService.getAddress(latitude, longitude);
+        return ResponseEntity.ok(
+            ApiResponse.success(ResponseMessage.ADDRESS_FOUND.getMessage(), response)
+        );
+    }
+
+    /**
+     * 주소 → 좌표 변환 (Geocoding)
+     */
+    @GetMapping("/coordinate")
+    @Operation(summary = "주소로 좌표 조회", description = "주소 정보를 받아 GPS 좌표로 변환합니다.")
+    public ResponseEntity<ApiResponse<CoordinateResponse>> getCoordinate(
+        @Parameter(description = "시/도", example = "서울특별시", required = true)
+        @RequestParam String cityDo,
+
+        @Parameter(description = "구/군", example = "강남구", required = true)
+        @RequestParam String guGun,
+
+        @Parameter(description = "동/읍/면", example = "역삼동", required = true)
+        @RequestParam String dong,
+
+        @Parameter(description = "번지", example = "737")
+        @RequestParam(required = false) String bunji
+    ) {
+        CoordinateResponse response = mapService.getCoordinate(cityDo, guGun, dong, bunji);
+        return ResponseEntity.ok(
+            ApiResponse.success(ResponseMessage.COORDINATE_FOUND.getMessage(), response)
+        );
+    }
 }
