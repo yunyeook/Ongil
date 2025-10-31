@@ -1,14 +1,20 @@
 package kr.co.ongil.domain.map.service;
 
+import java.time.Duration;
+import java.util.List;
 import kr.co.ongil.domain.map.dto.response.AddressResponse;
 import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
+import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
+import kr.co.ongil.domain.map.dto.response.SearchPlaceResponse;
 import kr.co.ongil.domain.map.dto.tmap.TmapGeocodeResponse;
+import kr.co.ongil.domain.map.dto.tmap.TmapPoiSearchResponse;
 import kr.co.ongil.domain.map.dto.tmap.TmapReverseGeocodeResponse;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -23,6 +29,7 @@ public class TmapService {
 
     @Qualifier("tmapWebClient")
     private final WebClient tmapWebClient;
+
 
     /**
      * 좌표 → 주소 변환 (Reverse Geocoding)
@@ -144,6 +151,123 @@ public class TmapService {
         } catch (Exception e) {
             log.error("주소 → 좌표 변환 중 예외 발생", e);
             throw new BusinessException(ErrorCode.MAP_API_ERROR);
+        }
+    }
+
+    /**
+     * 장소 검색 (POI 통합 검색)
+     */
+    public SearchPlaceListResponse searchPlaces(String keyword, Double latitude, Double longitude,
+        Integer radius, Integer page, Integer count) {
+        // Tmap API: radius는 km 단위 (미터 → km 변환 및 범위 제한: 1~33km)
+        final int radiusInKm = Math.max(1, Math.min(33, radius / 1000));
+
+        try {
+            TmapPoiSearchResponse response = tmapWebClient.get()
+                .uri(uriBuilder -> uriBuilder
+                    .path("/tmap/pois")
+                    .queryParam("version", 1)
+                    .queryParam("searchKeyword", keyword)
+                    .queryParam("centerLat", latitude)
+                    .queryParam("centerLon", longitude)
+                    .queryParam("radius", radiusInKm)
+                    .queryParam("searchtypCd", "R")
+                    .queryParam("reqCoordType", "WGS84GEO")
+                    .queryParam("resCoordType", "WGS84GEO")
+                    .queryParam("page", page)
+                    .queryParam("count", count)
+                    .build())
+                .retrieve()
+                .bodyToMono(TmapPoiSearchResponse.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+
+            if (response == null || response.searchPoiInfo() == null) {
+                return SearchPlaceListResponse.of(0, page, count, List.of());
+            }
+
+            TmapPoiSearchResponse.SearchPoiInfo searchPoiInfo = response.searchPoiInfo();
+
+            if (searchPoiInfo.pois() == null || searchPoiInfo.pois().poi() == null) {
+                return SearchPlaceListResponse.of(0, page, count, List.of());
+            }
+
+            List<SearchPlaceResponse> places = searchPoiInfo.pois().poi().stream()
+                .map(poi -> {
+                    // 주소: newAddressList의 fullAddressRoad 사용
+                    String address = null;
+                    if (poi.newAddressList() != null &&
+                        poi.newAddressList().newAddress() != null &&
+                        !poi.newAddressList().newAddress().isEmpty()) {
+                        address = poi.newAddressList().newAddress().get(0).fullAddressRoad();
+                    }
+
+                    if (address == null || address.isEmpty()) {
+                        address = String.format("%s %s %s",
+                            poi.upperAddrName() != null ? poi.upperAddrName() : "",
+                            poi.middleAddrName() != null ? poi.middleAddrName() : "",
+                            poi.lowerAddrName() != null ? poi.lowerAddrName() : ""
+                        ).trim();
+                    }
+
+                    // 위도/경도
+                    String lat = poi.frontLat() != null && !poi.frontLat().isEmpty()
+                        ? poi.frontLat()
+                        : poi.noorLat();
+                    String lon = poi.frontLon() != null && !poi.frontLon().isEmpty()
+                        ? poi.frontLon()
+                        : poi.noorLon();
+
+                    // 거리: radius 필드 사용 (km → 미터 변환)
+                    Integer distanceInMeters = null;
+                    String distanceField = poi.radius();
+                    if (distanceField != null && !distanceField.isEmpty()) {
+                        try {
+                            double distanceKm = Double.parseDouble(distanceField);
+                            distanceInMeters = (int) (distanceKm * 1000);
+                        } catch (NumberFormatException e) {
+                            log.warn("거리 파싱 실패: {}", distanceField);
+                        }
+                    }
+
+                    // 카테고리: 대/중/소 분류로 분리
+                    SearchPlaceResponse.CategoryInfo category = SearchPlaceResponse.CategoryInfo.of(
+                        poi.upperBizName(),
+                        poi.middleBizName(),
+                        poi.lowerBizName()
+                    );
+
+                    return SearchPlaceResponse.of(
+                        poi.name(),
+                        address,
+                        lat != null && !lat.isEmpty() ? Double.parseDouble(lat) : null,
+                        lon != null && !lon.isEmpty() ? Double.parseDouble(lon) : null,
+                        distanceInMeters,
+                        category,
+                        poi.telNo()
+                    );
+                })
+                .sorted((p1, p2) -> {
+                    if (p1.distance() == null && p2.distance() == null) return 0;
+                    if (p1.distance() == null) return 1;
+                    if (p2.distance() == null) return -1;
+                    return p1.distance().compareTo(p2.distance());
+                })
+                .toList();
+
+            int totalCount = Integer.parseInt(searchPoiInfo.totalCount());
+
+            return SearchPlaceListResponse.of(totalCount, page, count, places);
+
+        } catch (WebClientResponseException.TooManyRequests e) {
+            log.error("Tmap API 호출 제한 초과", e);
+            throw new BusinessException(ErrorCode.MAP_API_LIMIT_EXCEEDED);
+        } catch (WebClientResponseException e) {
+            log.error("Tmap API 호출 실패: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw new BusinessException(ErrorCode.MAP_API_ERROR);
+        } catch (Exception e) {
+            log.error("장소 검색 중 예외 발생", e);
+            throw new BusinessException(ErrorCode.PLACE_SEARCH_FAILED);
         }
     }
 }

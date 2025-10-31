@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.ongil.domain.map.dto.response.AddressResponse;
 import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
+import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
 import kr.co.ongil.domain.map.service.MapService;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
@@ -60,6 +61,36 @@ public class MapController {
         CoordinateResponse response = mapService.getCoordinate(cityDo, guGun, dong, bunji);
         return ResponseEntity.ok(
             ApiResponse.success(ResponseMessage.COORDINATE_FOUND.getMessage(), response)
+        );
+    }
+
+    /**
+     * 장소 검색
+     */
+    @GetMapping("/search")
+    @Operation(summary = "장소 검색", description = "키워드와 현재 위치를 기반으로 주변 장소를 검색합니다.")
+    public ResponseEntity<ApiResponse<SearchPlaceListResponse>> searchPlaces(
+        @Parameter(description = "검색 키워드", example = "약국")
+        @RequestParam(required = false, defaultValue = "지구대") String keyword,
+
+        @Parameter(description = "위도", example = "37.5665", required = true)
+        @RequestParam Double latitude,
+
+        @Parameter(description = "경도", example = "126.9780", required = true)
+        @RequestParam Double longitude,
+
+        @Parameter(description = "반경(미터)", example = "1000")
+        @RequestParam(required = false, defaultValue = "3000") Integer radius,
+
+        @Parameter(description = "페이지 번호", example = "1")
+        @RequestParam(required = false, defaultValue = "1") Integer page,
+
+        @Parameter(description = "페이지당 개수", example = "10")
+        @RequestParam(required = false, defaultValue = "10") Integer size
+    ) {
+        SearchPlaceListResponse response = mapService.searchPlaces(keyword, latitude, longitude, radius, page, size);
+        return ResponseEntity.ok(
+            ApiResponse.success(ResponseMessage.PLACE_SEARCH_SUCCESS.getMessage(), response)
         );
     }
 }
