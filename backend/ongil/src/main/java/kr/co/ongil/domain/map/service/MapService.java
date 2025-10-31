@@ -1,4 +1,5 @@
 package kr.co.ongil.domain.map.service;
+import kr.co.ongil.domain.map.dto.response.PlaceDetailResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
@@ -56,6 +57,13 @@ public class MapService {
         return tmapService.searchPlaces(keyword, latitude, longitude, radius, page, size);
     }
 
+    /**
+     * 장소 상세 조회
+     */
+    public PlaceDetailResponse getPlaceDetail(String poiId) {
+        log.info("장소 상세 조회 요청: poiId={}", poiId);
+        return tmapService.getPlaceDetail(poiId);
+    }
 
 
     /**

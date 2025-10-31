@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.ongil.domain.map.dto.response.AddressResponse;
 import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
+import kr.co.ongil.domain.map.dto.response.PlaceDetailResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
 import kr.co.ongil.domain.map.service.MapService;
 import kr.co.ongil.global.common.response.ApiResponse;
@@ -91,6 +92,21 @@ public class MapController {
         SearchPlaceListResponse response = mapService.searchPlaces(keyword, latitude, longitude, radius, page, size);
         return ResponseEntity.ok(
             ApiResponse.success(ResponseMessage.PLACE_SEARCH_SUCCESS.getMessage(), response)
+        );
+    }
+
+    /**
+     * 장소 상세 조회
+     */
+    @GetMapping("/places/{poiId}")
+    @Operation(summary = "장소 상세 조회", description = "POI ID로 장소 상세 정보를 조회합니다.")
+    public ResponseEntity<ApiResponse<PlaceDetailResponse>> getPlaceDetail(
+        @Parameter(description = "POI ID", example = "7839545")
+        @PathVariable String poiId
+    ) {
+        PlaceDetailResponse response = mapService.getPlaceDetail(poiId);
+        return ResponseEntity.ok(
+            ApiResponse.success(ResponseMessage.PLACE_SEARCH_DETAIL_SUCCESS.getMessage(), response)
         );
     }
 }
