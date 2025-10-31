@@ -17,7 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun LabelledInputBox(
+fun InputBox(
     label: String,                  // 인풋박스 라벨
     placeholder: String = "",       // 플레이스홀더
     value: String,
@@ -55,6 +55,6 @@ fun LabelledInputBox(
 
 @Preview(showBackground = true)
 @Composable
-fun LabelledInputBoxPreview(){
-    LabelledInputBox(label = "이름", "홍길동", value = "", onValueChange = {})
+fun InputBoxPreview(){
+    InputBox(label = "이름", "홍길동", value = "", onValueChange = {})
 }

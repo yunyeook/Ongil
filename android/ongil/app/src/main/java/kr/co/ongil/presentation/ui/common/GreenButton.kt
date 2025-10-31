@@ -11,11 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-
-
-
-
-
+import androidx.compose.ui.unit.sp
 
 
 @Composable
@@ -38,7 +34,10 @@ fun GreenButton(
             disabledContainerColor = Color(0xFFD3D3D3)
         )
     ) {
-        Text(text = text)
+        Text(
+            text = text,
+            fontSize = 18.sp
+        )
     }
 }
 

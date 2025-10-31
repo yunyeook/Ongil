@@ -1,37 +1,35 @@
-package kr.co.ongil.presentation.ui.Atest
+package kr.co.ongil.presentation.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavType
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.NavType
+import kr.co.ongil.presentation.ui.home.HomeScreen
 import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
 import kr.co.ongil.presentation.ui.favorite.PlaceDetailScreen
-import kr.co.ongil.presentation.ui.navigation.Screen
-import kr.co.ongil.presentation.ui.home.HomeScreen
-
 
 @Composable
-fun PlayGroundMJ() {
-
-    val navController = rememberNavController()
-
+fun AppNavGraph(
+    navController: NavHostController
+) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Home.route // ✅ 앱 첫 화면은 홈
     ) {
-        composable(route = Screen.Home.route) {
+        // 홈
+        composable(Screen.Home.route) {
             HomeScreen(
                 onGoFavoriteClick = {
+                    // ✅ GreenButton 눌렀을 때 실행될 실제 이동 로직
                     navController.navigate(Screen.Favorite.route)
                 }
             )
         }
-        // 즐겨찾기 화면
-        composable(route = Screen.Favorite.route) {
+
+        // 즐겨찾기
+        composable(Screen.Favorite.route) {
             FavoriteScreen(
                 onNavigateToPlaceDetail = { placeId ->
                     navController.navigate(
@@ -41,22 +39,19 @@ fun PlayGroundMJ() {
             )
         }
 
-        // 장소 상세 화면
+        // 장소 상세
         composable(
             route = Screen.PlaceDetail.route,
             arguments = listOf(
-                navArgument(name = "placeId") {
-                    type = NavType.LongType
-                }
+                navArgument("placeId") { type = NavType.LongType }
             )
         ) { backStackEntry ->
-
             val placeIdArg: Long =
                 backStackEntry.arguments?.getLong("placeId") ?: -1L
 
             PlaceDetailScreen(
-                placeLabel = "우리집 (${placeIdArg})",
-                placeAddress = "서울시 노원구 중계동 123-45",
+                placeLabel = "우리집",
+                placeAddress = "서울시 노원구 중계동 ...",
                 onBackClick = { navController.popBackStack() },
                 onEditNameClick = { /* TODO */ },
                 onSetDefaultClick = { /* TODO */ },
@@ -65,10 +60,4 @@ fun PlayGroundMJ() {
             )
         }
     }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
-@Composable
-private fun PlayGroundMJPreview() {
-    PlayGroundMJ()
 }
