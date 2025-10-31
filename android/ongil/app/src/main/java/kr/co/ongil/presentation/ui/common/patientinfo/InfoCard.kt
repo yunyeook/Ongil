@@ -35,7 +35,7 @@ fun InfoCard(
     val borderColor = Color(0xFFD9D9D9)
     val mainTextColor = Color(0xFF101828)
     val subTextColor = Color(0xFF99A1AF)
-    val iconBgColor = Color(0xFF5C7165)
+    val iconBgColor = Color(0xFF257A3F)
 
     Card(
         modifier = modifier,

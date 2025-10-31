@@ -37,7 +37,7 @@ fun SelectPatientModal(
             .background(
                 color = Color.White,
                 shape = RoundedCornerShape(
-                    topStart = 12.dp,
+                    topStart = 50.dp,
                     topEnd = 0.dp,
                     bottomStart = 0.dp,
                     bottomEnd = 0.dp
