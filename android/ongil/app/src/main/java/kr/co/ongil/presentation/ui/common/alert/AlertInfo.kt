@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.components.alert
+package kr.co.ongil.presentation.ui.common.alert
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.components.map
+package kr.co.ongil.presentation.ui.common.map
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box

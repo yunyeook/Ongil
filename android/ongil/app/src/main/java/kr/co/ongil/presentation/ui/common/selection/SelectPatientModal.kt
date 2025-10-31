@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.components.selection
+package kr.co.ongil.presentation.ui.common.selection
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kr.co.ongil.presentation.ui.components.patient.PatientCard
+import kr.co.ongil.presentation.ui.common.patient.PatientCard
 
 data class PatientInfoUi(
     val id: String,

@@ -1,4 +1,5 @@
-package kr.co.ongil.presentation.ui.components
+package kr.co.ongil.presentation.ui.common
+
 
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -19,9 +20,9 @@ import androidx.compose.ui.unit.dp
 
 
 @Composable
-fun GreenButton(
+fun GreyButton(
     modifier: Modifier = Modifier,
-    text: String,
+    text: String, // 버튼 안에 들어갈 내용
     onClick: () -> Unit,
     enabled: Boolean = true,
 ) {
@@ -33,9 +34,8 @@ fun GreenButton(
         enabled = enabled,
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF8CA898),
-            contentColor = Color.White,
-            disabledContainerColor = Color(0xFFD3D3D3)
+            containerColor = Color(0xFFDFE0E2),
+            contentColor = Color.Black,
         )
     ) {
         Text(text = text)
@@ -44,6 +44,6 @@ fun GreenButton(
 
 @Preview(showBackground = true)
 @Composable
-fun GreenButtonPreview() {
-    GreenButton(text = "버튼", onClick = {})
+fun GreyButtonPreview() {
+    GreyButton(text = "버튼", onClick = {})
 }

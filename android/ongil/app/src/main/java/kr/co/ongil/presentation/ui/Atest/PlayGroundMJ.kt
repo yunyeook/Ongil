@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.theme.OngilTheme
-import kr.co.ongil.presentation.ui.components.GreenButton
+import kr.co.ongil.presentation.ui.common.GreenButton
 
 @Composable
 fun PlayGroundMJ(

@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.components.patient
+package kr.co.ongil.presentation.ui.common.patient
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

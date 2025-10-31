@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.components.favorite
+package kr.co.ongil.presentation.ui.common.favorite
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
