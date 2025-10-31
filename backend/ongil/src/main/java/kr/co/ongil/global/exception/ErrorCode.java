@@ -70,7 +70,22 @@ public enum ErrorCode {
     JSON_PARSING_ERROR(HttpStatus.BAD_REQUEST, "요청 본문 파싱 중 오류가 발생했습니다."),
     EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 연동 중 오류가 발생했습니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "현재 서비스를 이용할 수 없습니다."),
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
+
+    // MAP / GEOCODING / ADDRESS
+    INVALID_COORDINATE(HttpStatus.BAD_REQUEST, "유효하지 않은 좌표입니다."),
+    INVALID_LATITUDE(HttpStatus.BAD_REQUEST, "유효하지 않은 위도입니다. (대한민국 범위: 33~43)"),
+    INVALID_LONGITUDE(HttpStatus.BAD_REQUEST, "유효하지 않은 경도입니다. (대한민국 범위: 124~132)"),
+    COORDINATE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 주소의 좌표를 찾을 수 없습니다."),
+
+    INVALID_ADDRESS(HttpStatus.BAD_REQUEST, "유효하지 않은 주소입니다."),
+    ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 좌표의 주소를 찾을 수 없습니다."),
+
+    MAP_API_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "지도 API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."),
+    MAP_API_ERROR(HttpStatus.BAD_GATEWAY, "지도 서비스와의 통신에 실패했습니다."),
+    PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."),
+    PLACE_SEARCH_FAILED(HttpStatus.BAD_GATEWAY, "장소 검색 중 오류가 발생했습니다."),
+    PLACE_DETAIL_FAILED(HttpStatus.BAD_GATEWAY, "장소 상세 조회 중 오류가 발생했습니다.");
 
     private final HttpStatus status;
     private final String message;
