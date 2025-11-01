@@ -16,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import kr.co.ongil.presentation.ui.myinfo.MyInfoEditScreen
 import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 
@@ -56,8 +57,38 @@ fun AppNavGraph(
 
         // 내 정보 수정 화면
         composable(Routes.EditInfo.route) {
-            // TODO: EditInfoScreen 구현
-            PlaceholderScreen(title = "내 정보 수정")
+            val viewModel: MyInfoViewModel = viewModel()
+            val uiState by viewModel.uiState.collectAsState()
+
+            MyInfoEditScreen(
+                roleLabel = "보호자", // TODO: 실제 사용자 역할
+                nameInit = uiState.name,
+                birthInit = "1990.01.01", // TODO: 생년월일 추가
+                phoneInit = uiState.phoneNumber,
+                profileImageUrl = uiState.profileImage,
+                onPickProfileImage = {
+                    // TODO: 이미지 선택 로직
+                },
+                onBirthPickClick = {
+                    // TODO: 날짜 선택 로직
+                },
+                onSendVerifyCode = { newPhone ->
+                    // TODO: 인증번호 발송 API
+                },
+                onResendCode = { newPhone ->
+                    // TODO: 인증번호 재발송 API
+                },
+                onVerifyCode = { newPhone, code ->
+                    // TODO: 인증번호 확인 API
+                },
+                onChangePasswordClick = {
+                    // TODO: 비밀번호 변경 화면으로 이동
+                },
+                onSaveClick = { name, birth, phone ->
+                    // TODO: 정보 수정 API
+                    navController.popBackStack()
+                }
+            )
         }
 
         // 최근 통화목록 화면
