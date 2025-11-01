@@ -1,5 +1,4 @@
 package kr.co.ongil.presentation.ui.common.calledinfo
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
