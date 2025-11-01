@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 
 private val Accent = Color(0xFF8CA898)
 
-enum class PhoneUiState { Idle, Editing, Verifying } // Idle: 표시, Editing: 새 번호 + 발송, Verifying: 코드입력
+enum class PhoneUiState { Idle, Editing, Verifying }
 
 @Composable
 fun MyInfoEditScreen(
@@ -129,7 +129,7 @@ fun MyInfoEditScreen(
                 onResendCode(newPhone)
             },
             onVerified = { newPhone, _ ->
-                phone = newPhone // 인증 성공 시 화면의 표시 번호 갱신
+                phone = newPhone
             },
             onVerifyCode = onVerifyCode
         )
@@ -156,19 +156,16 @@ fun MyInfoEditScreen(
 @Composable
 private fun PhoneVerificationSection(
     currentPhone: String,
-    onRequestSend: (newPhone: String) -> Unit,              // 첫 발송
-    onResend: (newPhone: String) -> Unit,                   // 재발송
-    onVerifyCode: (newPhone: String, code6: String) -> Unit,// 서버 검증
-    onVerified: (newPhone: String, code6: String) -> Unit,  // 검증 성공 시 UI 반영 콜백
+    onRequestSend: (newPhone: String) -> Unit,
+    onResend: (newPhone: String) -> Unit,
+    onVerifyCode: (newPhone: String, code6: String) -> Unit,
+    onVerified: (newPhone: String, code6: String) -> Unit,
 ) {
     var uiState by rememberSaveable { mutableStateOf(PhoneUiState.Idle) }
     var newPhone by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
-
-    // 검증 결과 상태: null(미검증), true(성공), false(실패)
     var verificationResult by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
-    // 타이머 상태
     var secondsLeft by rememberSaveable { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     var timerJob by remember { mutableStateOf<Job?>(null) }
@@ -185,224 +182,269 @@ private fun PhoneVerificationSection(
     }
 
     Column {
-        // 라벨
         Text(
             text = "휴대폰 번호",
             style = MaterialTheme.typography.titleMedium,
             color = Color(0xFF6B767A),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 8.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp)
         )
 
         when (uiState) {
             PhoneUiState.Idle -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = currentPhone,
-                        onValueChange = {},
-                        readOnly = true,
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFCBD5D0),
-                            unfocusedBorderColor = Color(0xFFE3E7E5),
-                            cursorColor = Color(0xFF6B767A),
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-
-                    Button(
-                        onClick = { uiState = PhoneUiState.Editing },
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(56.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Text("변경하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                    }
-                }
-            }
-
-        PhoneUiState.Editing -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = newPhone,
-                        onValueChange = { newPhone = it.filter { ch -> ch.isDigit() || ch == '-' } },
-                        placeholder = { Text("새로운 번호를 입력하세요") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFCBD5D0),
-                            unfocusedBorderColor = Color(0xFFE3E7E5),
-                            cursorColor = Color(0xFF6B767A),
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-
-                    Button(
-                        onClick = {
-                            if (newPhone.isNotBlank()) {
-                                onRequestSend(newPhone)
-                                uiState = PhoneUiState.Verifying
-                                verificationResult = null
-                                startTimer()
-                            }
-                        },
-                        enabled = newPhone.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(56.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Text("인증번호 발송", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                    }
-                }
-            }
-
-        PhoneUiState.Verifying -> {
-                // 번호 입력 + 재발송 버튼
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = newPhone,
-                        onValueChange = { newPhone = it.filter { ch -> ch.isDigit() || ch == '-' } },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFCBD5D0),
-                            unfocusedBorderColor = Color(0xFFE3E7E5),
-                            cursorColor = Color(0xFF6B767A),
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-
-                    Button(
-                        onClick = {
-                            if (newPhone.isNotBlank()) {
-                                onResend(newPhone)
-                                verificationResult = null
-                                startTimer()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(56.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Text("재발송", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // 인증번호 라벨
-                Text(
-                    text = "인증번호",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFF6B767A),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
+                PhoneIdleState(
+                    currentPhone = currentPhone,
+                    onChangeClick = { uiState = PhoneUiState.Editing }
                 )
+            }
 
-                // 인증번호 입력 + 확인 버튼
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = code,
-                        onValueChange = { if (it.length <= 6) code = it.filter(Char::isDigit) },
-                        singleLine = true,
-                        placeholder = { Text("인증번호 6자리") },
-                        shape = RoundedCornerShape(14.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFCBD5D0),
-                            unfocusedBorderColor = Color(0xFFE3E7E5),
-                            cursorColor = Color(0xFF6B767A),
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
-                        )
-                    )
-
-                    Button(
-                        onClick = {
-                            if (code.length == 6) {
-                                onVerifyCode(newPhone, code)
-                                // TODO: 실제로는 서버 응답에 따라 처리해야 함
-                                // 임시로 성공으로 처리
-                                verificationResult = true
-                                if (verificationResult == true) {
-                                    timerJob?.cancel()
-                                    onVerified(newPhone, code)
-                                }
-                            }
-                        },
-                        enabled = code.length == 6,
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(56.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Text("확인", color = Color.White, style = MaterialTheme.typography.titleMedium)
+            PhoneUiState.Editing -> {
+                PhoneEditingState(
+                    newPhone = newPhone,
+                    onPhoneChange = { newPhone = it },
+                    onSendClick = {
+                        onRequestSend(newPhone)
+                        uiState = PhoneUiState.Verifying
+                        verificationResult = null
+                        startTimer()
                     }
-                }
+                )
+            }
 
-                Spacer(Modifier.height(8.dp))
-
-                // 검증 결과 메시지 또는 남은 시간 표시
-                when (verificationResult) {
-                    true -> {
-                        Text(
-                            text = "인증번호 등록에 성공했습니다.",
-                            color = Color(0xFF4CAF50),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    false -> {
-                        Text(
-                            text = "올바른 인증번호가 아닙니다.",
-                            color = Color(0xFFD85B4E),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    null -> {
-                        // 남은 시간 표시
-                        val mm = (secondsLeft / 60).toString().padStart(2, '0')
-                        val ss = (secondsLeft % 60).toString().padStart(2, '0')
-                        val timeColor = if (secondsLeft in 1..180) Color(0xFFD85B4E) else Color(0xFF9AA3A7)
-
-                        Row(Modifier.fillMaxWidth()) {
-                            Text("남은 시간: ", color = Color(0xFF6B767A))
-                            Text("$mm:$ss", color = timeColor, fontWeight = FontWeight.SemiBold)
+            PhoneUiState.Verifying -> {
+                PhoneVerifyingState(
+                    newPhone = newPhone,
+                    code = code,
+                    verificationResult = verificationResult,
+                    secondsLeft = secondsLeft,
+                    onPhoneChange = { newPhone = it },
+                    onCodeChange = { code = it },
+                    onResendClick = {
+                        onResend(newPhone)
+                        verificationResult = null
+                        startTimer()
+                    },
+                    onVerifyClick = {
+                        onVerifyCode(newPhone, code)
+                        // TODO: 실제로는 서버 응답에 따라 처리
+                        verificationResult = true
+                        if (verificationResult == true) {
+                            timerJob?.cancel()
+                            onVerified(newPhone, code)
                         }
                     }
-                }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhoneIdleState(
+    currentPhone: String,
+    onChangeClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = currentPhone,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFFCBD5D0),
+                unfocusedBorderColor = Color(0xFFE3E7E5),
+                cursorColor = Color(0xFF6B767A),
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White
+            )
+        )
+
+        Button(
+            onClick = onChangeClick,
+            colors = ButtonDefaults.buttonColors(containerColor = Accent),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.height(56.dp),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            Text("변경하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+@Composable
+private fun PhoneEditingState(
+    newPhone: String,
+    onPhoneChange: (String) -> Unit,
+    onSendClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = newPhone,
+            onValueChange = { onPhoneChange(it.filter { ch -> ch.isDigit() || ch == '-' }) },
+            placeholder = { Text("새로운 번호를 입력하세요") },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFFCBD5D0),
+                unfocusedBorderColor = Color(0xFFE3E7E5),
+                cursorColor = Color(0xFF6B767A),
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White
+            )
+        )
+
+        Button(
+            onClick = onSendClick,
+            enabled = newPhone.isNotBlank(),
+            colors = ButtonDefaults.buttonColors(containerColor = Accent),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.height(56.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text("인증번호 발송", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+@Composable
+private fun PhoneVerifyingState(
+    newPhone: String,
+    code: String,
+    verificationResult: Boolean?,
+    secondsLeft: Int,
+    onPhoneChange: (String) -> Unit,
+    onCodeChange: (String) -> Unit,
+    onResendClick: () -> Unit,
+    onVerifyClick: () -> Unit
+) {
+    Column {
+        // 번호 입력 + 재발송 버튼
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = newPhone,
+                onValueChange = { onPhoneChange(it.filter { ch -> ch.isDigit() || ch == '-' }) },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFCBD5D0),
+                    unfocusedBorderColor = Color(0xFFE3E7E5),
+                    cursorColor = Color(0xFF6B767A),
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                )
+            )
+
+            Button(
+                onClick = onResendClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(56.dp).width(100.dp)
+            ) {
+                Text("재발송", color = Color.White, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // 인증번호 라벨
+        Text(
+            text = "인증번호",
+            style = MaterialTheme.typography.titleMedium,
+            color = Color(0xFF6B767A),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        )
+
+        // 인증번호 입력 + 확인 버튼
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = code,
+                onValueChange = { if (it.length <= 6) onCodeChange(it.filter(Char::isDigit)) },
+                singleLine = true,
+                placeholder = { Text("인증번호 6자리") },
+                shape = RoundedCornerShape(14.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFCBD5D0),
+                    unfocusedBorderColor = Color(0xFFE3E7E5),
+                    cursorColor = Color(0xFF6B767A),
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                )
+            )
+
+            Button(
+                onClick = onVerifyClick,
+                enabled = code.length == 6,
+                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(56.dp).width(100.dp)
+            ) {
+                Text("확인", color = Color.White, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // 검증 결과 또는 타이머
+        VerificationResultOrTimer(
+            verificationResult = verificationResult,
+            secondsLeft = secondsLeft
+        )
+    }
+}
+
+@Composable
+private fun VerificationResultOrTimer(
+    verificationResult: Boolean?,
+    secondsLeft: Int
+) {
+    when (verificationResult) {
+        true -> {
+            Text(
+                text = "인증번호 등록에 성공했습니다.",
+                color = Color(0xFF4CAF50),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        false -> {
+            Text(
+                text = "올바른 인증번호가 아닙니다.",
+                color = Color(0xFFD85B4E),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        null -> {
+            val mm = (secondsLeft / 60).toString().padStart(2, '0')
+            val ss = (secondsLeft % 60).toString().padStart(2, '0')
+            val timeColor = if (secondsLeft in 1..180) Color(0xFFD85B4E) else Color(0xFF9AA3A7)
+
+            Row(Modifier.fillMaxWidth()) {
+                Text("남은 시간: ", color = Color(0xFF6B767A))
+                Text("$mm:$ss", color = timeColor, fontWeight = FontWeight.SemiBold)
             }
         }
     }
