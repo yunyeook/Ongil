@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kr.co.ongil.core.utils.formatPhoneNumber
+import kr.co.ongil.domain.repository.AuthRepository
 import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.presentation.ui.myinfo.MyInfoUiState
 
@@ -27,7 +28,8 @@ import kr.co.ongil.presentation.ui.myinfo.MyInfoUiState
  * ```
  */
 class MyInfoViewModel(
-    private val userRepository: UserRepository = kr.co.ongil.data.repository.UserRepositoryImpl()
+    private val userRepository: UserRepository = kr.co.ongil.data.repository.UserRepositoryImpl(),
+    private val authRepository: AuthRepository = kr.co.ongil.data.repository.AuthRepositoryImpl()
     // TODO: DI(Hilt/Koin)로 주입하도록 변경
 ) : ViewModel() {
 
@@ -69,8 +71,20 @@ class MyInfoViewModel(
      */
     fun logout() {
         viewModelScope.launch {
-            // TODO: 로그아웃 처리
-            // authRepository.logout()
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            authRepository.logout()
+                .onSuccess { message ->
+                    // 로그아웃 성공
+                    // Navigation은 UI에서 처리
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "로그아웃에 실패했습니다."
+                    )
+                }
         }
     }
 }

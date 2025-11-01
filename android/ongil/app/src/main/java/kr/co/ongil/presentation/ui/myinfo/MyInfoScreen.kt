@@ -156,13 +156,19 @@ private fun PreviewMyInfoScreen() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         MyInfoScreen(
             uiState = MyInfoUiState(
-                name = "김민수",
+                name = "홍길동",
                 phoneNumber = "010-1234-5678",
                 profileImage = null
             ),
-            onEditInfo = {},
-            onRecentCalls = {},
-            onLogout = {}
+            onEditInfo = {
+                println("✅ 내 정보 수정 클릭됨")
+            },
+            onRecentCalls = {
+                println("✅ 최근 통화목록 클릭됨")
+            },
+            onLogout = {
+                println("✅ 로그아웃 클릭됨")
+            }
         )
     }
 }
