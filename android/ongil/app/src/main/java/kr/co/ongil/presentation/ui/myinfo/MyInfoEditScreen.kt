@@ -9,46 +9,56 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kr.co.ongil.presentation.ui.components.LabeledOutlinedField
+import kr.co.ongil.presentation.uistate.MyInfoEditEvent
+import kr.co.ongil.presentation.uistate.MyInfoEditUiState
+import kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel
 
 private val Accent = Color(0xFF8CA898)
 
-enum class PhoneUiState { Idle, Editing, Verifying }
-
+/**
+ * 내 정보 수정 화면 (ViewModel 기반)
+ */
 @Composable
 fun MyInfoEditScreen(
-    roleLabel: String,
-    nameInit: String,
-    birthInit: String,
-    phoneInit: String,
-    profileImageUrl: String? = null,
-    onPickProfileImage: () -> Unit = {},
-    onBirthPickClick: () -> Unit = {},
-    onSendVerifyCode: (newPhone: String) -> Unit = {},
-    onResendCode: (newPhone: String) -> Unit = {},
-    onVerifyCode: (newPhone: String, code6: String) -> Unit = { _, _ -> },
-    onChangePasswordClick: () -> Unit = {},
-    onSaveClick: (name: String, birth: String, phone: String) -> Unit = { _, _, _ -> },
+    modifier: Modifier = Modifier,
+    viewModel: MyInfoEditViewModel = viewModel(),
+    onNavigateBack: () -> Unit = {},
+    onChangePasswordClick: () -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    MyInfoEditContent(
+        uiState = uiState,
+        onEvent = viewModel::onEvent,
+        onNavigateBack = onNavigateBack,
+        onChangePasswordClick = onChangePasswordClick,
+        modifier = modifier
+    )
+}
+
+/**
+ * 내 정보 수정 화면 컨텐츠 (Stateless)
+ */
+@Composable
+private fun MyInfoEditContent(
+    uiState: MyInfoEditUiState,
+    onEvent: (MyInfoEditEvent) -> Unit,
+    onNavigateBack: () -> Unit,
+    onChangePasswordClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var name by rememberSaveable { mutableStateOf(nameInit) }
-    var birth by rememberSaveable { mutableStateOf(birthInit) }
-    var phone by rememberSaveable { mutableStateOf(phoneInit) }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -73,9 +83,9 @@ fun MyInfoEditScreen(
                         .background(Color(0xFFF1F3F4)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!profileImageUrl.isNullOrBlank()) {
+                    if (!uiState.profileImageUrl.isNullOrBlank()) {
                         AsyncImage(
-                            model = profileImageUrl,
+                            model = uiState.profileImageUrl,
                             contentDescription = "프로필",
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
@@ -88,7 +98,7 @@ fun MyInfoEditScreen(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(48.dp)
-                        .clickable { onPickProfileImage() }
+                        .clickable { onEvent(MyInfoEditEvent.PickProfileImage) }
                 ) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Icon(Icons.Outlined.CameraAlt, contentDescription = "사진 변경", tint = Color.White)
@@ -97,22 +107,22 @@ fun MyInfoEditScreen(
             }
         }
 
-        Text(text = roleLabel, color = Accent, style = MaterialTheme.typography.titleMedium)
+        Text(text = uiState.roleLabel, color = Accent, style = MaterialTheme.typography.titleMedium)
 
         // 이름
         LabeledOutlinedField(
             label = "이름",
-            value = name,
-            onValueChange = { name = it }
+            value = uiState.name,
+            onValueChange = { onEvent(MyInfoEditEvent.UpdateName(it)) }
         )
 
         // 생년월일
         LabeledOutlinedField(
             label = "생년월일",
-            value = birth,
-            onValueChange = { birth = it },
+            value = uiState.birth,
+            onValueChange = { onEvent(MyInfoEditEvent.UpdateBirth(it)) },
             trailing = {
-                IconButton(onClick = onBirthPickClick) {
+                IconButton(onClick = { onEvent(MyInfoEditEvent.PickBirthDate) }) {
                     Icon(Icons.Outlined.CalendarToday, contentDescription = "날짜", tint = Color(0xFF7B8A8D))
                 }
             }
@@ -121,17 +131,18 @@ fun MyInfoEditScreen(
         // 휴대폰 번호(변경/인증 전체 섹션)
         Spacer(Modifier.height(6.dp))
         PhoneVerificationSection(
-            currentPhone = phone,
-            onRequestSend = { newPhone ->
-                onSendVerifyCode(newPhone)
-            },
-            onResend = { newPhone ->
-                onResendCode(newPhone)
-            },
-            onVerified = { newPhone, _ ->
-                phone = newPhone
-            },
-            onVerifyCode = onVerifyCode
+            phoneUiState = uiState.phoneUiState,
+            currentPhone = uiState.phone,
+            newPhone = uiState.newPhone,
+            verificationCode = uiState.verificationCode,
+            verificationResult = uiState.verificationResult,
+            secondsLeft = uiState.secondsLeft,
+            onChangeClick = { onEvent(MyInfoEditEvent.StartPhoneEdit) },
+            onPhoneChange = { onEvent(MyInfoEditEvent.UpdateNewPhone(it)) },
+            onSendClick = { onEvent(MyInfoEditEvent.SendVerificationCode(uiState.newPhone)) },
+            onResendClick = { onEvent(MyInfoEditEvent.ResendVerificationCode(uiState.newPhone)) },
+            onCodeChange = { onEvent(MyInfoEditEvent.UpdateVerificationCode(it)) },
+            onVerifyClick = { onEvent(MyInfoEditEvent.VerifyCode(uiState.newPhone, uiState.verificationCode)) }
         )
 
         Spacer(Modifier.height(16.dp))
@@ -143,7 +154,10 @@ fun MyInfoEditScreen(
         Spacer(Modifier.height(24.dp))
 
         Button(
-            onClick = { onSaveClick(name, birth, phone) },
+            onClick = {
+                onEvent(MyInfoEditEvent.SaveInfo(uiState.name, uiState.birth, uiState.phone))
+                onNavigateBack()
+            },
             colors = ButtonDefaults.buttonColors(containerColor = Accent),
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -153,346 +167,19 @@ fun MyInfoEditScreen(
     }
 }
 
-@Composable
-private fun PhoneVerificationSection(
-    currentPhone: String,
-    onRequestSend: (newPhone: String) -> Unit,
-    onResend: (newPhone: String) -> Unit,
-    onVerifyCode: (newPhone: String, code6: String) -> Unit,
-    onVerified: (newPhone: String, code6: String) -> Unit,
-) {
-    var uiState by rememberSaveable { mutableStateOf(PhoneUiState.Idle) }
-    var newPhone by rememberSaveable { mutableStateOf("") }
-    var code by rememberSaveable { mutableStateOf("") }
-    var verificationResult by rememberSaveable { mutableStateOf<Boolean?>(null) }
-
-    var secondsLeft by rememberSaveable { mutableStateOf(0) }
-    val scope = rememberCoroutineScope()
-    var timerJob by remember { mutableStateOf<Job?>(null) }
-
-    fun startTimer(totalSec: Int = 180) {
-        timerJob?.cancel()
-        secondsLeft = totalSec
-        timerJob = scope.launch {
-            while (secondsLeft > 0) {
-                delay(1000)
-                secondsLeft--
-            }
-        }
-    }
-
-    Column {
-        Text(
-            text = "휴대폰 번호",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color(0xFF6B767A),
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp)
-        )
-
-        when (uiState) {
-            PhoneUiState.Idle -> {
-                PhoneIdleState(
-                    currentPhone = currentPhone,
-                    onChangeClick = { uiState = PhoneUiState.Editing }
-                )
-            }
-
-            PhoneUiState.Editing -> {
-                PhoneEditingState(
-                    newPhone = newPhone,
-                    onPhoneChange = { newPhone = it },
-                    onSendClick = {
-                        onRequestSend(newPhone)
-                        uiState = PhoneUiState.Verifying
-                        verificationResult = null
-                        startTimer()
-                    }
-                )
-            }
-
-            PhoneUiState.Verifying -> {
-                PhoneVerifyingState(
-                    newPhone = newPhone,
-                    code = code,
-                    verificationResult = verificationResult,
-                    secondsLeft = secondsLeft,
-                    onPhoneChange = { newPhone = it },
-                    onCodeChange = { code = it },
-                    onResendClick = {
-                        onResend(newPhone)
-                        verificationResult = null
-                        startTimer()
-                    },
-                    onVerifyClick = {
-                        onVerifyCode(newPhone, code)
-                        // TODO: 실제로는 서버 응답에 따라 처리
-                        verificationResult = true
-                        if (verificationResult == true) {
-                            timerJob?.cancel()
-                            onVerified(newPhone, code)
-                        }
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PhoneIdleState(
-    currentPhone: String,
-    onChangeClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = currentPhone,
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFFCBD5D0),
-                unfocusedBorderColor = Color(0xFFE3E7E5),
-                cursorColor = Color(0xFF6B767A),
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            )
-        )
-
-        Button(
-            onClick = onChangeClick,
-            colors = ButtonDefaults.buttonColors(containerColor = Accent),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.height(56.dp),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            Text("변경하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}
-
-@Composable
-private fun PhoneEditingState(
-    newPhone: String,
-    onPhoneChange: (String) -> Unit,
-    onSendClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = newPhone,
-            onValueChange = { onPhoneChange(it.filter { ch -> ch.isDigit() || ch == '-' }) },
-            placeholder = { Text("새로운 번호를 입력하세요") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFFCBD5D0),
-                unfocusedBorderColor = Color(0xFFE3E7E5),
-                cursorColor = Color(0xFF6B767A),
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            )
-        )
-
-        Button(
-            onClick = onSendClick,
-            enabled = newPhone.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = Accent),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.height(56.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Text("인증번호 발송", color = Color.White, style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}
-
-@Composable
-private fun PhoneVerifyingState(
-    newPhone: String,
-    code: String,
-    verificationResult: Boolean?,
-    secondsLeft: Int,
-    onPhoneChange: (String) -> Unit,
-    onCodeChange: (String) -> Unit,
-    onResendClick: () -> Unit,
-    onVerifyClick: () -> Unit
-) {
-    Column {
-        // 번호 입력 + 재발송 버튼
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = newPhone,
-                onValueChange = { onPhoneChange(it.filter { ch -> ch.isDigit() || ch == '-' }) },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFCBD5D0),
-                    unfocusedBorderColor = Color(0xFFE3E7E5),
-                    cursorColor = Color(0xFF6B767A),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                )
-            )
-
-            Button(
-                onClick = onResendClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(56.dp).width(100.dp)
-            ) {
-                Text("재발송", color = Color.White, style = MaterialTheme.typography.titleMedium)
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // 인증번호 라벨
-        Text(
-            text = "인증번호",
-            style = MaterialTheme.typography.titleMedium,
-            color = Color(0xFF6B767A),
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-        )
-
-        // 인증번호 입력 + 확인 버튼
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = code,
-                onValueChange = { if (it.length <= 6) onCodeChange(it.filter(Char::isDigit)) },
-                singleLine = true,
-                placeholder = { Text("인증번호 6자리") },
-                shape = RoundedCornerShape(14.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFCBD5D0),
-                    unfocusedBorderColor = Color(0xFFE3E7E5),
-                    cursorColor = Color(0xFF6B767A),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                )
-            )
-
-            Button(
-                onClick = onVerifyClick,
-                enabled = code.length == 6,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(56.dp).width(100.dp)
-            ) {
-                Text("확인", color = Color.White, style = MaterialTheme.typography.titleMedium)
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // 검증 결과 또는 타이머
-        VerificationResultOrTimer(
-            verificationResult = verificationResult,
-            secondsLeft = secondsLeft
-        )
-    }
-}
-
-@Composable
-private fun VerificationResultOrTimer(
-    verificationResult: Boolean?,
-    secondsLeft: Int
-) {
-    when (verificationResult) {
-        true -> {
-            Text(
-                text = "인증번호 등록에 성공했습니다.",
-                color = Color(0xFF4CAF50),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-        false -> {
-            Text(
-                text = "올바른 인증번호가 아닙니다.",
-                color = Color(0xFFD85B4E),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-        null -> {
-            val mm = (secondsLeft / 60).toString().padStart(2, '0')
-            val ss = (secondsLeft % 60).toString().padStart(2, '0')
-            val timeColor = if (secondsLeft in 1..180) Color(0xFFD85B4E) else Color(0xFF9AA3A7)
-
-            Row(Modifier.fillMaxWidth()) {
-                Text("남은 시간: ", color = Color(0xFF6B767A))
-                Text("$mm:$ss", color = timeColor, fontWeight = FontWeight.SemiBold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun LabeledOutlinedField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    trailing: (@Composable () -> Unit)? = null,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.titleMedium,
-        color = Color(0xFF6B767A),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 8.dp)
-    )
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-        singleLine = true,
-        shape = RoundedCornerShape(14.dp),
-        trailingIcon = trailing,
-        keyboardOptions = keyboardOptions,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Color(0xFFCBD5D0),
-            unfocusedBorderColor = Color(0xFFE3E7E5),
-            cursorColor = Color(0xFF6B767A),
-            focusedContainerColor = Color.White,
-            unfocusedContainerColor = Color.White
-        )
-    )
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun PreviewMyInfoEditScreen_All() {
     MaterialTheme(colorScheme = lightColorScheme()) {
+        val previewViewModel = MyInfoEditViewModel(
+            initialName = "김민수",
+            initialBirth = "1972.10.29",
+            initialPhone = "010-4321-8765",
+            initialRoleLabel = "보호자"
+        )
         MyInfoEditScreen(
-            roleLabel = "보호자",
-            nameInit = "김민수",
-            birthInit = "1972.10.29",
-            phoneInit = "010-4321-8765",
+            viewModel = previewViewModel
         )
     }
 }
+

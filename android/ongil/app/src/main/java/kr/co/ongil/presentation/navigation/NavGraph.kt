@@ -57,36 +57,30 @@ fun AppNavGraph(
 
         // 내 정보 수정 화면
         composable(Routes.EditInfo.route) {
-            val viewModel: MyInfoViewModel = viewModel()
-            val uiState by viewModel.uiState.collectAsState()
+            val myInfoViewModel: MyInfoViewModel = viewModel()
+            val myInfoUiState by myInfoViewModel.uiState.collectAsState()
+
+            val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel(
+                factory = androidx.lifecycle.viewmodel.viewModelFactory {
+                    addInitializer(kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel::class) {
+                        kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel(
+                            initialName = myInfoUiState.name,
+                            initialBirth = "1990.01.01", // TODO: 생년월일 추가
+                            initialPhone = myInfoUiState.phoneNumber,
+                            initialProfileImageUrl = myInfoUiState.profileImage,
+                            initialRoleLabel = "보호자" // TODO: 실제 사용자 역할
+                        )
+                    }
+                }
+            )
 
             MyInfoEditScreen(
-                roleLabel = "보호자", // TODO: 실제 사용자 역할
-                nameInit = uiState.name,
-                birthInit = "1990.01.01", // TODO: 생년월일 추가
-                phoneInit = uiState.phoneNumber,
-                profileImageUrl = uiState.profileImage,
-                onPickProfileImage = {
-                    // TODO: 이미지 선택 로직
-                },
-                onBirthPickClick = {
-                    // TODO: 날짜 선택 로직
-                },
-                onSendVerifyCode = { newPhone ->
-                    // TODO: 인증번호 발송 API
-                },
-                onResendCode = { newPhone ->
-                    // TODO: 인증번호 재발송 API
-                },
-                onVerifyCode = { newPhone, code ->
-                    // TODO: 인증번호 확인 API
+                viewModel = editViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
                 },
                 onChangePasswordClick = {
                     // TODO: 비밀번호 변경 화면으로 이동
-                },
-                onSaveClick = { name, birth, phone ->
-                    // TODO: 정보 수정 API
-                    navController.popBackStack()
                 }
             )
         }
