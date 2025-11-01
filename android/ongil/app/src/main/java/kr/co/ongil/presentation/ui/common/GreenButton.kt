@@ -11,11 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-
-
-
-
-
+import androidx.compose.ui.unit.sp
 
 
 @Composable
@@ -23,7 +19,9 @@ fun GreenButton(
     modifier: Modifier = Modifier,
     text: String,
     onClick: () -> Unit,
+    isActive: Boolean = true,  // 얘는 기본목적지 설정처럼 토글 느낌으로
     enabled: Boolean = true,
+    containerColor: Color = Color(0xFF8CA898),
 ) {
     Button(
         onClick = onClick,
@@ -33,17 +31,26 @@ fun GreenButton(
         enabled = enabled,
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF8CA898),
+            containerColor = if (isActive) containerColor else Color(0xFFD3D3D3),
             contentColor = Color.White,
             disabledContainerColor = Color(0xFFD3D3D3)
         )
     ) {
-        Text(text = text)
+        Text(
+            text = text,
+            fontSize = 18.sp
+        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun GreenButtonPreview() {
-    GreenButton(text = "버튼", onClick = {})
+fun GreenButtonPreview_On() {
+    GreenButton(text = "기본 목적지", isActive = true, onClick = {})
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreenButtonPreview_Off() {
+    GreenButton(text = "기본 목적지", isActive = false, onClick = {})
 }

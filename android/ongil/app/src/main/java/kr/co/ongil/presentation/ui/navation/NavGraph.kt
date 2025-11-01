@@ -1,65 +1,77 @@
-package kr.co.ongil.presentation.ui.Atest
+package kr.co.ongil.presentation.ui.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavType
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.NavType
+import kr.co.ongil.presentation.ui.home.HomeScreen
 import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
 import kr.co.ongil.presentation.ui.favorite.PlaceDetailScreen
 import kr.co.ongil.presentation.ui.favorite.PlaceDetailViewModel
 import kr.co.ongil.data.repository.FavoriteRepository
-import kr.co.ongil.presentation.ui.navigation.Screen
-import kr.co.ongil.presentation.ui.home.HomeScreen
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+
 @Composable
-fun PlayGroundMJ() {
-
-    val navController = rememberNavController()
-
+fun AppNavGraph(
+    navController: NavHostController
+) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Home.route // ✅ 앱 첫 화면은 홈
     ) {
-        composable(route = Screen.Home.route) {
+        // 홈
+        composable(Screen.Home.route) {
             HomeScreen(
                 onGoFavoriteClick = {
                     navController.navigate(Screen.Favorite.route)
                 }
             )
         }
-        // 즐겨찾기 화면
-        composable(route = Screen.Favorite.route) {
+
+        // 즐겨찾기
+        composable(Screen.Favorite.route) {
             FavoriteScreen(
-                patientId = 1L, // TODO: 나중에 선택된 환자 ID로 교체
+                patientId = 1L, // TODO: 실제 선택된 환자 ID로 교체
                 onNavigateToPlaceDetail = { favoriteId, placeName, address ->
+                    val encodedName = Uri.encode(placeName)
+                    val encodedAddress = Uri.encode(address)
+
                     navController.navigate(
-                        Screen.PlaceDetail.createRoute( favoriteId, placeName, address)
+                        Screen.PlaceDetail.createRoute(
+                            favoriteId = favoriteId,
+                            placeName = encodedName,
+                            address = encodedAddress
+                        )
                     )
                 }
             )
         }
 
-        // 장소 상세 화면
+        // 장소 상세
         composable(
             route = Screen.PlaceDetail.route,
             arguments = listOf(
-                navArgument("favoriteId") {type = NavType.LongType},
-                navArgument("placeName") {type = NavType.StringType},
-                navArgument("address") {type = NavType.StringType}
+                navArgument("favoriteId") { type = NavType.LongType },
+                navArgument("placeName") { type = NavType.StringType },
+                navArgument("address") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val favoriteId = backStackEntry.arguments?.getLong("favoriteId") ?: 1L
-            val placeNameArg = backStackEntry.arguments?.getString("placeName") ?: ""
-            val addressArg = backStackEntry.arguments?.getString("address") ?: ""
+            val favoriteId: Long =
+                backStackEntry.arguments?.getLong("favoriteId") ?: 1L
+            val placeNameArg =
+                backStackEntry.arguments?.getString("placeName")
+                    ?.let { Uri.decode(it) } ?: ""
+            val addressArg =
+                backStackEntry.arguments?.getString("address")
+                    ?.let { Uri.decode(it) } ?: ""
 
             // 싱글톤 Repository 사용
             val repository = remember { FavoriteRepository.getInstance() }
@@ -116,10 +128,4 @@ fun PlayGroundMJ() {
             )
         }
     }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
-@Composable
-private fun PlayGroundMJPreview() {
-    PlayGroundMJ()
 }

@@ -25,12 +25,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun PatientListCard(
+fun PatientCard(
     patientLabel: String,
     basicInfo: String,
     phoneNumber: String,
     onClickCard: () -> Unit,
-    onClickCall: () -> Unit,
+    onClickIcon: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -100,7 +100,7 @@ fun PatientListCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 IconButton(
-                    onClick = { onClickCall() },
+                    onClick = { onClickIcon() },
                     modifier = Modifier
                         .size(48.dp) // 시안상 원이 좀 더 크니까 48.dp로 넉넉하게
                         .clip(CircleShape)
@@ -133,12 +133,12 @@ fun PatientListPreview() {
             .padding(16.dp),
         color = Color(0xFF1E1E1E)
     ) {
-        PatientListCard(
+        PatientCard(
             patientLabel = "환자 1",
             basicInfo = "김철수 (남, 75세)",
             phoneNumber = "010-1234-5678",
             onClickCard = {},
-            onClickCall = {},
+            onClickIcon = {},
             modifier = Modifier
         )
     }

@@ -11,6 +11,8 @@ import kr.co.ongil.presentation.theme.OngilTheme
 import kr.co.ongil.presentation.ui.Atest.PlayGroundMJ
 import kr.co.ongil.presentation.ui.Atest.PlayGroundSH
 
+
+// 나중에 커밋할때는 플레이그라운드 다 주석처리해주세요
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge() // ✅ super.onCreate() 보다 먼저 호출
@@ -18,11 +20,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OngilTheme {
-                // ✅ Column으로 감싸서 겹치지 않게 함
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // ✅ PlayGroundMJ 실행
+                    // 혹시 충돌 날 수도 있으니까 커밋이나 푸시할때는 여기 밑에 전부 주석처리 해주세요
                     PlayGroundMJ()
-                    // PlayGroundSH() // 지금은 MJ만 확인하기 위해 잠시 주석처리
+                    // PlayGroundSH()
                 }
             }
         }
