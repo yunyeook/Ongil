@@ -41,7 +41,6 @@ fun PlaceDetailScreen(
 ) {
     var editedPlaceName by remember { mutableStateOf(placeName) }
     var editedAddress by remember { mutableStateOf(address) }
-    var currentIsDefault by remember { mutableStateOf(isDefault) }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -90,13 +89,12 @@ fun PlaceDetailScreen(
             GreenButton(
                 text = "기본 목적지로 설정",
                 onClick = {
-                    currentIsDefault = !currentIsDefault
                     onSetDefaultClick()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                containerColor = if (currentIsDefault) Color(0xFF87A293) else Color(0xFFD1D5DB)
+                containerColor = if (isDefault) Color(0xFF87A293) else Color(0xFFD1D5DB)
             )
 
             GreenButton(
