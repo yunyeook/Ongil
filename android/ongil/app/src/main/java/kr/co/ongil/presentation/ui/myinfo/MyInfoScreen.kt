@@ -19,14 +19,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 
 /**
  * 온길 - 나의 정보 화면 (헤더/바텀바 제외)
  */
 @Composable
 fun MyInfoScreen(
-    name: String,
-    phoneNumber: String,
+    uiState: MyInfoUiState,
     onEditInfo: () -> Unit,
     onRecentCalls: () -> Unit,
     onLogout: () -> Unit,
@@ -52,19 +52,29 @@ fun MyInfoScreen(
                     .background(accent.copy(alpha = 0.35f)),
                 contentAlignment = Alignment.Center
             ) {
-                // 사람 아이콘 대신 이니셜/도형 느낌 (심플)
-                Text(
-                    text = "∙",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = accent,
-                )
+                if (!uiState.profileImage.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = uiState.profileImage,
+                        contentDescription = "프로필 이미지",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                } else {
+                    // 프로필 이미지가 없을 때 이니셜 표시
+                    Text(
+                        text = "∙",
+                        style = MaterialTheme.typography.displaySmall,
+                        color = accent,
+                    )
+                }
             }
 
             Spacer(Modifier.width(16.dp))
 
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = name,
+                    text = uiState.name,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold
                     ),
@@ -72,7 +82,7 @@ fun MyInfoScreen(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = phoneNumber,
+                    text = uiState.phoneNumber,
                     style = MaterialTheme.typography.titleMedium,
                     color = Color(0xFF6B767A),
                     maxLines = 1,
@@ -146,8 +156,11 @@ private fun MenuItem(
 private fun PreviewMyInfoScreen() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         MyInfoScreen(
-            name = "김민수",
-            phoneNumber = "010-1234-5678",
+            uiState = MyInfoUiState(
+                name = "김민수",
+                phoneNumber = "010-1234-5678",
+                profileImage = null
+            ),
             onEditInfo = {},
             onRecentCalls = {},
             onLogout = {}
