@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +20,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,16 +27,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kr.co.ongil.presentation.ui.common.GreenButton
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun PlaceList(
-    places: List<PlaceItem>,
+    places: List<PlaceData>,
     onAddPlaceClick: () -> Unit,
-    onClickPlaceCard: (Long) -> Unit,
+    onClickPlaceCard: (favoriteId: Long, placeName: String, address: String) -> Unit,
     onClickPlaceIcon: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -54,7 +52,7 @@ fun PlaceList(
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
                 top = 0.dp,
@@ -63,10 +61,14 @@ fun PlaceList(
         ) {
             items(places) { place ->
                 PlaceCard(
-                    label = place.label,
+                    favoriteId = place.favoriteId,
+                    placeName = place.placeName,
                     address = place.address,
-                    onClickCard = { onClickPlaceCard(place.id) },
-                    onClickIcon = { onClickPlaceIcon(place.id) },
+                    isDefault = place.isDefault,
+                    onClickCard = {
+                        onClickPlaceCard(place.favoriteId, place.placeName, place.address)
+                    },
+                    onClickIcon = { onClickPlaceIcon(place.favoriteId) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -76,18 +78,22 @@ fun PlaceList(
 
 @Composable
 fun PlaceCard(
-    label: String,
+    favoriteId: Long,
+    placeName: String,
     address: String,
+    isDefault: Boolean,
     onClickCard: () -> Unit,
     onClickIcon: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val cardBg = if (isDefault) Color(0xFFDFF5E1) else Color.White
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClickCard() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -99,8 +105,24 @@ fun PlaceCard(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
+                if (isDefault) {
+                    Text(
+                        text = "기본 목적지",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF256D3D),
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFFBDE9C5),
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+
                 Text(
-                    text = label,
+                    text = placeName,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1F2937)
@@ -137,32 +159,38 @@ fun PlaceCard(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
+@Preview(showBackground = true,)
 @Composable
 private fun PlaceListPreview() {
     val dummyPlaces = listOf(
-        PlaceItem(
-            id = 101L,
-            label = "집",
-            address = "서울시 서초구"
+        PlaceData(
+            patientId = 1,
+            favoriteId = 101L,
+            placeName = "집",
+            address = "서울시 서초구",
+            isDefault = true
         ),
-        PlaceItem(
-            id = 102L,
-            label = "병원",
-            address = "OO병원 신관 2F 신경과"
+        PlaceData(
+            patientId = 1,
+            favoriteId = 102L,
+            placeName = "병원",
+            address = "OO병원 신관 2F 신경과",
+            isDefault = false
         ),
-        PlaceItem(
-            id = 103L,
-            label = "경로당",
-            address = "서초구 ○○ 경로당 (매일 13시 방문)"
+        PlaceData(
+            patientId = 1,
+            favoriteId = 103L,
+            placeName = "경로당",
+            address = "서초구 ○○ 경로당 (매일 13시 방문)",
+            isDefault = false
         )
     )
 
-    Surface(color = Color(0xFFF9FAFB)) {
+    androidx.compose.material3.Surface(color = Color(0xFFF9FAFB)) {
         PlaceList(
             places = dummyPlaces,
             onAddPlaceClick = {},
-            onClickPlaceCard = {},
+            onClickPlaceCard = { _, _, _ -> },
             onClickPlaceIcon = {}
         )
     }

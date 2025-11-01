@@ -1,5 +1,12 @@
 package kr.co.ongil.presentation.ui.favorite
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -15,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,14 +34,42 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun FavoriteScreen(
-    onNavigateToPlaceDetail: (Long) -> Unit,
-    viewModel: FavoriteViewModel = viewModel()
-) {
-    val uiState by viewModel.uiState.collectAsState()
+    patientId: Long? = null,
+    onNavigateToPlaceDetail: (favoriteId:Long, placeName: String, address: String) -> Unit
+)
+//    viewModel: FavoriteViewModel = viewModel()
+//    - 이거 더미테스트용이니까 일단 빼고 나중에 위에 집어넣기
+//      그리고 밑에 val uistate이거 빼기
+ {    val viewModel: FavoriteViewModel =
+     androidx.lifecycle.viewmodel.compose.viewModel(
+         factory = FavoriteDummyFactory(
+             initialPatientId = patientId ?: 1L
+         )
+     )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val effectivePatientId = patientId ?: 1L
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(effectivePatientId) {
+        viewModel.loadData(effectivePatientId)
+    }
+
+    // 화면이 다시 보일 때마다 데이터 새로고침
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadData(effectivePatientId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF9FAFB) // 전체 배경 (연한 회색 톤)
+        color = Color(0xFFFFFFFF)
     ) {
         Column(
             modifier = Modifier
@@ -90,8 +124,12 @@ fun FavoriteScreen(
                         onAddPlaceClick = {
                             viewModel.onEvent(FavoriteUiEvent.OnAddPlaceClick)
                         },
-                        onClickPlaceCard = { placeId ->
-                            onNavigateToPlaceDetail(placeId)
+                        onClickPlaceCard = { favoriteId, placeName, address ->
+                            onNavigateToPlaceDetail(
+                                favoriteId,
+                                placeName,
+                                address
+                            )
                         },
                         onClickPlaceIcon = { placeId ->
                             // TODO: 지도 화면으로 이동 or 지도 열기 처리 예정
@@ -118,7 +156,7 @@ private fun TopHeaderBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
 
-        // 왼쪽: 사용자 프로필 영역 (지금은 텍스트로 대체)
+        // 왼쪽: 로고대신
         Text(
             text = "온길",
             fontSize = 20.sp,
@@ -138,11 +176,7 @@ private fun TopHeaderBar(
     }
 }
 
-/**
- * 타이틀 / 보조설명
- * "사용자님의 즐겨찾기" 같은 부분입니다.
- * 실제 문구/스타일은 시안에 맞춰 조정 가능
- */
+
 @Composable
 private fun FavoriteTitleSection(
     modifier: Modifier = Modifier
@@ -168,10 +202,7 @@ private fun FavoriteTitleSection(
     }
 }
 
-/**
- * 장소 탭이 아직 준비 안 된 상태라서 임시로 화면 비지 않게 넣는 플레이스홀더
- * 추후 PlaceListSection으로 교체
- */
+
 @Composable
 private fun PlaceholderPlacesSection(
     modifier: Modifier = Modifier

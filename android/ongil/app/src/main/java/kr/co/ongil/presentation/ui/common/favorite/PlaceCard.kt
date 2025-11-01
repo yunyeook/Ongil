@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 fun PlaceCard(
     name: String,
     address: String,
+    isDefault: Boolean,
     onClickCard: () -> Unit,
     onClickIcon: () -> Unit,
     modifier: Modifier = Modifier
@@ -37,7 +38,7 @@ fun PlaceCard(
             .clickable { onClickCard() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = if (isDefault) Color(0xFFDFF5E1) else Color.White
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp
@@ -52,6 +53,15 @@ fun PlaceCard(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
+                if (isDefault) {
+                    Text(
+                        text = "기본 목적지",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF2E7D32),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
                 Text(
                     text = name,
                     fontSize = 18.sp,
@@ -102,6 +112,7 @@ fun PlaceCardPreview() {
         PlaceCard(
             name = "이마트 중계점",
             address = "서울시 노원구 중계로 235",
+            isDefault = true,
             onClickCard = {},
             onClickIcon = {},
             modifier = Modifier
