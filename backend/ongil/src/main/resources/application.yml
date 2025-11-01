@@ -23,7 +23,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
@@ -45,13 +45,13 @@ spring:
     redis:
       time-to-live: 600000 # 10? TTL ??
 
-# ???/?? ??(??)
+  # ???/?? ??(??)
   servlet:
     multipart:
       max-file-size: 25MB
       max-request-size: 25MB
 
-# S3 (Spring Cloud AWS)
+  # S3 (Spring Cloud AWS)
   cloud:
     aws:
       region:
