@@ -1,0 +1,78 @@
+package kr.co.ongil.global.config;
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.http.codec.json.Jackson2JsonDecoder;
+import org.springframework.http.codec.json.Jackson2JsonEncoder;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import reactor.netty.http.client.HttpClient;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * WebClient 공통 설정
+ * 모든 외부 API 호출에 사용되는 공통 컴포넌트
+ */
+@Configuration
+public class WebClientConfig {
+
+    /**
+     * 관대한 ObjectMapper
+     * - 알 수 없는 필드 무시
+     * - 제어 문자 허용 (외부 API가 JSON 표준을 안 지킬 때 대비)
+     */
+    @Bean
+    public ObjectMapper webClientObjectMapper() {
+        return new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
+    }
+
+    /**
+     * ExchangeStrategies (메시지 크기 제한, 코덱 설정)
+     */
+    @Bean
+    public ExchangeStrategies webClientExchangeStrategies(ObjectMapper webClientObjectMapper) {
+        return ExchangeStrategies.builder()
+            .codecs(configurer -> {
+                configurer.defaultCodecs().jackson2JsonEncoder(
+                    new Jackson2JsonEncoder(webClientObjectMapper)
+                );
+                configurer.defaultCodecs().jackson2JsonDecoder(
+                    new Jackson2JsonDecoder(webClientObjectMapper)
+                );
+                configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024); // 10MB
+            })
+            .build();
+    }
+
+    /**
+     * HttpClient (타임아웃 설정)
+     */
+    @Bean
+    public HttpClient webClientHttpClient() {
+        return HttpClient.create()
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000)
+            .responseTimeout(Duration.ofSeconds(30))
+            .doOnConnected(conn -> conn
+                .addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
+                .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS))
+            );
+    }
+
+    /**
+     * ReactorClientHttpConnector
+     */
+    @Bean
+    public ReactorClientHttpConnector webClientConnector(HttpClient webClientHttpClient) {
+        return new ReactorClientHttpConnector(webClientHttpClient);
+    }
+}

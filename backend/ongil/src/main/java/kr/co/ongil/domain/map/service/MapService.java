@@ -1,5 +1,6 @@
 package kr.co.ongil.domain.map.service;
 import kr.co.ongil.domain.map.dto.response.PlaceDetailResponse;
+import kr.co.ongil.domain.map.dto.response.RouteResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
@@ -21,9 +22,7 @@ public class MapService {
      */
     public AddressResponse getAddress(Double latitude, Double longitude) {
         log.info("좌표 → 주소 변환 요청: lat={}, lng={}", latitude, longitude);
-
         validateCoordinate(latitude, longitude);
-
         return tmapService.getAddressFromCoordinate(latitude, longitude);
     }
 
@@ -32,9 +31,7 @@ public class MapService {
      */
     public CoordinateResponse getCoordinate(String cityDo, String guGun, String dong, String bunji) {
         log.info("주소 → 좌표 변환 요청: {} {} {} {}", cityDo, guGun, dong, bunji);
-
         validateAddress(cityDo, guGun, dong);
-
         return tmapService.getCoordinateFromAddress(cityDo, guGun, dong, bunji);
     }
 
@@ -45,15 +42,12 @@ public class MapService {
         Integer radius, Integer page, Integer size) {
         log.info("장소 검색 요청: keyword={}, lat={}, lng={}, radius={}, page={}, size={}",
             keyword, latitude, longitude, radius, page, size);
-
         // 키워드 유효성 검증
         if (keyword == null || keyword.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
-
         // 좌표 유효성 검증
         validateCoordinate(latitude, longitude);
-
         return tmapService.searchPlaces(keyword, latitude, longitude, radius, page, size);
     }
 
@@ -65,6 +59,23 @@ public class MapService {
         return tmapService.getPlaceDetail(poiId);
     }
 
+    /**
+     * 보행자 경로 탐색
+     */
+    public RouteResponse getPedestrianRoute(
+        Double startLatitude, Double startLongitude,
+        Double endLatitude, Double endLongitude,
+        String startName, String endName
+    ) {
+        log.info("보행자 경로 조회: startLatitude={}, startLongitude={}, endLatitude={}, endLongitude={}, startName={}, endName={}",
+            startLatitude,startLongitude,endLatitude,endLongitude,startName,endName);
+
+        return tmapService.getPedestrianRoute(
+            startLatitude, startLongitude,
+            endLatitude, endLongitude,
+            startName, endName
+        );
+    }
 
     /**
      * 좌표 유효성 검증

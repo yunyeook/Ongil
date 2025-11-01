@@ -80,7 +80,7 @@ public enum ErrorCode {
 
     INVALID_ADDRESS(HttpStatus.BAD_REQUEST, "유효하지 않은 주소입니다."),
     ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 좌표의 주소를 찾을 수 없습니다."),
-
+    ROUTE_SEARCH_FAILED(HttpStatus.BAD_GATEWAY,"경로 탐색에 실패했습니다"),
     MAP_API_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "지도 API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."),
     MAP_API_ERROR(HttpStatus.BAD_GATEWAY, "지도 서비스와의 통신에 실패했습니다."),
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."),
