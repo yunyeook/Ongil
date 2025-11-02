@@ -140,4 +140,33 @@ class UserRepositoryImpl(
             Result.failure(apiException)
         }
     }
+
+    override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> {
+        return try {
+            // TODO: TokenManager에서 accessToken 가져오기
+            val accessToken = "Bearer YOUR_ACCESS_TOKEN"
+
+            if (userApi == null) {
+                throw IllegalStateException("UserApi가 주입되지 않았습니다. DI를 통해 주입해주세요.")
+            }
+
+            // 비밀번호 변경 API 호출
+            val request = kr.co.ongil.data.model.auth.ChangePasswordRequest(
+                oldPassword = currentPassword,
+                newPassword = newPassword,
+                confirmPassword = newPassword // ViewModel에서 이미 검증했으므로 동일한 값 전달
+            )
+
+            userApi.changePassword(
+                accessToken = accessToken,
+                request = request
+            )
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            // HTTP 에러를 ApiException으로 변환
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
+        }
+    }
 }

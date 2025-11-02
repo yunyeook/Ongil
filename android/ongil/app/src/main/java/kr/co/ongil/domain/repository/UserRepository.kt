@@ -42,4 +42,11 @@ interface UserRepository {
      * @return 인증 성공 시 verificationToken 반환
      */
     suspend fun verifyCode(phoneNumber: String, code: String): Result<String>
+
+    /**
+     * 비밀번호 변경
+     * @param currentPassword 현재 비밀번호
+     * @param newPassword 새 비밀번호
+     */
+    suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
 }

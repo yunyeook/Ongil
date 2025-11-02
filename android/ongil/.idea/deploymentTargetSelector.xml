@@ -14,6 +14,9 @@
       <SelectionState runConfigName="PreviewMyInfoEditScreen_All">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+      <SelectionState runConfigName="PreviewChangePasswordScreen">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
     </selectionStates>
   </component>
 </project>
