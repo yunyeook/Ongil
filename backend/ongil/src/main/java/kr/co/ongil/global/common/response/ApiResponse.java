@@ -17,7 +17,7 @@ public class ApiResponse<T> {
         return new ApiResponse<>(message, data);
     }
 
-    public static ApiResponse<Void> success(String message) {
-        return new ApiResponse<>(message, null);
+    public static ApiResponse<String> success(String message) {
+        return new ApiResponse<>(message, "");
     }
 }

@@ -1,10 +1,38 @@
 package kr.co.ongil.domain.auth.controller;
 
+import kr.co.ongil.domain.auth.service.AuthService;
+import kr.co.ongil.domain.auth.dto.request.RegisterRequest;
+import kr.co.ongil.global.common.response.ApiResponse;
+import kr.co.ongil.global.common.response.ResponseMessage;
+import kr.co.ongil.global.exception.BusinessException;
+import kr.co.ongil.global.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+import jakarta.validation.Valid;
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/auth")
+@Validated
+@Tag(name = "Auth API", description = "인증 관련 API")
 public class AuthController {
 
+    private final AuthService authService;
+
+    @PostMapping("/register")
+    @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
+    public ResponseEntity<ApiResponse<String>> register(@Valid @RequestBody RegisterRequest request) {
+        
+        authService.register(request);
+        return ResponseEntity.ok(ApiResponse.success(ResponseMessage.SIGNUP_SUCCESS.getMessage()));
+    }
 }

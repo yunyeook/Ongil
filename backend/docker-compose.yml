@@ -8,4 +8,33 @@ services:
     image: rabent0207/ongil:latest
     env_file:
       - .env
+    ports:
+      - "8080:8080"
     command: tail -f /dev/null
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app-network
+      
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+  
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+
+networks:
+  app-network:
