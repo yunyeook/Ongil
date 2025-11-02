@@ -25,21 +25,6 @@ public record RouteResponse(
     @Schema(description = "턴바이턴 안내 목록")
     List<RouteGuide> guides
 ) {
-    @Schema(description = "위치 정보")
-    public record LocationInfo(
-        @Schema(description = "위도", example = "37.5665")
-        Double latitude,
-
-        @Schema(description = "경도", example = "126.9780")
-        Double longitude,
-
-        @Schema(description = "장소명", example = "서울역")
-        String name
-    ) {
-        public static LocationInfo of(Double latitude, Double longitude, String name) {
-            return new LocationInfo(latitude, longitude, name);
-        }
-    }
 
     @Schema(description = "경로 안내")
     public record RouteGuide(

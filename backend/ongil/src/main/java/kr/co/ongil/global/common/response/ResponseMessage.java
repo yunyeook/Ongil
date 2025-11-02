@@ -32,6 +32,9 @@ public enum ResponseMessage {
     FAVORITE_PLACE_DELETED("자주 가는 장소가 삭제되었습니다."),
     ROUTE_FOUND("경로를 성공적으로 조회하였습니다."),
 
+    //Navigation
+    NAVIGATION_START_SUCCESS("길안내가 시작되었습니다."),
+
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다."),
     INVALID_INPUT("입력값이 유효하지 않습니다.");

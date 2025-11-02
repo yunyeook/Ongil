@@ -85,7 +85,12 @@ public enum ErrorCode {
     MAP_API_ERROR(HttpStatus.BAD_GATEWAY, "지도 서비스와의 통신에 실패했습니다."),
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."),
     PLACE_SEARCH_FAILED(HttpStatus.BAD_GATEWAY, "장소 검색 중 오류가 발생했습니다."),
-    PLACE_DETAIL_FAILED(HttpStatus.BAD_GATEWAY, "장소 상세 조회 중 오류가 발생했습니다.");
+    PLACE_DETAIL_FAILED(HttpStatus.BAD_GATEWAY, "장소 상세 조회 중 오류가 발생했습니다."),
+
+    // NAVIGATION
+    NAVIGATION_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "길안내 세션을 찾을 수 없습니다."),
+    NAVIGATION_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "길안내 기록을 찾을 수 없습니다."),
+    NAVIGATION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "이미 진행 중인 길안내가 있습니다.");
 
     private final HttpStatus status;
     private final String message;

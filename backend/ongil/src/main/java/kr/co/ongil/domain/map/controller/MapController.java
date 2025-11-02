@@ -29,7 +29,7 @@ public class MapController {
 
     @GetMapping("/address")
     @Operation(summary = "좌표로 주소 조회", description = "GPS 좌표를 받아 주소로 변환합니다.")
-    public ResponseEntity<ApiResponse<AddressResponse>> getAddress(
+    public ApiResponse<AddressResponse> getAddress(
         @Parameter(description = "위도", example = "37.5665", required = true)
         @RequestParam Double latitude,
 
@@ -37,14 +37,12 @@ public class MapController {
         @RequestParam Double longitude
     ) {
         AddressResponse response = mapService.getAddress(latitude, longitude);
-        return ResponseEntity.ok(
-            ApiResponse.success(ResponseMessage.ADDRESS_FOUND.getMessage(), response)
-        );
+        return ApiResponse.success(ResponseMessage.ADDRESS_FOUND.getMessage(), response);
     }
 
     @GetMapping("/coordinate")
     @Operation(summary = "주소로 좌표 조회", description = "주소 정보를 받아 GPS 좌표로 변환합니다.")
-    public ResponseEntity<ApiResponse<CoordinateResponse>> getCoordinate(
+    public ApiResponse<CoordinateResponse> getCoordinate(
         @Parameter(description = "시/도", example = "서울특별시", required = true)
         @RequestParam String cityDo,
 
@@ -58,14 +56,12 @@ public class MapController {
         @RequestParam(required = false) String bunji
     ) {
         CoordinateResponse response = mapService.getCoordinate(cityDo, guGun, dong, bunji);
-        return ResponseEntity.ok(
-            ApiResponse.success(ResponseMessage.COORDINATE_FOUND.getMessage(), response)
-        );
+        return ApiResponse.success(ResponseMessage.COORDINATE_FOUND.getMessage(), response);
     }
 
     @GetMapping("/search")
     @Operation(summary = "장소 검색", description = "키워드와 현재 위치를 기반으로 주변 장소를 검색합니다.")
-    public ResponseEntity<ApiResponse<SearchPlaceListResponse>> searchPlaces(
+    public ApiResponse<SearchPlaceListResponse> searchPlaces(
         @Parameter(description = "검색 키워드", example = "약국")
         @RequestParam(required = false, defaultValue = "지구대") String keyword,
 
@@ -85,25 +81,21 @@ public class MapController {
         @RequestParam(required = false, defaultValue = "10") Integer size
     ) {
         SearchPlaceListResponse response = mapService.searchPlaces(keyword, latitude, longitude, radius, page, size);
-        return ResponseEntity.ok(
-            ApiResponse.success(ResponseMessage.PLACE_SEARCH_SUCCESS.getMessage(), response)
-        );
+        return  ApiResponse.success(ResponseMessage.PLACE_SEARCH_SUCCESS.getMessage(), response);
     }
 
     @GetMapping("/places/{poiId}")
     @Operation(summary = "장소 상세 조회", description = "POI ID로 장소 상세 정보를 조회합니다.")
-    public ResponseEntity<ApiResponse<PlaceDetailResponse>> getPlaceDetail(
+    public ApiResponse<PlaceDetailResponse> getPlaceDetail(
         @Parameter(description = "POI ID", example = "7839545")
         @PathVariable String poiId
     ) {
         PlaceDetailResponse response = mapService.getPlaceDetail(poiId);
-        return ResponseEntity.ok(
-            ApiResponse.success(ResponseMessage.PLACE_SEARCH_DETAIL_SUCCESS.getMessage(), response)
-        );
+        return ApiResponse.success(ResponseMessage.PLACE_SEARCH_DETAIL_SUCCESS.getMessage(), response);
     }
     @GetMapping("/route/pedestrian")
     @Operation(summary = "보행자 경로 탐색", description = "출발지와 도착지 좌표로 보행자 경로를 조회합니다.")
-    public ResponseEntity<ApiResponse<RouteResponse>> getPedestrianRoute(
+    public ApiResponse<RouteResponse> getPedestrianRoute(
         @Parameter(description = "출발지 위도", example = "37.5665", required = true)
         @RequestParam Double startLatitude,
 
@@ -127,9 +119,7 @@ public class MapController {
             endLatitude, endLongitude,
             startName, endName
         );
-        return ResponseEntity.ok(
-            ApiResponse.success(ResponseMessage.ROUTE_FOUND.getMessage(), response)
-        );
+        return ApiResponse.success(ResponseMessage.ROUTE_FOUND.getMessage(), response);
     }
 
 }
