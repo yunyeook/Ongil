@@ -1,0 +1,393 @@
+package kr.co.ongil.presentation.ui.searchuser
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kr.co.ongil.domain.model.UserSummary
+import kr.co.ongil.domain.repository.SearchUserRepository
+import kr.co.ongil.data.repository.fake.FakeSearchUserRepository
+/**
+ * SearchUserViewModel
+ *
+ * 역할:
+ * 1) 전화번호로 사용자 검색
+ * 2) 검색 결과 기반으로 "등록하기" 플로우로 전환
+ * 3) 인증번호 검증 -> 등록 요청 -> 성공 시 모달 / 이동 신호 발행
+ *
+ * 화면은 Navigation으로 분리하지 않고 mode(SearchUserMode)만 바꿔서 상태 전환합니다.
+ * 단, 토스트나 화면 전환 같은 일회성 동작은 sideEffect로 보냅니다.
+ */
+class SearchUserViewModel(
+    private val repository: SearchUserRepository = FakeSearchUserRepository()
+) : ViewModel() {
+
+    private fun normalizePhoneNumber(raw: String): String {
+        return raw.filter { it.isDigit() }
+    }
+
+    // ---------- UI State ----------
+    private val _uiState = MutableStateFlow(SearchUserUiState())
+    val uiState: StateFlow<SearchUserUiState> = _uiState.asStateFlow()
+
+    // ---------- Side Effect (단발 이벤트: Toast, Navigation 등) ----------
+    private val _sideEffect = Channel<SearchUserUiSideEffect>(Channel.BUFFERED)
+    val sideEffect = _sideEffect.receiveAsFlow()
+
+    // 외부에서 ViewModel에 명령을 전달할 단일 엔트리
+    fun onEvent(event: SearchUserUiEvent) {
+        when (event) {
+            is SearchUserUiEvent.OnPhoneInputChange -> handlePhoneInputChange(event.value)
+            SearchUserUiEvent.OnClickSearch -> handleClickSearch()
+            SearchUserUiEvent.OnClickRetrySearch -> handleClickRetrySearch()
+            SearchUserUiEvent.OnClickAddFriend -> handleClickAddFriend()
+            SearchUserUiEvent.OnClickBackToSearch -> handleBackToSearch()
+
+            is SearchUserUiEvent.OnRelationshipNameChange -> handleRelationshipNameChange(event.value)
+            is SearchUserUiEvent.OnRelationshipTypeSelect -> handleRelationshipTypeSelect(event.value)
+            is SearchUserUiEvent.OnVerificationCodeChange -> handleVerificationCodeChange(event.value)
+            SearchUserUiEvent.OnClickVerifyCode -> handleClickVerifyCode()
+            is SearchUserUiEvent.OnMemoChange -> handleMemoChange(event.value)
+
+            SearchUserUiEvent.OnClickSubmitRegister -> handleClickSubmitRegister()
+
+            SearchUserUiEvent.OnClickGoToRegisterUser -> handleClickGoToRegisterUser()
+            SearchUserUiEvent.OnClickSearchMore -> handleClickSearchMore()
+        }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 검색 단계 로직
+    // ---------------------------------------------------------------------------------
+
+    private fun handlePhoneInputChange(raw: String) {
+        // TODO: "01012345678" -> "010-1234-5678" 같은 포맷팅 적용 가능
+        _uiState.update {
+            it.copy(
+                phoneInput = raw,
+                searchErrorMessage = null
+            )
+        }
+    }
+
+    private fun handleClickSearch() {
+        val phone = _uiState.value.phoneInput
+        if (phone.isBlank()) return
+
+        _uiState.update {
+            it.copy(
+                isSearching = true,
+                searchErrorMessage = null
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                val normalizedPhone = normalizePhoneNumber(phone)
+                // 실제 구현부: repository.searchUserByPhone
+                // 성공 시 UserSummary?, 실패 시 null 리턴 가정
+                val result = repository.searchUserByPhone(normalizedPhone)
+
+                if (result != null) {
+                    // 검색 성공
+                    _uiState.update {
+                        it.copy(
+                            isSearching = false,
+                            mode = SearchUserMode.SEARCH_SUCCESS,
+                            foundUser = result,
+                            // 등록 단계 기본값 세팅
+                            relationshipName = result.displayName,
+                            relationshipType = "",
+                            relationshipTypeOptions = defaultRelationOptions(),
+                            verificationCodeInput = "",
+                            verificationToken = "",
+                            verificationCountdownSec = DEFAULT_VERIFY_COUNTDOWN_SEC,
+                            isVerificationValid = false,
+                            memo = "",
+                            isSubmitting = false,
+                            submitErrorMessage = null
+                        )
+                    }
+                } else {
+                    // 검색 실패
+                    _uiState.update {
+                        it.copy(
+                            isSearching = false,
+                            mode = SearchUserMode.SEARCH_NOT_FOUND,
+                            foundUser = null,
+                            searchErrorMessage = "해당 번호로 등록된 사용자를 찾을 수 없습니다."
+                        )
+                    }
+                }
+            } catch (_: Throwable) {
+                // 에러 발생 시에도 실패 화면으로 전환
+                _uiState.update {
+                    it.copy(
+                        isSearching = false,
+                        mode = SearchUserMode.SEARCH_NOT_FOUND,
+                        foundUser = null,
+                        searchErrorMessage = "검색 중 오류가 발생했습니다."
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleClickRetrySearch() {
+        // 검색 실패 화면에서 "다시 시도" 눌렀을 때
+        resetToSearchInput()
+    }
+
+    private fun handleBackToSearch() {
+        // 검색 성공 화면에서 "다시 검색하기" 눌렀을 때
+        resetToSearchInput()
+    }
+
+    private fun resetToSearchInput() {
+        _uiState.update {
+            it.copy(
+                mode = SearchUserMode.SEARCH_INPUT,
+                isSearching = false,
+                searchErrorMessage = null,
+                foundUser = null,
+                relationshipName = "",
+                relationshipType = "",
+                relationshipTypeOptions = emptyList(),
+                verificationCodeInput = "",
+                verificationToken = "",
+                verificationCountdownSec = 0,
+                isVerificationValid = false,
+                memo = "",
+                isSubmitting = false,
+                submitErrorMessage = null
+            )
+        }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 등록 단계 진입/입력 로직
+    // ---------------------------------------------------------------------------------
+
+    private fun handleClickAddFriend() {
+        // 검색 성공 화면에서 "친구 추가하기" 눌렀을 때
+        val found = _uiState.value.foundUser ?: return
+
+        val targetPhone = found.phoneNumber
+        _uiState.update {
+            it.copy(
+                mode = SearchUserMode.REGISTER,
+                relationshipName = found.displayName,
+                relationshipTypeOptions = defaultRelationOptions(),
+                verificationCountdownSec = DEFAULT_VERIFY_COUNTDOWN_SEC,
+                submitErrorMessage = null
+            )
+        }
+
+        viewModelScope.launch {
+            // 인증번호 전송 요청
+            val sent = try {
+                repository.requestVerificationCode(
+                    phoneNumber = normalizePhoneNumber(targetPhone)
+                )
+            } catch (_: Throwable) {
+                false
+            }
+
+            if (!sent) {
+                _sideEffect.send(
+                    SearchUserUiSideEffect.ShowToast("인증번호 전송에 실패했습니다.")
+                )
+            } else {
+                _sideEffect.send(
+                    SearchUserUiSideEffect.ShowToast("인증번호를 전송했습니다.")
+                )
+            }
+        }
+    }
+
+    private fun handleRelationshipNameChange(value: String) {
+        _uiState.update { it.copy(relationshipName = value) }
+    }
+
+    private fun handleRelationshipTypeSelect(value: String) {
+        _uiState.update { it.copy(relationshipType = value) }
+    }
+
+    private fun handleVerificationCodeChange(value: String) {
+        _uiState.update {
+            it.copy(
+                verificationCodeInput = value,
+                // 코드 바꾸면 다시 미검증 상태로
+                isVerificationValid = false
+            )
+        }
+    }
+
+    private fun handleClickVerifyCode() {
+        val state = _uiState.value
+        val code = state.verificationCodeInput
+        val phone = state.foundUser?.phoneNumber ?: return
+
+        // 기본적인 입력 검증 (6자리)
+        if (code.length != 6) {
+            viewModelScope.launch {
+                _sideEffect.send(
+                    SearchUserUiSideEffect.ShowToast("6자리 인증번호를 입력하세요.")
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            val (verified, token) = try {
+                repository.verifyCode(
+                    phoneNumber = normalizePhoneNumber(phone),
+                    verificationCode = code,
+                    grants = "RELATIONSHIP_BIND"
+                )
+            } catch (_: Throwable) {
+                false to null
+            }
+
+            if (verified && !token.isNullOrBlank()) {
+                _uiState.update {
+                    it.copy(
+                        isVerificationValid = true,
+                        verificationToken = token
+                    )
+                }
+                _sideEffect.send(
+                    SearchUserUiSideEffect.ShowToast("인증이 완료되었습니다.")
+                )
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isVerificationValid = false,
+                        verificationToken = ""
+                    )
+                }
+                _sideEffect.send(
+                    SearchUserUiSideEffect.ShowToast("인증번호가 올바르지 않습니다.")
+                )
+            }
+        }
+    }
+
+    private fun handleMemoChange(value: String) {
+        _uiState.update { state ->
+            state.copy(
+                memo = value.take(state.memoMaxLen)
+            )
+        }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 등록 제출 / 완료 후 후처리
+    // ---------------------------------------------------------------------------------
+
+    private fun handleClickSubmitRegister() {
+        val state = _uiState.value
+        if (state.isSubmitting) return
+        if (!state.canSubmitRegister) return
+
+        val targetUser = state.foundUser ?: return
+
+        _uiState.update { it.copy(isSubmitting = true, submitErrorMessage = null) }
+
+        viewModelScope.launch {
+            val success = try {
+                repository.registerContact(
+                    targetUserId = targetUser.id,
+                    relationshipName = state.relationshipName,
+                    relationshipType = state.relationshipType,
+                    memo = state.memo,
+                    verificationToken = state.verificationToken
+                )
+            } catch (_: Throwable) {
+                false
+            }
+
+            if (success) {
+                // 성공 시 REGISTER_DONE 모드로 (완료 모달 띄우는 상태)
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        mode = SearchUserMode.REGISTER_DONE
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        submitErrorMessage = "등록에 실패했습니다. 다시 시도해주세요."
+                    )
+                }
+
+                _sideEffect.send(
+                    SearchUserUiSideEffect.ShowToast("등록에 실패했습니다.")
+                )
+            }
+        }
+    }
+
+    private fun handleClickGoToRegisterUser() {
+        // 완료 모달에서 "연락처 보기" / "추가된 사용자 보기" 등
+        val registeredUserId = _uiState.value.foundUser?.id ?: return
+
+        viewModelScope.launch {
+            _sideEffect.send(
+                SearchUserUiSideEffect.NavigateToRegisterUser(
+                    userId = registeredUserId
+                )
+            )
+        }
+    }
+
+    private fun handleClickSearchMore() {
+        // 완료 모달에서 "더 검색하기"
+        // 1) 상태를 초기 검색 단계로 돌리고
+        // 2) UI에게 초기화(포커스 등) 신호를 줄 수도 있음
+        _uiState.update {
+            it.copy(
+                mode = SearchUserMode.SEARCH_INPUT,
+                isSearching = false,
+                searchErrorMessage = null,
+                foundUser = null,
+                relationshipName = "",
+                relationshipType = "",
+                relationshipTypeOptions = emptyList(),
+                verificationCodeInput = "",
+                verificationToken = "",
+                verificationCountdownSec = 0,
+                isVerificationValid = false,
+                memo = "",
+                isSubmitting = false,
+                submitErrorMessage = null
+            )
+        }
+
+        viewModelScope.launch {
+            _sideEffect.send(
+                SearchUserUiSideEffect.BackToSearchStart
+            )
+        }
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 내부 헬퍼
+    // ---------------------------------------------------------------------------------
+
+    private fun defaultRelationOptions(): List<String> {
+        // TODO: 이건 나중에 서버에서 내려줄 수도 있음
+        return listOf("자녀", "부모", "배우자", "기타")
+    }
+
+    companion object {
+        private const val DEFAULT_VERIFY_COUNTDOWN_SEC = 180 // 예: 3분 타이머
+    }
+}
