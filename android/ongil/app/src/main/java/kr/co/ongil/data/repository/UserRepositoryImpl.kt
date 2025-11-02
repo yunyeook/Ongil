@@ -6,6 +6,7 @@ import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.model.auth.SendVerificationRequest
 import kr.co.ongil.data.model.auth.VerifyCodeRequest
 import kr.co.ongil.data.model.user.UserDto
+import kr.co.ongil.data.util.ErrorHandler
 import kr.co.ongil.domain.repository.UserRepository
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -61,6 +62,11 @@ class UserRepositoryImpl(
             // TODO: TokenManager에서 accessToken 가져오기
             val accessToken = "Bearer YOUR_ACCESS_TOKEN"
 
+            // API 주입 확인
+            if (userApi == null) {
+                throw IllegalStateException("UserApi가 주입되지 않았습니다. DI를 통해 주입해주세요.")
+            }
+
             // RequestBody 생성
             val namePart = name?.toRequestBody("text/plain".toMediaTypeOrNull())
             val birthPart = birth?.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -74,10 +80,6 @@ class UserRepositoryImpl(
             }
 
             // API 호출
-            if (userApi == null) {
-                throw IllegalStateException("UserApi가 주입되지 않았습니다. DI를 통해 주입해주세요.")
-            }
-
             val response = userApi.updateMyInfo(
                 accessToken = accessToken,
                 name = namePart,
@@ -89,7 +91,9 @@ class UserRepositoryImpl(
 
             Result.success(response.data.user)
         } catch (e: Exception) {
-            Result.failure(e)
+            // HTTP 에러를 ApiException으로 변환
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
         }
     }
 
@@ -109,7 +113,9 @@ class UserRepositoryImpl(
 
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            // HTTP 에러를 ApiException으로 변환
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
         }
     }
 
@@ -129,7 +135,9 @@ class UserRepositoryImpl(
 
             Result.success(response.data.verificationToken)
         } catch (e: Exception) {
-            Result.failure(e)
+            // HTTP 에러를 ApiException으로 변환
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
         }
     }
 }

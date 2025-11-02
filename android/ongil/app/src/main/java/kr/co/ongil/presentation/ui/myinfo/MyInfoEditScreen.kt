@@ -78,6 +78,19 @@ private fun MyInfoEditContent(
     onChangePasswordClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Snackbar 호스트 상태
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 에러 메시지 표시
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { errorMessage ->
+            snackbarHostState.showSnackbar(
+                message = errorMessage,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
     // 이미지 선택 런처 (한국어 타이틀)
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -108,13 +121,17 @@ private fun MyInfoEditContent(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(horizontal = 24.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.White
+    ) { paddingValues ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         // 상단 아바타
         Box(
             modifier = Modifier
@@ -216,6 +233,7 @@ private fun MyInfoEditContent(
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text("저장하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        }
         }
     }
 }
