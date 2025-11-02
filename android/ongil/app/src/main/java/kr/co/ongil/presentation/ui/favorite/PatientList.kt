@@ -1,8 +1,9 @@
 package kr.co.ongil.presentation.ui.favorite
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,44 +12,55 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.favorite.PatientCard
-import androidx.compose.foundation.layout.fillMaxWidth
+import kr.co.ongil.presentation.ui.favorite.PatientData
 
-// 환자 목록 섹션만 담당 (상단의 "+ 새로운 환자 등록" 버튼 포함 예정이라면 여기에 배치 가능)
 @Composable
 fun PatientList(
-    patients: List<PatientItem>,
+    patients: List<PatientData>,
     onCallClick: (Long) -> Unit,
-    onAddPatientClick: () -> Unit
+    onPatientCardClick: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit,
+    onAddPatientClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column {
+    Column(modifier = modifier) {
+
         GreenButton(
-            text = " + 새로운 환자 등록",
+            text = "+ 새로운 환자 등록",
             onClick = onAddPatientClick,
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 18.dp)
                 .fillMaxWidth()
-
         )
-        Spacer(modifier = Modifier.height(8.dp))
 
-        // 일부러 일단 레이지칼럼으로 묶어뒀는데, 필요하면 그냥 전체 다 렌더링하는걸로 바꿀게요
-        LazyColumn {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 0.dp,
+                bottom = 16.dp
+            )
+        ) {
             items(patients) { patient ->
                 PatientCard(
-                    patientLabel = "환자 ${patient.id}",
-                    basicInfo = patient.displayName,
+                    patientName = patient.name,
                     phoneNumber = patient.phoneNumber,
-                    onClickCard = { /* 환자 상세보기로 이동 */ },
-                    onClickIcon = { /* 여기는 전화 걸기로 이동해야됨 */ },
-                    modifier = Modifier
-                        .padding(
-                                bottom = 16.dp
+                    gender = patient.gender,
+                    onClickCard = {
+                        onPatientCardClick(
+                            patient.id,
+                            patient.name,
+                            patient.phoneNumber,
+                            patient.gender
                         )
-            )
-
+                    },
+                    onClickCall = {
+                        onCallClick(patient.id)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
-
     }
 }
 
@@ -60,26 +72,33 @@ fun PatientList(
 )
 fun PatientListPreview() {
     val samplePatients = listOf(
-        PatientItem(
+        PatientData(
             id = 1L,
-            displayName = "김철수 (남, 75세)",
-            phoneNumber = "010-1234-5678"
+            name = "김철수 할아버지",
+            phoneNumber = "010-1234-5678",
+            gender = "남성",
+            registeredDate = "2025-10-18T13:00:00Z"
         ),
-        PatientItem(
+        PatientData(
             id = 2L,
-            displayName = "이영희 (여, 68세)",
-            phoneNumber = "010-2345-6789"
+            name = "이영희 할머니",
+            phoneNumber = "010-2222-3333",
+            gender = "여성",
+            registeredDate = "2025-10-18T13:05:00Z"
         ),
-        PatientItem(
+        PatientData(
             id = 3L,
-            displayName = "박민수 (남, 82세)",
-            phoneNumber = "010-3456-7890"
+            name = "박민수 어르신",
+            phoneNumber = "010-9999-0000",
+            gender = "남성",
+            registeredDate = "2025-10-18T13:10:00Z"
         )
     )
 
     PatientList(
         patients = samplePatients,
-        onCallClick = { /* no-op for preview */ },
-        onAddPatientClick = { /* no-op for preview */ }
+        onCallClick = {  },
+        onPatientCardClick = { _, _, _, _ ->  },
+        onAddPatientClick = {  }
     )
 }

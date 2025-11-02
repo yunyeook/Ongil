@@ -1,7 +1,6 @@
 package kr.co.ongil.presentation.ui.Atest
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -9,17 +8,21 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
-import kr.co.ongil.presentation.ui.favorite.PlaceDetailScreen
-import kr.co.ongil.presentation.ui.favorite.PlaceDetailViewModel
+import kr.co.ongil.presentation.ui.placedetail.PlaceDetailScreen
+import kr.co.ongil.presentation.ui.placedetail.PlaceDetailViewModel
 import kr.co.ongil.data.repository.FavoriteRepository
-import kr.co.ongil.presentation.ui.navigation.Screen
+import kr.co.ongil.presentation.navigation.Screen
 import kr.co.ongil.presentation.ui.home.HomeScreen
+import android.net.Uri
+import kr.co.ongil.presentation.ui.patientdetail.PatientDetailScreen
+import kr.co.ongil.presentation.ui.patientdetail.PatientDetailViewModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+
 @Composable
 fun PlayGroundMJ() {
 
@@ -39,10 +42,31 @@ fun PlayGroundMJ() {
         // 즐겨찾기 화면
         composable(route = Screen.Favorite.route) {
             FavoriteScreen(
-                patientId = 1L, // TODO: 나중에 선택된 환자 ID로 교체
+                patientId = 1L,
                 onNavigateToPlaceDetail = { favoriteId, placeName, address ->
+                    val encodedName = Uri.encode(placeName)
+                    val encodedAddress = Uri.encode(address)
+
                     navController.navigate(
-                        Screen.PlaceDetail.createRoute( favoriteId, placeName, address)
+                        Screen.PlaceDetail.createRoute(
+                            favoriteId = favoriteId,
+                            placeName = encodedName,
+                            address = encodedAddress
+                        )
+                    )
+                },
+                onNavigateToPatientDetail = { id, name, phone, gender ->
+                    val encodedName = Uri.encode(name)
+                    val encodedPhone = Uri.encode(phone)
+                    val encodedGender = Uri.encode(gender)
+
+                    navController.navigate(
+                        Screen.PatientDetail.createRoute(
+                            patientId = id,
+                            name = encodedName,
+                            phoneNumber = encodedPhone,
+                            gender = encodedGender
+                        )
                     )
                 }
             )
@@ -113,6 +137,68 @@ fun PlayGroundMJ() {
                         navController.popBackStack()
                     })
                 }
+            )
+        }
+
+        // 환자 상세 화면
+        composable(
+            route = Screen.PatientDetail.route,
+            arguments = listOf(
+                navArgument("patientId") { type = NavType.LongType },
+                navArgument("name") { type = NavType.StringType },
+                navArgument("phoneNumber") { type = NavType.StringType },
+                navArgument("gender") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+
+            val patientId: Long =
+                backStackEntry.arguments?.getLong("patientId") ?: -1L
+            val nameArg =
+                backStackEntry.arguments?.getString("name")
+                    ?.let { Uri.decode(it) } ?: ""
+            val phoneArg =
+                backStackEntry.arguments?.getString("phoneNumber")
+                    ?.let { Uri.decode(it) } ?: ""
+            val genderArg =
+                backStackEntry.arguments?.getString("gender")
+                    ?.let { Uri.decode(it) } ?: ""
+
+            // 싱글톤 Repository 사용
+            val repository = remember { FavoriteRepository.getInstance() }
+
+            // Repository에서 실제 환자 데이터 조회
+            var actualPatientData by remember { mutableStateOf<kr.co.ongil.presentation.ui.favorite.PatientData?>(null) }
+
+            LaunchedEffect(patientId) {
+                actualPatientData = repository.getFavoritePatientDetail(patientId)
+            }
+
+            val viewModel = remember(actualPatientData) {
+                val patientData = actualPatientData
+                if (patientData != null) {
+                    PatientDetailViewModel(
+                        repository = repository,
+                        initialPatientId = patientData.id,
+                        initialName = patientData.name,
+                        initialPhoneNumber = patientData.phoneNumber,
+                        initialGender = patientData.gender
+                    )
+                } else {
+                    PatientDetailViewModel(
+                        repository = repository,
+                        initialPatientId = patientId,
+                        initialName = nameArg,
+                        initialPhoneNumber = phoneArg,
+                        initialGender = genderArg
+                    )
+                }
+            }
+
+            val uiState by viewModel.uiState.collectAsState()
+
+            PatientDetailScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

@@ -26,10 +26,10 @@ fun InputBox(
     placeholder: String = "",       // 플레이스홀더
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        // ⬆️ 상단 라벨
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
@@ -37,11 +37,11 @@ fun InputBox(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // ⬜ 인풋 박스
         TextField(
             value = value,
             onValueChange = onValueChange,
             placeholder = { Text(placeholder, color = Color(0xFF9CA3AF)) },
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)

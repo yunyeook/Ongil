@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.favorite
+package kr.co.ongil.presentation.ui.placedetail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

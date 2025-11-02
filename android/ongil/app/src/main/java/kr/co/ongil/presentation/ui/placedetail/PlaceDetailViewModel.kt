@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.favorite
+package kr.co.ongil.presentation.ui.placedetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,13 +9,6 @@ import kr.co.ongil.data.repository.FavoriteRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.asStateFlow
 
-data class PlaceDetailUiState(
-    val favoriteId: Long,
-    val placeName: String,
-    val address: String,
-    val isDefault: Boolean,
-    val patientId: Long
-)
 
 class PlaceDetailViewModel(
     private val repository: FavoriteRepository,
