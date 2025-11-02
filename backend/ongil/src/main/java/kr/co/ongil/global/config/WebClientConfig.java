@@ -3,11 +3,14 @@ package kr.co.ongil.global.config;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.http.codec.json.Jackson2JsonEncoder;
@@ -25,29 +28,17 @@ import java.util.concurrent.TimeUnit;
 public class WebClientConfig {
 
     /**
-     * 관대한 ObjectMapper
-     * - 알 수 없는 필드 무시
-     * - 제어 문자 허용 (외부 API가 JSON 표준을 안 지킬 때 대비)
-     */
-    @Bean
-    public ObjectMapper webClientObjectMapper() {
-        return new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
-    }
-
-    /**
      * ExchangeStrategies (메시지 크기 제한, 코덱 설정)
      */
     @Bean
-    public ExchangeStrategies webClientExchangeStrategies(ObjectMapper webClientObjectMapper) {
+    public ExchangeStrategies webClientExchangeStrategies(ObjectMapper objectMapper) {
         return ExchangeStrategies.builder()
             .codecs(configurer -> {
                 configurer.defaultCodecs().jackson2JsonEncoder(
-                    new Jackson2JsonEncoder(webClientObjectMapper)
+                    new Jackson2JsonEncoder(objectMapper)
                 );
                 configurer.defaultCodecs().jackson2JsonDecoder(
-                    new Jackson2JsonDecoder(webClientObjectMapper)
+                    new Jackson2JsonDecoder(objectMapper)
                 );
                 configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024); // 10MB
             })

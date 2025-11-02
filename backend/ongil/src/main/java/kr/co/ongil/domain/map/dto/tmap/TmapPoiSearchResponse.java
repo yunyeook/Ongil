@@ -1,11 +1,13 @@
 package kr.co.ongil.domain.map.dto.tmap;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
 /**
  * Tmap POI 통합 검색 API 응답
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
+
 public record TmapPoiSearchResponse(
     SearchPoiInfo searchPoiInfo
 ) {
@@ -13,6 +15,7 @@ public record TmapPoiSearchResponse(
     /**
      * 검색 결과 정보
      */
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record SearchPoiInfo(
         String totalCount,  // 전체 검색 결과 수
 
@@ -28,6 +31,7 @@ public record TmapPoiSearchResponse(
     /**
      * POI 목록 래퍼
      */
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Pois(
         List<Poi> poi  // POI 리스트
     ) {
@@ -37,6 +41,7 @@ public record TmapPoiSearchResponse(
     /**
      * POI (Point of Interest) 상세 정보
      */
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Poi(
         String id,  // POI 고유 ID
 
@@ -90,13 +95,14 @@ public record TmapPoiSearchResponse(
     ) {
 
     }
+    @JsonIgnoreProperties(ignoreUnknown = true)
 
     public record NewAddressList(
         List<NewAddress> newAddress
     ) {
 
     }
-
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record NewAddress(
         String centerLat,
 

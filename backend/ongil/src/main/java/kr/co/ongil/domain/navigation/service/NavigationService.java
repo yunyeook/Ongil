@@ -48,7 +48,6 @@ public class NavigationService {
         // 2. 시간 계산
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expectedArrival = now.plusSeconds(route.totalTime());
-        LocalDateTime safetyDeadline = expectedArrival.plusMinutes(30);
 
         // 3. DB 로그 생성 (ID 생성)
         NavigationLog navigationLog = logService.createLog(
@@ -72,7 +71,6 @@ public class NavigationService {
             route,
             now,
             expectedArrival,
-            safetyDeadline,
             request.getInitiatedBy()
         );
     }

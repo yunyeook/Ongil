@@ -25,9 +25,6 @@ public class NavigationSessionResponse {
     @Schema(description = "예상 도착 시간")
     private LocalDateTime expectedArrival;
 
-    @Schema(description = "안전 제한 시간")
-    private LocalDateTime safetyDeadline;
-
     @Schema(description = "시작 주체", example = "PATIENT")
     private String initiatedBy;
 
@@ -40,7 +37,6 @@ public class NavigationSessionResponse {
         RouteResponse route,
         LocalDateTime startedAt,
         LocalDateTime expectedArrival,
-        LocalDateTime safetyDeadline,
         String initiatedBy
     ) {
         return NavigationSessionResponse.builder()
@@ -48,7 +44,6 @@ public class NavigationSessionResponse {
             .route(route)
             .startedAt(startedAt)
             .expectedArrival(expectedArrival)
-            .safetyDeadline(safetyDeadline)
             .initiatedBy(initiatedBy)
             .build();
     }

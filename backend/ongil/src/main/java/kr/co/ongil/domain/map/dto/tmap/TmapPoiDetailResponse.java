@@ -1,10 +1,12 @@
 package kr.co.ongil.domain.map.dto.tmap;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record TmapPoiDetailResponse(
     PoiDetailInfo poiDetailInfo
 ) {
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record PoiDetailInfo(
 
         String id,
