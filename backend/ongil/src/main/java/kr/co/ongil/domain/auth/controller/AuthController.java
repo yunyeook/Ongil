@@ -2,6 +2,8 @@ package kr.co.ongil.domain.auth.controller;
 
 import kr.co.ongil.domain.auth.service.AuthService;
 import kr.co.ongil.domain.auth.dto.request.RegisterRequest;
+import kr.co.ongil.domain.auth.dto.request.LoginRequest;
+import kr.co.ongil.domain.auth.dto.response.LoginResponse;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import kr.co.ongil.global.exception.BusinessException;
@@ -31,8 +33,16 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
     public ResponseEntity<ApiResponse<String>> register(@Valid @RequestBody RegisterRequest request) {
-        
+
         authService.register(request);
         return ResponseEntity.ok(ApiResponse.success(ResponseMessage.SIGNUP_SUCCESS.getMessage()));
+    }
+
+    @PostMapping("/login")
+    @Operation(summary = "로그인", description = "전화번호와 비밀번호로 로그인합니다.")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+
+        LoginResponse loginResponse = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.success(ResponseMessage.LOGIN_SUCCESS.getMessage(), loginResponse));
     }
 }
