@@ -39,12 +39,11 @@ import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 
 @Composable
 fun AppNavGraph(
-    navController: NavHostController,
-    startDestination: String = Routes.MyInfo.route
+    navController: NavHostController
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Screen.Home.route
     ) {
         // 홈
         composable(Screen.Home.route) {
