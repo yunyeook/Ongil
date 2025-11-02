@@ -7,14 +7,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kr.co.ongil.data.model.call.toCallSummary
+import kr.co.ongil.data.model.call.toContactInfo
+import kr.co.ongil.data.model.call.toMockChatMessages
+import kr.co.ongil.domain.repository.CallRepository
 import kr.co.ongil.presentation.uistate.*
 
 /**
  * 통화 상세 정보 화면 ViewModel
  */
 class CallDetailViewModel(
+    private val callRepository: CallRepository? = null
     // TODO: DI(Hilt/Koin)로 CallRepository 주입
-    // private val callRepository: CallRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CallDetailUiState())
@@ -39,43 +43,72 @@ class CallDetailViewModel(
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // TODO: Repository에서 통화 상세 정보 가져오기
-                // val result = callRepository?.getCallDetail(callLogId)
-
-                // Mock 데이터 사용
-                val mockContactInfo = ContactInfo(
-                    initials = "이지",
-                    name = "이지현",
-                    phone = "010-1234-5678",
-                    badge = "VoIP",
-                    isEmergency = true
-                )
-
-                val mockCallSummary = CallSummary(
-                    direction = "발신 통화",
-                    duration = "5분 12초",
-                    location = "서울시 강남구 역삼동",
-                    date = "2024년 10월 28일",
-                    startTime = "오후 3:24:15",
-                    endTime = "오후 3:29:27"
-                )
-
-                val mockMessages = listOf(
-                    ChatMessage("CareLink 응급상담센터입니다. 어떤 도움이 필요하신가요?", "15:24", isMine = false),
-                    ChatMessage("아, 안녕하세요. 갑자기 가슴이 너무 아파서… 숨쉬기도 힘들어요.", "15:24", isMine = true),
-                    ChatMessage("네, 상황을 파악하겠습니다. 현재 몇 살이시고, 기존에 앓고 계신 질병이 있으신가요?", "15:24", isMine = false),
-                    ChatMessage("57세이고… 고혈압 약을 먹고 있어요. 가슴 가운데가 꽉 조이는 것 같아요.", "15:25", isMine = true),
-                    ChatMessage("알겠습니다. 지금 계시는 위치를 알려주시고, 즉시 119에 연계해드리겠습니다.", "15:25", isMine = false),
-                    ChatMessage("서울시 강남구 역삼동이에요… 제발 빨리 도와주세요.", "15:26", isMine = true)
-                )
-
-                _uiState.update {
-                    it.copy(
-                        contactInfo = mockContactInfo,
-                        callSummary = mockCallSummary,
-                        messages = mockMessages,
-                        isLoading = false
+                if (callRepository == null) {
+                    // Repository가 없으면 Mock 데이터 사용
+                    val mockContactInfo = ContactInfo(
+                        initials = "이지",
+                        name = "이지현",
+                        phone = "010-1234-5678",
+                        badge = "VoIP",
+                        isEmergency = true
                     )
+
+                    val mockCallSummary = CallSummary(
+                        direction = "발신 통화",
+                        duration = "5분 12초",
+                        location = "서울시 강남구 역삼동",
+                        date = "2024년 10월 28일",
+                        startTime = "오후 3:24:15",
+                        endTime = "오후 3:29:27"
+                    )
+
+                    val mockMessages = listOf(
+                        ChatMessage("CareLink 응급상담센터입니다. 어떤 도움이 필요하신가요?", "15:24", isMine = false),
+                        ChatMessage("아, 안녕하세요. 갑자기 가슴이 너무 아파서… 숨쉬기도 힘들어요.", "15:24", isMine = true),
+                        ChatMessage("네, 상황을 파악하겠습니다. 현재 몇 살이시고, 기존에 앓고 계신 질병이 있으신가요?", "15:24", isMine = false),
+                        ChatMessage("57세이고… 고혈압 약을 먹고 있어요. 가슴 가운데가 꽉 조이는 것 같아요.", "15:25", isMine = true),
+                        ChatMessage("알겠습니다. 지금 계시는 위치를 알려주시고, 즉시 119에 연계해드리겠습니다.", "15:25", isMine = false),
+                        ChatMessage("서울시 강남구 역삼동이에요… 제발 빨리 도와주세요.", "15:26", isMine = true)
+                    )
+
+                    _uiState.update {
+                        it.copy(
+                            contactInfo = mockContactInfo,
+                            callSummary = mockCallSummary,
+                            messages = mockMessages,
+                            isLoading = false
+                        )
+                    }
+                    return@launch
+                }
+
+                // Repository에서 통화 상세 정보 가져오기
+                val result = callRepository.getCallDetail(callLogId)
+
+                result.onSuccess { callDetail ->
+                    // TODO: 현재 로그인된 사용자 ID 가져오기
+                    val currentUserId = 1L
+
+                    // DTO → UI 모델 변환
+                    val contactInfo = callDetail.toContactInfo(currentUserId)
+                    val callSummary = callDetail.toCallSummary(currentUserId)
+                    val messages = callDetail.toMockChatMessages()
+
+                    _uiState.update {
+                        it.copy(
+                            contactInfo = contactInfo,
+                            callSummary = callSummary,
+                            messages = messages,
+                            isLoading = false
+                        )
+                    }
+                }.onFailure { exception ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message ?: "통화 상세 정보를 불러오는데 실패했습니다."
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update {
