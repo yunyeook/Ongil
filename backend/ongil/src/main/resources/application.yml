@@ -82,3 +82,9 @@ tmap:
   app-key: ${TMAP_APP_KEY}
   api:
     base-url: https://apis.openapi.sk.com
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET}
+  verification:
+    expiration: 300000 # 5분 (밀리초)
