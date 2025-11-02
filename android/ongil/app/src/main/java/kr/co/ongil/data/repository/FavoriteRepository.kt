@@ -1,7 +1,8 @@
 package kr.co.ongil.data.repository
 
 import kr.co.ongil.presentation.ui.favorite.PlaceData
-
+import kr.co.ongil.presentation.ui.favorite.PatientData
+import kr.co.ongil.data.model.favorite.FavoritePlaceDto
 class FavoriteRepository {
 
     companion object {
@@ -16,6 +17,64 @@ class FavoriteRepository {
     }
 
     // 앱 내부 임시 저장소 (백엔드 나오면 Retrofit/DB로 교체)
+
+    // Patient 더미 데이터
+    private val favoritePatients: MutableList<PatientData> =
+        mutableListOf(
+            PatientData(
+                id = 1L,
+                name = "김철수 할아버지",
+                phoneNumber = "010-1234-5678",
+                gender = "남성",
+                registeredDate = "2024-01-15"
+            ),
+            PatientData(
+                id = 2L,
+                name = "이영희 할머니",
+                phoneNumber = "010-9876-5432",
+                gender = "여성",
+                registeredDate = "2024-02-20"
+            ),
+            PatientData(
+                id = 3L,
+                name = "박민수 어르신",
+                phoneNumber = "010-5555-2222",
+                gender = "남성",
+                registeredDate = "2024-03-10"
+            )
+        )
+
+
+    suspend fun updatePatientDetail(
+        updatedId: Long,
+        newName: String,
+        newPhoneNumber: String,
+        newGender: String
+    ): Boolean {
+        val index = favoritePatients.indexOfFirst { it.id == updatedId }
+        if (index == -1) return false
+
+        val old = favoritePatients[index]
+        favoritePatients[index] = old.copy(
+            name = newName,
+            phoneNumber = newPhoneNumber,
+            gender = newGender
+            // registeredDate는 유지 (환자 등록 시점이므로 바뀌지 않는 값)
+        )
+
+        return true
+    }
+
+    suspend fun deletePatient(
+        patientId: Long
+    ): Boolean {
+        return favoritePatients.removeIf { it.id == patientId }
+    }
+
+
+
+
+    // Place 더미 데이터
     private val favoritePlacesPerPatient: MutableMap<Long, MutableList<PlaceData>> =
         mutableMapOf(
             1L to mutableListOf(
@@ -106,5 +165,33 @@ class FavoriteRepository {
         }
 
         return found
+    }
+
+    // ===== Patient 관련 메서드들 =====
+
+    // 즐겨찾기 환자 목록 조회
+    suspend fun getFavoritePatients(): List<kr.co.ongil.presentation.ui.favorite.PatientData> {
+        // TODO: 나중에 Retrofit으로 교체, 지금은 더미
+        return favoritePatients.toList()
+    }
+
+    // 환자 상세 조회
+    suspend fun getFavoritePatientDetail(patientId: Long): kr.co.ongil.presentation.ui.favorite.PatientData? {
+        return favoritePatients.find { it.id == patientId }
+    }
+
+    // 환자 추가
+    suspend fun addFavoritePatient(patientData: kr.co.ongil.presentation.ui.favorite.PatientData): Boolean {
+        return try {
+            favoritePatients.add(patientData)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // 환자 제거
+    suspend fun removeFavoritePatient(patientId: Long): Boolean {
+        return favoritePatients.removeIf { it.id == patientId }
     }
 }

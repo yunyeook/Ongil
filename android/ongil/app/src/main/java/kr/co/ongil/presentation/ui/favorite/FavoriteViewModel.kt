@@ -28,7 +28,8 @@ class FavoriteViewModel(
 
     fun loadData(patientId: Long) {
         viewModelScope.launch {
-            val patients = emptyList<PatientItem>()
+            // 로컬 저장소(Repository)에서 즐겨찾기 환자 / 장소 목록 불러오기
+            val patients = favoriteRepository.getFavoritePatients()
             val places = favoriteRepository.getFavoritePlaces(patientId)
 
             _uiState.update {
@@ -48,6 +49,10 @@ class FavoriteViewModel(
 
             is FavoriteUiEvent.OnCallClick -> {
                 // TODO 전화걸기 로직 넣기
+            }
+
+            is FavoriteUiEvent.OnPatientCardClick -> {
+                // TODO 환자 상세 화면으로 네비게이션 로직 넣기
             }
 
             FavoriteUiEvent.OnAddPatientClick -> {

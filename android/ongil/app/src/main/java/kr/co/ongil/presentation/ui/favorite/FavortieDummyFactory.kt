@@ -13,10 +13,8 @@ class FavoriteDummyFactory(
 
         if (modelClass.isAssignableFrom(FavoriteViewModel::class.java)) {
 
-            // 싱글톤 Repository 주입
             val repo = FavoriteRepository.getInstance()
 
-            // FavoriteViewModel의 생성자에 우리가 직접 값을 넣어서 만든다
             @Suppress("UNCHECKED_CAST")
             return FavoriteViewModel(
                 favoriteRepository = repo,

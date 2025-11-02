@@ -6,7 +6,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
-
+import kr.co.ongil.presentation.ui.favorite.PatientList
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -35,7 +35,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun FavoriteScreen(
     patientId: Long? = null,
-    onNavigateToPlaceDetail: (favoriteId:Long, placeName: String, address: String) -> Unit
+    onNavigateToPlaceDetail: (favoriteId: Long, placeName: String, address: String) -> Unit,
+    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit
 )
 //    viewModel: FavoriteViewModel = viewModel()
 //    - 이거 더미테스트용이니까 일단 빼고 나중에 위에 집어넣기
@@ -112,8 +113,18 @@ fun FavoriteScreen(
                         onCallClick = { id ->
                             viewModel.onEvent(FavoriteUiEvent.OnCallClick(id))
                         },
+                        onPatientCardClick = { id, name, phoneNumber, gender ->
+                            viewModel.onEvent(FavoriteUiEvent.OnPatientCardClick(id))
+                            onNavigateToPatientDetail(
+                                id,
+                                name,
+                                phoneNumber,
+                                gender
+                            )
+                        },
                         onAddPatientClick = {
                             viewModel.onEvent(FavoriteUiEvent.OnAddPatientClick)
+                            // TODO: 신규 환자 등록 화면으로 네비게이션 연결 예정
                         }
                     )
                 }
@@ -226,55 +237,5 @@ private fun PlaceholderPlacesSection(
             color = Color(0xFF9CA3AF),
             lineHeight = 20.sp
         )
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFF5F5F5)
-@Composable
-fun FavoriteScreenPreviewPatients() {
-
-    val dummyPatients = listOf(
-        PatientItem(
-            id = 1L,
-            displayName = "김철수 (남, 75세)",
-            phoneNumber = "010-1234-5678"
-        ),
-        PatientItem(
-            id = 2L,
-            displayName = "이영희 (여, 68세)",
-            phoneNumber = "010-2345-6789"
-        )
-    )
-
-    Surface(color = Color(0xFFF9FAFB)) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TopHeaderBar(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 20.dp)
-            )
-
-            FavoriteTitleSection(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FavoriteTabBar(
-                selectedTab = FavoriteTab.PATIENTS,
-                onTabSelected = {},
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            PatientList(
-                patients = dummyPatients,
-                onCallClick = {},
-                onAddPatientClick = {}
-            )
-        }
     }
 }
