@@ -2,7 +2,9 @@ package kr.co.ongil.domain.navigation.service;
 
 import kr.co.ongil.domain.map.dto.response.RouteResponse;
 import kr.co.ongil.domain.map.service.MapService;
+import kr.co.ongil.domain.navigation.dto.request.EndNavigationRequest;
 import kr.co.ongil.domain.navigation.dto.request.StartNavigationRequest;
+import kr.co.ongil.domain.navigation.dto.response.EndNavigationResponse;
 import kr.co.ongil.domain.navigation.dto.response.NavigationSessionResponse;
 import kr.co.ongil.domain.navigation.entity.NavigationLog;
 import kr.co.ongil.global.exception.BusinessException;
@@ -74,4 +76,34 @@ public class NavigationService {
             request.getInitiatedBy()
         );
     }
+
+    /**
+     * 길안내 종료
+     */
+    public EndNavigationResponse endNavigation(EndNavigationRequest request) {
+
+        log.info("길안내 종료: patientId={}, navigationId={}",
+            request.getPatientId(), request.getNavigationId());
+
+        // 1. DB 로그 완료 처리
+        NavigationLog completedLog = logService.completeLog(
+            request.getNavigationId(),
+            request.getIsSuccessful()
+        );
+
+        // 2. Redis 세션 삭제
+        redisService.endSession(request.getPatientId());
+
+        log.info("길안내 종료 완료: navigationId={}, isSuccessful={}",
+            request.getNavigationId(), completedLog.getIsSuccessful());
+
+        // 3. 응답
+        return EndNavigationResponse.of(
+            request.getNavigationId().toString(),
+            completedLog.getStartedAt(),
+            completedLog.getEndedAt(),
+            completedLog.getIsSuccessful()
+        );
+    }
+
 }

@@ -31,9 +31,10 @@ public enum ResponseMessage {
     FAVORITE_PLACE_UPDATED("자주 가는 장소가 수정되었습니다."),
     FAVORITE_PLACE_DELETED("자주 가는 장소가 삭제되었습니다."),
     ROUTE_FOUND("경로를 성공적으로 조회하였습니다."),
-
+    
     //Navigation
     NAVIGATION_START_SUCCESS("길안내가 시작되었습니다."),
+    NAVIGATION_END_SUCCESS("길안내가 종료되었습니다."),
 
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),

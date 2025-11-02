@@ -34,16 +34,16 @@ public class NavigationLogService {
     }
 
     /**
-     * 길안내 종료
+     * 로그 완료 처리
      */
     @Transactional
-    public void completeLog(Long navigationId, Boolean isSuccessful) {
+    public NavigationLog completeLog(Long navigationId, Boolean isSuccessful) {
         NavigationLog navigationLog = logRepository.findById(navigationId)
             .orElseThrow(() -> new BusinessException(ErrorCode.NAVIGATION_LOG_NOT_FOUND));
 
         navigationLog.complete(LocalDateTime.now(), isSuccessful);
-        logRepository.save(navigationLog);
 
         log.info("길안내 로그 완료: navigationId={}, isSuccessful={}", navigationId, isSuccessful);
+        return navigationLog;
     }
 }
