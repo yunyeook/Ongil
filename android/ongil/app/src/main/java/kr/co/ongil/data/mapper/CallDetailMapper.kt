@@ -1,7 +1,7 @@
-package kr.co.ongil.data.model.call
+package kr.co.ongil.data.mapper
 
+import kr.co.ongil.data.model.call.CallDetailDto
 import kr.co.ongil.presentation.uistate.CallSummary
-import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.ChatMessage
 import kr.co.ongil.presentation.uistate.ContactInfo
 import java.time.LocalDateTime

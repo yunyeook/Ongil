@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kr.co.ongil.data.model.call.toCallSummary
-import kr.co.ongil.data.model.call.toContactInfo
-import kr.co.ongil.data.model.call.toMockChatMessages
+import kr.co.ongil.data.mapper.toCallSummary
+import kr.co.ongil.data.mapper.toContactInfo
+import kr.co.ongil.data.mapper.toMockChatMessages
 import kr.co.ongil.domain.repository.CallRepository
 import kr.co.ongil.presentation.uistate.*
 

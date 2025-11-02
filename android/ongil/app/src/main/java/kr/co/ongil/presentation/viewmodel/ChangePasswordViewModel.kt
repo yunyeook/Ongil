@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kr.co.ongil.core.utils.PasswordValidationResult
+import kr.co.ongil.core.utils.validatePasswordChange
 import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.presentation.uistate.ChangePasswordEvent
 import kr.co.ongil.presentation.uistate.ChangePasswordUiState
@@ -63,9 +65,21 @@ class ChangePasswordViewModel(
     private fun changePassword() {
         val currentState = _uiState.value
 
-        // 유효성 검사
-        if (!validatePassword(currentState)) {
-            return
+        // 유효성 검사 (ValidationUtils 사용)
+        val validationResult = validatePasswordChange(
+            currentPassword = currentState.currentPassword,
+            newPassword = currentState.newPassword,
+            confirmPassword = currentState.confirmPassword
+        )
+
+        when (validationResult) {
+            is PasswordValidationResult.Invalid -> {
+                _uiState.update { it.copy(error = validationResult.message) }
+                return
+            }
+            is PasswordValidationResult.Valid -> {
+                // 검증 통과, API 호출 진행
+            }
         }
 
         viewModelScope.launch {
@@ -93,49 +107,5 @@ class ChangePasswordViewModel(
                 }
             }
         }
-    }
-
-    /**
-     * 비밀번호 유효성 검사
-     */
-    private fun validatePassword(state: ChangePasswordUiState): Boolean {
-        return when {
-            state.currentPassword.isBlank() -> {
-                _uiState.update { it.copy(error = "현재 비밀번호를 입력해주세요.") }
-                false
-            }
-            state.newPassword.isBlank() -> {
-                _uiState.update { it.copy(error = "새 비밀번호를 입력해주세요.") }
-                false
-            }
-            state.newPassword.length < 8 -> {
-                _uiState.update { it.copy(error = "비밀번호는 8자 이상이어야 합니다.") }
-                false
-            }
-            !isValidPasswordFormat(state.newPassword) -> {
-                _uiState.update { it.copy(error = "영문, 숫자, 특수문자를 포함해야 합니다.") }
-                false
-            }
-            state.newPassword != state.confirmPassword -> {
-                _uiState.update { it.copy(error = "비밀번호가 일치하지 않습니다.") }
-                false
-            }
-            state.currentPassword == state.newPassword -> {
-                _uiState.update { it.copy(error = "현재 비밀번호와 새 비밀번호가 같습니다.") }
-                false
-            }
-            else -> true
-        }
-    }
-
-    /**
-     * 비밀번호 형식 검사 (영문, 숫자, 특수문자 포함)
-     */
-    private fun isValidPasswordFormat(password: String): Boolean {
-        val hasLetter = password.any { it.isLetter() }
-        val hasDigit = password.any { it.isDigit() }
-        val hasSpecialChar = password.any { !it.isLetterOrDigit() }
-
-        return hasLetter && hasDigit && hasSpecialChar
     }
 }

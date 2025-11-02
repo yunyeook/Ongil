@@ -1,10 +1,10 @@
-package kr.co.ongil.data.model.call
+package kr.co.ongil.data.mapper
 
+import kr.co.ongil.data.model.call.CallLogDto
 import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 
 /**
  * CallLogDto를 RecentCallUi로 변환
