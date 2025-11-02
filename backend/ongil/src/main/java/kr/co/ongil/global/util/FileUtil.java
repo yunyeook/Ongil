@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Slf4j
 @Component
-public class FileService {
+public class FileUtil {
 
     @Value("${file.upload.path:/uploads/}")
     private String basePath;

@@ -5,7 +5,7 @@ import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.entity.Provider;
 import kr.co.ongil.domain.user.entity.UserType;
 import kr.co.ongil.domain.user.repository.UserRepository;
-import kr.co.ongil.global.util.FileService;
+import kr.co.ongil.global.util.FileUtil;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final FileService fileService;
+    private final FileUtil fileUtil;
     private final UserRepository userRepository;
 
     public void register(RegisterRequest request) {
@@ -28,7 +28,7 @@ public class AuthService {
         }
 
         // 프로필 이미지 처리
-        String profileImagePath = fileService.saveProfileImage(request.getProfileImage());
+        String profileImagePath = fileUtil.saveProfileImage(request.getProfileImage());
 
         // User 엔티티 생성
         User user = User.builder()
