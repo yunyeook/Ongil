@@ -37,9 +37,6 @@ class RecentCallsViewModel(
             is RecentCallsEvent.UpdateSearchQuery -> {
                 updateSearchQuery(event.query)
             }
-            is RecentCallsEvent.OnCallClick -> {
-                handleCallClick(event.call)
-            }
             is RecentCallsEvent.OnInfoClick -> {
                 handleInfoClick(event.call)
             }
@@ -130,15 +127,6 @@ class RecentCallsViewModel(
                 }
             }
         }
-    }
-
-    /**
-     * 통화 버튼 클릭 처리
-     */
-    private fun handleCallClick(call: RecentCallUi) {
-        // TODO: 통화 기능 구현
-        // 예: phoneCallManager.makeCall(call.nameOrNumber, call.type)
-        println("통화: ${call.nameOrNumber} (${call.type})")
     }
 
     /**

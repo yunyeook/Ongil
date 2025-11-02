@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +29,6 @@ private val Accent = Color(0xFF8CA898)
 @Composable
 fun CallListItem(
     item: RecentCallUi,
-    onCallClick: () -> Unit,
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -62,9 +60,8 @@ fun CallListItem(
                 modifier = Modifier.weight(1f)
             )
 
-            // 우측 아이콘들
+            // 우측 아이콘
             CallActions(
-                onCallClick = onCallClick,
                 onInfoClick = onInfoClick
             )
         }
@@ -143,34 +140,19 @@ private fun CallInfo(
 }
 
 /**
- * 통화 액션 버튼들 (통화, 상세)
+ * 통화 액션 버튼 (상세)
  */
 @Composable
 private fun CallActions(
-    onCallClick: () -> Unit,
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Icon(
+        imageVector = Icons.Outlined.Info,
+        contentDescription = "상세",
+        tint = Color(0xFF8F9A9E),
         modifier = modifier
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Call,
-            contentDescription = "통화",
-            tint = Accent,
-            modifier = Modifier
-                .size(22.dp)
-                .clickable(onClick = onCallClick)
-        )
-        Spacer(Modifier.width(10.dp))
-        Icon(
-            imageVector = Icons.Outlined.Info,
-            contentDescription = "상세",
-            tint = Color(0xFF8F9A9E),
-            modifier = Modifier
-                .size(20.dp)
-                .clickable(onClick = onInfoClick)
-        )
-    }
+            .size(20.dp)
+            .clickable(onClick = onInfoClick)
+    )
 }

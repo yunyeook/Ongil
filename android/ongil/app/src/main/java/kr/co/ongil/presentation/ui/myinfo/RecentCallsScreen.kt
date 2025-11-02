@@ -121,7 +121,7 @@ private fun SearchBar(
         shape = RoundedCornerShape(24.dp),
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 12.dp),
+            .padding(top = 8.dp, bottom = 16.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color(0xFFE6EBE9),
             unfocusedBorderColor = Color(0xFFF1F3F2),
@@ -149,7 +149,6 @@ private fun CallList(
         items(calls, key = { it.id }) { call ->
             CallListItem(
                 item = call,
-                onCallClick = { onEvent(RecentCallsEvent.OnCallClick(call)) },
                 onInfoClick = { onEvent(RecentCallsEvent.OnInfoClick(call)) }
             )
         }

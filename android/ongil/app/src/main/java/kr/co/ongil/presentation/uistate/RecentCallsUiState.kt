@@ -37,8 +37,7 @@ sealed interface RecentCallsEvent {
     // 검색
     data class UpdateSearchQuery(val query: String) : RecentCallsEvent
 
-    // 통화 액션
-    data class OnCallClick(val call: RecentCallUi) : RecentCallsEvent
+    // 액션
     data class OnInfoClick(val call: RecentCallUi) : RecentCallsEvent
 
     // 데이터 로드
