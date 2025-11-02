@@ -1,5 +1,10 @@
 package kr.co.ongil.presentation.ui.myinfo
 
+import android.content.res.Configuration
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,13 +14,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,8 +28,23 @@ import kr.co.ongil.presentation.ui.components.LabeledOutlinedField
 import kr.co.ongil.presentation.uistate.MyInfoEditEvent
 import kr.co.ongil.presentation.uistate.MyInfoEditUiState
 import kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel
+import java.util.*
 
 private val Accent = Color(0xFF8CA898)
+
+/**
+ * 날짜 형식 변환 함수
+ */
+// YYYYMMDD → YYYY.MM.DD
+private fun formatDateForDisplay(date: String): String {
+    if (date.length != 8) return date
+    return "${date.substring(0, 4)}.${date.substring(4, 6)}.${date.substring(6, 8)}"
+}
+
+// YYYY.MM.DD → YYYYMMDD
+private fun formatDateForStorage(date: String): String {
+    return date.replace(".", "")
+}
 
 /**
  * 내 정보 수정 화면 (ViewModel 기반)
@@ -59,6 +78,36 @@ private fun MyInfoEditContent(
     onChangePasswordClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 이미지 선택 런처 (한국어 타이틀)
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri?.let {
+            onEvent(MyInfoEditEvent.OnImageSelected(it.toString()))
+        } ?: onEvent(MyInfoEditEvent.DismissImagePicker)
+    }
+
+    // showImagePicker 상태 감지
+    LaunchedEffect(uiState.showImagePicker) {
+        if (uiState.showImagePicker) {
+            imagePickerLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        }
+    }
+
+    // 날짜 선택 다이얼로그
+    if (uiState.showDatePicker) {
+        BirthDatePickerDialog(
+            onDateSelected = { dateString ->
+                onEvent(MyInfoEditEvent.OnDateSelected(dateString))
+            },
+            onDismiss = {
+                onEvent(MyInfoEditEvent.DismissDatePicker)
+            }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -119,8 +168,12 @@ private fun MyInfoEditContent(
         // 생년월일
         LabeledOutlinedField(
             label = "생년월일",
-            value = uiState.birth,
-            onValueChange = { onEvent(MyInfoEditEvent.UpdateBirth(it)) },
+            value = formatDateForDisplay(uiState.birth),
+            onValueChange = { newValue ->
+                // 사용자가 직접 입력하는 경우 처리 (선택 사항)
+                val formatted = formatDateForStorage(newValue)
+                onEvent(MyInfoEditEvent.UpdateBirth(formatted))
+            },
             trailing = {
                 IconButton(onClick = { onEvent(MyInfoEditEvent.PickBirthDate) }) {
                     Icon(Icons.Outlined.CalendarToday, contentDescription = "날짜", tint = Color(0xFF7B8A8D))
@@ -167,13 +220,78 @@ private fun MyInfoEditContent(
     }
 }
 
+/**
+ * 생년월일 선택 다이얼로그 (한국어)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BirthDatePickerDialog(
+    onDateSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val locale = Locale.KOREA
+
+    // 한국어 환경 설정
+    val configuration = Configuration()
+    configuration.setLocale(locale)
+
+    val context = LocalContext.current
+    val localizedContext = remember(locale) {
+        context.createConfigurationContext(configuration)
+    }
+
+    // DatePicker 상태
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis()
+    )
+
+    CompositionLocalProvider(
+        LocalContext provides localizedContext
+    ) {
+        DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val calendar = Calendar.getInstance(locale)
+                            calendar.timeInMillis = millis
+                            val year = calendar.get(Calendar.YEAR)
+                            val month = calendar.get(Calendar.MONTH) + 1
+                            val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+                            // YYYYMMDD 형식으로 변환 (저장용)
+                            val dateString = String.format(locale, "%04d%02d%02d", year, month, day)
+                            onDateSelected(dateString)
+                        } ?: onDismiss()
+                    }
+                ) {
+                    Text("확인")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("취소")
+                }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                title = {
+                    Text("생년월일 선택", modifier = Modifier.padding(16.dp))
+                }
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun PreviewMyInfoEditScreen_All() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         val previewViewModel = MyInfoEditViewModel(
             initialName = "김민수",
-            initialBirth = "1972.10.29",
+            initialBirth = "19721029",  // YYYYMMDD 형식으로 저장
             initialPhone = "010-4321-8765",
             initialRoleLabel = "보호자"
         )

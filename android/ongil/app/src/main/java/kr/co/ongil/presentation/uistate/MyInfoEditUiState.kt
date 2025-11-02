@@ -24,7 +24,15 @@ data class MyInfoEditUiState(
     val newPhone: String = "",
     val verificationCode: String = "",
     val verificationResult: Boolean? = null,  // null: 대기, true: 성공, false: 실패
+    val verificationToken: String? = null,    // 인증 성공 시 받은 토큰
     val secondsLeft: Int = 0,
+
+    // UI 트리거 상태 (1회성 이벤트)
+    val showImagePicker: Boolean = false,
+    val showDatePicker: Boolean = false,
+
+    // 선택된 이미지 파일 (저장 전까지 임시 보관)
+    val selectedImageUri: String? = null,
 
     // 전역 상태
     val isLoading: Boolean = false,
@@ -38,8 +46,16 @@ sealed interface MyInfoEditEvent {
     // 기본 정보 수정
     data class UpdateName(val name: String) : MyInfoEditEvent
     data class UpdateBirth(val birth: String) : MyInfoEditEvent
+
+    // 이미지 선택 관련
     data object PickProfileImage : MyInfoEditEvent
+    data class OnImageSelected(val uri: String) : MyInfoEditEvent
+    data object DismissImagePicker : MyInfoEditEvent
+
+    // 날짜 선택 관련
     data object PickBirthDate : MyInfoEditEvent
+    data class OnDateSelected(val date: String) : MyInfoEditEvent  // YYYYMMDD 형식
+    data object DismissDatePicker : MyInfoEditEvent
 
     // 휴대폰 인증
     data object StartPhoneEdit : MyInfoEditEvent

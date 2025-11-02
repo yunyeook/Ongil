@@ -9,14 +9,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.presentation.uistate.MyInfoEditEvent
 import kr.co.ongil.presentation.uistate.MyInfoEditUiState
 import kr.co.ongil.presentation.uistate.PhoneUiState
+import java.io.File
 
 /**
  * 내 정보 수정 화면 ViewModel
  */
 class MyInfoEditViewModel(
+    private val userRepository: UserRepository? = null,
     initialName: String = "",
     initialBirth: String = "",
     initialPhone: String = "",
@@ -51,11 +54,38 @@ class MyInfoEditViewModel(
             }
 
             is MyInfoEditEvent.PickProfileImage -> {
-                // TODO: 이미지 선택 로직
+                _uiState.update { it.copy(showImagePicker = true) }
+            }
+
+            is MyInfoEditEvent.OnImageSelected -> {
+                _uiState.update {
+                    it.copy(
+                        selectedImageUri = event.uri,
+                        profileImageUrl = event.uri,  // 미리보기용
+                        showImagePicker = false
+                    )
+                }
+            }
+
+            is MyInfoEditEvent.DismissImagePicker -> {
+                _uiState.update { it.copy(showImagePicker = false) }
             }
 
             is MyInfoEditEvent.PickBirthDate -> {
-                // TODO: 날짜 선택 로직
+                _uiState.update { it.copy(showDatePicker = true) }
+            }
+
+            is MyInfoEditEvent.OnDateSelected -> {
+                _uiState.update {
+                    it.copy(
+                        birth = event.date,
+                        showDatePicker = false
+                    )
+                }
+            }
+
+            is MyInfoEditEvent.DismissDatePicker -> {
+                _uiState.update { it.copy(showDatePicker = false) }
             }
 
             is MyInfoEditEvent.StartPhoneEdit -> {
@@ -107,8 +137,8 @@ class MyInfoEditViewModel(
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // TODO: 실제 API 호출
-                // authRepository.sendVerificationCode(phone)
+                // API 호출
+                userRepository?.sendVerificationCode(phone)?.getOrThrow()
 
                 _uiState.update {
                     it.copy(
@@ -123,7 +153,7 @@ class MyInfoEditViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "인증번호 발송에 실패했습니다."
+                        error = "인증번호 발송에 실패했습니다: ${e.message}"
                     )
                 }
             }
@@ -138,8 +168,8 @@ class MyInfoEditViewModel(
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // TODO: 실제 API 호출
-                // authRepository.sendVerificationCode(phone)
+                // API 호출
+                userRepository?.sendVerificationCode(phone)?.getOrThrow()
 
                 _uiState.update {
                     it.copy(
@@ -153,7 +183,7 @@ class MyInfoEditViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "인증번호 재발송에 실패했습니다."
+                        error = "인증번호 재발송에 실패했습니다: ${e.message}"
                     )
                 }
             }
@@ -168,35 +198,31 @@ class MyInfoEditViewModel(
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // TODO: 실제 API 호출
-                // val result = authRepository.verifyCode(phone, code)
-
-                // 임시: 항상 성공으로 처리
-                val result = true
+                // API 호출
+                val verificationToken = userRepository?.verifyCode(phone, code)?.getOrThrow()
 
                 _uiState.update {
                     it.copy(
-                        verificationResult = result,
+                        verificationResult = true,
+                        verificationToken = verificationToken,
                         isLoading = false
                     )
                 }
 
-                if (result) {
-                    stopTimer()
-                    // 인증 성공 시 전화번호 업데이트
-                    _uiState.update {
-                        it.copy(
-                            phone = phone,
-                            phoneUiState = PhoneUiState.Idle
-                        )
-                    }
+                stopTimer()
+                // 인증 성공 시 새 전화번호로 업데이트 (실제 저장은 나중에)
+                _uiState.update {
+                    it.copy(
+                        phone = phone,
+                        phoneUiState = PhoneUiState.Idle
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         verificationResult = false,
                         isLoading = false,
-                        error = "인증번호 확인에 실패했습니다."
+                        error = "인증번호 확인에 실패했습니다: ${e.message}"
                     )
                 }
             }
@@ -211,15 +237,27 @@ class MyInfoEditViewModel(
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
-                // TODO: 실제 API 호출
-                // userRepository.updateUserInfo(name, birth, phone)
+                val currentState = _uiState.value
+
+                // 전화번호 변경 여부 확인
+                val phoneChanged = phone != currentState.phone
+                val verificationToken = if (phoneChanged) currentState.verificationToken else null
+
+                // API 호출
+                userRepository?.updateMyInfo(
+                    name = name,
+                    birth = birth,
+                    phoneNumber = if (phoneChanged) phone else null,
+                    verificationToken = verificationToken,
+                    profileImage = null // TODO: 프로필 이미지 선택 기능 구현 후 추가
+                )?.getOrThrow()
 
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "정보 저장에 실패했습니다."
+                        error = "정보 저장에 실패했습니다: ${e.message}"
                     )
                 }
             }
