@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.calls
+package kr.co.ongil.presentation.ui.myinfo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -160,10 +160,8 @@ private fun CallList(
  * Preview
  */
 @Preview(
-    name = "Galaxy S21 – Recent Calls",
-    device = "spec:shape=Normal,width=1080,height=2400,unit=px,dpi=420",
-    showBackground = true,
-    backgroundColor = 0xFFFFFFFF
+    name = "Recent Calls",
+    showBackground = true
 )
 @Composable
 private fun PreviewRecentCallsScreen() {

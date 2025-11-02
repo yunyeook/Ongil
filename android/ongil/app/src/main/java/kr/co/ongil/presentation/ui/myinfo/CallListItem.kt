@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.calls
+package kr.co.ongil.presentation.ui.myinfo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
