@@ -34,7 +34,7 @@ public class NavigationRedisService {
         try {
             Map<String, Object> sessionData = new HashMap<>();
             sessionData.put("navigation_id", navigationId);
-            sessionData.put("route", objectMapper.writeValueAsString(route));
+            sessionData.put("route", route);
             sessionData.put("started_at", LocalDateTime.now().toString());
 
             redisTemplate.opsForHash().putAll(key, sessionData);
@@ -43,7 +43,7 @@ public class NavigationRedisService {
             log.info("Redis 길안내 세션 저장: patientId={}, navigationId={}", patientId, navigationId);
         } catch (Exception e) {
             log.error("Redis 세션 저장 실패", e);
-            throw new RuntimeException("Redis 세션 저장 실패", e);
+            throw new BusinessException(ErrorCode.REDIS_SESSION_SAVE_FAILED);
         }
     }
 
@@ -66,17 +66,18 @@ public class NavigationRedisService {
      */
     public RouteResponse getRoute(Long patientId) {
         String key = NAV_KEY_PREFIX + patientId;
-        Object routeJson = redisTemplate.opsForHash().get(key, "route");
+        Object routeObject = redisTemplate.opsForHash().get(key, "route");
 
-        if (routeJson == null) {
+        if (routeObject == null) {
             return null;
         }
 
         try {
-            return objectMapper.readValue(routeJson.toString(), RouteResponse.class);
+            // 👈 convertValue 사용으로 변경
+            return objectMapper.convertValue(routeObject, RouteResponse.class);
         } catch (Exception e) {
             log.error("경로 역직렬화 실패", e);
-            return null;
+            throw new BusinessException(ErrorCode.REDIS_DESERIALIZATION_FAILED);
         }
     }
 

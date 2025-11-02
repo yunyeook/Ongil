@@ -92,7 +92,12 @@ public enum ErrorCode {
     // NAVIGATION
     NAVIGATION_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "길안내 세션을 찾을 수 없습니다."),
     NAVIGATION_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "길안내 기록을 찾을 수 없습니다."),
-    NAVIGATION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "이미 진행 중인 길안내가 있습니다.");
+    NAVIGATION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "이미 진행 중인 길안내가 있습니다."),
+
+    // REDIS
+    REDIS_DESERIALIZATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,"Redis 데이터 역직렬화에 실패했습니다." ),
+    REDIS_SESSION_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 세션 저장에 실패했습니다.");
+
 
     private final HttpStatus status;
     private final String message;
