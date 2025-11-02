@@ -7,7 +7,7 @@ sealed class Screen(val route: String) {
     // 즐겨찾기 메인 화면
     data object Favorite : Screen("favorite")
 
-    data object MyInfo : Screen("my_info")
+
     // 환자 상세 화면
     data object PatientDetail : Screen("patient_detail/{patientId}/{name}/{phoneNumber}/{gender}") {
         fun createRoute(

@@ -22,9 +22,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
-import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 
 @Composable
 fun PlayGroundMJ() {
@@ -39,9 +36,6 @@ fun PlayGroundMJ() {
             HomeScreen(
                 onGoFavoriteClick = {
                     navController.navigate(Screen.Favorite.route)
-                },
-                onGoMyInfoClick = {
-                    navController.navigate(Screen.MyInfo.route)
                 }
             )
         }
@@ -205,29 +199,6 @@ fun PlayGroundMJ() {
             PatientDetailScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // 내 정보 화면
-        composable(route = Screen.MyInfo.route) {
-
-            // MyInfoViewModel 은 Hilt 주입 안 쓰는 Playground 기준이므로
-            // 기본 viewModel()로 가져옵니다.
-            val viewModel: MyInfoViewModel = viewModel()
-            val uiState by viewModel.uiState.collectAsState()
-
-            MyInfoScreen(
-                uiState = uiState,
-                onEditInfo = {
-                    // TODO: 정보 수정 화면 navController.navigate(Screen.EditInfo.route)
-                },
-                onRecentCalls = {
-                    // TODO: 통화 기록 화면 navController.navigate(Screen.CallHistory.route)
-                },
-                onLogout = {
-                    viewModel.logout()
-                    navController.popBackStack()
-                }
             )
         }
     }
