@@ -72,11 +72,21 @@ ongil:
 # ??
 server:
   port: ${SERVER_PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 logging:
   level:
-    root: INFO
+    root: DEBUG
     org.hibernate.SQL: WARN
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:86400000}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:259200000}
 
 tmap:
   app-key: ${TMAP_APP_KEY}
