@@ -49,7 +49,7 @@ fun CallListItem(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp)
         ) {
             // 아바타(이니셜)
             CallAvatar(nameOrNumber = item.nameOrNumber)
@@ -113,28 +113,32 @@ private fun CallInfo(
             color = Color(0xFF243033)
         )
         Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val typeText = when (item.type) {
-                CallType.VOIP -> "VoIP"
-                CallType.NORMAL -> "일반전화"
-                CallType.SOS -> "SOS"
-            }
-            val typeColor = when (item.type) {
-                CallType.SOS -> Color(0xFFD85B4E)
-                else -> Color(0xFF6B767A)
-            }
-            Text(
-                text = "↗ $typeText",
-                color = typeColor,
-                style = MaterialTheme.typography.bodySmall
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = item.subtitle,
-                color = Color(0xFF98A2A6),
-                style = MaterialTheme.typography.bodySmall
-            )
+
+        val typeText = when (item.type) {
+            CallType.VOIP -> "VoIP"
+            CallType.NORMAL -> "일반전화"
+            CallType.SOS -> "SOS"
         }
+        val typeColor = when (item.type) {
+            CallType.SOS -> Color(0xFFD85B4E)
+            else -> Color(0xFF6B767A)
+        }
+
+        // CallType
+        Text(
+            text = "↗ $typeText",
+            color = typeColor,
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Spacer(Modifier.height(2.dp))
+
+        // Subtitle
+        Text(
+            text = item.subtitle,
+            color = Color(0xFF98A2A6),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
