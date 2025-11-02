@@ -1,6 +1,8 @@
 spring:
   application:
     name: ongil
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
   # ?? ?? ? .env? ???? ??? (Spring Boot 2.4+)
   config:
