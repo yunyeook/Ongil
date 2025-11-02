@@ -28,7 +28,8 @@ private val Accent = Color(0xFF8CA898)
 fun RecentCallsScreen(
     modifier: Modifier = Modifier,
     viewModel: RecentCallsViewModel = viewModel(),
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onNavigateToCallDetail: (Long) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -38,6 +39,7 @@ fun RecentCallsScreen(
         isLoading = uiState.isLoading,
         error = uiState.error,
         onEvent = viewModel::onEvent,
+        onNavigateToCallDetail = onNavigateToCallDetail,
         modifier = modifier
     )
 }
@@ -52,6 +54,7 @@ private fun RecentCallsContent(
     isLoading: Boolean,
     error: String?,
     onEvent: (RecentCallsEvent) -> Unit,
+    onNavigateToCallDetail: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -98,7 +101,8 @@ private fun RecentCallsContent(
         if (!isLoading && error == null) {
             CallList(
                 calls = calls,
-                onEvent = onEvent
+                onEvent = onEvent,
+                onNavigateToCallDetail = onNavigateToCallDetail
             )
         }
     }
@@ -139,6 +143,7 @@ private fun SearchBar(
 private fun CallList(
     calls: List<RecentCallUi>,
     onEvent: (RecentCallsEvent) -> Unit,
+    onNavigateToCallDetail: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -149,7 +154,10 @@ private fun CallList(
         items(calls, key = { it.id }) { call ->
             CallListItem(
                 item = call,
-                onInfoClick = { onEvent(RecentCallsEvent.OnInfoClick(call)) }
+                onInfoClick = {
+                    onEvent(RecentCallsEvent.OnInfoClick(call))
+                    onNavigateToCallDetail(call.id)
+                }
             )
         }
     }
@@ -178,7 +186,8 @@ private fun PreviewRecentCallsScreen() {
             calls = sampleCalls,
             isLoading = false,
             error = null,
-            onEvent = {}
+            onEvent = {},
+            onNavigateToCallDetail = {}
         )
     }
 }
