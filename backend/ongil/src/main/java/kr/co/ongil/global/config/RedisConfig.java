@@ -28,7 +28,7 @@ public class RedisConfig {
         config.setHostName(redisHost);
         config.setPort(redisPort);
         if (redisPassword != null && !redisPassword.isEmpty()) {
-            config.setPassword(redisPassword); // ✅ 여기서 비밀번호 설정
+            config.setPassword(redisPassword); // 여기서 비밀번호 설정
         }
         return new LettuceConnectionFactory(config);
     }

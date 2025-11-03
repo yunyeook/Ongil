@@ -51,10 +51,16 @@ public enum ResponseMessage {
     NAVIGATION_END_SUCCESS("길안내가 종료되었습니다."),
 
 
-
+    // Notification
+    NOTIFICATION_LIST_FOUND("알림 목록 조회에 성공했습니다."),
+    NOTIFICATION_FOUND("알림 조회에 성공했습니다."),
+    NOTIFICATION_READ("알림을 읽음 처리했습니다."),
+    NOTIFICATION_READ_ALL("전체 알림을 읽음 처리했습니다."),
+    NOTIFICATION_DELETED("알림이 삭제되었습니다."),
+    NOTIFICATION_DELETED_ALL("전체 알림이 삭제되었습니다."),
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
-    INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요.");
+    INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."), ;
 
     private final String message;
 }
