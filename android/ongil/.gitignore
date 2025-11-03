@@ -133,4 +133,7 @@ fabric.properties
 
 !/gradle/wrapper/gradle-wrapper.jar
 
+# Claude Code settings
+.claude/
+
 # End of https://www.toptal.com/developers/gitignore/api/androidstudio

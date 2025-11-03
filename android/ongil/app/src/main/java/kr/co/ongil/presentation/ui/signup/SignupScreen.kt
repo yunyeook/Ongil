@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.ui.signup
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -16,17 +19,19 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import kr.co.ongil.presentation.ui.common.AlertModal
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.InputBox
+import java.util.*
 
 /**
  * 회원가입 화면
@@ -45,6 +51,8 @@ fun SignupScreen(
     onProfileImageClick: () -> Unit,
     onNameChange: (String) -> Unit,
     onBirthClick: () -> Unit,
+    onSetBirth: (String) -> Unit,
+    onDismissDatePicker: () -> Unit,
     onPhoneChange: (String) -> Unit,
     onRequestVerificationCode: () -> Unit,
     onVerificationCodeChange: (String) -> Unit,
@@ -60,13 +68,19 @@ fun SignupScreen(
     onDismissErrorModal: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
+    val focusManager = LocalFocusManager.current
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .imePadding() // 키보드가 올라올 때 자동으로 padding 추가
         ) {
             // 상단 헤더
             SignupHeader(onBackClick = onBackClick)
@@ -135,7 +149,6 @@ fun SignupScreen(
                 // 휴대폰 번호 + 인증번호 발송 / 재발송
                 LabeledField(label = "휴대폰 번호") {
 
-                    // search_user 스타일: 하단 정렬 / 간격 12.dp / 버튼 높이 56.dp
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.Bottom,
@@ -151,7 +164,7 @@ fun SignupScreen(
 
                         GreenButton(
                             text = if (uiState.isCodeRequested) "재발송" else "발송",
-                            enabled = true, // 발송 버튼은 항상 활성 (추후 로직에서 제어)
+                            enabled = true,
                             onClick = onRequestVerificationCode,
                             modifier = Modifier
                                 .weight(0.6f)
@@ -164,7 +177,6 @@ fun SignupScreen(
                 if (uiState.isCodeRequested) {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 위에서 주신 search_user 스타일과 동일한 패턴
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -213,9 +225,9 @@ fun SignupScreen(
                                     text = uiState.verificationStatusMessage,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (uiState.isCodeVerified)
-                                        Color(0xFF2E7D32) // 초록 (성공)
+                                        Color(0xFF2E7D32)
                                     else
-                                        Color(0xFFD32F2F), // 빨강 (실패)
+                                        Color(0xFFD32F2F),
                                     fontWeight = FontWeight.Medium
                                 )
                             } else {
@@ -229,76 +241,86 @@ fun SignupScreen(
 
                 // 비밀번호
                 LabeledField(label = "비밀번호") {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(
-                                1.dp,
-                                Color(0xFFDDE0E4),
-                                RoundedCornerShape(8.dp)
+                    OutlinedTextField(
+                        value = uiState.password,
+                        onValueChange = onPasswordChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = "영문, 숫자 조합 8자 이상",
+                                color = Color(0xFF9CA1A9),
+                                fontSize = 16.sp
                             )
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (uiState.password.isNotEmpty()) uiState.passwordMasked else "영문, 숫자 조합 8자 이상",
-                            color = if (uiState.password.isNotEmpty()) Color(0xFF1A1D21) else Color(0xFF9CA1A9),
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(vertical = 12.dp)
-                        )
-
-                        Icon(
-                            imageVector = if (uiState.isPasswordVisible)
-                                Icons.Filled.VisibilityOff
-                            else
-                                Icons.Filled.Visibility,
-                            contentDescription = "toggle password visibility",
-                            tint = Color(0xFF707680),
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clickable { onTogglePasswordVisible() }
-                        )
-                    }
+                        },
+                        visualTransformation = if (uiState.isPasswordVisible)
+                            VisualTransformation.None
+                        else
+                            PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = onTogglePasswordVisible) {
+                                Icon(
+                                    imageVector = if (uiState.isPasswordVisible)
+                                        Icons.Filled.VisibilityOff
+                                    else
+                                        Icons.Filled.Visibility,
+                                    contentDescription = "toggle password visibility",
+                                    tint = Color(0xFF707680)
+                                )
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = { /* 포커스를 다음 필드로 이동 */ }
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color(0xFFDDE0E4),
+                            focusedBorderColor = Color(0xFF788F7E),
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 비밀번호 확인
                 LabeledField(label = "비밀번호 확인") {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(
-                                1.dp,
-                                Color(0xFFDDE0E4),
-                                RoundedCornerShape(8.dp)
+                    OutlinedTextField(
+                        value = uiState.passwordConfirm,
+                        onValueChange = onPasswordConfirmChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = "비밀번호를 다시 입력해주세요",
+                                color = Color(0xFF9CA1A9),
+                                fontSize = 16.sp
                             )
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (uiState.passwordConfirm.isNotEmpty()) uiState.passwordConfirmMasked else "비밀번호를 다시 입력해주세요",
-                            color = if (uiState.passwordConfirm.isNotEmpty()) Color(0xFF1A1D21) else Color(0xFF9CA1A9),
-                            fontSize = 16.sp,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(vertical = 12.dp)
-                        )
-
-                        Icon(
-                            imageVector = if (uiState.isConfirmPasswordVisible)
-                                Icons.Filled.VisibilityOff
-                            else
-                                Icons.Filled.Visibility,
-                            contentDescription = "toggle confirm password visibility",
-                            tint = Color(0xFF707680),
-                            modifier = Modifier
-                                .size(20.dp)
-                                .clickable { onTogglePasswordConfirmVisible() }
-                        )
-                    }
+                        },
+                        visualTransformation = if (uiState.isConfirmPasswordVisible)
+                            VisualTransformation.None
+                        else
+                            PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = onTogglePasswordConfirmVisible) {
+                                Icon(
+                                    imageVector = if (uiState.isConfirmPasswordVisible)
+                                        Icons.Filled.VisibilityOff
+                                    else
+                                        Icons.Filled.Visibility,
+                                    contentDescription = "toggle password visibility",
+                                    tint = Color(0xFF707680)
+                                )
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = { focusManager.clearFocus() }
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color(0xFFDDE0E4),
+                            focusedBorderColor = Color(0xFF788F7E),
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -327,15 +349,23 @@ fun SignupScreen(
                 // 가입하기 버튼
                 GreenButton(
                     text = "가입하기",
-                    enabled = true, // 유효성 검증 후 false 처리 가능
+                    enabled = true,
                     onClick = onSubmitSignup,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(100.dp)) // 하단 여유 공간
             }
+        }
+
+        // DatePicker 다이얼로그
+        if (uiState.showDatePicker) {
+            BirthDatePickerDialog(
+                onDateSelected = onSetBirth,
+                onDismiss = onDismissDatePicker
+            )
         }
 
         // 성공 모달
@@ -358,6 +388,56 @@ fun SignupScreen(
                 buttonText = "확인",
                 onButtonClick = onDismissErrorModal
             )
+        }
+    }
+}
+
+/**
+ * 생년월일 선택 다이얼로그
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BirthDatePickerDialog(
+    onDateSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val locale = Locale.KOREA
+    val configuration = Configuration().apply { setLocale(locale) }
+    val context = LocalContext.current
+    val localizedContext = remember(locale) {
+        context.createConfigurationContext(configuration)
+    }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis()
+    )
+
+    CompositionLocalProvider(LocalContext provides localizedContext) {
+        DatePickerDialog(
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val cal = Calendar.getInstance(locale).apply { timeInMillis = millis }
+                        val yyyyMMdd = String.format(
+                            locale, "%04d%02d%02d",
+                            cal.get(Calendar.YEAR),
+                            cal.get(Calendar.MONTH) + 1,
+                            cal.get(Calendar.DAY_OF_MONTH)
+                        )
+                        onDateSelected(yyyyMMdd)
+                    }
+                    onDismiss()
+                }) {
+                    Text("확인")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("취소")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
@@ -446,7 +526,6 @@ private fun ProfileSection(
                 } else {
                     Image(
                         painter = painterResource(id = android.R.drawable.ic_menu_gallery),
-                        // Coil 등 실제 이미지 로더는 추후 연결
                         contentDescription = "profile image",
                         modifier = Modifier.size(120.dp),
                         contentScale = ContentScale.Crop
@@ -553,7 +632,6 @@ private fun RowScope.UserTypeButton(
 private fun PreviewSignupScreen() {
     SignupScreen(
         uiState = SignupUiState(
-            // preview용 샘플 데이터 약간 넣어볼 수도 있음
             name = "",
             birth = "",
             phoneNumber = "",
@@ -571,6 +649,8 @@ private fun PreviewSignupScreen() {
         onProfileImageClick = {},
         onNameChange = {},
         onBirthClick = {},
+        onSetBirth = {},
+        onDismissDatePicker = {},
         onPhoneChange = {},
         onRequestVerificationCode = {},
         onVerificationCodeChange = {},
