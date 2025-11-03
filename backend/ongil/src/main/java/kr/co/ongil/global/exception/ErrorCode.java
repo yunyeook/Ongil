@@ -36,6 +36,8 @@ public enum ErrorCode {
     PHONE_VERIFICATION_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
     PHONE_VERIFICATION_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "인증번호 재요청은 1분 후에 가능합니다."),
     IP_RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+    VERIFICATION_TOKEN_REQUIRED(HttpStatus.BAD_REQUEST, "전화번호 변경 시 인증 토큰이 필요합니다."),
+    PHONE_NUMBER_MISMATCH(HttpStatus.BAD_REQUEST, "인증된 전화번호와 요청한 전화번호가 일치하지 않습니다."),
 
     // SMS
     SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 전송 중 오류가 발생했습니다."),

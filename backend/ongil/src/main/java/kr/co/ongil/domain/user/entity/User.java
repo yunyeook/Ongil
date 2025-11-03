@@ -55,4 +55,19 @@ public class User extends BaseEntity {
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
     }
+
+    public void updateProfile(String name, String birth, String phoneNumber, String profileImage) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (birth != null) {
+            this.birth = birth;
+        }
+        if (phoneNumber != null) {
+            this.phoneNumber = phoneNumber;
+        }
+        if (profileImage != null) {
+            this.profileImage = profileImage;
+        }
+    }
 }
