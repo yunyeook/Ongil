@@ -4,7 +4,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import kr.co.ongil.global.security.jwt.JwtUtil;
+import kr.co.ongil.global.security.userdetails.CustomUserDetails;
 import kr.co.ongil.global.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +18,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 @Slf4j
 @Component
@@ -32,7 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-
 
         String token = extractTokenFromRequest(request);
 
@@ -54,15 +54,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             Integer userId = jwtUtil.getUserIdFromToken(token);
+            String username = jwtUtil.getUsernameFromToken(token);
+            String userType = jwtUtil.getUserTypeFromToken(token);
+
+            // 토큰에서 추출한 정보로 UserDetails 생성 (DB 조회 없음)
+            CustomUserDetails userDetails = CustomUserDetails.fromToken(userId, username, userType);
 
             // Spring Security Context에 인증 정보 설정
             UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(userId, null, new ArrayList<>());
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.debug("JWT 토큰 인증 성공: userId={}", userId);
+            log.debug("JWT 토큰 인증 성공: userId={}, userType={}", userId, userType);
         }
 
         filterChain.doFilter(request, response);

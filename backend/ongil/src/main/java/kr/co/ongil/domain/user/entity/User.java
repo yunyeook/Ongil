@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import kr.co.ongil.domain.user.entity.Provider;
 import kr.co.ongil.domain.user.entity.UserType;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Builder
 @AllArgsConstructor

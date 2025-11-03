@@ -1,5 +1,6 @@
 package kr.co.ongil.domain.user.service;
 
+import kr.co.ongil.domain.user.dto.response.UserResponse;
 import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
@@ -18,16 +19,22 @@ public class UserService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    @Transactional
-    public void deleteMe(Integer userId) {
-        // 사용자 조회
+    @Transactional(readOnly = true)
+    public UserResponse getMe(Integer userId) {
+        // 사용자 조회 (삭제된 사용자는 @SQLRestriction에 의해 자동으로 필터링됨)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 이미 삭제된 사용자인지 확인
-        if (user.getDeletedAt() != null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        log.info("사용자 정보 조회 완료: userId={}", userId);
+
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public void deleteMe(Integer userId) {
+        // 사용자 조회 (삭제된 사용자는 @SQLRestriction에 의해 자동으로 필터링됨)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 소프트 삭제
         user.softDelete();
