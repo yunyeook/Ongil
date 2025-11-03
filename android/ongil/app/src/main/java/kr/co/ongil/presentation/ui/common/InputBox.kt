@@ -28,6 +28,7 @@ fun InputBox(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    backgroundColor: Color = Color.White,  // 배경색 파라미터 추가
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -45,10 +46,10 @@ fun InputBox(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(8.dp)),
+                .border(1.dp, Color(0xFFD6D7DA), RoundedCornerShape(8.dp)),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
+                focusedContainerColor = backgroundColor,
+                unfocusedContainerColor = backgroundColor,
                 cursorColor = Color(0xFF374151),
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
