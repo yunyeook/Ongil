@@ -2,6 +2,8 @@ package kr.co.ongil.presentation.ui.signup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,41 +21,48 @@ class SignupViewModel(
     private val _uiState = MutableStateFlow(SignupUiState())
     val uiState: StateFlow<SignupUiState> = _uiState.asStateFlow()
 
-    // ========================================
-    // 기본 정보 입력 처리
-    // ========================================
+    private var countdownJob: Job? = null
+    private var remainingSeconds: Int = 0
 
+    // 기본 정보 입력 처리 - 이름, 생일, 등등..
     fun onNameChange(newName: String) {
         _uiState.update { it.copy(name = newName) }
     }
 
     fun onBirthClick() {
-        // 생년월일 선택 UI는 화면에서 처리 (DatePicker, BottomSheet 등)
+        _uiState.update { it.copy(showDatePicker = true) }
     }
 
     fun onSetBirth(birth: String) {
-        _uiState.update { it.copy(birth = birth) }
+        _uiState.update { it.copy(birth = birth, showDatePicker = false) }
     }
 
-    // ========================================
-    // 전화번호 인증 처리
-    // ========================================
+    fun onDismissDatePicker() {
+        _uiState.update { it.copy(showDatePicker = false) }
+    }
 
+
+    // 전화번호 인증
     fun onPhoneChange(newPhone: String) {
         _uiState.update { it.copy(phoneNumber = newPhone) }
     }
 
     fun onRequestVerificationCode() {
         // TODO: 실제 구현 시 repository.sendVerificationCode() 호출
+        // 재요청 시 기존 타이머 취소
+        cancelVerificationTimer()
+
+        remainingSeconds = 180 // 3분
         _uiState.update {
             it.copy(
                 isCodeRequested = true,
                 showTimerText = true,
-                remainingTimeText = "03:00",  // TODO: 실제 타이머 구현 필요
+                remainingTimeText = formatSeconds(remainingSeconds),
                 verificationStatusMessage = "",
                 isCodeVerified = false
             )
         }
+        startVerificationTimer()
     }
 
     fun onVerificationCodeChange(newCode: String) {
@@ -62,26 +71,61 @@ class SignupViewModel(
 
     fun onVerifyCodeClick() {
         // TODO: 실제 구현 시 repository.verifyCode() 호출
-        // 임시 로직: "123456"을 정답으로 간주
         val currentCode = _uiState.value.verificationCode
         val isValid = currentCode == "123456"
 
-        _uiState.update {
-            it.copy(
-                isCodeVerified = isValid,
-                verificationStatusMessage = if (isValid) {
-                    "인증번호 등록에 성공했습니다."
-                } else {
-                    "올바른 인증번호가 아닙니다."
-                }
-            )
+        if (isValid) {
+            // 성공 시 타이머 중단 및 메시지 반영
+            cancelVerificationTimer()
+            _uiState.update {
+                it.copy(
+                    isCodeVerified = true,
+                    showTimerText = false,
+                    verificationStatusMessage = "인증번호 등록에 성공했습니다."
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    isCodeVerified = false,
+                    verificationStatusMessage = "올바른 인증번호가 아닙니다."
+                )
+            }
         }
     }
 
-    // ========================================
-    // 비밀번호 처리
-    // ========================================
+    private fun startVerificationTimer() {
+        countdownJob = viewModelScope.launch {
+            while (remainingSeconds > 0) {
+                delay(1_000)
+                remainingSeconds -= 1
+                _uiState.update {
+                    it.copy(remainingTimeText = formatSeconds(remainingSeconds))
+                }
+            }
+            // 시간 만료
+            _uiState.update {
+                it.copy(
+                    showTimerText = false,
+                    isCodeVerified = false,
+                    verificationStatusMessage = "인증 시간이 만료되었습니다."
+                )
+            }
+        }
+    }
 
+    private fun cancelVerificationTimer() {
+        countdownJob?.cancel()
+        countdownJob = null
+    }
+
+    private fun formatSeconds(total: Int): String {
+        val m = total / 60
+        val s = total % 60
+        return String.format("%02d:%02d", m, s)
+    }
+
+    // 비밀번호
     fun onPasswordChange(newPassword: String) {
         _uiState.update {
             it.copy(
@@ -113,10 +157,9 @@ class SignupViewModel(
         return "•".repeat(password.length.coerceAtMost(10))
     }
 
-    // ========================================
-    // 프로필 이미지 처리
-    // ========================================
 
+
+    // 프로필 이미지 처리
     fun onProfileImageClick() {
         // 갤러리/카메라 선택은 화면에서 처리
     }
@@ -125,10 +168,7 @@ class SignupViewModel(
         _uiState.update { it.copy(profileImageUrl = imageUrl) }
     }
 
-    // ========================================
-    // 회원 유형 선택
-    // ========================================
-
+    // 회원 유형
     fun onSelectGuardian() {
         _uiState.update { it.copy(userType = UserType.GUARDIAN) }
     }
@@ -137,10 +177,7 @@ class SignupViewModel(
         _uiState.update { it.copy(userType = UserType.PATIENT) }
     }
 
-    // ========================================
-    // 회원가입 처리
-    // ========================================
-
+    // 회원가입
     fun onSubmitSignup() {
         viewModelScope.launch {
             val isValid = validateSignupInput()
@@ -186,10 +223,8 @@ class SignupViewModel(
         return true
     }
 
-    // ========================================
-    // 모달 처리
-    // ========================================
 
+    // 모달 처리
     fun onDismissSuccessModal() {
         _uiState.update { it.copy(showSuccessModal = false) }
         // 성공 후 로그인 화면 이동은 UI에서 처리
@@ -197,5 +232,10 @@ class SignupViewModel(
 
     fun onDismissErrorModal() {
         _uiState.update { it.copy(showErrorModal = false) }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cancelVerificationTimer()
     }
 }
