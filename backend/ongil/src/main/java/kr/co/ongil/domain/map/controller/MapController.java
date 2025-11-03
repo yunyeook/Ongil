@@ -9,7 +9,6 @@ import kr.co.ongil.domain.map.dto.response.PlaceDetailResponse;
 import kr.co.ongil.domain.map.dto.response.RouteResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
 import kr.co.ongil.domain.map.service.MapService;
-import kr.co.ongil.global.api.BaseController;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/map")
 @RequiredArgsConstructor
 @Tag(name = "Map API", description = "지도 관련 API")
-public class MapController extends BaseController {
+public class MapController {
 
     private final MapService mapService;
 

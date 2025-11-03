@@ -6,7 +6,6 @@ import kr.co.ongil.domain.auth.dto.request.LoginRequest;
 import kr.co.ongil.domain.auth.dto.request.RefreshRequest;
 import kr.co.ongil.domain.auth.dto.response.LoginResponse;
 import kr.co.ongil.domain.auth.dto.response.RefreshResponse;
-import kr.co.ongil.global.api.BaseController;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/auth")
 @Validated
 @Tag(name = "Auth API", description = "인증 관련 API")
-public class AuthController extends BaseController {
+public class AuthController {
 
     private final AuthService authService;
 
