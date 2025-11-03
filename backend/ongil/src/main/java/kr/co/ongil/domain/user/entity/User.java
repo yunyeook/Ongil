@@ -48,4 +48,9 @@ public class User extends BaseEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    // 비즈니스 메서드
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 }
