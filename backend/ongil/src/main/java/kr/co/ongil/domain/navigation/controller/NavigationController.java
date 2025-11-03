@@ -8,6 +8,7 @@ import kr.co.ongil.domain.navigation.dto.request.StartNavigationRequest;
 import kr.co.ongil.domain.navigation.dto.response.EndNavigationResponse;
 import kr.co.ongil.domain.navigation.dto.response.NavigationSessionResponse;
 import kr.co.ongil.domain.navigation.service.NavigationService;
+import kr.co.ongil.global.api.BaseController;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/navigation")
 @RequiredArgsConstructor
 @Tag(name = "Navigation API", description = "길안내 네비게이션 API")
-public class NavigationController {
+public class NavigationController extends BaseController {
 
     private final NavigationService navigationService;
 

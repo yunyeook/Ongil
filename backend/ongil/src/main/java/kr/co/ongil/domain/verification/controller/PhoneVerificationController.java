@@ -8,6 +8,7 @@ import kr.co.ongil.domain.verification.dto.request.SendVerificationRequest;
 import kr.co.ongil.domain.verification.dto.request.VerifyCodeRequest;
 import kr.co.ongil.domain.verification.dto.response.VerificationResponse;
 import kr.co.ongil.domain.verification.service.PhoneVerificationService;
+import kr.co.ongil.global.api.BaseController;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/phone-verifications")
 @RequiredArgsConstructor
 @Tag(name = "Phone Verification API", description = "전화번호 인증 API")
-public class PhoneVerificationController {
+public class PhoneVerificationController extends BaseController {
 
     private final PhoneVerificationService phoneVerificationService;
 

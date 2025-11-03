@@ -6,15 +6,12 @@ import kr.co.ongil.domain.auth.dto.request.LoginRequest;
 import kr.co.ongil.domain.auth.dto.request.RefreshRequest;
 import kr.co.ongil.domain.auth.dto.response.LoginResponse;
 import kr.co.ongil.domain.auth.dto.response.RefreshResponse;
+import kr.co.ongil.global.api.BaseController;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
-import kr.co.ongil.global.exception.BusinessException;
-import kr.co.ongil.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,7 +25,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/auth")
 @Validated
 @Tag(name = "Auth API", description = "인증 관련 API")
-public class AuthController {
+public class AuthController extends BaseController {
 
     private final AuthService authService;
 
