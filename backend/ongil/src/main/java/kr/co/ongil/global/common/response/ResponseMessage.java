@@ -26,6 +26,14 @@ public enum ResponseMessage {
     PATIENT_FOUND("환자 조회 성공"),
     SAFEZONE_UPDATED("안전구역이 수정되었습니다."),
 
+    // Favorite
+    FAVORITE_CREATED("즐겨찾기가 성공적으로 추가되었습니다."),
+    FAVORITE_LIST_FOUND("즐겨찾기 목록 조회에 성공했습니다."),
+    FAVORITE_FOUND("즐겨찾기 조회에 성공했습니다."),
+    FAVORITE_UPDATED("즐겨찾기가 성공적으로 수정되었습니다."),
+    FAVORITE_DELETED("즐겨찾기가 성공적으로 삭제되었습니다."),
+    FAVORITE_DEFAULT_SET("기본 목적지가 설정되었습니다."),
+
     // Map
     ADDRESS_FOUND("주소를 성공적으로 조회하였습니다."),
     COORDINATE_FOUND("좌표를 성공적으로 조회하였습니다."),
@@ -40,6 +48,8 @@ public enum ResponseMessage {
     //Navigation
     NAVIGATION_START_SUCCESS("길안내가 시작되었습니다."),
     NAVIGATION_END_SUCCESS("길안내가 종료되었습니다."),
+
+
 
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),

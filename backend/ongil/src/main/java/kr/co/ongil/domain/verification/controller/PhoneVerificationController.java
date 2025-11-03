@@ -51,8 +51,7 @@ public class PhoneVerificationController {
         phoneVerificationService.sendVerificationCode(request, ipAddress);
 
         return ApiResponse.success(
-                ResponseMessage.PHONE_VERIFICATION_SENT.getMessage()
-        );
+                ResponseMessage.PHONE_VERIFICATION_SENT);
     }
 
     /**
@@ -72,8 +71,7 @@ public class PhoneVerificationController {
         VerificationResponse response = phoneVerificationService.verifyCode(request);
 
         return ApiResponse.success(
-                ResponseMessage.PHONE_VERIFICATION_SUCCESS.getMessage(),
-                response
+                ResponseMessage.PHONE_VERIFICATION_SUCCESS,response
         );
     }
 

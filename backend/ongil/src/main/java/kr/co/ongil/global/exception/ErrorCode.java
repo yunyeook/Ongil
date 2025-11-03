@@ -1,7 +1,9 @@
 package kr.co.ongil.global.exception;
 
+import kr.co.ongil.global.common.response.ApiResponse;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 @Getter
 public enum ErrorCode {
@@ -46,6 +48,11 @@ public enum ErrorCode {
     CARE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "보호자 권한이 없습니다."),
     PATIENT_ALREADY_LINKED(HttpStatus.CONFLICT, "이미 보호자와 연결된 환자입니다."),
 
+    // FAVORITE
+    FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "즐겨찾기를 찾을 수 없습니다."),
+    FAVORITE_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일한 즐겨찾기가 이미 존재합니다."),
+    FAVORITE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 접근 권한이 없습니다."),
+
     // LOCATION / SAFEZONE / ABNORMAL DETECTION
     SAFEZONE_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 안전구역이 없습니다."),
     SAFEZONE_DUPLICATED(HttpStatus.CONFLICT, "이미 등록된 안전구역입니다."),
@@ -84,7 +91,7 @@ public enum ErrorCode {
     EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 연동 중 오류가 발생했습니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "현재 서비스를 이용할 수 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
-
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED,"지원하지 않는 HTTP 메서드입니다."),
     // MAP / GEOCODING / ADDRESS
     INVALID_COORDINATE(HttpStatus.BAD_REQUEST, "유효하지 않은 좌표입니다."),
     INVALID_LATITUDE(HttpStatus.BAD_REQUEST, "유효하지 않은 위도입니다. (대한민국 범위: 33~43)"),
