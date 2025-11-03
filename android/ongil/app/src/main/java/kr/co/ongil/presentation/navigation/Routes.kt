@@ -10,6 +10,12 @@ sealed class Routes(val route: String) {
     object PatientList : Routes("patient_list")
     object RegisterUser : Routes("register_user")
 
+    // 로그인
+    object Login : Routes("login")
+
+    // 회원가입
+    object Signup : Routes("signup")
+
     // 나의 정보
     object MyInfo : Routes("my_info")
 
@@ -18,9 +24,6 @@ sealed class Routes(val route: String) {
 
     // 최근 통화목록
     object CallHistory : Routes("call_history")
-
-    // 회원가입
-    object Signup : Routes("signup")
 
     // 즐겨찾기
     object Favorite : Routes("favorite")

@@ -217,6 +217,8 @@ fun AppNavGraph(
                 onProfileImageClick = viewModel::onProfileImageClick,
                 onNameChange = viewModel::onNameChange,
                 onBirthClick = viewModel::onBirthClick,
+                onSetBirth = viewModel::onSetBirth,
+                onDismissDatePicker = viewModel::onDismissDatePicker,
                 onPhoneChange = viewModel::onPhoneChange,
                 onRequestVerificationCode = viewModel::onRequestVerificationCode,
                 onVerificationCodeChange = viewModel::onVerificationCodeChange,

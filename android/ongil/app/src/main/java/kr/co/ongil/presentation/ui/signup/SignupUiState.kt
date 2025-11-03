@@ -8,6 +8,7 @@ data class SignupUiState(
 
     val name: String = "",
     val birth: String = "",
+    val showDatePicker: Boolean = false,
 
     val phoneNumber: String = "",
     val isCodeRequested: Boolean = false,
