@@ -1,0 +1,104 @@
+package kr.co.ongil.presentation.ui.favorite
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import kr.co.ongil.presentation.ui.common.GreenButton
+import kr.co.ongil.presentation.ui.common.favorite.PatientCard
+import kr.co.ongil.presentation.ui.favorite.PatientData
+
+@Composable
+fun PatientList(
+    patients: List<PatientData>,
+    onCallClick: (Long) -> Unit,
+    onPatientCardClick: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit,
+    onAddPatientClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+
+        GreenButton(
+            text = "+ 새로운 환자 등록",
+            onClick = onAddPatientClick,
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 18.dp)
+                .fillMaxWidth()
+        )
+
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 0.dp,
+                bottom = 16.dp
+            )
+        ) {
+            items(patients) { patient ->
+                PatientCard(
+                    patientName = patient.name,
+                    phoneNumber = patient.phoneNumber,
+                    gender = patient.gender,
+                    onClickCard = {
+                        onPatientCardClick(
+                            patient.id,
+                            patient.name,
+                            patient.phoneNumber,
+                            patient.gender
+                        )
+                    },
+                    onClickCall = {
+                        onCallClick(patient.id)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+@androidx.compose.ui.tooling.preview.Preview(
+    showBackground = true,
+    backgroundColor = 0xFFF5F5F5
+)
+fun PatientListPreview() {
+    val samplePatients = listOf(
+        PatientData(
+            id = 1L,
+            name = "김철수 할아버지",
+            phoneNumber = "010-1234-5678",
+            gender = "남성",
+            registeredDate = "2025-10-18T13:00:00Z"
+        ),
+        PatientData(
+            id = 2L,
+            name = "이영희 할머니",
+            phoneNumber = "010-2222-3333",
+            gender = "여성",
+            registeredDate = "2025-10-18T13:05:00Z"
+        ),
+        PatientData(
+            id = 3L,
+            name = "박민수 어르신",
+            phoneNumber = "010-9999-0000",
+            gender = "남성",
+            registeredDate = "2025-10-18T13:10:00Z"
+        )
+    )
+
+    PatientList(
+        patients = samplePatients,
+        onCallClick = {  },
+        onPatientCardClick = { _, _, _, _ ->  },
+        onAddPatientClick = {  }
+    )
+}
