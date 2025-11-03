@@ -34,6 +34,9 @@ public enum ErrorCode {
     PHONE_VERIFICATION_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "인증번호 재요청은 1분 후에 가능합니다."),
     IP_RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
 
+    // SMS
+    SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 전송 중 오류가 발생했습니다."),
+
     // PATIENT / DEVICE / CARE LINK
     PATIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 환자입니다."),
     DEVICE_NOT_REGISTERED(HttpStatus.NOT_FOUND, "등록되지 않은 기기입니다."),

@@ -7,6 +7,7 @@ import kr.co.ongil.domain.verification.entity.VerificationGrant;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import kr.co.ongil.global.security.jwt.JwtUtil;
+import kr.co.ongil.global.sms.SmsService;
 import kr.co.ongil.global.util.VerificationCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 전화번호 인증 서비스
- * - 인증번호 발송 (Redis 저장, 콘솔 출력)
+ * - 인증번호 발송 (Redis 저장, SMS 전송)
  * - 인증번호 검증 및 1회용 토큰 발급
  * - Redis 기반 요청 제한 (전화번호당, IP당)
  */
@@ -29,6 +30,7 @@ public class PhoneVerificationService {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final JwtUtil jwtUtil;
+    private final SmsService smsService;
 
     // Redis Key Prefix
     private static final String CODE_KEY_PREFIX = "verify:code:";
@@ -81,14 +83,8 @@ public class PhoneVerificationService {
         // 8. 인증 시도 횟수 초기화
         resetVerifyAttempts(phoneNumber);
 
-        // 9. SMS 발송 (콘솔 출력으로 대체)
-        // TODO: 실제 SMS 서비스 연동 필요
-        log.info("====================================");
-        log.info("📱 [SMS 발송 시뮬레이션]");
-        log.info("전화번호: {}", phoneNumber);
-        log.info("인증번호: {}", code);
-        log.info("유효시간: 3분");
-        log.info("====================================");
+        // 9. SMS 발송
+        smsService.sendVerificationCode(phoneNumber, code);
 
         log.info("인증번호 발송 완료: phoneNumber={}", phoneNumber);
     }

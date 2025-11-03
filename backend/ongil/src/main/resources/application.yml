@@ -90,10 +90,17 @@ jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:86400000}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:259200000}
-  verification:
-    expiration: 300000 # 5분 (전화번호 인증용)
+  verification: # phone verification token
+    expiration: 300000 # 5 minutes
 
 tmap:
   app-key: ${TMAP_APP_KEY}
   api:
     base-url: https://apis.openapi.sk.com
+
+coolsms:
+  api:
+    key: ${COOLSMS_API_KEY}        # CoolSMS API KEY
+    secret: ${COOLSMS_API_SECRET}  # coolSMS API SECRET
+  from: ${COOLSMS_FROM_NUMBER}     # Sender Phone Number
+  domain: https://api.coolsms.co.kr
