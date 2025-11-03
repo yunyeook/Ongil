@@ -9,10 +9,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-@PostConstruct
-public void init() {
-    System.out.println("[DEBUG] Redis host=" + redisHost + ", port=" + redisPort + ", password=" + redisPassword);
-}
 
 @Configuration
 public class RedisConfig {
@@ -25,6 +21,11 @@ public class RedisConfig {
 
     @Value("${spring.data.redis.password:}")  // ✅ 환경변수 주입 (없으면 빈 문자열)
     private String redisPassword;
+
+    @PostConstruct
+    public void init() {
+    System.out.println("[DEBUG] Redis host=" + redisHost + ", port=" + redisPort + ", password=" + redisPassword);
+    }
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
