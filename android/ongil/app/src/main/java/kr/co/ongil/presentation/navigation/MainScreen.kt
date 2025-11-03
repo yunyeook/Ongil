@@ -31,7 +31,8 @@ fun MainScreen() {
         Routes.EditInfo.route,
         Routes.CallHistory.route,
         Routes.ChangePassword.route,
-        Routes.SearchUser.route
+        Routes.SearchUser.route,
+        Routes.Notifications.route
     )
 
     // 현재 라우트가 BottomBar를 표시해야 하는 화면인지 확인

@@ -25,6 +25,7 @@ import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
 import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
+import kr.co.ongil.presentation.ui.notification.NotificationScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
@@ -47,7 +48,7 @@ fun AppNavGraph(
         composable(Routes.Location.route) {
             Column(modifier = Modifier.fillMaxSize()) {
                 OngilBrandHeaderCard(
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 PlaceholderScreen("위치")
             }
@@ -57,7 +58,7 @@ fun AppNavGraph(
         composable(Routes.Favorite.route) {
             Column(modifier = Modifier.fillMaxSize()) {
                 OngilBrandHeaderCard(
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 PlaceholderScreen("즐겨찾기")
             }
@@ -67,7 +68,7 @@ fun AppNavGraph(
         composable(Routes.Home.route) {
             Column(modifier = Modifier.fillMaxSize()) {
                 OngilBrandHeaderCard(
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 PlaceholderScreen("홈")
             }
@@ -77,7 +78,7 @@ fun AppNavGraph(
         composable(Routes.PatientList.route) {
             Column(modifier = Modifier.fillMaxSize()) {
                 OngilBrandHeaderCard(
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 PlaceholderScreen("환자 정보")
             }
@@ -89,7 +90,7 @@ fun AppNavGraph(
                 OngilTopBarForRoute(
                     route = Routes.SearchUser.route,
                     onBackClick = { navController.popBackStack() },
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 PlaceholderScreen("사용자 찾기")
             }
@@ -102,7 +103,7 @@ fun AppNavGraph(
 
             Column(modifier = Modifier.fillMaxSize()) {
                 OngilBrandHeaderCard(
-                    onBellClick = { /* TODO: 알림 화면 이동 */ },
+                    onBellClick = { navController.navigate(Routes.Notifications.route) },
                     profileImageUrl = uiState.profileImage
                 )
                 MyInfoScreen(
@@ -132,7 +133,7 @@ fun AppNavGraph(
                 OngilTopBarForRoute(
                     route = Routes.EditInfo.route,
                     onBackClick = { navController.popBackStack() },
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 MyInfoEditScreen(
                     viewModel = editViewModel,
@@ -152,7 +153,7 @@ fun AppNavGraph(
                 OngilTopBarForRoute(
                     route = Routes.CallHistory.route,
                     onBackClick = { navController.popBackStack() },
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 RecentCallsScreen(
                     onNavigateBack = {
@@ -171,7 +172,7 @@ fun AppNavGraph(
                 OngilTopBarForRoute(
                     route = Routes.ChangePassword.route,
                     onBackClick = { navController.popBackStack() },
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 ChangePasswordScreen(
                     onNavigateBack = {
@@ -197,10 +198,21 @@ fun AppNavGraph(
                 OngilTopBarForRoute(
                     route = Routes.CallDetail.route,
                     onBackClick = { navController.popBackStack() },
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                    onBellClick = { navController.navigate(Routes.Notifications.route) }
                 )
                 CallDetailScreen(
                     callLogId = callLogId
+                )
+            }
+        }
+
+        // 알림 화면
+        composable(Routes.Notifications.route) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                NotificationScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
                 )
             }
         }

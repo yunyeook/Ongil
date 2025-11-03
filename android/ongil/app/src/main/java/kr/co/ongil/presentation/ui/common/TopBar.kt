@@ -191,6 +191,7 @@ fun OngilTopBarForRoute(
         route.contains("recent_calls") -> "최근 통화목록"
         route.contains("call_detail") -> "통화 상세"
         route.contains("change_password") -> "비밀번호 변경"
+        route.contains("notifications") -> "알림"
         route.contains("search_user") -> "사용자 찾기"
         route.contains("register_user") -> "사용자 등록"
         route.contains("patient_detail") -> "환자 상세"
