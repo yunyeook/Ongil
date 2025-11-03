@@ -35,12 +35,66 @@ import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
+    modifier: Modifier = Modifier,
     startDestination: String = Routes.MyInfo.route
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        modifier = modifier
     ) {
+        // 위치 화면
+        composable(Routes.Location.route) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilBrandHeaderCard(
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                PlaceholderScreen("위치")
+            }
+        }
+
+        // 즐겨찾기 화면
+        composable(Routes.Favorite.route) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilBrandHeaderCard(
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                PlaceholderScreen("즐겨찾기")
+            }
+        }
+
+        // 홈 화면
+        composable(Routes.Home.route) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilBrandHeaderCard(
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                PlaceholderScreen("홈")
+            }
+        }
+
+        // 환자 정보 화면
+        composable(Routes.PatientList.route) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilBrandHeaderCard(
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                PlaceholderScreen("환자 정보")
+            }
+        }
+
+        // 사용자 찾기 화면
+        composable(Routes.SearchUser.route) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilTopBarForRoute(
+                    route = Routes.SearchUser.route,
+                    onBackClick = { navController.popBackStack() },
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                PlaceholderScreen("사용자 찾기")
+            }
+        }
+
         // 나의 정보 화면
         composable(Routes.MyInfo.route) {
             val viewModel: MyInfoViewModel = viewModel()
