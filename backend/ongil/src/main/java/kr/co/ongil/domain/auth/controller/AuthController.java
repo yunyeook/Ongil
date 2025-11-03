@@ -3,7 +3,9 @@ package kr.co.ongil.domain.auth.controller;
 import kr.co.ongil.domain.auth.service.AuthService;
 import kr.co.ongil.domain.auth.dto.request.RegisterRequest;
 import kr.co.ongil.domain.auth.dto.request.LoginRequest;
+import kr.co.ongil.domain.auth.dto.request.RefreshRequest;
 import kr.co.ongil.domain.auth.dto.response.LoginResponse;
+import kr.co.ongil.domain.auth.dto.response.RefreshResponse;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import kr.co.ongil.global.exception.BusinessException;
@@ -44,5 +46,13 @@ public class AuthController {
 
         LoginResponse loginResponse = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(ResponseMessage.LOGIN_SUCCESS.getMessage(), loginResponse));
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "토큰 재발급", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰과 리프레시 토큰을 발급받습니다.")
+    public ApiResponse<RefreshResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+
+        RefreshResponse refreshResponse = authService.refresh(request);
+        return ApiResponse.success(ResponseMessage.TOKEN_REISSUE_SUCCESS.getMessage(), refreshResponse);
     }
 }
