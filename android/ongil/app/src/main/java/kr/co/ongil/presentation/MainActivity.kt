@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
                 // 하단바 포함된 메인 화면
                 MainScreen()
 
-                // 테스트용 플레이그라운드 (필요시 주석 해제)
+//                // 테스트용 플레이그라운드 (필요시 주석 해제)
 //                Column(modifier = Modifier.fillMaxSize()) {
 //                    PlayGroundMJ()
 //                    PlayGroundSH()
