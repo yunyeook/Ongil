@@ -17,7 +17,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
-import kr.co.ongil.presentation.ui.common.alert.NotificationAlertInfo
+import kr.co.ongil.presentation.ui.common.alert.AlertInfo
+import kr.co.ongil.presentation.ui.common.alert.getNotificationStyle
 import kr.co.ongil.presentation.uistate.NotificationEvent
 import kr.co.ongil.presentation.uistate.NotificationUi
 import kr.co.ongil.presentation.uistate.NotificationUiState
@@ -211,14 +212,23 @@ private fun NotificationList(
         modifier = Modifier.fillMaxSize()
     ) {
         items(notifications, key = { it.id }) { notification ->
-            NotificationAlertInfo(
-                type = notification.type,
+            val style = getNotificationStyle(notification.type)
+
+            AlertInfo(
                 title = notification.title,
                 content = notification.body,
                 timeText = notification.timeAgo,
+                icon = style.icon,
+                iconColor = style.iconColor,
+                iconBackgroundColor = style.bubbleColor,
                 isRead = notification.isRead,
+                showActionMenu = true,
+                enableSwipeToDelete = true,
                 onItemClick = {
                     onEvent(NotificationEvent.OnNotificationClick(notification))
+                },
+                onMarkAsRead = {
+                    onEvent(NotificationEvent.MarkAsRead(notification.id))
                 },
                 onDelete = {
                     onEvent(NotificationEvent.DeleteNotification(notification.id))
