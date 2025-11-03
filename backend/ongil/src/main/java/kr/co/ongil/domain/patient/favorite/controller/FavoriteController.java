@@ -9,7 +9,6 @@ import kr.co.ongil.domain.patient.favorite.dto.request.UpdateFavoriteRequest;
 import kr.co.ongil.domain.patient.favorite.dto.response.FavoriteListResponse;
 import kr.co.ongil.domain.patient.favorite.dto.response.FavoriteResponse;
 import kr.co.ongil.domain.patient.favorite.service.FavoriteService;
-import kr.co.ongil.global.api.BaseController;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/patients/{patientId}/favorites")
 @RequiredArgsConstructor
 @Tag(name = "Favorite API", description = "즐겨찾기 관련 API")
-public class FavoriteController extends BaseController {
+public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
