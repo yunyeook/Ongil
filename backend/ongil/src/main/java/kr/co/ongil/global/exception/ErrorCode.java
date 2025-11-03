@@ -21,6 +21,7 @@ public enum ErrorCode {
     TOKEN_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "토큰 발급 중 오류가 발생했습니다."),
     INVALID_PROVIDER(HttpStatus.BAD_REQUEST, "유효하지 않은 인증 제공자입니다."),
     INVALID_USER_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자 유형입니다."),
+    LOGIN_REQUEST_PARSE_FAILED(HttpStatus.BAD_REQUEST, "로그인 요청 파싱에 실패했습니다."),
 
     // USER
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),

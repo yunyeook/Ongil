@@ -54,49 +54,6 @@ public class AuthService {
         User savedUser = userRepository.save(user);
     }
 
-    public LoginResponse login(LoginRequest request) {
-        log.info("로그인 시도: {}", request.getPhoneNumber());
-
-        // 사용자 조회
-        User user = userRepository.findByPhoneNumber(request.getPhoneNumber())
-                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
-
-        // 비밀번호 확인
-        if (!user.getPassword().equals(request.getPassword())) {
-            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
-        }
-
-        // 소프트 삭제 확인
-        if (user.getDeletedAt() != null) {
-            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
-        }
-
-        // JWT 토큰 생성
-        String accessToken = jwtUtil.generateAccessToken(user.getId());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
-
-        // Redis에 토큰 저장
-        refreshTokenRepository.storeRefreshToken(user.getId(), refreshToken, jwtUtil.getRefreshTokenExpiration());
-
-        // 사용자 정보 구성
-        LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .birth(user.getBirth())
-                .phoneNumber(user.getPhoneNumber())
-                .userType(user.getUserType().name())
-                .profileImage(user.getProfileImage())
-                .build();
-
-        log.info("로그인 성공: {}", user.getPhoneNumber());
-
-        return LoginResponse.builder()
-                .user(userInfo)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
-    }
-
     public RefreshResponse refresh(RefreshRequest request) {
         String refreshToken = request.getRefreshToken();
 
@@ -116,27 +73,23 @@ public class AuthService {
 
         // 리프레시 토큰 소비 시도
         if (!refreshTokenRepository.consumeRefreshToken(userId, refreshToken)) {
-            
+
             log.warn("잠재적인 리프레시 토큰 재사용 시도 감지: userId={}", userId);
-            
+
             // 모든 리프레시 토큰 삭제 (보안 조치)
             refreshTokenRepository.deleteAllTokensForUser(userId);
 
             throw new BusinessException(ErrorCode.EXPIRED_REFRESH_TOKEN);
         }
 
-        // 사용자 존재 확인
+        // 사용자 존재 확인 (삭제된 사용자는 @SQLRestriction에 의해 자동으로 필터링됨)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 소프트 삭제 확인
-        if (user.getDeletedAt() != null) {
-            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
-        }
-
-        // 새로운 토큰 생성
-        String newAccessToken = jwtUtil.generateAccessToken(userId);
-        String newRefreshToken = jwtUtil.generateRefreshToken(userId);
+        // 새로운 토큰 생성 (userType 포함)
+        String userType = user.getUserType().name();
+        String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getPhoneNumber(), userType);
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getPhoneNumber(), userType);
 
         // Redis에 새로운 리프레시 토큰 저장 (기존 토큰 덮어쓰기)
         refreshTokenRepository.storeRefreshToken(userId, newRefreshToken, jwtUtil.getRefreshTokenExpiration());

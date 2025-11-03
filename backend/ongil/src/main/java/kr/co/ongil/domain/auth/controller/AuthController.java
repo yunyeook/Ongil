@@ -30,18 +30,10 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
-    public ApiResponse<String> register(@Valid @RequestBody RegisterRequest request) {
+    public ApiResponse<String> register(@Valid @ModelAttribute RegisterRequest request) {
 
         authService.register(request);
         return ApiResponse.success(ResponseMessage.SIGNUP_SUCCESS);
-    }
-
-    @PostMapping("/login")
-    @Operation(summary = "로그인", description = "전화번호와 비밀번호로 로그인합니다.")
-    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-
-        LoginResponse loginResponse = authService.login(request);
-        return ApiResponse.success(ResponseMessage.LOGIN_SUCCESS, loginResponse);
     }
 
     @PostMapping("/refresh")
