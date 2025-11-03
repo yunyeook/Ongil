@@ -1,8 +1,10 @@
 package kr.co.ongil.presentation.navigation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +26,8 @@ import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
 import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
+import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
+import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 
 /**
  * 앱 Navigation Graph
@@ -42,61 +46,88 @@ fun AppNavGraph(
             val viewModel: MyInfoViewModel = viewModel()
             val uiState by viewModel.uiState.collectAsState()
 
-            MyInfoScreen(
-                uiState = uiState,
-                onEditInfo = {
-                    navController.navigate(Routes.EditInfo.route)
-                },
-                onRecentCalls = {
-                    navController.navigate(Routes.CallHistory.route)
-                },
-                onLogout = {
-                    viewModel.logout()
-                    // TODO: 로그아웃 성공시 로그인 화면으로 이동
-                    // navController.navigate(Routes.Login.route) {
-                    //     popUpTo(Routes.MyInfo.route) { inclusive = true }
-                    // }
-                }
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilBrandHeaderCard(
+                    onBellClick = { /* TODO: 알림 화면 이동 */ },
+                    profileImageUrl = uiState.profileImage
+                )
+                MyInfoScreen(
+                    uiState = uiState,
+                    onEditInfo = {
+                        navController.navigate(Routes.EditInfo.route)
+                    },
+                    onRecentCalls = {
+                        navController.navigate(Routes.CallHistory.route)
+                    },
+                    onLogout = {
+                        viewModel.logout()
+                        // TODO: 로그아웃 성공시 로그인 화면으로 이동
+                        // navController.navigate(Routes.Login.route) {
+                        //     popUpTo(Routes.MyInfo.route) { inclusive = true }
+                        // }
+                    }
+                )
+            }
         }
 
         // 내 정보 수정 화면
         composable(Routes.EditInfo.route) {
             val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel()
 
-            MyInfoEditScreen(
-                viewModel = editViewModel,
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onChangePasswordClick = {
-                    navController.navigate(Routes.ChangePassword.route)
-                }
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilTopBarForRoute(
+                    route = Routes.EditInfo.route,
+                    onBackClick = { navController.popBackStack() },
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                MyInfoEditScreen(
+                    viewModel = editViewModel,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onChangePasswordClick = {
+                        navController.navigate(Routes.ChangePassword.route)
+                    }
+                )
+            }
         }
 
         // 최근 통화목록 화면
         composable(Routes.CallHistory.route) {
-            RecentCallsScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onNavigateToCallDetail = { callId ->
-                    navController.navigate(Routes.CallDetail.createRoute(callId))
-                }
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilTopBarForRoute(
+                    route = Routes.CallHistory.route,
+                    onBackClick = { navController.popBackStack() },
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                RecentCallsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToCallDetail = { callId ->
+                        navController.navigate(Routes.CallDetail.createRoute(callId))
+                    }
+                )
+            }
         }
 
         // 비밀번호 변경 화면
         composable(Routes.ChangePassword.route) {
-            ChangePasswordScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                },
-                onPasswordChanged = {
-                    // 비밀번호 변경 성공 시 추가 동작이 필요하면 여기에 구현
-                }
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilTopBarForRoute(
+                    route = Routes.ChangePassword.route,
+                    onBackClick = { navController.popBackStack() },
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                ChangePasswordScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onPasswordChanged = {
+                        // 비밀번호 변경 성공 시 추가 동작이 필요하면 여기에 구현
+                    }
+                )
+            }
         }
 
         // 통화 상세 화면
