@@ -30,6 +30,17 @@ public class AuthService {
 
     public void register(RegisterRequest request) {
 
+        // 전화번호 인증 토큰 검증
+        if (!jwtUtil.validateToken(request.getVerificationToken())) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰에서 전화번호 추출 및 검증
+        String verifiedPhoneNumber = jwtUtil.getPhoneNumberFromToken(request.getVerificationToken());
+        if (!request.getPhoneNumber().equals(verifiedPhoneNumber)) {
+            throw new BusinessException(ErrorCode.PHONE_NUMBER_MISMATCH);
+        }
+
         // 중복 확인
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new BusinessException(ErrorCode.DUPLICATE_MEMBER);
@@ -52,6 +63,8 @@ public class AuthService {
 
         // 사용자 저장
         User savedUser = userRepository.save(user);
+
+        log.info("회원가입 완료: phoneNumber={}, userType={}", request.getPhoneNumber(), request.getUserType());
     }
 
     public RefreshResponse refresh(RefreshRequest request) {
