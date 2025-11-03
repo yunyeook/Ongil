@@ -1,5 +1,6 @@
 package kr.co.ongil.global.common.response;
 
+import kr.co.ongil.global.exception.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -9,15 +10,15 @@ public class ApiResponse<T> {
     private final String message;
     private final T data;
 
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>("요청이 성공했습니다.", data);
+    public static <T> ApiResponse<String> fail(ErrorCode errorCode) {
+        return new ApiResponse<>(errorCode.getMessage(), "");
     }
 
-    public static <T> ApiResponse<T> success(String message, T data) {
-        return new ApiResponse<>(message, data);
+    public static <T> ApiResponse<T> success(ResponseMessage responseMessage, T data) {
+        return new ApiResponse<>(responseMessage.getMessage(), data);
     }
 
-    public static ApiResponse<String> success(String message) {
-        return new ApiResponse<>(message, "");
+    public static ApiResponse<String> success(ResponseMessage responseMessage) {
+        return new ApiResponse<>(responseMessage.getMessage(), "");
     }
 }

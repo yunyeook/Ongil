@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import kr.co.ongil.global.common.response.ApiResponse;
+import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -30,10 +31,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
-        ApiResponse<String> apiResponse = ApiResponse.success(
-                ErrorCode.AUTHENTICATION_REQUIRED.getMessage()
-        );
+        ApiResponse<String> apiResponse = ApiResponse.fail( ErrorCode.AUTHENTICATION_REQUIRED);
 
         String jsonResponse = objectMapper.writeValueAsString(apiResponse);
         response.getWriter().write(jsonResponse);

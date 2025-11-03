@@ -104,3 +104,11 @@ coolsms:
     secret: ${COOLSMS_API_SECRET}  # coolSMS API SECRET
   from: ${COOLSMS_FROM_NUMBER}     # Sender Phone Number
   domain: https://api.coolsms.co.kr
+
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
