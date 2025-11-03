@@ -177,4 +177,17 @@ public class JwtUtil {
         Claims claims = parseClaims(token);
         return claims.getSubject();
     }
+
+    /**
+     * 토큰의 남은 만료 시간(밀리초) 계산
+     *
+     * @param token JWT 토큰
+     * @return 남은 만료 시간 (밀리초)
+     */
+    public long getRemainingExpiration(String token) {
+        Claims claims = parseClaims(token);
+        Date expiration = claims.getExpiration();
+        Date now = new Date();
+        return expiration.getTime() - now.getTime();
+    }
 }
