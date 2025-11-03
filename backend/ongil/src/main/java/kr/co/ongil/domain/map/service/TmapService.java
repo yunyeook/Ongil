@@ -1,16 +1,18 @@
-// TmapService.java (간결해진 버전)
 package kr.co.ongil.domain.map.service;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import kr.co.ongil.domain.map.dto.response.AddressResponse;
 import kr.co.ongil.domain.map.dto.response.BusinessInfo;
 import kr.co.ongil.domain.map.dto.response.CategoryInfo;
 import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
 import kr.co.ongil.domain.map.dto.response.PlaceDetailResponse;
+import kr.co.ongil.domain.map.dto.response.RouteResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceResponse;
 import kr.co.ongil.domain.map.dto.tmap.TmapGeocodeResponse;
+import kr.co.ongil.domain.map.dto.tmap.TmapPedestrianRouteResponse;
 import kr.co.ongil.domain.map.dto.tmap.TmapPoiDetailResponse;
 import kr.co.ongil.domain.map.dto.tmap.TmapPoiSearchResponse;
 import kr.co.ongil.domain.map.dto.tmap.TmapReverseGeocodeResponse;
@@ -20,11 +22,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
@@ -38,16 +38,19 @@ public class TmapService {
      * 좌표 → 주소 변환 (Reverse Geocoding)
      */
     public AddressResponse getAddressFromCoordinate(Double latitude, Double longitude) {
-        String uri = String.format(
-            "/tmap/geo/reversegeocoding?version=1&lat=%s&lon=%s&coordType=WGS84GEO&addressType=A10",
-            latitude, longitude
-        );
-
         try {
             TmapReverseGeocodeResponse response = tmapWebClient.get()
-                .uri(uri)
+                .uri(uriBuilder -> uriBuilder
+                    .path("/tmap/geo/reversegeocoding")
+                    .queryParam("version", 1)
+                    .queryParam("lat", latitude)
+                    .queryParam("lon", longitude)
+                    .queryParam("coordType", "WGS84GEO")
+                    .queryParam("addressType", "A10")
+                    .build())
                 .retrieve()
                 .bodyToMono(TmapReverseGeocodeResponse.class)
+                .timeout(Duration.ofSeconds(30))
                 .block();
 
             if (response == null || response.addressInfo() == null) {
@@ -72,37 +75,52 @@ public class TmapService {
      * 주소 → 좌표 변환 (Geocoding)
      */
     public CoordinateResponse getCoordinateFromAddress(String cityDo, String guGun, String dong, String bunji) {
-        String encodedCityDo = URLEncoder.encode(cityDo, StandardCharsets.UTF_8);
-        String encodedGuGun = URLEncoder.encode(guGun, StandardCharsets.UTF_8);
-        String encodedDong = URLEncoder.encode(dong, StandardCharsets.UTF_8);
-        String encodedBunji = bunji != null ? URLEncoder.encode(bunji, StandardCharsets.UTF_8) : "";
-
-        String uri = String.format(
-            "/tmap/geo/geocoding?version=1&city_do=%s&gu_gun=%s&dong=%s&bunji=%s&coordType=WGS84GEO&addressFlag=F00",
-            encodedCityDo, encodedGuGun, encodedDong, encodedBunji
-        );
-
         try {
             TmapGeocodeResponse response = tmapWebClient.get()
-                .uri(uri)
+                .uri(uriBuilder -> {
+                    var builder = uriBuilder
+                        .path("/tmap/geo/geocoding")
+                        .queryParam("version", 1)
+                        .queryParam("city_do", cityDo)
+                        .queryParam("gu_gun", guGun)
+                        .queryParam("dong", dong)
+                        .queryParam("coordType", "WGS84GEO")
+                        .queryParam("addressFlag", "F00");
+
+                    // bunji가 있을 때만 추가
+                    if (bunji != null && !bunji.trim().isEmpty()) {
+                        builder.queryParam("bunji", bunji);
+                    }
+
+                    return builder.build();
+                })
                 .retrieve()
                 .bodyToMono(TmapGeocodeResponse.class)
+                .timeout(Duration.ofSeconds(30))
                 .block();
 
+            log.info("Tmap Geocoding API 응답: {}", response);
+
             if (response == null || response.coordinateInfo() == null) {
+                log.error("Tmap API 응답이 null이거나 coordinateInfo가 없습니다. response={}", response);
                 throw new BusinessException(ErrorCode.COORDINATE_NOT_FOUND);
             }
 
             TmapGeocodeResponse.CoordinateInfo coordinateInfo = response.coordinateInfo();
+            log.info("CoordinateInfo: newLat={}, newLon={}, lat={}, lon={}",
+                coordinateInfo.newLat(), coordinateInfo.newLon(),
+                coordinateInfo.latitude(), coordinateInfo.longitude());
 
-            String latitude = coordinateInfo.newLat() != null && !coordinateInfo.newLat().isEmpty()
+            String latitude = (coordinateInfo.newLat() != null && !coordinateInfo.newLat().trim().isEmpty())
                 ? coordinateInfo.newLat()
                 : coordinateInfo.latitude();
-            String longitude = coordinateInfo.newLon() != null && !coordinateInfo.newLon().isEmpty()
+
+            String longitude = (coordinateInfo.newLon() != null && !coordinateInfo.newLon().trim().isEmpty())
                 ? coordinateInfo.newLon()
                 : coordinateInfo.longitude();
 
             if (latitude == null || latitude.isEmpty() || longitude == null || longitude.isEmpty()) {
+                log.error("좌표 값이 비어있습니다. latitude={}, longitude={}", latitude, longitude);
                 throw new BusinessException(ErrorCode.COORDINATE_NOT_FOUND);
             }
 
@@ -117,6 +135,8 @@ public class TmapService {
         } catch (NumberFormatException e) {
             log.error("좌표 파싱 실패", e);
             throw new BusinessException(ErrorCode.COORDINATE_NOT_FOUND);
+        } catch (BusinessException e) {
+            throw e;  // BusinessException은 그대로 던지기
         } catch (Exception e) {
             log.error("주소 → 좌표 변환 중 예외 발생", e);
             throw new BusinessException(ErrorCode.MAP_API_ERROR);
@@ -191,10 +211,12 @@ public class TmapService {
      */
     public PlaceDetailResponse getPlaceDetail(String poiId) {
         try {
-            String uri = String.format("/tmap/pois/%s?version=1&resCoordType=WGS84GEO", poiId);
-
             TmapPoiDetailResponse response = tmapWebClient.get()
-                .uri(uri)
+                .uri(uriBuilder -> uriBuilder
+                    .path("/tmap/pois/{poiId}")
+                    .queryParam("version", 1)
+                    .queryParam("resCoordType", "WGS84GEO")
+                    .build(poiId))
                 .retrieve()
                 .bodyToMono(TmapPoiDetailResponse.class)
                 .timeout(Duration.ofSeconds(30))
@@ -231,6 +253,52 @@ public class TmapService {
         } catch (Exception e) {
             log.error("장소 상세 조회 중 예외 발생", e);
             throw new BusinessException(ErrorCode.PLACE_DETAIL_FAILED);
+        }
+    }
+    /**
+     * 보행자 경로 탐색
+     */
+    public RouteResponse getPedestrianRoute(
+        Double startLat, Double startLon,
+        Double endLat, Double endLon,
+        String startName, String endName
+    ) {
+        try {
+            TmapPedestrianRouteResponse response = tmapWebClient.post()
+                .uri("/tmap/routes/pedestrian?version=1")
+                .body(BodyInserters.fromFormData("startX", String.valueOf(startLon))
+                    .with("startY", String.valueOf(startLat))
+                    .with("endX", String.valueOf(endLon))
+                    .with("endY", String.valueOf(endLat))
+                    .with("reqCoordType", "WGS84GEO")
+                    .with("resCoordType", "WGS84GEO")
+                    .with("startName", startName != null ? startName : "출발지")
+                    .with("endName", endName != null ? endName : "도착지")
+                    .with("searchOption", "0")
+                )
+                .retrieve()
+                .bodyToMono(TmapPedestrianRouteResponse.class)
+                .timeout(Duration.ofSeconds(30))
+                .block();
+
+            if (response == null || response.features() == null || response.features().isEmpty()) {
+                throw new BusinessException(ErrorCode.ROUTE_NOT_FOUND);
+            }
+
+            return RouteResponse.parseRouteResponse(
+                response, startLat, startLon, endLat, endLon, startName, endName
+            );
+
+        } catch (WebClientResponseException.TooManyRequests e) {
+            log.error("Tmap API 호출 제한 초과", e);
+            throw new BusinessException(ErrorCode.MAP_API_LIMIT_EXCEEDED);
+        } catch (WebClientResponseException e) {
+            log.error("Tmap API 호출 실패: status={}, body={}",
+                e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw new BusinessException(ErrorCode.MAP_API_ERROR);
+        } catch (Exception e) {
+            log.error("경로 탐색 중 예외 발생", e);
+            throw new BusinessException(ErrorCode.ROUTE_SEARCH_FAILED);
         }
     }
 }

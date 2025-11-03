@@ -1,6 +1,7 @@
 package kr.co.ongil.global.config;
 
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -16,15 +17,26 @@ import java.util.List;
 
 @Configuration
 public class JacksonConfig implements WebMvcConfigurer {
-
-    @Bean
+    
+    @Bean 
     @Primary
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.registerModule(new JavaTimeModule());
+        
+        // 알 수 없는 필드 무시
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        
+        // JSON 파싱 유연성 (외부 API 대응)
+        mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
         mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
         mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+        
+        // Java 8 날짜/시간 지원
+        mapper.registerModule(new JavaTimeModule());
+        
+        // 날짜를 ISO 문자열로 표현 (timestamp 대신)
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        
         return mapper;
     }
 

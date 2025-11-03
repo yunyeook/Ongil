@@ -8,4 +8,4 @@ services:
     image: rabent0207/ongil:latest
     env_file:
       - .env
-    # command: tail -f /dev/null
+    command: tail -f /dev/null

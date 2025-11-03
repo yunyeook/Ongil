@@ -1,11 +1,13 @@
 package kr.co.ongil.domain.map.dto.tmap;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record TmapGeocodeResponse(
     CoordinateInfo coordinateInfo
 ) {
-
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record CoordinateInfo(
         @JsonProperty("lat") //지번주소일때 위도
         String latitude,

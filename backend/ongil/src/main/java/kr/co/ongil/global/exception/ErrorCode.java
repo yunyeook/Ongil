@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
 
     // AUTH
+    AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않거나 만료된 토큰입니다."),
     EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 만료되었습니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 리소스에 접근할 권한이 없습니다."),
@@ -89,12 +90,22 @@ public enum ErrorCode {
 
     INVALID_ADDRESS(HttpStatus.BAD_REQUEST, "유효하지 않은 주소입니다."),
     ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 좌표의 주소를 찾을 수 없습니다."),
-
+    ROUTE_SEARCH_FAILED(HttpStatus.BAD_GATEWAY,"경로 탐색에 실패했습니다"),
     MAP_API_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "지도 API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."),
     MAP_API_ERROR(HttpStatus.BAD_GATEWAY, "지도 서비스와의 통신에 실패했습니다."),
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "장소를 찾을 수 없습니다."),
     PLACE_SEARCH_FAILED(HttpStatus.BAD_GATEWAY, "장소 검색 중 오류가 발생했습니다."),
-    PLACE_DETAIL_FAILED(HttpStatus.BAD_GATEWAY, "장소 상세 조회 중 오류가 발생했습니다.");
+    PLACE_DETAIL_FAILED(HttpStatus.BAD_GATEWAY, "장소 상세 조회 중 오류가 발생했습니다."),
+
+    // NAVIGATION
+    NAVIGATION_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "길안내 세션을 찾을 수 없습니다."),
+    NAVIGATION_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "길안내 기록을 찾을 수 없습니다."),
+    NAVIGATION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "이미 진행 중인 길안내가 있습니다."),
+
+    // REDIS
+    REDIS_DESERIALIZATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,"Redis 데이터 역직렬화에 실패했습니다." ),
+    REDIS_SESSION_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 세션 저장에 실패했습니다.");
+
 
     private final HttpStatus status;
     private final String message;
