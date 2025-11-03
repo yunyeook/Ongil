@@ -1,10 +1,10 @@
 package kr.co.ongil.presentation.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -42,7 +42,7 @@ object OngilBottomNavItems {
     val patientList = BottomNavItem(
         route = Routes.PatientList.route,
         label = "환자 정보",
-        icon = Icons.Filled.People
+        icon = Icons.Filled.Assignment
     )
 
     val myInfo = BottomNavItem(

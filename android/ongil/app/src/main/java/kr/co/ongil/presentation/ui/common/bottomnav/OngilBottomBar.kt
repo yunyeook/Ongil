@@ -44,23 +44,22 @@ fun OngilBottomBar(
 ) {
     // 카드는 상단 모서리만 둥글게, 하단은 직각, 좌우 패딩 없음
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 0.dp, vertical = 0.dp),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         shape = RoundedCornerShape(
-            topStart = 24.dp,
-            topEnd = 24.dp,
+            topStart = 40.dp,
+            topEnd = 40.dp,
             bottomStart = 0.dp,
             bottomEnd = 0.dp
         )
     ) {
         Row(
             modifier = Modifier
-                .navigationBarsPadding()
-                .padding(vertical = 10.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(top = 22.dp, bottom = 5.dp)
+                .navigationBarsPadding(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -99,15 +98,14 @@ private fun BottomBarItem(
 
     Column(
         modifier = modifier
-            .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.Transparent) // 추후 선택 배경 넣을 거면 변경
-            .padding(vertical = 2.dp)
+            .background(Color.White)
             .noRippleClickable { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Box(
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(35.dp),
             contentAlignment = Alignment.Center
         ) {
             // 아이콘 색상 적용
@@ -118,7 +116,7 @@ private fun BottomBarItem(
         Spacer(Modifier.height(4.dp))
         Text(
             text = label,
-            fontSize = 10.sp,
+            fontSize = 13.sp,
             color = textColor,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1

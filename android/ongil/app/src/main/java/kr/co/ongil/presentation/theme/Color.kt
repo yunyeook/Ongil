@@ -11,5 +11,5 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // Bottom Navigation Colors
-val OngilIconSelected = Color(0xFF4CAF50)      // 선택된 아이콘 색상 (녹색)
+val OngilIconSelected = Color(0xFF8CA898)      // 선택된 아이콘 색상 (온길 그린)
 val OngilIconUnselected = Color(0xFF9E9E9E)    // 선택되지 않은 아이콘 색상 (회색)
