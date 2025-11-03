@@ -94,110 +94,111 @@ BE/src/main/generated/
 # ============================================
 
 # Gradle
-android/.gradle/
+android/ongil/.gradle/
 android/build/
-android/*/build/
-android/local.properties
-android/gradle-wrapper.jar
-android/.gradle
-android/captures/
-android/.externalNativeBuild
-android/.cxx
+android/ongil/*/build/
+android/ongil/local.properties
+android/ongil/gradle-wrapper.jar
+android/ongil/.gradle
+android/ongil/captures/
+android/ongil/.externalNativeBuild
+android/ongil/.cxx
 
 # Android Studio
-android/.idea/
-android/*.iml
-android/*.ipr
-android/*.iws
-android/.idea/workspace.xml
-android/.idea/tasks.xml
-android/.idea/gradle.xml
-android/.idea/assetWizardSettings.xml
-android/.idea/dictionaries
-android/.idea/libraries
-android/.idea/caches
-android/.idea/modules.xml
-android/.idea/.name
-android/.idea/compiler.xml
-android/.idea/copyright/profiles_settings.xml
-android/.idea/encodings.xml
-android/.idea/misc.xml
-android/.idea/vcs.xml
-android/.navigation/
-android/*.apk
-android/output.json
+android/ongil/.idea/
+android/ongil/.idea/*
+android/ongil/*.iml
+android/ongil/*.ipr
+android/ongil/*.iws
+android/ongil/.idea/workspace.xml
+android/ongil/.idea/tasks.xml
+android/ongil/.idea/gradle.xml
+android/ongil/.idea/assetWizardSettings.xml
+android/ongil/.idea/dictionaries
+android/ongil/.idea/libraries
+android/ongil/.idea/caches
+android/ongil/.idea/modules.xml
+android/ongil/.idea/.name
+android/ongil/.idea/compiler.xml
+android/ongil/.idea/copyright/profiles_settings.xml
+android/ongil/.idea/encodings.xml
+android/ongil/.idea/misc.xml
+android/ongil/.idea/vcs.xml
+android/ongil/.navigation/
+android/ongil/*.apk
+android/ongil/output.json
 
 # Keystore 파일 (절대 커밋하지 말 것!)
-android/*.jks
-android/*.keystore
-android/keystore.properties
-android/release.jks
-android/debug.jks
+android/ongil/*.jks
+android/ongil/*.keystore
+android/ongil/keystore.properties
+android/ongil/release.jks
+android/ongil/debug.jks
 
 # NDK
-android/obj/
-android/.externalNativeBuild
+android/ongil/obj/
+android/ongil/.externalNativeBuild
 
 # 빌드 산출물
-android/app/release/
-android/app/debug/
-android/wear/release/
-android/wear/debug/
-android/*.ap_
-android/*.dex
+android/ongil/app/release/
+android/ongil/app/debug/
+android/ongil/wear/release/
+android/ongil/wear/debug/
+android/ongil/*.ap_
+android/ongil/*.dex
 
 # Generated files
-android/bin/
-android/gen/
-android/out/
+android/ongil/bin/
+android/ongil/gen/
+android/ongil/out/
 
 # Signing files
-android/.signing/
+android/ongil/.signing/
 
 # Google Services
-android/google-services.json
-android/app/google-services.json
-android/wear/google-services.json
+android/ongil/google-services.json
+android/ongil/app/google-services.json
+android/ongil/wear/google-services.json
 
 # Firebase
-android/app/src/debug/google-services.json
-android/app/src/release/google-services.json
+android/ongil/app/src/debug/google-services.json
+android/ongil/app/src/release/google-services.json
 
 # Local configuration
-android/local.properties
+android/ongil/local.properties
 
 # Proguard
-android/proguard/
-android/app/proguard-rules.pro
+android/ongil/proguard/
+android/ongil/app/proguard-rules.pro
 
 # Profiler
-android/*.hprof
+android/ongil/*.hprof
 
 # Lint
-android/lint/
-android/lint-report.html
-android/lint-report.xml
+android/ongil/lint/
+android/ongil/lint-report.html
+android/ongil/lint-report.xml
 
 # Android Profiling
-android/*.trace
+android/ongil/*.trace
 
 # Freeline
-android/freeline.py
-android/freeline/
-android/freeline_project_description.json
+android/ongil/freeline.py
+android/ongil/freeline/
+android/ongil/freeline_project_description.json
 
 # fastlane
-android/fastlane/report.xml
-android/fastlane/Preview.html
-android/fastlane/screenshots
-android/fastlane/test_output
-android/fastlane/readme.md
+android/ongil/fastlane/report.xml
+android/ongil/fastlane/Preview.html
+android/ongil/fastlane/screenshots
+android/ongil/fastlane/test_output
+android/ongil/fastlane/readme.md
 
 # Version control
-android/vcs.xml
+android/ongil/vcs.xml
 
 # Room Database
-android/schemas/
+android/ongil/schemas/
 
 # ============================================
 # 문서 및 임시 파일
