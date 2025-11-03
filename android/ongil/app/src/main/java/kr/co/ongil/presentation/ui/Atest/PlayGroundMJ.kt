@@ -22,7 +22,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
-
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
+import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
+import kr.co.ongil.presentation.ui.searchuser.SearchUserScreen
+import kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel
 @Composable
 fun PlayGroundMJ() {
 
@@ -30,7 +34,7 @@ fun PlayGroundMJ() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.SearchUser.route
     ) {
         composable(route = Screen.Home.route) {
             HomeScreen(
@@ -39,6 +43,17 @@ fun PlayGroundMJ() {
                 }
             )
         }
+
+        // 사용자 찾기 화면
+        // 사용자 찾기 화면
+        composable(route = Screen.SearchUser.route) {
+            val viewModel: SearchUserViewModel = viewModel()
+            SearchUserScreen(
+                navController = navController,
+                viewModel = viewModel
+            )
+        }
+
         // 즐겨찾기 화면
         composable(route = Screen.Favorite.route) {
             FavoriteScreen(
