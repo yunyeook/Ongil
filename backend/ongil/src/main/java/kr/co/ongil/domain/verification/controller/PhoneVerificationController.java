@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Validated
 @RestController
-@RequestMapping("/api/v1/phone-verifications")
+@RequestMapping("/phone-verifications")
 @RequiredArgsConstructor
 @Tag(name = "Phone Verification API", description = "전화번호 인증 API")
 public class PhoneVerificationController {

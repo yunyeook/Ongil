@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Validated
 @RestController
-@RequestMapping("/api/v1/map")
+@RequestMapping("/map")
 @RequiredArgsConstructor
 @Tag(name = "Map API", description = "지도 관련 API")
 public class MapController {
