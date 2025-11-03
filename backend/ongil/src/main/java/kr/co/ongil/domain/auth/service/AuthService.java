@@ -149,4 +149,33 @@ public class AuthService {
                 .build();
     }
 
+    public void logout(String accessToken) {
+        // 액세스 토큰 검증
+        if (!jwtUtil.validateToken(accessToken)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰 타입 확인
+        String tokenType = jwtUtil.getTokenType(accessToken);
+        if (!"access".equals(tokenType)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰에서 사용자 ID 추출
+        Integer userId = jwtUtil.getUserIdFromToken(accessToken);
+
+        // 액세스 토큰의 남은 만료 시간 계산
+        long remainingExpiration = jwtUtil.getRemainingExpiration(accessToken);
+
+        // 액세스 토큰을 블랙리스트에 추가 (남은 만료 시간만큼만 유지)
+        if (remainingExpiration > 0) {
+            refreshTokenRepository.addAccessTokenToBlacklist(accessToken, remainingExpiration);
+        }
+
+        // 리프레시 토큰 삭제 (모든 세션 무효화)
+        refreshTokenRepository.deleteAllTokensForUser(userId);
+
+        log.info("로그아웃 완료: userId={}", userId);
+    }
+
 }
