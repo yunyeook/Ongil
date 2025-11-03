@@ -5,7 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -65,7 +65,7 @@ fun OngilTopBar(
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        Icons.Outlined.ArrowBack,
+                        Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "뒤로가기",
                         tint = OngilGray
                     )
@@ -189,6 +189,7 @@ fun OngilTopBarForRoute(
         route.contains("my_info") -> "내 정보"
         route.contains("call_history") -> "최근 통화목록"
         route.contains("recent_calls") -> "최근 통화목록"
+        route.contains("call_detail") -> "통화 상세"
         route.contains("change_password") -> "비밀번호 변경"
         route.contains("search_user") -> "사용자 찾기"
         route.contains("register_user") -> "사용자 등록"
