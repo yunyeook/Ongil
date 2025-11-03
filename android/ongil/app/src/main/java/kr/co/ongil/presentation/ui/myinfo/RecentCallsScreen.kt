@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,49 +62,59 @@ private fun RecentCallsContent(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .navigationBarsPadding()
+            .imePadding()
     ) {
         // 검색창
-        SearchBar(
-            query = searchQuery,
-            onQueryChange = { onEvent(RecentCallsEvent.UpdateSearchQuery(it)) }
-        )
-
-        // 로딩 상태
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 32.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Accent)
-            }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { onEvent(RecentCallsEvent.UpdateSearchQuery(it)) }
+            )
         }
 
-        // 에러 상태
-        error?.let { errorMessage ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 32.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
+        when {
+            isLoading -> {
+                // 로딩 상태
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = RecentAccent)
+                }
+            }
+
+            error != null -> {
+                // 에러 상태
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            else -> {
+                // 통화 목록
+                CallList(
+                    calls = calls,
+                    onEvent = onEvent,
+                    onNavigateToCallDetail = onNavigateToCallDetail
                 )
             }
-        }
-
-        // 통화 목록
-        if (!isLoading && error == null) {
-            CallList(
-                calls = calls,
-                onEvent = onEvent,
-                onNavigateToCallDetail = onNavigateToCallDetail
-            )
         }
     }
 }
@@ -129,7 +140,7 @@ private fun SearchBar(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color(0xFFE6EBE9),
             unfocusedBorderColor = Color(0xFFF1F3F2),
-            cursorColor = Accent,
+            cursorColor = RecentAccent,
             focusedContainerColor = Color.White,
             unfocusedContainerColor = Color.White
         )
@@ -148,8 +159,8 @@ private fun CallList(
 ) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 28.dp),
-        modifier = modifier
+        contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
+        modifier = modifier.fillMaxSize()
     ) {
         items(calls, key = { it.id }) { call ->
             CallListItem(
@@ -166,10 +177,7 @@ private fun CallList(
 /**
  * Preview
  */
-@Preview(
-    name = "Recent Calls",
-    showBackground = true
-)
+@Preview(name = "Recent Calls", showBackground = true)
 @Composable
 private fun PreviewRecentCallsScreen() {
     MaterialTheme(colorScheme = lightColorScheme()) {

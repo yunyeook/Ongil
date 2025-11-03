@@ -94,7 +94,7 @@ private fun CallDetailContent(
                     .padding(vertical = 32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = Accent)
+                CircularProgressIndicator(color = CallAccent)
             }
             return@Column
         }

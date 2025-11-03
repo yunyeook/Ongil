@@ -8,8 +8,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CameraAlt
@@ -30,25 +32,22 @@ import kr.co.ongil.presentation.uistate.MyInfoEditUiState
 import kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel
 import java.util.*
 
- val Accent = Color(0xFF8CA898)
+// 톤 컬러 (가능하면 theme로 이동 권장)
+private val Accent = Color(0xFF8CA898)
 
-/**
- * 날짜 형식 변환 함수
- */
-// YYYYMMDD → YYYY.MM.DD
- fun formatDateForDisplay(date: String): String {
+/* =========================
+   유틸: 날짜 포맷
+   ========================= */
+fun formatDateForDisplay(date: String): String {
     if (date.length != 8) return date
     return "${date.substring(0, 4)}.${date.substring(4, 6)}.${date.substring(6, 8)}"
 }
 
-// YYYY.MM.DD → YYYYMMDD
- fun formatDateForStorage(date: String): String {
-    return date.replace(".", "")
-}
+fun formatDateForStorage(date: String): String = date.replace(".", "")
 
-/**
- * 내 정보 수정 화면 (ViewModel 기반)
- */
+/* =========================
+   Screen Entrypoint
+   ========================= */
 @Composable
 fun MyInfoEditScreen(
     modifier: Modifier = Modifier,
@@ -67,40 +66,34 @@ fun MyInfoEditScreen(
     )
 }
 
-/**
- * 내 정보 수정 화면 컨텐츠 (Stateless)
- */
+/* =========================
+   Content (Stateless)
+   ========================= */
 @Composable
- fun MyInfoEditContent(
+fun MyInfoEditContent(
     uiState: MyInfoEditUiState,
     onEvent: (MyInfoEditEvent) -> Unit,
     onNavigateBack: () -> Unit,
     onChangePasswordClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Snackbar 호스트 상태
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 에러 메시지 표시
     LaunchedEffect(uiState.error) {
-        uiState.error?.let { errorMessage ->
-            snackbarHostState.showSnackbar(
-                message = errorMessage,
-                duration = SnackbarDuration.Short
-            )
+        uiState.error?.let { message ->
+            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
     }
 
-    // 이미지 선택 런처 (한국어 타이틀)
+    // 이미지 선택 런처
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
-        uri?.let {
-            onEvent(MyInfoEditEvent.OnImageSelected(it.toString()))
-        } ?: onEvent(MyInfoEditEvent.DismissImagePicker)
+        uri?.let { onEvent(MyInfoEditEvent.OnImageSelected(it.toString())) }
+            ?: onEvent(MyInfoEditEvent.DismissImagePicker)
     }
 
-    // showImagePicker 상태 감지
+    // 이미지 피커 트리거
     LaunchedEffect(uiState.showImagePicker) {
         if (uiState.showImagePicker) {
             imagePickerLauncher.launch(
@@ -109,208 +102,208 @@ fun MyInfoEditScreen(
         }
     }
 
-    // 날짜 선택 다이얼로그
+    // 생년월일 다이얼로그
     if (uiState.showDatePicker) {
         BirthDatePickerDialog(
-            onDateSelected = { dateString ->
-                onEvent(MyInfoEditEvent.OnDateSelected(dateString))
-            },
-            onDismiss = {
-                onEvent(MyInfoEditEvent.DismissDatePicker)
-            }
+            onDateSelected = { dateString -> onEvent(MyInfoEditEvent.OnDateSelected(dateString)) },
+            onDismiss = { onEvent(MyInfoEditEvent.DismissDatePicker) }
         )
     }
 
+    // 내부 Scaffold가 바깥 Scaffold 인셋을 덮지 않도록 0으로 고정
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color.White
+        containerColor = Color.White,
+        contentWindowInsets = WindowInsets(0) // ✅ 핵심
     ) { paddingValues ->
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp, vertical = 24.dp),
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .verticalScroll(rememberScrollState()) // ✅ 스크롤
+                .navigationBarsPadding()               // ✅ 제스처/네비바 보정
+                .imePadding(),                          // ✅ 키보드 보정
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-        // 상단 아바타
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp, bottom = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
+            /* -------- 아바타 -------- */
             Box(
-                modifier = Modifier.size(140.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 24.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(Color(0xFFF1F3F4)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!uiState.profileImageUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = uiState.profileImageUrl,
-                            contentDescription = "프로필",
-                            modifier = Modifier.fillMaxSize().clip(CircleShape)
+                Box(modifier = Modifier.size(140.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(Color(0xFFF1F3F4)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!uiState.profileImageUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = uiState.profileImageUrl,
+                                contentDescription = "프로필 이미지",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        }
+                    }
+                    Surface(
+                        color = Accent,
+                        shape = CircleShape,
+                        shadowElevation = 6.dp,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(48.dp)
+                            .clickable { onEvent(MyInfoEditEvent.PickProfileImage) }
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.CameraAlt,
+                                contentDescription = "사진 변경",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
+            Text(
+                text = uiState.roleLabel,
+                color = Accent,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            /* -------- 이름 -------- */
+            LabeledOutlinedField(
+                label = "이름",
+                value = uiState.name,
+                onValueChange = { onEvent(MyInfoEditEvent.UpdateName(it)) }
+            )
+
+            /* -------- 생년월일 -------- */
+            LabeledOutlinedField(
+                label = "생년월일",
+                value = formatDateForDisplay(uiState.birth),
+                onValueChange = { newValue ->
+                    onEvent(MyInfoEditEvent.UpdateBirth(formatDateForStorage(newValue)))
+                },
+                trailing = {
+                    IconButton(onClick = { onEvent(MyInfoEditEvent.PickBirthDate) }) {
+                        Icon(
+                            Icons.Outlined.CalendarToday,
+                            contentDescription = "날짜 선택",
+                            tint = Color(0xFF7B8A8D)
                         )
                     }
                 }
-                Surface(
-                    color = Accent,
-                    shape = CircleShape,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(48.dp)
-                        .clickable { onEvent(MyInfoEditEvent.PickProfileImage) }
-                ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.CameraAlt, contentDescription = "사진 변경", tint = Color.White)
-                    }
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            /* -------- 휴대폰 인증 섹션 -------- */
+            PhoneVerificationSection(
+                phoneUiState = uiState.phoneUiState,
+                currentPhone = uiState.phone,
+                newPhone = uiState.newPhone,
+                verificationCode = uiState.verificationCode,
+                verificationResult = uiState.verificationResult,
+                secondsLeft = uiState.secondsLeft,
+                onChangeClick = { onEvent(MyInfoEditEvent.StartPhoneEdit) },
+                onPhoneChange = { onEvent(MyInfoEditEvent.UpdateNewPhone(it)) },
+                onSendClick = { onEvent(MyInfoEditEvent.SendVerificationCode(uiState.newPhone)) },
+                onResendClick = { onEvent(MyInfoEditEvent.ResendVerificationCode(uiState.newPhone)) },
+                onCodeChange = { onEvent(MyInfoEditEvent.UpdateVerificationCode(it)) },
+                onVerifyClick = {
+                    onEvent(MyInfoEditEvent.VerifyCode(uiState.newPhone, uiState.verificationCode))
                 }
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            TextButton(onClick = onChangePasswordClick) {
+                Text("비밀번호 변경하기", color = Accent, style = MaterialTheme.typography.titleMedium)
             }
-        }
 
-        Text(text = uiState.roleLabel, color = Accent, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(24.dp))
 
-        // 이름
-        LabeledOutlinedField(
-            label = "이름",
-            value = uiState.name,
-            onValueChange = { onEvent(MyInfoEditEvent.UpdateName(it)) }
-        )
-
-        // 생년월일
-        LabeledOutlinedField(
-            label = "생년월일",
-            value = formatDateForDisplay(uiState.birth),
-            onValueChange = { newValue ->
-                // 사용자가 직접 입력하는 경우 처리 (선택 사항)
-                val formatted = formatDateForStorage(newValue)
-                onEvent(MyInfoEditEvent.UpdateBirth(formatted))
-            },
-            trailing = {
-                IconButton(onClick = { onEvent(MyInfoEditEvent.PickBirthDate) }) {
-                    Icon(Icons.Outlined.CalendarToday, contentDescription = "날짜", tint = Color(0xFF7B8A8D))
-                }
+            Button(
+                onClick = {
+                    onEvent(MyInfoEditEvent.SaveInfo(uiState.name, uiState.birth, uiState.phone))
+                    onNavigateBack()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Text("저장하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
             }
-        )
 
-        // 휴대폰 번호(변경/인증 전체 섹션)
-        Spacer(Modifier.height(6.dp))
-        PhoneVerificationSection(
-            phoneUiState = uiState.phoneUiState,
-            currentPhone = uiState.phone,
-            newPhone = uiState.newPhone,
-            verificationCode = uiState.verificationCode,
-            verificationResult = uiState.verificationResult,
-            secondsLeft = uiState.secondsLeft,
-            onChangeClick = { onEvent(MyInfoEditEvent.StartPhoneEdit) },
-            onPhoneChange = { onEvent(MyInfoEditEvent.UpdateNewPhone(it)) },
-            onSendClick = { onEvent(MyInfoEditEvent.SendVerificationCode(uiState.newPhone)) },
-            onResendClick = { onEvent(MyInfoEditEvent.ResendVerificationCode(uiState.newPhone)) },
-            onCodeChange = { onEvent(MyInfoEditEvent.UpdateVerificationCode(it)) },
-            onVerifyClick = { onEvent(MyInfoEditEvent.VerifyCode(uiState.newPhone, uiState.verificationCode)) }
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        TextButton(onClick = onChangePasswordClick) {
-            Text("비밀번호 변경하기", color = Accent, style = MaterialTheme.typography.titleMedium)
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        Button(
-            onClick = {
-                onEvent(MyInfoEditEvent.SaveInfo(uiState.name, uiState.birth, uiState.phone))
-                onNavigateBack()
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Accent),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.fillMaxWidth().height(56.dp)
-        ) {
-            Text("저장하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
-        }
+            Spacer(Modifier.height(32.dp)) // 하단 여유
         }
     }
 }
 
-/**
- * 생년월일 선택 다이얼로그 (한국어)
- */
+/* =========================
+   생년월일 선택 다이얼로그
+   ========================= */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
- fun BirthDatePickerDialog(
+fun BirthDatePickerDialog(
     onDateSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val locale = Locale.KOREA
-
-    // 한국어 환경 설정
-    val configuration = Configuration()
-    configuration.setLocale(locale)
-
+    val configuration = Configuration().apply { setLocale(locale) }
     val context = LocalContext.current
     val localizedContext = remember(locale) {
         context.createConfigurationContext(configuration)
     }
 
-    // DatePicker 상태
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
 
-    CompositionLocalProvider(
-        LocalContext provides localizedContext
-    ) {
+    CompositionLocalProvider(LocalContext provides localizedContext) {
         DatePickerDialog(
             onDismissRequest = onDismiss,
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val calendar = Calendar.getInstance(locale)
-                            calendar.timeInMillis = millis
-                            val year = calendar.get(Calendar.YEAR)
-                            val month = calendar.get(Calendar.MONTH) + 1
-                            val day = calendar.get(Calendar.DAY_OF_MONTH)
-
-                            // YYYYMMDD 형식으로 변환 (저장용)
-                            val dateString = String.format(locale, "%04d%02d%02d", year, month, day)
-                            onDateSelected(dateString)
-                        } ?: onDismiss()
-                    }
-                ) {
-                    Text("확인")
-                }
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val cal = Calendar.getInstance(locale).apply { timeInMillis = millis }
+                        val yyyyMMdd = String.format(
+                            locale, "%04d%02d%02d",
+                            cal.get(Calendar.YEAR),
+                            cal.get(Calendar.MONTH) + 1,
+                            cal.get(Calendar.DAY_OF_MONTH)
+                        )
+                        onDateSelected(yyyyMMdd)
+                    } ?: onDismiss()
+                }) { Text("확인") }
             },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("취소")
-                }
-            }
+            dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
         ) {
             DatePicker(
                 state = datePickerState,
-                title = {
-                    Text("생년월일 선택", modifier = Modifier.padding(16.dp))
-                }
+                title = { Text("생년월일 선택", modifier = Modifier.padding(16.dp)) }
             )
         }
     }
 }
 
+/* =========================
+   Preview
+   ========================= */
 @Preview(showBackground = true)
 @Composable
- fun PreviewMyInfoEditScreen_All() {
+fun PreviewMyInfoEditScreen_All() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         val previewViewModel = MyInfoEditViewModel()
-        MyInfoEditScreen(
-            viewModel = previewViewModel
-        )
+        MyInfoEditScreen(viewModel = previewViewModel)
     }
 }
-

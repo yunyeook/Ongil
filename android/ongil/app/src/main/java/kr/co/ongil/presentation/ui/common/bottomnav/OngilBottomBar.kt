@@ -5,10 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -43,10 +42,10 @@ fun OngilBottomBar(
     items: List<BottomNavItem> = OngilBottomNavItems.all
 ) {
     // 카드는 상단 모서리만 둥글게, 하단은 직각, 좌우 패딩 없음
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        color = Color.White,
+        shadowElevation = 4.dp,
         shape = RoundedCornerShape(
             topStart = 40.dp,
             topEnd = 40.dp,

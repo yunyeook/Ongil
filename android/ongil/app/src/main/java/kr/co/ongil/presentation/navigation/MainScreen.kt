@@ -21,17 +21,22 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Routes.MyInfo.route
 
-    // BottomBar를 표시할 화면들
+    // BottomBar를 표시할 화면들 (모든 페이지)
     val bottomBarRoutes = listOf(
         Routes.Location.route,
         Routes.Favorite.route,
         Routes.Home.route,
         Routes.PatientList.route,
-        Routes.MyInfo.route
+        Routes.MyInfo.route,
+        Routes.EditInfo.route,
+        Routes.CallHistory.route,
+        Routes.ChangePassword.route,
+        Routes.SearchUser.route
     )
 
     // 현재 라우트가 BottomBar를 표시해야 하는 화면인지 확인
-    val showBottomBar = currentRoute in bottomBarRoutes
+    // CallDetail은 동적 라우트이므로 별도 체크
+    val showBottomBar = currentRoute in bottomBarRoutes || currentRoute?.startsWith("call_detail/") == true
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),

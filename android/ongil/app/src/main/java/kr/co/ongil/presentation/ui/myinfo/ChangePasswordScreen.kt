@@ -150,7 +150,7 @@ private fun ChangePasswordContent(
                           uiState.newPassword.isNotBlank() &&
                           uiState.confirmPassword.isNotBlank() &&
                           uiState.newPassword == uiState.confirmPassword,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = CallAccent),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
