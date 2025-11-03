@@ -12,17 +12,8 @@ import kotlinx.coroutines.launch
 import kr.co.ongil.domain.model.UserSummary
 import kr.co.ongil.domain.repository.SearchUserRepository
 import kr.co.ongil.data.repository.fake.FakeSearchUserRepository
-/**
- * SearchUserViewModel
- *
- * 역할:
- * 1) 전화번호로 사용자 검색
- * 2) 검색 결과 기반으로 "등록하기" 플로우로 전환
- * 3) 인증번호 검증 -> 등록 요청 -> 성공 시 모달 / 이동 신호 발행
- *
- * 화면은 Navigation으로 분리하지 않고 mode(SearchUserMode)만 바꿔서 상태 전환합니다.
- * 단, 토스트나 화면 전환 같은 일회성 동작은 sideEffect로 보냅니다.
- */
+
+
 class SearchUserViewModel(
     private val repository: SearchUserRepository = FakeSearchUserRepository()
 ) : ViewModel() {
@@ -383,7 +374,6 @@ class SearchUserViewModel(
     // ---------------------------------------------------------------------------------
 
     private fun defaultRelationOptions(): List<String> {
-        // TODO: 이건 나중에 서버에서 내려줄 수도 있음
         return listOf("자녀", "부모", "배우자", "기타")
     }
 

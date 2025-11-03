@@ -1,0 +1,588 @@
+package kr.co.ongil.presentation.ui.signup
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kr.co.ongil.presentation.ui.common.AlertModal
+import kr.co.ongil.presentation.ui.common.GreenButton
+import kr.co.ongil.presentation.ui.common.InputBox
+
+/**
+ * 회원가입 화면
+ */
+@Composable
+fun SignupScreen(
+    uiState: SignupUiState,
+    onBackClick: () -> Unit,
+    onProfileImageClick: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onBirthClick: () -> Unit,
+    onPhoneChange: (String) -> Unit,
+    onRequestVerificationCode: () -> Unit,
+    onVerificationCodeChange: (String) -> Unit,
+    onVerifyCodeClick: () -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onTogglePasswordVisible: () -> Unit,
+    onPasswordConfirmChange: (String) -> Unit,
+    onTogglePasswordConfirmVisible: () -> Unit,
+    onSelectGuardian: () -> Unit,
+    onSelectPatient: () -> Unit,
+    onSubmitSignup: () -> Unit,
+    onDismissSuccessModal: () -> Unit,
+    onDismissErrorModal: () -> Unit,
+) {
+    val scrollState = rememberScrollState()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+        ) {
+            // 상단 헤더
+            SignupHeader(onBackClick = onBackClick)
+
+            // 본문 내용
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+
+                // 프로필 영역
+                ProfileSection(
+                    profileImageUrl = uiState.profileImageUrl,
+                    onProfileImageClick = onProfileImageClick
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 이름
+                LabeledField(label = "이름") {
+                    InputBox(
+                        value = uiState.name,
+                        onValueChange = onNameChange,
+                        label = "",
+                        placeholder = "실명을 입력해주세요",
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 생년월일
+                LabeledField(label = "생년월일") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFDDE0E4),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .clickable { onBirthClick() }
+                    ) {
+                        Text(
+                            text = if (uiState.birth.isNotEmpty()) uiState.birth else "생년월일을 입력해주세요",
+                            color = if (uiState.birth.isNotEmpty()) Color(0xFF1A1D21) else Color(0xFF9CA1A9),
+                            fontSize = 16.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 12.dp)
+                        )
+
+                        Icon(
+                            imageVector = Icons.Filled.CalendarMonth,
+                            contentDescription = "calendar",
+                            tint = Color(0xFF707680),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 휴대폰 번호 + 인증번호 발송 / 재발송
+                LabeledField(label = "휴대폰 번호") {
+
+                    // search_user 스타일: 하단 정렬 / 간격 12.dp / 버튼 높이 56.dp
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        InputBox(
+                            value = uiState.phoneNumber,
+                            onValueChange = onPhoneChange,
+                            label = "",
+                            placeholder = "010-1234-5678",
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        GreenButton(
+                            text = if (uiState.isCodeRequested) "재발송" else "발송",
+                            enabled = true, // 발송 버튼은 항상 활성 (추후 로직에서 제어)
+                            onClick = onRequestVerificationCode,
+                            modifier = Modifier
+                                .weight(0.6f)
+                                .height(56.dp)
+                        )
+                    }
+                }
+
+                // 인증번호 입력/확인/타이머/결과 메시지
+                if (uiState.isCodeRequested) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 위에서 주신 search_user 스타일과 동일한 패턴
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.Bottom,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            InputBox(
+                                value = uiState.verificationCode,
+                                onValueChange = onVerificationCodeChange,
+                                label = "인증번호",
+                                placeholder = "인증번호 6자리",
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            GreenButton(
+                                text = if (uiState.isCodeVerified) "확인됨" else "확인",
+                                enabled = !uiState.isCodeVerified,
+                                onClick = onVerifyCodeClick,
+                                modifier = Modifier
+                                    .weight(0.6f)
+                                    .height(56.dp)
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            // 남은 시간
+                            if (uiState.showTimerText) {
+                                Text(
+                                    text = "남은 시간: ${uiState.remainingTimeText}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFD32F2F)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(1.dp))
+                            }
+
+                            // 성공 / 실패 메시지
+                            if (uiState.verificationStatusMessage.isNotEmpty()) {
+                                Text(
+                                    text = uiState.verificationStatusMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (uiState.isCodeVerified)
+                                        Color(0xFF2E7D32) // 초록 (성공)
+                                    else
+                                        Color(0xFFD32F2F), // 빨강 (실패)
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(1.dp))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 비밀번호
+                LabeledField(label = "비밀번호") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                1.dp,
+                                Color(0xFFDDE0E4),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (uiState.password.isNotEmpty()) uiState.passwordMasked else "영문, 숫자 조합 8자 이상",
+                            color = if (uiState.password.isNotEmpty()) Color(0xFF1A1D21) else Color(0xFF9CA1A9),
+                            fontSize = 16.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 12.dp)
+                        )
+
+                        Icon(
+                            imageVector = if (uiState.isPasswordVisible)
+                                Icons.Filled.VisibilityOff
+                            else
+                                Icons.Filled.Visibility,
+                            contentDescription = "toggle password visibility",
+                            tint = Color(0xFF707680),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { onTogglePasswordVisible() }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 비밀번호 확인
+                LabeledField(label = "비밀번호 확인") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                1.dp,
+                                Color(0xFFDDE0E4),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (uiState.passwordConfirm.isNotEmpty()) uiState.passwordConfirmMasked else "비밀번호를 다시 입력해주세요",
+                            color = if (uiState.passwordConfirm.isNotEmpty()) Color(0xFF1A1D21) else Color(0xFF9CA1A9),
+                            fontSize = 16.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 12.dp)
+                        )
+
+                        Icon(
+                            imageVector = if (uiState.isConfirmPasswordVisible)
+                                Icons.Filled.VisibilityOff
+                            else
+                                Icons.Filled.Visibility,
+                            contentDescription = "toggle confirm password visibility",
+                            tint = Color(0xFF707680),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { onTogglePasswordConfirmVisible() }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 회원 유형
+                LabeledField(label = "회원 유형") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        UserTypeButton(
+                            text = "보호자",
+                            isSelected = uiState.userType == UserType.GUARDIAN,
+                            onClick = onSelectGuardian
+                        )
+                        UserTypeButton(
+                            text = "환자",
+                            isSelected = uiState.userType == UserType.PATIENT,
+                            onClick = onSelectPatient
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // 가입하기 버튼
+                GreenButton(
+                    text = "가입하기",
+                    enabled = true, // 유효성 검증 후 false 처리 가능
+                    onClick = onSubmitSignup,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+
+        // 성공 모달
+        if (uiState.showSuccessModal) {
+            AlertModal(
+                onDismiss = onDismissSuccessModal,
+                icon = null,
+                message = "회원가입이 성공적으로 완료되었습니다.",
+                buttonText = "확인",
+                onButtonClick = onDismissSuccessModal
+            )
+        }
+
+        // 실패 모달
+        if (uiState.showErrorModal) {
+            AlertModal(
+                onDismiss = onDismissErrorModal,
+                icon = null,
+                message = "회원가입에 실패했습니다.\n다시한번 시도해주세요.",
+                buttonText = "확인",
+                onButtonClick = onDismissErrorModal
+            )
+        }
+    }
+}
+
+/**
+ * 상단 헤더: ← 회원가입
+ * 높이 80dp
+ */
+@Composable
+private fun SignupHeader(
+    onBackClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        color = Color.White
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = "back",
+                tint = Color(0xFF1A1D21),
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onBackClick() }
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = "회원가입",
+                color = Color(0xFF1A1D21),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+/**
+ * 프로필 사진 업로드 UI
+ */
+@Composable
+private fun ProfileSection(
+    profileImageUrl: String?,
+    onProfileImageClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier.size(120.dp)
+        ) {
+            // 원형 영역 (placeholder or uploaded image)
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .border(
+                        width = 1.dp,
+                        color = Color(0xFFDDE0E4),
+                        shape = CircleShape
+                    )
+                    .background(
+                        color = Color(0xFFF7F8F9),
+                        shape = CircleShape
+                    )
+                    .clickable { onProfileImageClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                if (profileImageUrl.isNullOrEmpty()) {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = "profile",
+                        tint = Color(0xFF707680),
+                        modifier = Modifier.size(40.dp)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = android.R.drawable.ic_menu_gallery),
+                        // Coil 등 실제 이미지 로더는 추후 연결
+                        contentDescription = "profile image",
+                        modifier = Modifier.size(120.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
+            // 카메라 아이콘 배지
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(36.dp)
+                    .background(
+                        color = Color(0xFF788F7E),
+                        shape = CircleShape
+                    )
+                    .clickable { onProfileImageClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CameraAlt,
+                    contentDescription = "upload profile image",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "프로필 사진 (선택사항)",
+            color = Color(0xFF707680),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+/**
+ * 라벨 + 필드 묶음
+ */
+@Composable
+private fun LabeledField(
+    label: String,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                color = Color(0xFF1A1D21),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp
+            ),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        content()
+    }
+}
+
+/**
+ * 회원 유형 단일 Pill 버튼
+ */
+@Composable
+private fun RowScope.UserTypeButton(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val bg = if (isSelected) Color(0xFF788F7E) else Color.White
+    val borderColor = if (isSelected) Color(0xFF788F7E) else Color(0xFFDDE0E4)
+    val textColor = if (isSelected) Color.White else Color(0xFF1A1D21)
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .background(
+                color = bg,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable { onClick() }
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PreviewSignupScreen() {
+    SignupScreen(
+        uiState = SignupUiState(
+            // preview용 샘플 데이터 약간 넣어볼 수도 있음
+            name = "",
+            birth = "",
+            phoneNumber = "",
+            isCodeRequested = true,
+            verificationCode = "",
+            isCodeVerified = false,
+            showTimerText = true,
+            remainingTimeText = "02:45",
+            verificationStatusMessage = "인증번호 등록에 성공했습니다.",
+            passwordMasked = "********",
+            passwordConfirmMasked = "********",
+            userType = UserType.GUARDIAN
+        ),
+        onBackClick = {},
+        onProfileImageClick = {},
+        onNameChange = {},
+        onBirthClick = {},
+        onPhoneChange = {},
+        onRequestVerificationCode = {},
+        onVerificationCodeChange = {},
+        onVerifyCodeClick = {},
+        onPasswordChange = {},
+        onTogglePasswordVisible = {},
+        onPasswordConfirmChange = {},
+        onTogglePasswordConfirmVisible = {},
+        onSelectGuardian = {},
+        onSelectPatient = {},
+        onSubmitSignup = {},
+        onDismissSuccessModal = {},
+        onDismissErrorModal = {},
+    )
+}
