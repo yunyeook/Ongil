@@ -30,19 +30,19 @@ public class NavigationService {
     public NavigationSessionResponse startNavigation(StartNavigationRequest request) {
 
         log.info("길안내 시작: patientId={}, initiatedBy={}",
-            request.getPatientId(), request.getInitiatedBy());
+            request.patientId(), request.initiatedBy());
 
-        if (redisService.hasActiveSession(request.getPatientId())) {
+        if (redisService.hasActiveSession(request.patientId())) {
             throw new BusinessException(ErrorCode.NAVIGATION_ALREADY_ACTIVE);
         }
         // 1. 경로 조회 (TMAP API 호출)
         RouteResponse route = mapService.getPedestrianRoute(
-            request.getStartLocation().latitude(),
-            request.getStartLocation().longitude(),
-            request.getEndLocation().latitude(),
-            request.getEndLocation().longitude(),
-            request.getStartLocation().name(),
-            request.getEndLocation().name()
+            request.startLocation().latitude(),
+            request.startLocation().longitude(),
+            request.endLocation().latitude(),
+            request.endLocation().longitude(),
+            request.startLocation().name(),
+            request.endLocation().name()
         );
 
         // 2. 시간 계산
@@ -51,17 +51,17 @@ public class NavigationService {
 
         // 3. DB 로그 생성 (ID 생성)
         NavigationLog navigationLog = logService.createLog(
-            request.getPatientId(),
+            request.patientId(),
             route,
             now,
-            request.getInitiatedBy()
+            request.initiatedBy()
         );
 
         // 4. navigationId 생성
         String navigationId = navigationLog.getId().toString();
 
         // 5. Redis에 세션 저장 (patientId를 키로 사용)
-        redisService.saveNavigationSession(request.getPatientId(), navigationId, route);
+        redisService.saveNavigationSession(request.patientId(), navigationId, route);
 
         log.info("길안내 시작 완료: navigationId={}", navigationId);
 
@@ -71,7 +71,7 @@ public class NavigationService {
             route,
             now,
             expectedArrival,
-            request.getInitiatedBy()
+            request.initiatedBy()
         );
     }
 
@@ -81,23 +81,23 @@ public class NavigationService {
     public EndNavigationResponse endNavigation(EndNavigationRequest request) {
 
         log.info("길안내 종료: patientId={}, navigationId={}",
-            request.getPatientId(), request.getNavigationId());
+            request.patientId(), request.navigationId());
 
         // 1. DB 로그 완료 처리
         NavigationLog completedLog = logService.completeLog(
-            request.getNavigationId(),
-            request.getIsSuccessful()
+            request.navigationId(),
+            request.isSuccessful()
         );
 
         // 2. Redis 세션 삭제
-        redisService.endSession(request.getPatientId());
+        redisService.endSession(request.patientId());
 
         log.info("길안내 종료 완료: navigationId={}, isSuccessful={}",
-            request.getNavigationId(), completedLog.getIsSuccessful());
+            request.navigationId(), completedLog.getIsSuccessful());
 
         // 3. 응답
         return EndNavigationResponse.of(
-            request.getNavigationId().toString(),
+            request.navigationId().toString(),
             completedLog.getStartedAt(),
             completedLog.getEndedAt(),
             completedLog.getIsSuccessful()
