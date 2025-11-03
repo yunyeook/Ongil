@@ -25,6 +25,7 @@ WORKDIR /app
 
 # 빌드 단계에서 생성된 jar 파일 복사
 COPY --from=build /app/build/libs/*.jar app.jar
+COPY --from=build /app/build ./build
 
 # 메모리 및 GC 최적화
 ENV JAVA_OPTS="-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
