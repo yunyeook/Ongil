@@ -3,7 +3,9 @@ package kr.co.ongil.domain.user.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import kr.co.ongil.domain.user.dto.request.SearchUserRequest;
 import kr.co.ongil.domain.user.dto.request.UpdateUserRequest;
+import kr.co.ongil.domain.user.dto.response.SearchUserResponse;
 import kr.co.ongil.domain.user.dto.response.UpdateUserResponse;
 import kr.co.ongil.domain.user.dto.response.UserResponse;
 import kr.co.ongil.domain.user.service.UserService;
@@ -48,5 +50,16 @@ public class UserController {
 
         userService.deleteMe(userDetails.getUserId());
         return ApiResponse.success(ResponseMessage.USER_DELETE_SUCCESS);
+    }
+
+    @PostMapping("/searches")
+    @Operation(summary = "사용자 검색", description = "전화번호로 사용자를 검색합니다. PATIENT는 GUARDIAN만, GUARDIAN은 PATIENT만 검색 가능합니다.")
+    public ApiResponse<SearchUserResponse> searchUser(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody SearchUserRequest request) {
+
+        String userType = userDetails.getAuthorities().iterator().next().getAuthority();
+        SearchUserResponse response = userService.searchByPhoneNumber(userType, request);
+        return ApiResponse.success(ResponseMessage.USER_SEARCH_SUCCESS, response);
     }
 }

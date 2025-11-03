@@ -20,6 +20,7 @@ public enum ResponseMessage {
 
     // User
     USER_FOUND("사용자 조회 성공"),
+    USER_SEARCH_SUCCESS("사용자 검색 성공"),
     USER_UPDATED("사용자 정보 수정 성공"),
     USER_DELETE_SUCCESS("회원 탈퇴가 완료되었습니다."),
 
