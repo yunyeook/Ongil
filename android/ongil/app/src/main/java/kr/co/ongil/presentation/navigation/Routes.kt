@@ -6,10 +6,8 @@ package kr.co.ongil.presentation.navigation
 sealed class Routes(val route: String) {
     // 메인 화면들 (Bottom Navigation)
     object Location : Routes("location")
-    object Favorite : Routes("favorite")
     object Home : Routes("home")
     object PatientList : Routes("patient_list")
-    object SearchUser : Routes("search_user")
     object RegisterUser : Routes("register_user")
 
     // 나의 정보
@@ -27,15 +25,9 @@ sealed class Routes(val route: String) {
     // 즐겨찾기
     object Favorite : Routes("favorite")
 
-    // 장소 상세
-    object PlaceDetail : Routes("place_detail")
-
-    // 사용자 상세
-    object PatientDetail : Routes("patient_detail")
-
     // 사용자 등록(검색)
     object SearchUser : Routes("search_user")
-    // TODO: 다른 화면들 추가
+
     // 비밀번호 변경
     object ChangePassword : Routes("change_password")
 
