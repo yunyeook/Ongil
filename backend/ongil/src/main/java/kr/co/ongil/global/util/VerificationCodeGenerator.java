@@ -1,4 +1,4 @@
-package kr.co.ongil.domain.verification.util;
+package kr.co.ongil.global.util;
 
 import java.security.SecureRandom;
 
