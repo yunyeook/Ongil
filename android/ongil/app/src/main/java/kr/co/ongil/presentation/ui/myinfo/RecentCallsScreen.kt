@@ -1,0 +1,193 @@
+package kr.co.ongil.presentation.ui.myinfo
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.co.ongil.presentation.uistate.CallType
+import kr.co.ongil.presentation.uistate.RecentCallUi
+import kr.co.ongil.presentation.uistate.RecentCallsEvent
+import kr.co.ongil.presentation.viewmodel.RecentCallsViewModel
+
+private val Accent = Color(0xFF8CA898)
+
+/**
+ * 최근 통화 목록 화면 (ViewModel 기반)
+ */
+@Composable
+fun RecentCallsScreen(
+    modifier: Modifier = Modifier,
+    viewModel: RecentCallsViewModel = viewModel(),
+    onNavigateBack: () -> Unit = {},
+    onNavigateToCallDetail: (Long) -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    RecentCallsContent(
+        searchQuery = uiState.searchQuery,
+        calls = uiState.filteredCalls,
+        isLoading = uiState.isLoading,
+        error = uiState.error,
+        onEvent = viewModel::onEvent,
+        onNavigateToCallDetail = onNavigateToCallDetail,
+        modifier = modifier
+    )
+}
+
+/**
+ * 최근 통화 목록 화면 컨텐츠 (Stateless)
+ */
+@Composable
+private fun RecentCallsContent(
+    searchQuery: String,
+    calls: List<RecentCallUi>,
+    isLoading: Boolean,
+    error: String?,
+    onEvent: (RecentCallsEvent) -> Unit,
+    onNavigateToCallDetail: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        // 검색창
+        SearchBar(
+            query = searchQuery,
+            onQueryChange = { onEvent(RecentCallsEvent.UpdateSearchQuery(it)) }
+        )
+
+        // 로딩 상태
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Accent)
+            }
+        }
+
+        // 에러 상태
+        error?.let { errorMessage ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
+        // 통화 목록
+        if (!isLoading && error == null) {
+            CallList(
+                calls = calls,
+                onEvent = onEvent,
+                onNavigateToCallDetail = onNavigateToCallDetail
+            )
+        }
+    }
+}
+
+/**
+ * 검색창
+ */
+@Composable
+private fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = { Text("이름 또는 번호 검색") },
+        singleLine = true,
+        shape = RoundedCornerShape(24.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color(0xFFE6EBE9),
+            unfocusedBorderColor = Color(0xFFF1F3F2),
+            cursorColor = Accent,
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White
+        )
+    )
+}
+
+/**
+ * 통화 목록
+ */
+@Composable
+private fun CallList(
+    calls: List<RecentCallUi>,
+    onEvent: (RecentCallsEvent) -> Unit,
+    onNavigateToCallDetail: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 28.dp),
+        modifier = modifier
+    ) {
+        items(calls, key = { it.id }) { call ->
+            CallListItem(
+                item = call,
+                onInfoClick = {
+                    onEvent(RecentCallsEvent.OnInfoClick(call))
+                    onNavigateToCallDetail(call.id)
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Preview
+ */
+@Preview(
+    name = "Recent Calls",
+    showBackground = true
+)
+@Composable
+private fun PreviewRecentCallsScreen() {
+    MaterialTheme(colorScheme = lightColorScheme()) {
+        val sampleCalls = listOf(
+            RecentCallUi(1, "이지현", CallType.VOIP, "오늘 오후 3:24 · 통화시간 5분 12초"),
+            RecentCallUi(2, "박민수", CallType.NORMAL, "오늘 오후 1:02 · 통화시간 1분 03초"),
+            RecentCallUi(3, "김수진", CallType.SOS, "오늘 오후 12:10 · 통화시간 20초"),
+            RecentCallUi(4, "02-1234-5678", CallType.NORMAL, "어제 오후 9:50 · 통화시간 2분 11초"),
+            RecentCallUi(5, "이지현", CallType.VOIP, "어제 오후 8:30 · 통화시간 30초")
+        )
+
+        RecentCallsContent(
+            searchQuery = "",
+            calls = sampleCalls,
+            isLoading = false,
+            error = null,
+            onEvent = {},
+            onNavigateToCallDetail = {}
+        )
+    }
+}
