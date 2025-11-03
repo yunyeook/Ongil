@@ -39,7 +39,7 @@ public class FavoriteService {
 
         // 3. 중복 체크
         if (favoriteRepository.existsByPatientIdAndLatitudeAndLongitudeAndPlaceName(
-            patientId, request.getLatitude(), request.getLongitude(), request.getPlaceName())) {
+            patientId, request.latitude(), request.longitude(), request.placeName())) {
             throw new BusinessException(ErrorCode.FAVORITE_ALREADY_EXISTS);
         }
 
@@ -50,12 +50,12 @@ public class FavoriteService {
         // 5. 저장
         Favorite favorite = Favorite.builder()
             .patient(patient)
-            .placeName(request.getPlaceName())
+            .placeName(request.placeName())
             .placeAlias(request.getPlaceAlias())
-            .category(request.getCategory())
-            .address(request.getAddress())
-            .latitude(request.getLatitude())
-            .longitude(request.getLongitude())
+            .category(request.category())
+            .address(request.address())
+            .latitude(request.latitude())
+            .longitude(request.longitude())
             .isDefault(shouldBeDefault)
             .build();
 
@@ -107,12 +107,12 @@ public class FavoriteService {
 
         // 수정
         favorite.update(
-            request.getPlaceName(),
-            request.getPlaceAlias(),
-            request.getCategory(),
-            request.getAddress(),
-            request.getLatitude(),
-            request.getLongitude()
+            request.placeName(),
+            request.placeAlias(),
+            request.category(),
+            request.address(),
+            request.latitude(),
+            request.longitude()
         );
 
         log.info("즐겨찾기 수정 완료 - favoriteId: {}", favoriteId);
