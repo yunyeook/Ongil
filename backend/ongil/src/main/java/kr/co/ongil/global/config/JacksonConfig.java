@@ -8,6 +8,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -42,9 +43,13 @@ public class JacksonConfig implements WebMvcConfigurer {
 
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-        converter.setObjectMapper(objectMapper());
-        converter.setDefaultCharset(StandardCharsets.UTF_8);
-        converters.add(0, converter);
+        // ByteArrayHttpMessageConverter를 가장 먼저 등록 (Swagger/OpenAPI 명세 파싱을 위해 필수)
+        converters.add(0, new ByteArrayHttpMessageConverter());
+
+        // Jackson JSON 컨버터 등록
+        MappingJackson2HttpMessageConverter jsonConverter = new MappingJackson2HttpMessageConverter();
+        jsonConverter.setObjectMapper(objectMapper());
+        jsonConverter.setDefaultCharset(StandardCharsets.UTF_8);
+        converters.add(jsonConverter);
     }
 }
