@@ -55,4 +55,15 @@ public class AuthController {
         RefreshResponse refreshResponse = authService.refresh(request);
         return ApiResponse.success(ResponseMessage.TOKEN_REISSUE_SUCCESS.getMessage(), refreshResponse);
     }
+
+    @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "액세스 토큰을 블랙리스트에 추가하고 리프레시 토큰을 삭제하여 로그아웃합니다.")
+    public ApiResponse<String> logout(@RequestHeader("Authorization") String authorizationHeader) {
+
+        // "Bearer " 접두사 제거
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+
+        authService.logout(accessToken);
+        return ApiResponse.success(ResponseMessage.LOGOUT_SUCCESS);
+    }
 }
