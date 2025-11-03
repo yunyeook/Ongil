@@ -1,9 +1,12 @@
 package kr.co.ongil.domain.user.service;
 
+import kr.co.ongil.domain.user.dto.request.SearchUserRequest;
 import kr.co.ongil.domain.user.dto.request.UpdateUserRequest;
+import kr.co.ongil.domain.user.dto.response.SearchUserResponse;
 import kr.co.ongil.domain.user.dto.response.UpdateUserResponse;
 import kr.co.ongil.domain.user.dto.response.UserResponse;
 import kr.co.ongil.domain.user.entity.User;
+import kr.co.ongil.domain.user.entity.UserType;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
@@ -35,6 +38,28 @@ public class UserService {
         log.info("사용자 정보 조회 완료: userId={}", userId);
 
         return UserResponse.from(user);
+    }
+
+    @Transactional(readOnly = true)
+    public SearchUserResponse searchByPhoneNumber(String currentUserType, SearchUserRequest request) {
+        String phoneNumber = request.getPhoneNumber();
+
+        // 전화번호로 사용자 조회 (삭제된 사용자는 @SQLRestriction에 의해 자동으로 필터링됨)
+        User targetUser = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // authorities에서 "ROLE_" 제거
+        String userType = currentUserType.replace("ROLE_", "");
+
+        // UserType이 같으면 검색 불가 (PATIENT는 GUARDIAN만, GUARDIAN은 PATIENT만 검색 가능)
+        if (userType.equals(targetUser.getUserType().name())) {
+            log.warn("동일한 UserType 검색 시도: currentUserType={}, targetUserType={}", userType, targetUser.getUserType());
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        log.info("사용자 검색 완료: targetUserId={}, targetUserType={}", targetUser.getId(), targetUser.getUserType());
+
+        return SearchUserResponse.from(targetUser);
     }
 
     @Transactional
