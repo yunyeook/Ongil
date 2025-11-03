@@ -22,8 +22,8 @@ class MainActivity : ComponentActivity() {
             OngilTheme {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // 혹시 충돌 날 수도 있으니까 커밋이나 푸시할때는 여기 밑에 전부 주석처리 해주세요
-                    PlayGroundMJ()
-                    // PlayGroundSH()
+//                    PlayGroundMJ()
+                     PlayGroundSH()
                 }
             }
         }

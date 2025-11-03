@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import kr.co.ongil.presentation.ui.myinfo.MyInfoUiState
 
 /**
  * 온길 - 나의 정보 화면 (헤더/바텀바 제외)

@@ -34,7 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kr.co.ongil.presentation.uistate.*
 import kr.co.ongil.presentation.viewmodel.CallDetailViewModel
 
-private val Accent = Color(0xFF8CA898)
+val CallAccent = Color(0xFF8CA898)
 private val Danger = Color(0xFFD85B4E)
 private val ChipBg = Color(0xFFEFF4F2)
 private val SurfaceBg = Color(0xFFF8F9FA)

@@ -21,7 +21,8 @@ import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
 
-private val Accent = Color(0xFF8CA898)
+val CallListAccent = Color(0xFF8CA898)
+
 
 /**
  * 통화 목록 아이템

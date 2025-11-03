@@ -16,8 +16,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import kr.co.ongil.presentation.ui.myinfo.MyInfoEditScreen
 import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
+import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
+import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
+import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 
 /**
@@ -57,22 +62,7 @@ fun AppNavGraph(
 
         // 내 정보 수정 화면
         composable(Routes.EditInfo.route) {
-            val myInfoViewModel: MyInfoViewModel = viewModel()
-            val myInfoUiState by myInfoViewModel.uiState.collectAsState()
-
-            val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel(
-                factory = androidx.lifecycle.viewmodel.viewModelFactory {
-                    addInitializer(kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel::class) {
-                        kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel(
-                            initialName = myInfoUiState.name,
-                            initialBirth = "1990.01.01", // TODO: 생년월일 추가
-                            initialPhone = myInfoUiState.phoneNumber,
-                            initialProfileImageUrl = myInfoUiState.profileImage,
-                            initialRoleLabel = "보호자" // TODO: 실제 사용자 역할
-                        )
-                    }
-                }
-            )
+            val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel()
 
             MyInfoEditScreen(
                 viewModel = editViewModel,
@@ -80,15 +70,47 @@ fun AppNavGraph(
                     navController.popBackStack()
                 },
                 onChangePasswordClick = {
-                    // TODO: 비밀번호 변경 화면으로 이동
+                    navController.navigate(Routes.ChangePassword.route)
                 }
             )
         }
 
         // 최근 통화목록 화면
         composable(Routes.CallHistory.route) {
-            // TODO: CallHistoryScreen 구현
-            PlaceholderScreen(title = "최근 통화목록")
+            RecentCallsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToCallDetail = { callId ->
+                    navController.navigate(Routes.CallDetail.createRoute(callId))
+                }
+            )
+        }
+
+        // 비밀번호 변경 화면
+        composable(Routes.ChangePassword.route) {
+            ChangePasswordScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onPasswordChanged = {
+                    // 비밀번호 변경 성공 시 추가 동작이 필요하면 여기에 구현
+                }
+            )
+        }
+
+        // 통화 상세 화면
+        composable(
+            route = Routes.CallDetail.route,
+            arguments = listOf(
+                navArgument("callLogId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val callLogId = backStackEntry.arguments?.getLong("callLogId") ?: 0L
+
+            CallDetailScreen(
+                callLogId = callLogId
+            )
         }
     }
 }
