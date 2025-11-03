@@ -9,6 +9,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+@PostConstruct
+public void init() {
+    System.out.println("[DEBUG] Redis host=" + redisHost + ", port=" + redisPort + ", password=" + redisPassword);
+}
+
 @Configuration
 public class RedisConfig {
 
