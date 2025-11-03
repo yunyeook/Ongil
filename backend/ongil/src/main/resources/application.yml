@@ -82,7 +82,7 @@ server:
 
 logging:
   level:
-    root: DEBUG
+    root: INFO
     org.hibernate.SQL: WARN
 
 jwt:
@@ -94,3 +94,11 @@ tmap:
   app-key: ${TMAP_APP_KEY}
   api:
     base-url: https://apis.openapi.sk.com
+
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true

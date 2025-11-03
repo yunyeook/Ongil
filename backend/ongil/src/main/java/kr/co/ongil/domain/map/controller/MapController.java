@@ -37,7 +37,7 @@ public class MapController {
         @RequestParam Double longitude
     ) {
         AddressResponse response = mapService.getAddress(latitude, longitude);
-        return ApiResponse.success(ResponseMessage.ADDRESS_FOUND.getMessage(), response);
+        return ApiResponse.success(ResponseMessage.ADDRESS_FOUND, response);
     }
 
     @GetMapping("/coordinate")
@@ -56,7 +56,7 @@ public class MapController {
         @RequestParam(required = false) String bunji
     ) {
         CoordinateResponse response = mapService.getCoordinate(cityDo, guGun, dong, bunji);
-        return ApiResponse.success(ResponseMessage.COORDINATE_FOUND.getMessage(), response);
+        return ApiResponse.success(ResponseMessage.COORDINATE_FOUND, response);
     }
 
     @GetMapping("/search")
@@ -81,7 +81,7 @@ public class MapController {
         @RequestParam(required = false, defaultValue = "10") Integer size
     ) {
         SearchPlaceListResponse response = mapService.searchPlaces(keyword, latitude, longitude, radius, page, size);
-        return  ApiResponse.success(ResponseMessage.PLACE_SEARCH_SUCCESS.getMessage(), response);
+        return  ApiResponse.success(ResponseMessage.PLACE_SEARCH_SUCCESS, response);
     }
 
     @GetMapping("/places/{poiId}")
@@ -91,7 +91,7 @@ public class MapController {
         @PathVariable String poiId
     ) {
         PlaceDetailResponse response = mapService.getPlaceDetail(poiId);
-        return ApiResponse.success(ResponseMessage.PLACE_SEARCH_DETAIL_SUCCESS.getMessage(), response);
+        return ApiResponse.success(ResponseMessage.PLACE_SEARCH_DETAIL_SUCCESS, response);
     }
     @GetMapping("/route/pedestrian")
     @Operation(summary = "보행자 경로 탐색", description = "출발지와 도착지 좌표로 보행자 경로를 조회합니다.")
@@ -119,7 +119,7 @@ public class MapController {
             endLatitude, endLongitude,
             startName, endName
         );
-        return ApiResponse.success(ResponseMessage.ROUTE_FOUND.getMessage(), response);
+        return ApiResponse.success(ResponseMessage.ROUTE_FOUND, response);
     }
 
 }

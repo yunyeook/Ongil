@@ -31,7 +31,7 @@ public class NavigationController {
         @RequestBody  StartNavigationRequest request
     ) {
         NavigationSessionResponse response = navigationService.startNavigation(request);
-        return ApiResponse.success(ResponseMessage.NAVIGATION_START_SUCCESS.getMessage(), response);
+        return ApiResponse.success(ResponseMessage.NAVIGATION_START_SUCCESS, response);
     }
 
     @PostMapping("/end")
@@ -40,7 +40,7 @@ public class NavigationController {
         @RequestBody @Valid EndNavigationRequest request
     ) {
         EndNavigationResponse response = navigationService.endNavigation(request);
-        return ApiResponse.success(ResponseMessage.NAVIGATION_END_SUCCESS.getMessage(), response);
+        return ApiResponse.success(ResponseMessage.NAVIGATION_END_SUCCESS, response);
     }
 
 //    @PutMapping("/{navigationId}/location")

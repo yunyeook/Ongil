@@ -1,4 +1,4 @@
-package kr.co.ongil.global.config;
+package kr.co.ongil.global.security.config;
 
 import kr.co.ongil.global.security.jwt.JwtAuthenticationEntryPoint;
 import kr.co.ongil.global.security.jwt.JwtAuthenticationFilter;

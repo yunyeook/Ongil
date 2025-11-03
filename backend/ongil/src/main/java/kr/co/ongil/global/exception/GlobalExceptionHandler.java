@@ -18,30 +18,22 @@ public class GlobalExceptionHandler {
         ErrorCode code = e.getErrorCode();
         return ResponseEntity
             .status(code.getStatus())
-            .body(ApiResponse.success(e.getMessage()));
+            .body(ApiResponse.fail(e.getErrorCode()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<String>> handleValidationException(MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getFieldError() != null
-            ? e.getBindingResult().getFieldError().getDefaultMessage()
-            : ErrorCode.INVALID_INPUT.getMessage();
-
         return ResponseEntity
             .status(ErrorCode.INVALID_INPUT.getStatus())
-            .body(ApiResponse.success(message));
+            .body(ApiResponse.fail(ErrorCode.INVALID_INPUT));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<String>> handleConstraintViolationException(ConstraintViolationException e) {
-        String message = e.getConstraintViolations().stream()
-            .findFirst()
-            .map(violation -> violation.getMessage())
-            .orElse(ErrorCode.INVALID_INPUT.getMessage());
 
         return ResponseEntity
             .status(ErrorCode.INVALID_INPUT.getStatus())
-            .body(ApiResponse.success(message));
+            .body(ApiResponse.fail(ErrorCode.INVALID_INPUT));
     }
 
     @ExceptionHandler(Exception.class)
@@ -49,6 +41,6 @@ public class GlobalExceptionHandler {
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
         return ResponseEntity
             .status(code.getStatus())
-            .body(ApiResponse.success(code.getMessage()));
+            .body(ApiResponse.fail(code));
     }
 }
