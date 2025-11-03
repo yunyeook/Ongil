@@ -19,26 +19,48 @@ import java.io.File
  * 내 정보 수정 화면 ViewModel
  */
 class MyInfoEditViewModel(
-    private val userRepository: UserRepository? = null,
-    initialName: String = "",
-    initialBirth: String = "",
-    initialPhone: String = "",
-    initialProfileImageUrl: String? = null,
-    initialRoleLabel: String = ""
+    private val userRepository: UserRepository = kr.co.ongil.data.repository.UserRepositoryImpl()
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        MyInfoEditUiState(
-            name = initialName,
-            birth = initialBirth,
-            phone = initialPhone,
-            profileImageUrl = initialProfileImageUrl,
-            roleLabel = initialRoleLabel
-        )
-    )
+    private val _uiState = MutableStateFlow(MyInfoEditUiState())
     val uiState: StateFlow<MyInfoEditUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+
+    init {
+        loadUserInfo()
+    }
+
+    /**
+     * 사용자 정보 로드
+     */
+    private fun loadUserInfo() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            userRepository.getMyInfo()
+                .onSuccess { userDto ->
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            name = userDto.name,
+                            birth = userDto.birth,
+                            phone = kr.co.ongil.core.utils.formatPhoneNumber(userDto.phoneNumber),
+                            profileImageUrl = userDto.profileImage,
+                            roleLabel = if (userDto.userType == "PATIENT") "환자" else "보호자",
+                            isLoading = false
+                        )
+                    }
+                }
+                .onFailure { exception ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
+                        )
+                    }
+                }
+        }
+    }
 
     /**
      * 이벤트 처리
@@ -138,7 +160,7 @@ class MyInfoEditViewModel(
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
                 // API 호출
-                userRepository?.sendVerificationCode(phone)?.getOrThrow()
+                userRepository.sendVerificationCode(phone).getOrThrow()
 
                 _uiState.update {
                     it.copy(
@@ -169,7 +191,7 @@ class MyInfoEditViewModel(
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
                 // API 호출
-                userRepository?.sendVerificationCode(phone)?.getOrThrow()
+                userRepository.sendVerificationCode(phone).getOrThrow()
 
                 _uiState.update {
                     it.copy(
@@ -199,7 +221,7 @@ class MyInfoEditViewModel(
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
                 // API 호출
-                val verificationToken = userRepository?.verifyCode(phone, code)?.getOrThrow()
+                val verificationToken = userRepository.verifyCode(phone, code).getOrThrow()
 
                 _uiState.update {
                     it.copy(
@@ -244,7 +266,7 @@ class MyInfoEditViewModel(
                 val verificationToken = if (phoneChanged) currentState.verificationToken else null
 
                 // API 호출
-                userRepository?.updateMyInfo(
+                userRepository.updateMyInfo(
                     name = name,
                     birth = birth,
                     phoneNumber = if (phoneChanged) phone else null,

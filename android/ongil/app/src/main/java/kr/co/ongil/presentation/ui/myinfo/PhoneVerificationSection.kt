@@ -13,7 +13,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.uistate.PhoneUiState
 
-private val Accent = Color(0xFF8CA898)
+private val PhoneAccent = Color(0xFF8CA898)
 
 /**
  * Stateless 휴대폰 인증 섹션

@@ -99,7 +99,12 @@ class UserRepositoryImpl(
 
     override suspend fun sendVerificationCode(phoneNumber: String): Result<Unit> {
         return try {
-            // TODO: TokenManager에서 accessToken 가져오기
+            // 네트워크 지연 시뮬레이션
+            delay(1000)
+
+            // Mock 인증번호 발송 (개발/테스트용)
+            // TODO: 실제 API 연동 시 아래 주석 해제하고 위의 Mock 코드 제거
+            /*
             val accessToken = "Bearer YOUR_ACCESS_TOKEN"
 
             if (authApi == null) {
@@ -110,18 +115,29 @@ class UserRepositoryImpl(
                 accessToken = accessToken,
                 request = SendVerificationRequest(phoneNumber = phoneNumber)
             )
+            */
 
             Result.success(Unit)
         } catch (e: Exception) {
-            // HTTP 에러를 ApiException으로 변환
-            val apiException = ErrorHandler.handleException(e)
-            Result.failure(apiException)
+            Result.failure(e)
         }
     }
 
     override suspend fun verifyCode(phoneNumber: String, code: String): Result<String> {
         return try {
-            // TODO: TokenManager에서 accessToken 가져오기
+            // 네트워크 지연 시뮬레이션
+            delay(500)
+
+            // Mock 인증번호 확인 (개발/테스트용)
+            // 인증번호가 "1234"이면 성공, 아니면 실패
+            if (code == "1234") {
+                Result.success("mock_verification_token_12345")
+            } else {
+                Result.failure(Exception("인증번호가 올바르지 않습니다."))
+            }
+
+            // TODO: 실제 API 연동 시 아래 주석 해제하고 위의 Mock 코드 제거
+            /*
             val accessToken = "Bearer YOUR_ACCESS_TOKEN"
 
             if (authApi == null) {
@@ -134,10 +150,9 @@ class UserRepositoryImpl(
             )
 
             Result.success(response.data.verificationToken)
+            */
         } catch (e: Exception) {
-            // HTTP 에러를 ApiException으로 변환
-            val apiException = ErrorHandler.handleException(e)
-            Result.failure(apiException)
+            Result.failure(e)
         }
     }
 

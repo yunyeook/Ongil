@@ -24,25 +24,25 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import kr.co.ongil.presentation.ui.components.LabeledOutlinedField
+import kr.co.ongil.presentation.ui.common.LabeledOutlinedField
 import kr.co.ongil.presentation.uistate.MyInfoEditEvent
 import kr.co.ongil.presentation.uistate.MyInfoEditUiState
 import kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel
 import java.util.*
 
-private val Accent = Color(0xFF8CA898)
+ val Accent = Color(0xFF8CA898)
 
 /**
  * 날짜 형식 변환 함수
  */
 // YYYYMMDD → YYYY.MM.DD
-private fun formatDateForDisplay(date: String): String {
+ fun formatDateForDisplay(date: String): String {
     if (date.length != 8) return date
     return "${date.substring(0, 4)}.${date.substring(4, 6)}.${date.substring(6, 8)}"
 }
 
 // YYYY.MM.DD → YYYYMMDD
-private fun formatDateForStorage(date: String): String {
+ fun formatDateForStorage(date: String): String {
     return date.replace(".", "")
 }
 
@@ -71,7 +71,7 @@ fun MyInfoEditScreen(
  * 내 정보 수정 화면 컨텐츠 (Stateless)
  */
 @Composable
-private fun MyInfoEditContent(
+ fun MyInfoEditContent(
     uiState: MyInfoEditUiState,
     onEvent: (MyInfoEditEvent) -> Unit,
     onNavigateBack: () -> Unit,
@@ -243,7 +243,7 @@ private fun MyInfoEditContent(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BirthDatePickerDialog(
+ fun BirthDatePickerDialog(
     onDateSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -305,14 +305,9 @@ private fun BirthDatePickerDialog(
 
 @Preview(showBackground = true)
 @Composable
-private fun PreviewMyInfoEditScreen_All() {
+ fun PreviewMyInfoEditScreen_All() {
     MaterialTheme(colorScheme = lightColorScheme()) {
-        val previewViewModel = MyInfoEditViewModel(
-            initialName = "김민수",
-            initialBirth = "19721029",  // YYYYMMDD 형식으로 저장
-            initialPhone = "010-4321-8765",
-            initialRoleLabel = "보호자"
-        )
+        val previewViewModel = MyInfoEditViewModel()
         MyInfoEditScreen(
             viewModel = previewViewModel
         )

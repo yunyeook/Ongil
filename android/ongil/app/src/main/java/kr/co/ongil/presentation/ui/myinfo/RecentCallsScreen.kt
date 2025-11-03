@@ -19,7 +19,7 @@ import kr.co.ongil.presentation.uistate.RecentCallUi
 import kr.co.ongil.presentation.uistate.RecentCallsEvent
 import kr.co.ongil.presentation.viewmodel.RecentCallsViewModel
 
-private val Accent = Color(0xFF8CA898)
+private val RecentAccent = Color(0xFF8CA898)
 
 /**
  * 최근 통화 목록 화면 (ViewModel 기반)

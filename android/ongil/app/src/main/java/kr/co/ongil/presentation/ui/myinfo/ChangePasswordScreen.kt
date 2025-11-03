@@ -21,7 +21,7 @@ import kr.co.ongil.presentation.uistate.ChangePasswordEvent
 import kr.co.ongil.presentation.uistate.ChangePasswordUiState
 import kr.co.ongil.presentation.viewmodel.ChangePasswordViewModel
 
-private val Accent = Color(0xFF8CA898)
+private val PasswordAccent = Color(0xFF8CA898)
 
 /**
  * 비밀번호 변경 화면 (ViewModel 기반)

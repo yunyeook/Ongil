@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.components
+package kr.co.ongil.presentation.ui.common
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
