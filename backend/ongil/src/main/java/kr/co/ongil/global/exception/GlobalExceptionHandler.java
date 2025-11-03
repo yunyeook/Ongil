@@ -15,6 +15,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<String>> handleBusinessException(BusinessException e) {
+        log.warn("비즈니스 예외 발생: {}", e.getMessage());
         ErrorCode code = e.getErrorCode();
         return ResponseEntity
             .status(code.getStatus())
@@ -26,7 +27,7 @@ public class GlobalExceptionHandler {
         String message = e.getBindingResult().getFieldError() != null
             ? e.getBindingResult().getFieldError().getDefaultMessage()
             : ErrorCode.INVALID_INPUT.getMessage();
-
+        log.warn("유효성 검증 실패: {}", message);
         return ResponseEntity
             .status(ErrorCode.INVALID_INPUT.getStatus())
             .body(ApiResponse.success(message));
@@ -38,6 +39,8 @@ public class GlobalExceptionHandler {
             .findFirst()
             .map(violation -> violation.getMessage())
             .orElse(ErrorCode.INVALID_INPUT.getMessage());
+        
+        log.warn("제약 조건 위반: {}", message); 
 
         return ResponseEntity
             .status(ErrorCode.INVALID_INPUT.getStatus())
@@ -46,6 +49,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<String>> handleException(Exception e) {
+        log.error("예상치 못한 예외 발생: {}", e.getMessage(), e);
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
         return ResponseEntity
             .status(code.getStatus())
