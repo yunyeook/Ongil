@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.PersonSearch
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material3.DropdownMenu
@@ -48,7 +47,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.foundation.border
 
 @Composable
@@ -374,7 +372,6 @@ private fun SearchInputSection(
                         onValueChange = onPhoneChange,
                         label = "",
                         placeholder = "010-0000-0000",
-                        backgroundColor = Color(0x00EBEBEB)
                     )
 
                     // 안내 문구

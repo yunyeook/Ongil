@@ -106,7 +106,7 @@ fun PatientDetailContent(
                 onValueChange = {},
                 enabled = false,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(24.dp))

@@ -23,10 +23,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
-import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 import kr.co.ongil.presentation.ui.searchuser.SearchUserScreen
 import kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel
+import kr.co.ongil.presentation.ui.signup.SignupScreen
+import kr.co.ongil.presentation.ui.signup.SignupViewModel
+
+
 @Composable
 fun PlayGroundMJ() {
 
@@ -34,17 +36,49 @@ fun PlayGroundMJ() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.SearchUser.route
+        startDestination = Screen.Home.route
     ) {
         composable(route = Screen.Home.route) {
             HomeScreen(
                 onGoFavoriteClick = {
                     navController.navigate(Screen.Favorite.route)
+                },
+                onGoSearchUserClick = {
+                    navController.navigate(Screen.SearchUser.route)
+                },
+                onGoSignupClick = {
+                    navController.navigate(Screen.Signup.route)
                 }
             )
         }
 
-        // 사용자 찾기 화면
+        // 회원가입
+        composable(route = Screen.Signup.route) {
+            val viewModel: SignupViewModel = viewModel()
+            val uiState by viewModel.uiState.collectAsState()
+
+            SignupScreen(
+                uiState = uiState,
+                onBackClick = { navController.popBackStack() },
+                onProfileImageClick = viewModel::onProfileImageClick,
+                onNameChange = viewModel::onNameChange,
+                onBirthClick = viewModel::onBirthClick,
+                onPhoneChange = viewModel::onPhoneChange,
+                onRequestVerificationCode = viewModel::onRequestVerificationCode,
+                onVerificationCodeChange = viewModel::onVerificationCodeChange,
+                onVerifyCodeClick = viewModel::onVerifyCodeClick,
+                onPasswordChange = viewModel::onPasswordChange,
+                onTogglePasswordVisible = viewModel::onTogglePasswordVisible,
+                onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
+                onTogglePasswordConfirmVisible = viewModel::onTogglePasswordConfirmVisible,
+                onSelectGuardian = viewModel::onSelectGuardian,
+                onSelectPatient = viewModel::onSelectPatient,
+                onSubmitSignup = viewModel::onSubmitSignup,
+                onDismissSuccessModal = viewModel::onDismissSuccessModal,
+                onDismissErrorModal = viewModel::onDismissErrorModal,
+            )
+        }
+
         // 사용자 찾기 화면
         composable(route = Screen.SearchUser.route) {
             val viewModel: SearchUserViewModel = viewModel()

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,9 +28,17 @@ fun InputBox(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    backgroundColor: Color = Color.White,  // 배경색 파라미터 추가
+    enabled: Boolean = true
 ) {
+    // 둥근 모서리 모양을 변수로 추출하여 재사용합니다.
+    val shape = RoundedCornerShape(8.dp)
+
+    // --- 수정된 부분 ---
+    // enabled 상태에 따라 배경색을 결정합니다.
+    // 활성화 상태: 흰색, 비활성화 상태: 연한 회색
+    val backgroundColor = if (enabled) Color.White else Color(0xFFF5F5F5)
+    // ------------------
+
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = label,
@@ -46,10 +55,14 @@ fun InputBox(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .border(1.dp, Color(0xFFD6D7DA), RoundedCornerShape(8.dp)),
+                .clip(shape) // 배경이 삐져나오지 않도록 clip 적용
+                .border(1.dp, Color(0xFFD6D7DA), shape),
+            shape = shape,
             colors = TextFieldDefaults.colors(
+                // 위에서 결정된 backgroundColor를 각 상태에 맞게 적용합니다.
                 focusedContainerColor = backgroundColor,
                 unfocusedContainerColor = backgroundColor,
+                disabledContainerColor = backgroundColor,
                 cursorColor = Color(0xFF374151),
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
@@ -66,8 +79,15 @@ fun InputBox(
     }
 }
 
-@Preview(showBackground = true)
+
+@Preview(showBackground = true, name = "Enabled State")
 @Composable
-fun InputBoxPreview(){
-    InputBox(label = "이름", "홍길동", value = "", onValueChange = {})
+fun InputBoxEnabledPreview(){
+    InputBox(label = "이름 (활성화)", placeholder = "이름을 입력하세요", value = "", onValueChange = {})
+}
+
+@Preview(showBackground = true, name = "Disabled State")
+@Composable
+fun InputBoxDisabledPreview(){
+    InputBox(label = "전화번호 (비활성화)", value = "010-1234-5678", onValueChange = {}, enabled = false)
 }

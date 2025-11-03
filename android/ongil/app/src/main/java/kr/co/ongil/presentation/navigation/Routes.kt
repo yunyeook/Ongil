@@ -21,6 +21,21 @@ sealed class Routes(val route: String) {
     // 최근 통화목록
     object CallHistory : Routes("call_history")
 
+    // 회원가입
+    object Signup : Routes("signup")
+
+    // 즐겨찾기
+    object Favorite : Routes("favorite")
+
+    // 장소 상세
+    object PlaceDetail : Routes("place_detail")
+
+    // 사용자 상세
+    object PatientDetail : Routes("patient_detail")
+
+    // 사용자 등록(검색)
+    object SearchUser : Routes("search_user")
+    // TODO: 다른 화면들 추가
     // 비밀번호 변경
     object ChangePassword : Routes("change_password")
 

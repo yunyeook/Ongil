@@ -13,6 +13,9 @@ sealed class Screen(val route: String) {
     data object ChangePassword : Screen(route = "change_password")
 
 
+    // 회원가입
+    data object Signup : Screen("signup")
+
     // 사용자등록
     // 사용자 찾기 / 등록
     data object SearchUser : Screen("search_user")

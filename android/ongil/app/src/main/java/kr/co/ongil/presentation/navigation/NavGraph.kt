@@ -22,6 +22,8 @@ import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import kr.co.ongil.presentation.ui.myinfo.MyInfoEditScreen
 import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
+import kr.co.ongil.presentation.ui.signup.SignupScreen
+import kr.co.ongil.presentation.ui.signup.SignupViewModel
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
 import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
@@ -58,7 +60,7 @@ fun AppNavGraph(
         composable(Routes.Favorite.route) {
             Column(modifier = Modifier.fillMaxSize()) {
                 OngilBrandHeaderCard(
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
                 )
                 PlaceholderScreen("즐겨찾기")
             }
@@ -215,6 +217,32 @@ fun AppNavGraph(
                     }
                 )
             }
+        }
+        // 회원가입 화면
+        composable(Routes.Signup.route) {
+            val viewModel: SignupViewModel = viewModel()
+            val uiState by viewModel.uiState.collectAsState()
+
+            SignupScreen(
+                uiState = uiState,
+                onBackClick = { navController.popBackStack() },
+                onProfileImageClick = viewModel::onProfileImageClick,
+                onNameChange = viewModel::onNameChange,
+                onBirthClick = viewModel::onBirthClick,
+                onPhoneChange = viewModel::onPhoneChange,
+                onRequestVerificationCode = viewModel::onRequestVerificationCode,
+                onVerificationCodeChange = viewModel::onVerificationCodeChange,
+                onVerifyCodeClick = viewModel::onVerifyCodeClick,
+                onPasswordChange = viewModel::onPasswordChange,
+                onTogglePasswordVisible = viewModel::onTogglePasswordVisible,
+                onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
+                onTogglePasswordConfirmVisible = viewModel::onTogglePasswordConfirmVisible,
+                onSelectGuardian = viewModel::onSelectGuardian,
+                onSelectPatient = viewModel::onSelectPatient,
+                onSubmitSignup = viewModel::onSubmitSignup,
+                onDismissSuccessModal = viewModel::onDismissSuccessModal,
+                onDismissErrorModal = viewModel::onDismissErrorModal,
+            )
         }
     }
 }
