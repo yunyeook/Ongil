@@ -1,0 +1,24 @@
+package kr.co.ongil.domain.navigation.dto.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "길안내 종료 요청")
+public class EndNavigationRequest {
+
+    @NotNull
+    @Schema(description = "환자 ID", example = "1")
+    private Long patientId;
+
+    @NotNull
+    @Schema(description = "네비게이션 ID", example = "1")
+    private Long navigationId;
+
+    @Schema(description = "정상 종료 여부", example = "true")
+    private Boolean isSuccessful;
+}

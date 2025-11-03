@@ -1,0 +1,113 @@
+spring:
+  application:
+    name: ongil
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  # Environment Variables
+  config:
+    import: optional:file:.env[.properties]
+
+  # PostgreSQL (AWS RDS)
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSL_MODE:require}&reWriteBatchedInserts=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # JPA/Hibernate
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: false
+        jdbc:
+          time_zone: Asia/Seoul
+
+  # Redis (AWS ElastiCache)
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000 # 10? TTL ??
+
+  # File Upload
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+  # S3 (Spring Cloud AWS)
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+      s3:
+        bucket: ${S3_BUCKET}
+
+# Custom Properties
+ongil:
+  aws:
+    region: ${AWS_REGION}
+    s3:
+      bucket: ${S3_BUCKET}
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:86400000}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:259200000}
+  verification: # phone verification token
+    expiration: 300000 # 5 minutes
+
+tmap:
+  app-key: ${TMAP_APP_KEY}
+  api:
+    base-url: https://apis.openapi.sk.com
+
+coolsms:
+  api:
+    key: ${COOLSMS_API_KEY}        # CoolSMS API KEY
+    secret: ${COOLSMS_API_SECRET}  # coolSMS API SECRET
+  from: ${COOLSMS_FROM_NUMBER}     # Sender Phone Number
+  domain: https://api.coolsms.co.kr
+
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
