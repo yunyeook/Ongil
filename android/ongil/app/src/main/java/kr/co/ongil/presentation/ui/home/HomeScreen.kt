@@ -18,7 +18,11 @@ import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.ui.common.GreenButton
 
 @Composable
-fun HomeScreen(onGoFavoriteClick: () -> Unit) {
+fun HomeScreen(
+    onGoFavoriteClick: () -> Unit,
+    onGoSearchUserClick: () -> Unit = {},
+    onGoSignupClick: () -> Unit = {}
+) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFF9FAFB)
@@ -44,6 +48,20 @@ fun HomeScreen(onGoFavoriteClick: () -> Unit) {
                 onClick = onGoFavoriteClick
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            GreenButton(
+                text = "사용자 찾기",
+                onClick = onGoSearchUserClick
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            GreenButton(
+                text = "회원가입",
+                onClick = onGoSignupClick
+            )
+
             Spacer(modifier = Modifier.weight(1f))
         }
     }
@@ -54,6 +72,8 @@ fun HomeScreen(onGoFavoriteClick: () -> Unit) {
 @Composable
 fun HomeScreenPreview() {
     HomeScreen(
-        onGoFavoriteClick = {}
+        onGoFavoriteClick = {},
+        onGoSearchUserClick = {},
+        onGoSignupClick = {}
     )
 }

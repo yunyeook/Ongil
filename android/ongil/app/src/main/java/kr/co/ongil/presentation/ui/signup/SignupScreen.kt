@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,11 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kr.co.ongil.presentation.ui.common.AlertModal
 import kr.co.ongil.presentation.ui.common.GreenButton
-import kr.co.ongil.presentation.ui.common.GreyButton
 import kr.co.ongil.presentation.ui.common.InputBox
-import androidx.compose.ui.res.painterResource
+
 /**
- * 회원가입 화면 (Preview-safe 버전)
+ * 회원가입 화면
  */
 @Composable
 fun SignupScreen(
@@ -68,14 +68,17 @@ fun SignupScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
+            // 상단 헤더
             SignupHeader(onBackClick = onBackClick)
 
+            // 본문 내용
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
 
+                // 프로필 영역
                 ProfileSection(
                     profileImageUrl = uiState.profileImageUrl,
                     onProfileImageClick = onProfileImageClick
@@ -101,7 +104,11 @@ fun SignupScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0xFFDDE0E4), RoundedCornerShape(8.dp))
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFDDE0E4),
+                                shape = RoundedCornerShape(8.dp)
+                            )
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                             .clickable { onBirthClick() }
                     ) {
@@ -125,10 +132,13 @@ fun SignupScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 휴대폰 번호
+                // 휴대폰 번호 + 인증번호 발송 / 재발송
                 LabeledField(label = "휴대폰 번호") {
+
+                    // search_user 스타일: 하단 정렬 / 간격 12.dp / 버튼 높이 56.dp
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Bottom,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         InputBox(
@@ -136,63 +146,80 @@ fun SignupScreen(
                             onValueChange = onPhoneChange,
                             label = "",
                             placeholder = "010-1234-5678",
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 8.dp),
+                            modifier = Modifier.weight(1f)
                         )
 
                         GreenButton(
-                            text = if (uiState.isCodeRequested) "재발송" else "인증번호 발송",
-                            onClick = onRequestVerificationCode
+                            text = if (uiState.isCodeRequested) "재발송" else "발송",
+                            enabled = true, // 발송 버튼은 항상 활성 (추후 로직에서 제어)
+                            onClick = onRequestVerificationCode,
+                            modifier = Modifier
+                                .weight(0.6f)
+                                .height(56.dp)
                         )
                     }
                 }
 
-                // 인증번호 입력
+                // 인증번호 입력/확인/타이머/결과 메시지
                 if (uiState.isCodeRequested) {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    LabeledField(label = "인증번호") {
+                    // 위에서 주신 search_user 스타일과 동일한 패턴
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.Bottom,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             InputBox(
                                 value = uiState.verificationCode,
                                 onValueChange = onVerificationCodeChange,
-                                label = "",
+                                label = "인증번호",
                                 placeholder = "인증번호 6자리",
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(end = 8.dp),
+                                modifier = Modifier.weight(1f)
                             )
 
                             GreenButton(
-                                text = if (uiState.isCodeVerified) "확인완료" else "확인",
+                                text = if (uiState.isCodeVerified) "확인됨" else "확인",
+                                enabled = !uiState.isCodeVerified,
                                 onClick = onVerifyCodeClick,
+                                modifier = Modifier
+                                    .weight(0.6f)
+                                    .height(56.dp)
                             )
                         }
 
-                        if (uiState.showTimerText || uiState.verificationStatusMessage.isNotEmpty()) {
-                            Column(modifier = Modifier.padding(top = 8.dp)) {
-                                if (uiState.showTimerText) {
-                                    Text(
-                                        text = "남은 시간: ${uiState.remainingTimeText}",
-                                        color = Color(0xFFD32F2F),
-                                        fontSize = 14.sp,
-                                    )
-                                }
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            // 남은 시간
+                            if (uiState.showTimerText) {
+                                Text(
+                                    text = "남은 시간: ${uiState.remainingTimeText}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFD32F2F)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(1.dp))
+                            }
 
-                                if (uiState.verificationStatusMessage.isNotEmpty()) {
-                                    Text(
-                                        text = uiState.verificationStatusMessage,
-                                        color = if (uiState.isCodeVerified)
-                                            Color(0xFF2E7D32)
-                                        else Color(0xFFD32F2F),
-                                        fontSize = 14.sp,
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
-                                }
+                            // 성공 / 실패 메시지
+                            if (uiState.verificationStatusMessage.isNotEmpty()) {
+                                Text(
+                                    text = uiState.verificationStatusMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (uiState.isCodeVerified)
+                                        Color(0xFF2E7D32) // 초록 (성공)
+                                    else
+                                        Color(0xFFD32F2F), // 빨강 (실패)
+                                    fontWeight = FontWeight.Medium
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.width(1.dp))
                             }
                         }
                     }
@@ -206,7 +233,11 @@ fun SignupScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0xFFDDE0E4), RoundedCornerShape(8.dp))
+                            .border(
+                                1.dp,
+                                Color(0xFFDDE0E4),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -220,7 +251,9 @@ fun SignupScreen(
 
                         Icon(
                             imageVector = if (uiState.isPasswordVisible)
-                                Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                Icons.Filled.VisibilityOff
+                            else
+                                Icons.Filled.Visibility,
                             contentDescription = "toggle password visibility",
                             tint = Color(0xFF707680),
                             modifier = Modifier
@@ -238,7 +271,11 @@ fun SignupScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0xFFDDE0E4), RoundedCornerShape(8.dp))
+                            .border(
+                                1.dp,
+                                Color(0xFFDDE0E4),
+                                RoundedCornerShape(8.dp)
+                            )
                             .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -252,7 +289,9 @@ fun SignupScreen(
 
                         Icon(
                             imageVector = if (uiState.isConfirmPasswordVisible)
-                                Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                Icons.Filled.VisibilityOff
+                            else
+                                Icons.Filled.Visibility,
                             contentDescription = "toggle confirm password visibility",
                             tint = Color(0xFF707680),
                             modifier = Modifier
@@ -285,8 +324,10 @@ fun SignupScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // 가입하기 버튼
                 GreenButton(
                     text = "가입하기",
+                    enabled = true, // 유효성 검증 후 false 처리 가능
                     onClick = onSubmitSignup,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -297,6 +338,7 @@ fun SignupScreen(
             }
         }
 
+        // 성공 모달
         if (uiState.showSuccessModal) {
             AlertModal(
                 onDismiss = onDismissSuccessModal,
@@ -307,6 +349,7 @@ fun SignupScreen(
             )
         }
 
+        // 실패 모달
         if (uiState.showErrorModal) {
             AlertModal(
                 onDismiss = onDismissErrorModal,
@@ -319,8 +362,14 @@ fun SignupScreen(
     }
 }
 
+/**
+ * 상단 헤더: ← 회원가입
+ * 높이 80dp
+ */
 @Composable
-private fun SignupHeader(onBackClick: () -> Unit) {
+private fun SignupHeader(
+    onBackClick: () -> Unit,
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -354,20 +403,36 @@ private fun SignupHeader(onBackClick: () -> Unit) {
     }
 }
 
+/**
+ * 프로필 사진 업로드 UI
+ */
 @Composable
-private fun ProfileSection(profileImageUrl: String?, onProfileImageClick: () -> Unit) {
+private fun ProfileSection(
+    profileImageUrl: String?,
+    onProfileImageClick: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(modifier = Modifier.size(120.dp)) {
+        Box(
+            modifier = Modifier.size(120.dp)
+        ) {
+            // 원형 영역 (placeholder or uploaded image)
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .border(1.dp, Color(0xFFDDE0E4), CircleShape)
-                    .background(Color(0xFFF7F8F9), CircleShape)
+                    .border(
+                        width = 1.dp,
+                        color = Color(0xFFDDE0E4),
+                        shape = CircleShape
+                    )
+                    .background(
+                        color = Color(0xFFF7F8F9),
+                        shape = CircleShape
+                    )
                     .clickable { onProfileImageClick() },
                 contentAlignment = Alignment.Center
             ) {
@@ -380,7 +445,8 @@ private fun ProfileSection(profileImageUrl: String?, onProfileImageClick: () -> 
                     )
                 } else {
                     Image(
-                        painter = painterResource(android.R.drawable.ic_menu_gallery),
+                        painter = painterResource(id = android.R.drawable.ic_menu_gallery),
+                        // Coil 등 실제 이미지 로더는 추후 연결
                         contentDescription = "profile image",
                         modifier = Modifier.size(120.dp),
                         contentScale = ContentScale.Crop
@@ -388,11 +454,15 @@ private fun ProfileSection(profileImageUrl: String?, onProfileImageClick: () -> 
                 }
             }
 
+            // 카메라 아이콘 배지
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .size(36.dp)
-                    .background(Color(0xFF788F7E), CircleShape)
+                    .background(
+                        color = Color(0xFF788F7E),
+                        shape = CircleShape
+                    )
                     .clickable { onProfileImageClick() },
                 contentAlignment = Alignment.Center
             ) {
@@ -416,9 +486,17 @@ private fun ProfileSection(profileImageUrl: String?, onProfileImageClick: () -> 
     }
 }
 
+/**
+ * 라벨 + 필드 묶음
+ */
 @Composable
-private fun LabeledField(label: String, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+private fun LabeledField(
+    label: String,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge.copy(
@@ -432,6 +510,9 @@ private fun LabeledField(label: String, content: @Composable () -> Unit) {
     }
 }
 
+/**
+ * 회원 유형 단일 Pill 버튼
+ */
 @Composable
 private fun RowScope.UserTypeButton(
     text: String,
@@ -445,45 +526,47 @@ private fun RowScope.UserTypeButton(
     Box(
         modifier = Modifier
             .weight(1f)
-            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
-            .background(bg, RoundedCornerShape(16.dp))
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .background(
+                color = bg,
+                shape = RoundedCornerShape(16.dp)
+            )
             .clickable { onClick() }
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = text, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
-
-data class SignupUiState(
-    val profileImageUrl: String? = null,
-    val name: String = "",
-    val birth: String = "",
-    val phoneNumber: String = "",
-    val isCodeRequested: Boolean = false,
-    val verificationCode: String = "",
-    val isCodeVerified: Boolean = false,
-    val showTimerText: Boolean = false,
-    val remainingTimeText: String = "",
-    val verificationStatusMessage: String = "",
-    val password: String = "",
-    val passwordMasked: String = "",
-    val passwordConfirm: String = "",
-    val passwordConfirmMasked: String = "",
-    val userType: UserType? = null,
-    val isPasswordVisible: Boolean = false,
-    val isConfirmPasswordVisible: Boolean = false,
-    val showSuccessModal: Boolean = false,
-    val showErrorModal: Boolean = false,
-)
-
-enum class UserType { GUARDIAN, PATIENT }
 
 @Preview(showBackground = true)
 @Composable
 private fun PreviewSignupScreen() {
     SignupScreen(
-        uiState = SignupUiState(),
+        uiState = SignupUiState(
+            // preview용 샘플 데이터 약간 넣어볼 수도 있음
+            name = "",
+            birth = "",
+            phoneNumber = "",
+            isCodeRequested = true,
+            verificationCode = "",
+            isCodeVerified = false,
+            showTimerText = true,
+            remainingTimeText = "02:45",
+            verificationStatusMessage = "인증번호 등록에 성공했습니다.",
+            passwordMasked = "********",
+            passwordConfirmMasked = "********",
+            userType = UserType.GUARDIAN
+        ),
         onBackClick = {},
         onProfileImageClick = {},
         onNameChange = {},
