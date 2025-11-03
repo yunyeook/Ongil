@@ -102,7 +102,7 @@ private fun PhoneIdleState(
 
         Button(
             onClick = onChangeClick,
-            colors = ButtonDefaults.buttonColors(containerColor = Accent),
+            colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.height(56.dp),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
@@ -143,7 +143,7 @@ private fun PhoneEditingState(
         Button(
             onClick = onSendClick,
             enabled = newPhone.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = Accent),
+            colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.height(56.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
@@ -189,7 +189,7 @@ private fun PhoneVerifyingState(
 
             Button(
                 onClick = onResendClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.height(56.dp).width(100.dp)
             ) {
@@ -233,7 +233,7 @@ private fun PhoneVerifyingState(
             Button(
                 onClick = onVerifyClick,
                 enabled = code.length == 6,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.height(56.dp).width(100.dp)
             ) {

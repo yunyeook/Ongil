@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import kr.co.ongil.presentation.navigation.MainScreen
 import kr.co.ongil.presentation.theme.OngilTheme
 import kr.co.ongil.presentation.ui.Atest.PlayGroundMJ
 import kr.co.ongil.presentation.ui.Atest.PlayGroundSH
@@ -20,11 +21,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OngilTheme {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // 혹시 충돌 날 수도 있으니까 커밋이나 푸시할때는 여기 밑에 전부 주석처리 해주세요
+                // 하단바 포함된 메인 화면
+                MainScreen()
+
+                // 테스트용 플레이그라운드 (필요시 주석 해제)
+//                Column(modifier = Modifier.fillMaxSize()) {
 //                    PlayGroundMJ()
-                     PlayGroundSH()
-                }
+//                    PlayGroundSH()
+//                }
             }
         }
     }
