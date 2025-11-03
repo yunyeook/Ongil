@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  android-builder:
+    # 버전 고정 (latest 대신)
+    image: mingc/android-build-box:1.27.0
+    
+    working_dir: /project
+    
+    volumes:
+      - ./:/project
+      - gradle-cache:/root/.gradle
+      - android-sdk-cache:/opt/android-sdk  # SDK 캐시 추가
+    
+    environment:
+      - GRADLE_OPTS=-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+      - JAVA_OPTS=-Xmx2g
+    
+    command: |
+      sh -c "
+        echo '========================================' &&
+        echo 'Android Build Starting...' &&
+        echo '========================================' &&
+        chmod +x ./gradlew &&
+        ./gradlew clean app:assembleDebug wear:assembleDebug --no-daemon --stacktrace &&
+        echo '' &&
+        echo '========================================' &&
+        echo 'Build Completed Successfully!' &&
+        echo '========================================' &&
+        ls -lh app/build/outputs/apk/debug/ &&
+        ls -lh wear/build/outputs/apk/debug/
+      "
+
+volumes:
+  gradle-cache:
+    driver: local
+  android-sdk-cache:
+    driver: local
