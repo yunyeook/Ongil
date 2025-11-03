@@ -23,7 +23,7 @@ import jakarta.validation.Valid;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @Validated
 @Tag(name = "Auth API", description = "인증 관련 API")
 public class AuthController {
