@@ -139,9 +139,16 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val callLogId = backStackEntry.arguments?.getLong("callLogId") ?: 0L
 
-            CallDetailScreen(
-                callLogId = callLogId
-            )
+            Column(modifier = Modifier.fillMaxSize()) {
+                OngilTopBarForRoute(
+                    route = Routes.CallDetail.route,
+                    onBackClick = { navController.popBackStack() },
+                    onBellClick = { /* TODO: 알림 화면 이동 */ }
+                )
+                CallDetailScreen(
+                    callLogId = callLogId
+                )
+            }
         }
     }
 }
