@@ -2,7 +2,9 @@ package kr.co.ongil.domain.auth.service;
 
 import kr.co.ongil.domain.auth.dto.request.RegisterRequest;
 import kr.co.ongil.domain.auth.dto.request.LoginRequest;
+import kr.co.ongil.domain.auth.dto.request.RefreshRequest;
 import kr.co.ongil.domain.auth.dto.response.LoginResponse;
+import kr.co.ongil.domain.auth.dto.response.RefreshResponse;
 import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.entity.Provider;
 import kr.co.ongil.domain.user.entity.UserType;
@@ -92,6 +94,58 @@ public class AuthService {
                 .user(userInfo)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .build();
+    }
+
+    public RefreshResponse refresh(RefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        // 리프레시 토큰 검증
+        if (!jwtUtil.validateToken(refreshToken)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰 타입 확인
+        String tokenType = jwtUtil.getTokenType(refreshToken);
+        if (!"refresh".equals(tokenType)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰에서 사용자 ID 추출
+        Integer userId = jwtUtil.getUserIdFromToken(refreshToken);
+
+        // 리프레시 토큰 소비 시도
+        if (!refreshTokenRepository.consumeRefreshToken(userId, refreshToken)) {
+            
+            log.warn("잠재적인 리프레시 토큰 재사용 시도 감지: userId={}", userId);
+            
+            // 모든 리프레시 토큰 삭제 (보안 조치)
+            refreshTokenRepository.deleteAllTokensForUser(userId);
+
+            throw new BusinessException(ErrorCode.EXPIRED_REFRESH_TOKEN);
+        }
+
+        // 사용자 존재 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 소프트 삭제 확인
+        if (user.getDeletedAt() != null) {
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+        }
+
+        // 새로운 토큰 생성
+        String newAccessToken = jwtUtil.generateAccessToken(userId);
+        String newRefreshToken = jwtUtil.generateRefreshToken(userId);
+
+        // Redis에 새로운 리프레시 토큰 저장 (기존 토큰 덮어쓰기)
+        refreshTokenRepository.storeRefreshToken(userId, newRefreshToken, jwtUtil.getRefreshTokenExpiration());
+
+        log.info("토큰 재발급 완료: userId={}", userId);
+
+        return RefreshResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .build();
     }
 
