@@ -1,7 +1,9 @@
 package kr.co.ongil.global.exception;
 
+import kr.co.ongil.global.common.response.ApiResponse;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 @Getter
 public enum ErrorCode {
@@ -24,8 +26,18 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
     INVALID_USER_STATE(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자 상태입니다."),
     DUPLICATE_PHONE(HttpStatus.CONFLICT, "이미 등록된 전화번호입니다."),
+
+    // PHONE VERIFICATION
     INVALID_VERIFICATION_CODE(HttpStatus.BAD_REQUEST, "인증번호가 올바르지 않습니다."),
-    PHONE_VERIFICATION_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "인증 요청 횟수를 초과했습니다."),
+    VERIFICATION_CODE_EXPIRED(HttpStatus.GONE, "인증번호가 만료되었습니다."),
+    VERIFICATION_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "인증번호를 찾을 수 없습니다. 먼저 인증번호를 요청해주세요."),
+    VERIFICATION_ATTEMPTS_EXCEEDED(HttpStatus.UNAUTHORIZED, "인증번호 입력 횟수를 초과했습니다. 다시 요청해주세요."),
+    PHONE_VERIFICATION_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+    PHONE_VERIFICATION_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "인증번호 재요청은 1분 후에 가능합니다."),
+    IP_RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+
+    // SMS
+    SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 전송 중 오류가 발생했습니다."),
 
     // PATIENT / DEVICE / CARE LINK
     PATIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 환자입니다."),
@@ -79,7 +91,7 @@ public enum ErrorCode {
     EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 연동 중 오류가 발생했습니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "현재 서비스를 이용할 수 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
-
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED,"지원하지 않는 HTTP 메서드입니다."),
     // MAP / GEOCODING / ADDRESS
     INVALID_COORDINATE(HttpStatus.BAD_REQUEST, "유효하지 않은 좌표입니다."),
     INVALID_LATITUDE(HttpStatus.BAD_REQUEST, "유효하지 않은 위도입니다. (대한민국 범위: 33~43)"),

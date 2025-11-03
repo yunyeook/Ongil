@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Validated
 @RestController
-@RequestMapping("/api/v1/navigation")
+@RequestMapping("/navigation")
 @RequiredArgsConstructor
 @Tag(name = "Navigation API", description = "길안내 네비게이션 API")
 public class NavigationController {

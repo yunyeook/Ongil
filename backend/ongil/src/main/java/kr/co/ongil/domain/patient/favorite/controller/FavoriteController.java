@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/patients/{patientId}/favorites")
+@RequestMapping("/patients/{patientId}/favorites")
 @RequiredArgsConstructor
 @Tag(name = "Favorite API", description = "즐겨찾기 관련 API")
 public class FavoriteController {
