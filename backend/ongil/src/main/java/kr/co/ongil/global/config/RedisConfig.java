@@ -3,30 +3,23 @@ package kr.co.ongil.global.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import jakarta.annotation.PostConstruct;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-
 @Configuration
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
+    @Value("${spring.data.redis.host:redis}")
     private String redisHost;
 
-    @Value("${spring.data.redis.port}")
+    @Value("${spring.data.redis.port:6379}")
     private int redisPort;
 
-    @Value("${spring.data.redis.password:}")  // ✅ 환경변수 주입 (없으면 빈 문자열)
+    @Value("${spring.data.redis.password:redis}")  // ✅ 환경변수 주입 (없으면 빈 문자열)
     private String redisPassword;
-
-    @PostConstruct
-    public void init() {
-    System.out.println("[DEBUG] Redis host=" + redisHost + ", port=" + redisPort + ", password=" + redisPassword);
-    }
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
