@@ -1,16 +1,25 @@
 package kr.co.ongil.presentation.ui.favorite
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
-class FavoriteViewModel(
-    private val fakeFavoriteRepository: FakeFavoriteRepository,
-    private val initialPatientId: Long
+import kr.co.ongil.domain.repository.FavoriteRepository
+import kr.co.ongil.presentation.ui.favorite.toPlaceData
+import javax.inject.Inject
+
+@HiltViewModel
+class FavoriteViewModel @Inject constructor(
+    private val favoriteRepository: FavoriteRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val initialPatientId: Long = savedStateHandle["patientId"] ?: 0L
+    private var lastLoadedPatientId: Long? = null
 
     private val _uiState = MutableStateFlow(
         FavoriteUiState(
@@ -20,25 +29,49 @@ class FavoriteViewModel(
         )
     )
     val uiState: StateFlow<FavoriteUiState> = _uiState
-    // TODO 실제 즐겨찾기 목록 가져오는 코드 작성해야됨
 
     init {
-        loadData((initialPatientId))
+        loadData(initialPatientId)
     }
 
     fun loadData(patientId: Long) {
+        if (_uiState.value.isLoading) return
+        lastLoadedPatientId = patientId
         viewModelScope.launch {
-            // 로컬 저장소(Repository)에서 즐겨찾기 환자 / 장소 목록 불러오기
-            val patients = fakeFavoriteRepository.getFavoritePatients()
-            val places = fakeFavoriteRepository.getFavoritePlaces(patientId)
-
-            _uiState.update {
-                it.copy(
-                    patients = patients,
-                    places = places
-                )
-            }
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            val currentPatients = _uiState.value.patients
+            val result = favoriteRepository.getFavoritePlaces(patientId)
+            result.fold(
+                onSuccess = { placesDomain ->
+                    _uiState.update {
+                        it.copy(
+                            patients = currentPatients,
+                            places = placesDomain.items.map { place -> place.toPlaceData() },
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                },
+                onFailure = { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = throwable.message ?: "오류가 발생했습니다."
+                        )
+                    }
+                }
+            )
         }
+    }
+
+    fun onPatientChanged(newPatientId: Long) {
+        if (lastLoadedPatientId != newPatientId) {
+            loadData(newPatientId)
+        }
+    }
+
+    fun refresh() {
+        lastLoadedPatientId?.let { loadData(it) }
     }
 
     fun onEvent(event: FavoriteUiEvent) {

@@ -69,21 +69,14 @@ sealed class Routes(val route: String) {
     }
 
     // 장소 상세
-    object PlaceDetail : Routes("place_detail/{favoriteId}/{placeName}/{address}") {
-        fun createRoute(
-            favoriteId: Long,
-            placeName: String,
-            address: String
-        ): String {
-            val encodedName = Uri.encode(placeName)
-            val encodedAddress = Uri.encode(address)
-            return "place_detail/$favoriteId/$encodedName/$encodedAddress"
+    object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}") {
+        fun createRoute(patientId: Long, favoriteId: Long): String {
+            return "place_detail/$patientId/$favoriteId"
         }
 
         val arguments = listOf(
-            navArgument("favoriteId") { type = NavType.LongType },
-            navArgument("placeName") { type = NavType.StringType },
-            navArgument("address") { type = NavType.StringType },
+            navArgument("patientId") { type = NavType.LongType },
+            navArgument("favoriteId") { type = NavType.LongType }
         )
     }
 }

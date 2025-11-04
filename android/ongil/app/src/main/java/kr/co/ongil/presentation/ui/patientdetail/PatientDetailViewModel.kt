@@ -2,21 +2,24 @@ package kr.co.ongil.presentation.ui.patientdetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 
-class PatientDetailViewModel(
-    private val repository: FakeFavoriteRepository,
-    initialPatientId: Long,
-    initialName: String,
-    initialPhoneNumber: String,
-    initialGender: String
+@HiltViewModel
+class PatientDetailViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val initialPatientId: Long = savedStateHandle["patientId"] ?: 0L
+    private val initialName: String = savedStateHandle["name"] ?: ""
+    private val initialPhoneNumber: String = savedStateHandle["phoneNumber"] ?: ""
+    private val initialGender: String = savedStateHandle["gender"] ?: ""
 
     private val _uiState = MutableStateFlow(
         PatientDetailUiState(
@@ -37,26 +40,11 @@ class PatientDetailViewModel(
                 gender = newGender
             )
         }
-
-        viewModelScope.launch {
-            repository.updatePatientDetail(
-                updatedId = _uiState.value.patientId,
-                newName = newName,
-                newPhoneNumber = newPhoneNumber,
-                newGender = newGender
-            )
-        }
     }
 
     // 삭제하기
     fun deletePatient(onSuccess: () -> Unit = {}) {
-        viewModelScope.launch {
-            val success = repository.deletePatient(
-                patientId = _uiState.value.patientId
-            )
-            if (success) {
-                onSuccess()
-            }
-        }
+        _uiState.update { it.copy() }
+        onSuccess()
     }
 }

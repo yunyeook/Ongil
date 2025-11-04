@@ -5,5 +5,8 @@ data class PlaceDetailUiState(
     val placeName: String,
     val address: String,
     val isDefault: Boolean,
-    val patientId: Long
+    val patientId: Long,
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val successMessage: String? = null
 )

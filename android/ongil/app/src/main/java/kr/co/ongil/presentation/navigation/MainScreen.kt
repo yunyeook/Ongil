@@ -79,7 +79,13 @@ fun MainScreen() {
                 OngilBottomBar(
                     selectedRoute = baseRoute,
                     onClick = { route ->
-                        navController.navigate(route) {
+                        // favorite 경로는 patientId가 필요하므로 기본값 추가
+                        val navigationRoute = if (route == Routes.Favorite.route) {
+                            "${Routes.Favorite.route}/1"
+                        } else {
+                            route
+                        }
+                        navController.navigate(navigationRoute) {
                             // 같은 화면을 다시 클릭하면 스택을 정리
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
