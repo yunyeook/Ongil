@@ -19,7 +19,6 @@ import kr.co.ongil.presentation.ui.common.GreenButton
 
 @Composable
 fun HomeScreen(
-    onGoFavoriteClick: () -> Unit,
     onGoSearchUserClick: () -> Unit = {},
     onGoSignupClick: () -> Unit = {}
 ) {
@@ -44,13 +43,6 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             GreenButton(
-                text = "즐겨찾기로 이동",
-                onClick = onGoFavoriteClick
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            GreenButton(
                 text = "사용자 찾기",
                 onClick = onGoSearchUserClick
             )
@@ -72,7 +64,6 @@ fun HomeScreen(
 @Composable
 fun HomeScreenPreview() {
     HomeScreen(
-        onGoFavoriteClick = {},
         onGoSearchUserClick = {},
         onGoSignupClick = {}
     )

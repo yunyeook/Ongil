@@ -5,6 +5,6 @@ sealed interface FavoriteUiEvent {
     data class OnTabSelected(val tab: FavoriteTab) : FavoriteUiEvent
     data class OnCallClick(val patientId: Long) : FavoriteUiEvent
     data class OnPatientCardClick(val patientId: Long) : FavoriteUiEvent
-    data object OnAddPatientClick : FavoriteUiEvent
+    data object onGoSearchUserClick : FavoriteUiEvent
     data object OnAddPlaceClick : FavoriteUiEvent
 }

@@ -21,7 +21,7 @@ import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: Routes.MyInfo.route
+    val currentRoute = navBackStackEntry?.destination?.route ?: Routes.Home.route
     val baseRoute = currentRoute
         .substringBefore("/")
         .substringBefore("?")

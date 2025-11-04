@@ -2,6 +2,7 @@ package kr.co.ongil.presentation.ui.myinfo
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
@@ -11,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -180,6 +183,8 @@ private fun PasswordInputField(
     onVisibilityToggle: () -> Unit,
     isError: Boolean = false
 ) {
+    val focusManager = LocalFocusManager.current
+
     Column {
         // Label을 입력창 밖으로
         Text(
@@ -207,7 +212,13 @@ private fun PasswordInputField(
                     )
                 }
             },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            ),
             shape = RoundedCornerShape(14.dp),
             isError = isError,
             colors = OutlinedTextFieldDefaults.colors(

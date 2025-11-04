@@ -1,5 +1,7 @@
 package kr.co.ongil.presentation.ui.searchuser
 
+import kr.co.ongil.presentation.navigation.Routes
+
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -95,7 +97,12 @@ fun SearchUserScreen(
     SearchUserScreenContent(
         uiState = uiState,
         onEvent = { evt -> viewModel.onEvent(evt) },
-        onBackPress = backPress
+        onGoHome = {
+            navController.navigate(Routes.Home.route) {
+                popUpTo(Routes.Home.route) { inclusive = true }
+                launchSingleTop = true
+            }
+        },
     )
 }
 
@@ -103,37 +110,11 @@ fun SearchUserScreen(
 private fun SearchUserScreenContent(
     uiState: SearchUserUiState,
     onEvent: (SearchUserUiEvent) -> Unit,
-    onBackPress: () -> Unit
+    onGoHome: () -> Unit,
 ) {
-    val (topTitle, topSubtitle) = when (uiState.mode) {
-        SearchUserMode.REGISTER -> {
-            "연락처 등록" to null
-        }
-        else -> {
-            "사용자 찾기" to "전화번호를 입력하면 등록된 사용자를 찾을 수 있어요."
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            SearchUserTopBar(
-                title = topTitle,
-                subtitle = topSubtitle,
-                canGoBack = when (uiState.mode) {
-                    SearchUserMode.SEARCH_INPUT,
-                    SearchUserMode.REGISTER_DONE -> false
-                    else -> true
-                },
-                onBackClick = {
-                    onBackPress()
-                }
-            )
-        }
-    ) { innerPadding ->
-        Box(
+    Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .background(Color(0xFFF5F5F5))
         ) {
             when (uiState.mode) {
@@ -209,9 +190,7 @@ private fun SearchUserScreenContent(
 
                 SearchUserMode.REGISTER_DONE -> {
                     RegisterDoneSection(
-                        onSeeRegisteredUser = {
-                            onEvent(SearchUserUiEvent.OnClickGoToRegisterUser)
-                        },
+                        onGoHome = onGoHome,
                         onSearchMore = {
                             onEvent(SearchUserUiEvent.OnClickSearchMore)
                         }
@@ -220,46 +199,8 @@ private fun SearchUserScreenContent(
             }
         }
     }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SearchUserTopBar(
-    title: String,
-    subtitle: String?,
-    canGoBack: Boolean,
-    onBackClick: () -> Unit
-) {
-    TopAppBar(
-        title = {
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    )
-                )
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
-            }
-        },
-        navigationIcon = {
-            if (canGoBack) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로가기"
-                    )
-                }
-            }
-        }
-    )
-}
+
 
 @Composable
 private fun SearchHeader() {
@@ -819,7 +760,7 @@ private fun RegisterSection(
 
 @Composable
 private fun RegisterDoneSection(
-    onSeeRegisteredUser: () -> Unit,
+    onGoHome: () -> Unit,
     onSearchMore: () -> Unit
 ) {
     // dim + AlertModal 중앙 배치
@@ -841,7 +782,7 @@ private fun RegisterDoneSection(
             onDismiss = { /* 모달 외부 클릭시 처리 */ },
             message = "연락처에 성공적으로 등록됐어요!",
             buttonText = "확인",
-            onButtonClick = onSeeRegisteredUser
+            onButtonClick = onGoHome
         )
     }
 }
@@ -933,7 +874,7 @@ private fun PreviewSearchUserScreen_SearchInput() {
     SearchUserScreenContent(
         uiState = dummyState,
         onEvent = {},
-        onBackPress = {}
+        onGoHome = {},
     )
 }
 
@@ -953,7 +894,7 @@ private fun PreviewSearchUserScreen_SearchSuccess() {
     SearchUserScreenContent(
         uiState = dummyState,
         onEvent = {},
-        onBackPress = {}
+        onGoHome = {},
     )
 }
 
@@ -976,7 +917,7 @@ private fun PreviewSearchUserScreen_Register() {
     SearchUserScreenContent(
         uiState = dummyState,
         onEvent = {},
-        onBackPress = {}
+        onGoHome = {},
     )
 }
 
@@ -989,6 +930,6 @@ private fun PreviewSearchUserScreen_RegisterDone() {
     SearchUserScreenContent(
         uiState = dummyState,
         onEvent = {},
-        onBackPress = {}
+        onGoHome = {},
     )
 }

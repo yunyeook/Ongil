@@ -19,18 +19,20 @@ fun PatientList(
     patients: List<PatientData>,
     onCallClick: (Long) -> Unit,
     onPatientCardClick: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit,
-    onAddPatientClick: () -> Unit,
+    onGoSearchUserClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
 
         GreenButton(
-            text = "+ 새로운 환자 등록",
-            onClick = onAddPatientClick,
+            text = "+ 새로운 사용자 등록",
+            onClick = onGoSearchUserClick,
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 18.dp)
                 .fillMaxWidth()
         )
+
+
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -99,6 +101,6 @@ fun PatientListPreview() {
         patients = samplePatients,
         onCallClick = {  },
         onPatientCardClick = { _, _, _, _ ->  },
-        onAddPatientClick = {  }
+        onGoSearchUserClick = {  }
     )
 }

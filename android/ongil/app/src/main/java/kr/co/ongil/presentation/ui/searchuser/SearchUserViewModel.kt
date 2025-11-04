@@ -2,16 +2,17 @@ package kr.co.ongil.presentation.ui.searchuser
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kr.co.ongil.domain.model.UserSummary
 import kr.co.ongil.domain.repository.SearchUserRepository
-import kr.co.ongil.data.repository.fake.FakeSearchUserRepository
+import kr.co.ongil.data.repository.FakeSearchUserRepository
 
 
 class SearchUserViewModel(
@@ -29,6 +30,9 @@ class SearchUserViewModel(
     // ---------- Side Effect (단발 이벤트: Toast, Navigation 등) ----------
     private val _sideEffect = Channel<SearchUserUiSideEffect>(Channel.BUFFERED)
     val sideEffect = _sideEffect.receiveAsFlow()
+
+    // ---------- Timer for verification countdown ----------
+    private var countdownJob: Job? = null
 
     // 외부에서 ViewModel에 명령을 전달할 단일 엔트리
     fun onEvent(event: SearchUserUiEvent) {
@@ -169,12 +173,19 @@ class SearchUserViewModel(
         val found = _uiState.value.foundUser ?: return
 
         val targetPhone = found.phoneNumber
+
+        // 기존 타이머 취소
+        cancelVerificationTimer()
+
         _uiState.update {
             it.copy(
                 mode = SearchUserMode.REGISTER,
                 relationshipName = found.displayName,
                 relationshipTypeOptions = defaultRelationOptions(),
                 verificationCountdownSec = DEFAULT_VERIFY_COUNTDOWN_SEC,
+                isVerificationValid = false,
+                verificationCodeInput = "",
+                verificationToken = "",
                 submitErrorMessage = null
             )
         }
@@ -197,6 +208,8 @@ class SearchUserViewModel(
                 _sideEffect.send(
                     SearchUserUiSideEffect.ShowToast("인증번호를 전송했습니다.")
                 )
+                // 인증번호 전송 성공 시 타이머 시작
+                startVerificationTimer()
             }
         }
     }
@@ -246,10 +259,14 @@ class SearchUserViewModel(
             }
 
             if (verified && !token.isNullOrBlank()) {
+                // 인증 성공 시 타이머 중단
+                cancelVerificationTimer()
+
                 _uiState.update {
                     it.copy(
                         isVerificationValid = true,
-                        verificationToken = token
+                        verificationToken = token,
+                        verificationCountdownSec = 0
                     )
                 }
                 _sideEffect.send(
@@ -375,6 +392,48 @@ class SearchUserViewModel(
 
     private fun defaultRelationOptions(): List<String> {
         return listOf("자녀", "부모", "배우자", "기타")
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 타이머 관련 (SignupViewModel과 동일)
+    // ---------------------------------------------------------------------------------
+
+    private fun startVerificationTimer() {
+        countdownJob?.cancel() // 기존 타이머가 있으면 취소
+
+        countdownJob = viewModelScope.launch {
+            var remainingSeconds = _uiState.value.verificationCountdownSec
+
+            while (remainingSeconds > 0) {
+                delay(1_000)
+                remainingSeconds -= 1
+                _uiState.update {
+                    it.copy(verificationCountdownSec = remainingSeconds)
+                }
+            }
+
+            // 시간 만료 시
+            _uiState.update {
+                it.copy(
+                    verificationCountdownSec = 0,
+                    isVerificationValid = false
+                )
+            }
+
+            _sideEffect.send(
+                SearchUserUiSideEffect.ShowToast("인증 시간이 만료되었습니다.")
+            )
+        }
+    }
+
+    private fun cancelVerificationTimer() {
+        countdownJob?.cancel()
+        countdownJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cancelVerificationTimer()
     }
 
     companion object {

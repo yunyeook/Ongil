@@ -7,12 +7,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kr.co.ongil.data.repository.FavoriteRepository
-import kr.co.ongil.presentation.ui.patientdetail.PatientDetailUiState
+import kr.co.ongil.data.repository.FakeFavoriteRepository
 
 
 class PatientDetailViewModel(
-    private val repository: FavoriteRepository,
+    private val repository: FakeFavoriteRepository,
     initialPatientId: Long,
     initialName: String,
     initialPhoneNumber: String,

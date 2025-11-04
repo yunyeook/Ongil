@@ -2,7 +2,7 @@ package kr.co.ongil.presentation.ui.favorite
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import kr.co.ongil.data.repository.FavoriteRepository
+import kr.co.ongil.data.repository.FakeFavoriteRepository
 
 
 class FavoriteDummyFactory(
@@ -13,11 +13,11 @@ class FavoriteDummyFactory(
 
         if (modelClass.isAssignableFrom(FavoriteViewModel::class.java)) {
 
-            val repo = FavoriteRepository.getInstance()
+            val repo = FakeFavoriteRepository.getInstance()
 
             @Suppress("UNCHECKED_CAST")
             return FavoriteViewModel(
-                favoriteRepository = repo,
+                fakeFavoriteRepository = repo,
                 initialPatientId = initialPatientId
             ) as T
         }
