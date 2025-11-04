@@ -2,11 +2,16 @@ package kr.co.ongil.domain.notification.service;
 
 import java.util.List;
 import java.util.Map;
+import kr.co.ongil.domain.notification.dto.request.NotificationRequest;
 import kr.co.ongil.domain.notification.dto.response.NotificationListResponse;
 import kr.co.ongil.domain.notification.dto.response.NotificationReadResponse;
 import kr.co.ongil.domain.notification.dto.response.NotificationResponse;
 import kr.co.ongil.domain.notification.entity.Notification;
+import kr.co.ongil.domain.notification.entity.NotificationType;
 import kr.co.ongil.domain.notification.repository.NotificationRepository;
+import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
+import kr.co.ongil.domain.user.entity.User;
+import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+    private final RelationshipRepository relationshipRepository;
+
+
 
     public NotificationListResponse getNotifications(Integer userId, int page, int size, Boolean read) {
         validatePagingParameters(page, size);
@@ -98,7 +107,40 @@ public class NotificationService {
 
     }
 
+    @Transactional
+    public List<NotificationResponse> createNotifications(NotificationRequest request) {
+        Integer senderId = request.senderId();
+        Integer receiverId = request.receiverId();
+        NotificationType type = request.type();
 
+        List<User> targetUsers;
+
+        if (receiverId != null) {
+            // 수신자가 지정된 경우
+            User receiver = userRepository.findById(receiverId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+            targetUsers = List.of(receiver);
+        } else {
+            // 수신자가 없으면, sender 기준 보호자 조회
+            targetUsers = relationshipRepository.findGuardiansByPatientId(senderId);
+            if (targetUsers.isEmpty()) {
+                throw new BusinessException(ErrorCode.NO_GUARDIAN_FOUND);
+            }
+        }
+
+        List<Notification> notifications = targetUsers.stream()
+            .map(user -> Notification.from(request, user))
+            .toList();
+
+        notificationRepository.saveAll(notifications);
+
+        log.info("알림 생성 완료 - type: {}, senderId: {}, receiverCount: {}",
+            type, senderId, notifications.size());
+
+        return notifications.stream()
+            .map(NotificationResponse::from)
+            .toList();
+    }
 
     private void validatePagingParameters(int page, int size) {
         if (page < 1) {

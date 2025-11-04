@@ -3,7 +3,9 @@ package kr.co.ongil.domain.notification.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import java.util.Map;
+import kr.co.ongil.domain.notification.dto.request.NotificationRequest;
 import kr.co.ongil.domain.notification.dto.response.NotificationListResponse;
 import kr.co.ongil.domain.notification.dto.response.NotificationReadResponse;
 import kr.co.ongil.domain.notification.dto.response.NotificationResponse;
@@ -73,5 +75,12 @@ public class NotificationController {
         Integer userId = SecurityUtil.getCurrentUserId();
         Map<String,Integer>deletedNotifications=notificationService.deleteAllNotifications(userId);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_DELETED_ALL,deletedNotifications);
+    }
+
+    @PostMapping
+    @Operation(summary = "알림 생성", description = "알림을 생성합니다.")
+    public ApiResponse<List<NotificationResponse>> createNotification(@RequestBody NotificationRequest request) {
+        List<NotificationResponse> response = notificationService.createNotifications(request);
+        return ApiResponse.success(ResponseMessage.NOTIFICATION_CREATED, response);
     }
 }
