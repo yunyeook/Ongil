@@ -79,8 +79,8 @@ public class JwtUtil {
 
     private Claims parseClaims(String token) {
 //        log.info("▶▶▶ parseClaims 호출 - token length: {}, prefix: {}",
-                token != null ? token.length() : "null",
-                token != null ? token.substring(0, Math.min(30, token.length())) : "null");
+//                token != null ? token.length() : "null",
+//                token != null ? token.substring(0, Math.min(30, token.length())) : "null");
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(secretKey)
@@ -88,11 +88,11 @@ public class JwtUtil {
                     .parseSignedClaims(token)
                     .getPayload();
 //            log.info("▶▶▶ parseClaims 성공 - subject: {}, claims: {}",
-                    claims.getSubject(), claims.keySet());
+//                    claims.getSubject(), claims.keySet());
             return claims;
         } catch (JwtException e) {
 //            log.error("▶▶▶ JWT 토큰 파싱 실패 - 에러 타입: {}, 메시지: {}",
-                    e.getClass().getSimpleName(), e.getMessage(), e);
+//                    e.getClass().getSimpleName(), e.getMessage(), e);
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         } catch (IllegalArgumentException e) {
 //            log.error("▶▶▶ JWT 토큰 파싱 실패 - IllegalArgumentException: {}", e.getMessage(), e);
