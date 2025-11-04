@@ -52,14 +52,6 @@ fun PlaceDetailScreen(
                 .padding(horizontal = 16.dp)
         ) {
 
-            // ===== 상단 헤더 영역 =====
-            TopBarPlaceDetail(
-                title = "장소 상세",
-                onBackClick = onBackClick
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
             InputBox(
                 label = "장소명",
                 placeholder = "",
@@ -117,72 +109,6 @@ fun PlaceDetailScreen(
             // ===== 하단 탭바 영역 (Bottom Navigation) =====
 
             Spacer(modifier = Modifier.height(80.dp))
-        }
-    }
-}
-
-
-@Composable
-private fun TopBarPlaceDetail(
-    title: String,
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 24.dp) // 상태바 아래 여백 느낌
-            .heightIn(min = 40.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-
-        // 뒤로가기 + 타이틀
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .weight(1f)
-        ) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "뒤로가기",
-                    tint = Color(0xFF111827)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = title,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF111827)
-            )
-        }
-
-        // 우측 프로필/알림 - 아직 더미
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 프로필 아바타 자리 (지금은 동그란 컬러 박스로 대체)
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE0E7FF))
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "알림",
-                tint = Color(0xFF4B5563),
-                modifier = Modifier.size(24.dp)
-            )
         }
     }
 }

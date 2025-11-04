@@ -5,13 +5,13 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kr.co.ongil.data.repository.FavoriteRepository
+import kr.co.ongil.data.repository.FakeFavoriteRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.asStateFlow
 
 
 class PlaceDetailViewModel(
-    private val repository: FavoriteRepository,
+    private val repository: FakeFavoriteRepository,
     initialFavoriteId: Long,
     initialPlaceName: String,
     initialAddress: String,

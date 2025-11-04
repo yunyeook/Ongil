@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -30,6 +31,8 @@ fun InputBox(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val focusManager = LocalFocusManager.current
+
     // 둥근 모서리 모양을 변수로 추출하여 재사용합니다.
     val shape = RoundedCornerShape(8.dp)
 
@@ -72,7 +75,7 @@ fun InputBox(
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
-                onDone = { /* 키보드 숨김 등 필요시 추가 */ }
+                onDone = { focusManager.clearFocus() }
             ),
             singleLine = true
         )
