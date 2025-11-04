@@ -56,7 +56,8 @@ fun OngilTopBar(
     onBackClick: () -> Unit,
     onBellClick: () -> Unit = {},
     bottomDivider: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    customActions: (@Composable RowScope.() -> Unit)? = null
 ) {
     HeaderContainer(bottomDivider = bottomDivider) {
         TopAppBar(
@@ -79,12 +80,16 @@ fun OngilTopBar(
                 )
             },
             actions = {
-                IconButton(onClick = onBellClick) {
-                    Icon(
-                        Icons.Outlined.NotificationsNone,
-                        contentDescription = "알림",
-                        tint = OngilGray
-                    )
+                if (customActions != null) {
+                    customActions()
+                } else {
+                    IconButton(onClick = onBellClick) {
+                        Icon(
+                            Icons.Outlined.NotificationsNone,
+                            contentDescription = "알림",
+                            tint = OngilGray
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -184,18 +189,24 @@ fun OngilTopBarForRoute(
     onBellClick: () -> Unit = {}
 ) {
     // route에 따라 화면 제목 자동 설정
-    val title = when {
-        route.contains("edit_info") -> "내 정보 수정"
-        route.contains("my_info") -> "내 정보"
-        route.contains("call_history") -> "최근 통화목록"
-        route.contains("recent_calls") -> "최근 통화목록"
-        route.contains("call_detail") -> "통화 상세"
-        route.contains("change_password") -> "비밀번호 변경"
-        route.contains("search_user") -> "사용자 찾기"
-        route.contains("register_user") -> "사용자 등록"
-        route.contains("patient_detail") -> "환자 상세"
-        route.contains("place_detail") -> "장소 상세"
-        else -> ""
+    val title = when (route) {
+        "edit_info" -> "내 정보 수정"
+        "my_info" -> "내 정보"
+        "call_history" -> "최근 통화목록"
+        "change_password" -> "비밀번호 변경"
+        "notifications" -> "알림"
+        "search_user" -> "사용자 찾기"
+        "register_user" -> "사용자 등록"
+        "location" -> "위치"
+        "favorite" -> "즐겨찾기"
+        "home" -> "홈"
+        "patient_list" -> "환자 정보"
+        else -> when {
+            route.startsWith("call_detail") -> "통화 상세"
+            route.startsWith("patient_detail") -> "환자 상세"
+            route.startsWith("place_detail") -> "장소 상세"
+            else -> ""
+        }
     }
 
     OngilTopBar(

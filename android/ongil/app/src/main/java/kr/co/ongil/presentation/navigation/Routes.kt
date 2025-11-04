@@ -34,6 +34,9 @@ sealed class Routes(val route: String) {
     // 비밀번호 변경
     object ChangePassword : Routes("change_password")
 
+    // 알림
+    object Notifications : Routes("notifications")
+
     // 통화 상세
     object CallDetail : Routes("call_detail/{callLogId}") {
         fun createRoute(callLogId: Long): String = "call_detail/$callLogId"
