@@ -46,11 +46,25 @@ public enum ResponseMessage {
     FAVORITE_PLACE_DELETED("자주 가는 장소가 삭제되었습니다."),
     ROUTE_FOUND("경로를 성공적으로 조회하였습니다."),
     
-    //Navigation
+    // Navigation
     NAVIGATION_START_SUCCESS("길안내가 시작되었습니다."),
     NAVIGATION_END_SUCCESS("길안내가 종료되었습니다."),
 
+    // Call
+    CALL_REQUESTED("통화 요청이 전송되었습니다."),
+    CALL_ACCEPTED("통화가 연결되었습니다."),
+    CALL_ENDED("통화가 정상적으로 종료되었습니다."),
 
+    // Call Log
+    CALL_LOG_CREATED("통화 로그가 성공적으로 저장되었습니다."),
+    CALL_LOG_FOUND("통화 로그를 성공적으로 조회하였습니다."),
+    CALL_LOG_LIST_FOUND("통화 로그 목록을 성공적으로 조회하였습니다."),
+    CALL_LOG_DELETED("통화 기록을 성공적으로 삭제하였습니다."),
+
+    // Call Recording
+    CALL_RECORDING_CREATED("통화 녹음 정보가 성공적으로 등록되었습니다."),
+    CALL_RECORDING_FOUND("통화 녹음 정보를 성공적으로 조회하였습니다."),
+    CALL_RECORDING_DELETED("통화 녹음 정보가 성공적으로 삭제되었습니다."),
 
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),

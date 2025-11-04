@@ -63,11 +63,25 @@ public enum ErrorCode {
     LOCATION_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "위치 서비스가 일시적으로 사용 불가능합니다."),
 
     // CALL / VOICE / SOS
-    CALL_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 기록을 찾을 수 없습니다."),
+    CALL_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 세션을 찾을 수 없습니다."),
+    CALL_ALREADY_CONNECTED(HttpStatus.CONFLICT, "이미 연결된 통화입니다."),
+    CALL_ALREADY_ENDED(HttpStatus.CONFLICT, "이미 종료된 통화입니다."),
+    RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "수신자를 찾을 수 없습니다."),
+    USER_ALREADY_IN_CALL(HttpStatus.CONFLICT, "이미 통화 중인 사용자입니다."),
+    CALL_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "통화 권한이 없습니다."),
+    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "올바르지 않은 통화 상태입니다."),
     CALL_CONNECTION_FAILED(HttpStatus.BAD_GATEWAY, "통화 연결 중 오류가 발생했습니다."),
     EMERGENCY_CALL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "긴급 통화 요청에 실패했습니다."),
     INVALID_CALL_TYPE(HttpStatus.BAD_REQUEST, "올바르지 않은 통화 유형입니다."),
     SOS_NOT_REGISTERED(HttpStatus.NOT_FOUND, "등록된 긴급 연락처가 없습니다."),
+
+    // CALL LOG
+    CALL_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 기록을 찾을 수 없습니다."),
+    CALL_LOG_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "통화 기록 접근 권한이 없습니다."),
+
+    // CALL RECORDING
+    CALL_RECORDING_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 녹음을 찾을 수 없습니다."),
+    CALL_RECORDING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 통화에 녹음 정보가 등록되어 있습니다."),
 
     // NOTIFICATION / SSE / ALERT
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림 정보를 찾을 수 없습니다."),
