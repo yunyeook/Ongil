@@ -13,6 +13,8 @@ public enum ResponseMessage {
     LOGOUT_SUCCESS("로그아웃에 성공했습니다."),
     SIGNUP_SUCCESS("회원가입이 성공적으로 완료되었습니다!"),
     TOKEN_REISSUE_SUCCESS("토큰이 성공적으로 재발급되었습니다."),
+    PASSWORD_RESET_SUCCESS("비밀번호가 성공적으로 변경되었습니다."),
+    PASSWORD_RESET_WITH_TOKEN_SUCCESS("비밀번호 재설정이 성공적으로 완료되었습니다."),
 
     // Phone Verification
     PHONE_VERIFICATION_SENT("전화번호 인증 요청이 성공적으로 완료되었습니다."),
