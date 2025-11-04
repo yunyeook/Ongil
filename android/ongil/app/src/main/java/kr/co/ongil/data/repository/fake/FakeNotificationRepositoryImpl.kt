@@ -1,4 +1,4 @@
-package kr.co.ongil.data.repository
+package kr.co.ongil.data.repository.fake
 
 //import kr.co.ongil.data.datasource.remote.RetrofitClient
 //import kr.co.ongil.data.datasource.remote.api.NotificationApi

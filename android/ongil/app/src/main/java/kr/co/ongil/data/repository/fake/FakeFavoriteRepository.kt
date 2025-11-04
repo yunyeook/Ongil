@@ -1,4 +1,4 @@
-package kr.co.ongil.data.repository
+package kr.co.ongil.data.repository.fake
 
 import kr.co.ongil.presentation.ui.favorite.PlaceData
 import kr.co.ongil.presentation.ui.favorite.PatientData
@@ -170,18 +170,18 @@ class FakeFavoriteRepository {
     // ===== Patient 관련 메서드들 =====
 
     // 즐겨찾기 환자 목록 조회
-    suspend fun getFavoritePatients(): List<kr.co.ongil.presentation.ui.favorite.PatientData> {
+    suspend fun getFavoritePatients(): List<PatientData> {
         // TODO: 나중에 Retrofit으로 교체, 지금은 더미
         return favoritePatients.toList()
     }
 
     // 환자 상세 조회
-    suspend fun getFavoritePatientDetail(patientId: Long): kr.co.ongil.presentation.ui.favorite.PatientData? {
+    suspend fun getFavoritePatientDetail(patientId: Long): PatientData? {
         return favoritePatients.find { it.id == patientId }
     }
 
     // 환자 추가
-    suspend fun addFavoritePatient(patientData: kr.co.ongil.presentation.ui.favorite.PatientData): Boolean {
+    suspend fun addFavoritePatient(patientData: PatientData): Boolean {
         return try {
             favoritePatients.add(patientData)
             true

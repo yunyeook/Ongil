@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kr.co.ongil.data.repository.FakeFavoriteRepository
+import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
 
 
 class PatientDetailViewModel(

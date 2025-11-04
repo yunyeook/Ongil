@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.repository.SearchUserRepository
-import kr.co.ongil.data.repository.FakeSearchUserRepository
+import kr.co.ongil.data.repository.fake.FakeSearchUserRepository
 
 
 class SearchUserViewModel(

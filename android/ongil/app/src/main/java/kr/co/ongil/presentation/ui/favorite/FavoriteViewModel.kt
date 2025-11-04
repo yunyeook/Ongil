@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kr.co.ongil.data.repository.FakeFavoriteRepository
+import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
 class FavoriteViewModel(
     private val fakeFavoriteRepository: FakeFavoriteRepository,
     private val initialPatientId: Long
