@@ -65,6 +65,6 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
 
     // TMAP SDK (api로 노출하여 의존하는 모듈에서도 사용 가능하게)
-    api(files("libs/tmap-sdk-3.0.aar"))
-    api(files("libs/vsm-tmap-sdk-v2-android-1.7.45.aar"))
+    api("com.skt.tmap:tmap-sdk:3.0")
+    api("com.skt.tmap:vsm-tmap-sdk:1.7.45")
 }
