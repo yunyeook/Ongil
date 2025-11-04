@@ -2,7 +2,7 @@ package kr.co.ongil.presentation.ui.favorite
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import kr.co.ongil.data.repository.FakeFavoriteRepository
+import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
 
 
 class FavoriteDummyFactory(

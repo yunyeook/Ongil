@@ -10,7 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import android.net.Uri
 import androidx.compose.runtime.remember
-import kr.co.ongil.data.repository.FakeFavoriteRepository
+import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,7 +37,6 @@ import kr.co.ongil.presentation.ui.placedetail.PlaceDetailViewModel
 import kr.co.ongil.presentation.ui.patientdetail.PatientDetailViewModel
 import kr.co.ongil.presentation.ui.patientdetail.PatientDetailScreen
 import kr.co.ongil.presentation.ui.home.HomeScreen
-import androidx.navigation.NavController
 import kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel
 /**
  * 앱 Navigation Graph

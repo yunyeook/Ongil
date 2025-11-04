@@ -10,7 +10,7 @@ import androidx.navigation.navArgument
 import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
 import kr.co.ongil.presentation.ui.placedetail.PlaceDetailScreen
 import kr.co.ongil.presentation.ui.placedetail.PlaceDetailViewModel
-import kr.co.ongil.data.repository.FakeFavoriteRepository
+import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
 import kr.co.ongil.presentation.navigation.Routes
 import kr.co.ongil.presentation.ui.home.HomeScreen
 import android.net.Uri

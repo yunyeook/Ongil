@@ -1,4 +1,4 @@
-package kr.co.ongil.data.repository
+package kr.co.ongil.data.repository.fake
 
 import kotlinx.coroutines.delay
 import kr.co.ongil.domain.model.UserSummary
