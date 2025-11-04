@@ -73,4 +73,7 @@ dependencies {
 
     // Kotlinx Serialization
     implementation(libs.kotlinx.serialization.json)
+
+    // Common Module
+    implementation(project(":common"))
 }

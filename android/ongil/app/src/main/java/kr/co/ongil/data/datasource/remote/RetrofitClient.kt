@@ -2,6 +2,9 @@ package kr.co.ongil.data.datasource.remote
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
+import kr.co.ongil.data.datasource.remote.api.CallApi
+import kr.co.ongil.data.datasource.remote.api.NotificationApi
+import kr.co.ongil.data.datasource.remote.api.UserApi
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -45,5 +48,18 @@ object RetrofitClient {
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
+    }
+
+    // API 인스턴스들
+    val userApi: UserApi by lazy {
+        instance.create(UserApi::class.java)
+    }
+
+    val callApi: CallApi by lazy {
+        instance.create(CallApi::class.java)
+    }
+
+    val notificationApi: NotificationApi by lazy {
+        instance.create(NotificationApi::class.java)
     }
 }
