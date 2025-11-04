@@ -1,5 +1,7 @@
 package kr.co.ongil.presentation.ui.placedetail
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,6 +12,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +36,29 @@ import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.InputBox
 
 
+
+@Composable
+fun PlaceDetailScreen(
+    viewModel: PlaceDetailViewModel,
+    onBackClick: () -> Unit
+) {
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+
+    PlaceDetailScreen(
+        favoriteId = uiState.favoriteId,
+        placeName = uiState.placeName,
+        address = uiState.address,
+        isDefault = uiState.isDefault,
+        onBackClick = onBackClick,
+        onSetDefaultClick = { viewModel.setAsDefault() },
+        onSaveClick = { name, addr -> viewModel.updatePlaceInfo(name, addr) },
+        onDeleteClick = { viewModel.deletePlace { onBackClick() } },
+        isLoading = uiState.isLoading,
+        error = uiState.error,
+        successMessage = uiState.successMessage
+    )
+}
+
 @Composable
 fun PlaceDetailScreen(
     favoriteId: Long,
@@ -37,20 +69,43 @@ fun PlaceDetailScreen(
     onSetDefaultClick: () -> Unit,
     onSaveClick: (String, String) -> Unit,
     onDeleteClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    error: String? = null,
+    successMessage: String? = null
 ) {
     var editedPlaceName by remember { mutableStateOf(placeName) }
     var editedAddress by remember { mutableStateOf(address) }
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = Color(0xFFF9FAFB) // 배경 연한 그레이 톤 (즐겨찾기 화면과 동일)
-    ) {
-        Column(
+    val hasChanges = remember(placeName, address, editedPlaceName, editedAddress) {
+        editedPlaceName.trim() != placeName || editedAddress.trim() != address
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(error, successMessage) {
+        error?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
+        successMessage?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .padding(innerPadding)
         ) {
+            Surface(
+                modifier = modifier.fillMaxSize(),
+                color = Color(0xFFF9FAFB) // 배경 연한 그레이 톤 (즐겨찾기 화면과 동일)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                ) {
 
             InputBox(
                 label = "장소명",
@@ -81,7 +136,7 @@ fun PlaceDetailScreen(
             GreenButton(
                 text = "기본 목적지로 설정",
                 onClick = {
-                    onSetDefaultClick()
+                    if (!isDefault) onSetDefaultClick()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,10 +146,17 @@ fun PlaceDetailScreen(
 
             GreenButton(
                 text = "저장하기",
-                onClick = { onSaveClick(editedPlaceName, editedAddress) },
+                onClick = {
+                    val name = editedPlaceName.trim()
+                    val addr = editedAddress.trim()
+                    if (name.isNotEmpty() && hasChanges) {
+                        onSaveClick(name, addr)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 16.dp),
+                containerColor = if (hasChanges) Color(0xFF87A293) else Color(0xFFD1D5DB)
             )
 
             GreenButton(
@@ -109,6 +171,18 @@ fun PlaceDetailScreen(
             // ===== 하단 탭바 영역 (Bottom Navigation) =====
 
             Spacer(modifier = Modifier.height(80.dp))
+                }
+            }
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 }

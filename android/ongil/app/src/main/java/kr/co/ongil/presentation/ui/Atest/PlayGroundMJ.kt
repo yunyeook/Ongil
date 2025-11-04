@@ -10,7 +10,8 @@ import androidx.navigation.navArgument
 import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
 import kr.co.ongil.presentation.ui.placedetail.PlaceDetailScreen
 import kr.co.ongil.presentation.ui.placedetail.PlaceDetailViewModel
-import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
+import androidx.hilt.navigation.compose.hiltViewModel
+//import kr.co.ongil.data.repository.fake.FakeFavoriteRepository
 import kr.co.ongil.presentation.navigation.Routes
 import kr.co.ongil.presentation.ui.home.HomeScreen
 import android.net.Uri
@@ -88,18 +89,18 @@ fun PlayGroundMJ() {
         }
 
         // 즐겨찾기 화면
-        composable(route = Routes.Favorite.route) {
+        composable(
+            route = "${Routes.Favorite.route}/{patientId}",
+            arguments = listOf(
+                androidx.navigation.navArgument("patientId") { type = androidx.navigation.NavType.LongType }
+            )
+        ) {
             FavoriteScreen(
-                patientId = 1L,
-                onNavigateToPlaceDetail = { favoriteId, placeName, address ->
-                    val encodedName = Uri.encode(placeName)
-                    val encodedAddress = Uri.encode(address)
-
+                onNavigateToPlaceDetail = { patientId, favoriteId ->
                     navController.navigate(
                         Routes.PlaceDetail.createRoute(
-                            favoriteId = favoriteId,
-                            placeName = encodedName,
-                            address = encodedAddress
+                            patientId = patientId,
+                            favoriteId = favoriteId
                         )
                     )
                 },
@@ -127,68 +128,12 @@ fun PlayGroundMJ() {
         // 장소 상세 화면
         composable(
             route = Routes.PlaceDetail.route,
-            arguments = listOf(
-                navArgument("favoriteId") {type = NavType.LongType},
-                navArgument("placeName") {type = NavType.StringType},
-                navArgument("address") {type = NavType.StringType}
-            )
-        ) { backStackEntry ->
-            val favoriteId = backStackEntry.arguments?.getLong("favoriteId") ?: 1L
-            val placeNameArg = backStackEntry.arguments?.getString("placeName") ?: ""
-            val addressArg = backStackEntry.arguments?.getString("address") ?: ""
-
-            // 싱글톤 Repository 사용
-            val repository = remember { FakeFavoriteRepository.getInstance() }
-
-            // Repository에서 실제 데이터 조회
-            var actualPlaceData by remember { mutableStateOf<kr.co.ongil.presentation.ui.favorite.PlaceData?>(null) }
-
-            LaunchedEffect(favoriteId) {
-                actualPlaceData = repository.getFavoritePlaceDetail(1L, favoriteId)
-            }
-
-            val viewModel = remember(actualPlaceData) {
-                val placeData = actualPlaceData
-                if (placeData != null) {
-                    PlaceDetailViewModel(
-                        repository = repository,
-                        initialFavoriteId = placeData.favoriteId,
-                        initialPlaceName = placeData.placeName,
-                        initialAddress = placeData.address,
-                        initialIsDefault = placeData.isDefault,
-                        initialPatientId = placeData.patientId
-                    )
-                } else {
-                    // 데이터 로딩 중이거나 없을 경우 기본값 사용
-                    PlaceDetailViewModel(
-                        repository = repository,
-                        initialFavoriteId = favoriteId,
-                        initialPlaceName = placeNameArg,
-                        initialAddress = addressArg,
-                        initialIsDefault = false,
-                        initialPatientId = 1L
-                    )
-                }
-            }
-
-            val uiState by viewModel.uiState.collectAsState()
-
+            arguments = Routes.PlaceDetail.arguments
+        ) {
+            val viewModel: PlaceDetailViewModel = hiltViewModel()
             PlaceDetailScreen(
-                favoriteId = uiState.favoriteId,
-                placeName = uiState.placeName,
-                address = uiState.address,
-                isDefault = uiState.isDefault,
-                onBackClick = { navController.popBackStack() },
-                onSetDefaultClick = { viewModel.setAsDefault() },
-                onSaveClick = { newName, newAddress ->
-                    viewModel.updatePlaceInfo(newName, newAddress)
-                    navController.popBackStack()
-                },
-                onDeleteClick = {
-                    viewModel.deletePlace(onSuccess = {
-                        navController.popBackStack()
-                    })
-                }
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -201,53 +146,8 @@ fun PlayGroundMJ() {
                 navArgument("phoneNumber") { type = NavType.StringType },
                 navArgument("gender") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-
-            val patientId: Long =
-                backStackEntry.arguments?.getLong("patientId") ?: -1L
-            val nameArg =
-                backStackEntry.arguments?.getString("name")
-                    ?.let { Uri.decode(it) } ?: ""
-            val phoneArg =
-                backStackEntry.arguments?.getString("phoneNumber")
-                    ?.let { Uri.decode(it) } ?: ""
-            val genderArg =
-                backStackEntry.arguments?.getString("gender")
-                    ?.let { Uri.decode(it) } ?: ""
-
-            // 싱글톤 Repository 사용
-            val repository = remember { FakeFavoriteRepository.getInstance() }
-
-            // Repository에서 실제 환자 데이터 조회
-            var actualPatientData by remember { mutableStateOf<kr.co.ongil.presentation.ui.favorite.PatientData?>(null) }
-
-            LaunchedEffect(patientId) {
-                actualPatientData = repository.getFavoritePatientDetail(patientId)
-            }
-
-            val viewModel = remember(actualPatientData) {
-                val patientData = actualPatientData
-                if (patientData != null) {
-                    PatientDetailViewModel(
-                        repository = repository,
-                        initialPatientId = patientData.id,
-                        initialName = patientData.name,
-                        initialPhoneNumber = patientData.phoneNumber,
-                        initialGender = patientData.gender
-                    )
-                } else {
-                    PatientDetailViewModel(
-                        repository = repository,
-                        initialPatientId = patientId,
-                        initialName = nameArg,
-                        initialPhoneNumber = phoneArg,
-                        initialGender = genderArg
-                    )
-                }
-            }
-
-            val uiState by viewModel.uiState.collectAsState()
-
+        ) {
+            val viewModel: PatientDetailViewModel = hiltViewModel()
             PatientDetailScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }

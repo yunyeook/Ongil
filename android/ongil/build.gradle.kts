@@ -5,6 +5,15 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     id("org.sonarqube") version "4.4.1.3373"
     alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.dagger.hilt.android) apply false
+}
+
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force("com.squareup:javapoet:1.13.0")
+        }
+    }
 }
 
 sonar {

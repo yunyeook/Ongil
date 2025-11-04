@@ -36,7 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 fun PlaceList(
     places: List<PlaceData>,
     onAddPlaceClick: () -> Unit,
-    onClickPlaceCard: (favoriteId: Long, placeName: String, address: String) -> Unit,
+    onClickPlaceCardWithPatient: (patientId: Long, favoriteId: Long) -> Unit,
     onClickPlaceIcon: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -65,9 +65,7 @@ fun PlaceList(
                     placeName = place.placeName,
                     address = place.address,
                     isDefault = place.isDefault,
-                    onClickCard = {
-                        onClickPlaceCard(place.favoriteId, place.placeName, place.address)
-                    },
+                    onClickCard = { onClickPlaceCardWithPatient(place.patientId, place.favoriteId) },
                     onClickIcon = { onClickPlaceIcon(place.favoriteId) },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -190,7 +188,7 @@ private fun PlaceListPreview() {
         PlaceList(
             places = dummyPlaces,
             onAddPlaceClick = {},
-            onClickPlaceCard = { _, _, _ -> },
+            onClickPlaceCardWithPatient = { _, _ -> },
             onClickPlaceIcon = {}
         )
     }

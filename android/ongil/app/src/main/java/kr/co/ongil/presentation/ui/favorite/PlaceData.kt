@@ -1,6 +1,7 @@
 package kr.co.ongil.presentation.ui.favorite
 
 import kr.co.ongil.data.model.favorite.FavoritePlaceDto
+import kr.co.ongil.domain.model.favorite.FavoritePlace
 
 import kotlinx.serialization.Serializable
 @Serializable
@@ -17,6 +18,16 @@ fun FavoritePlaceDto.toPlaceData(): PlaceData {
         patientId = patientId,
         favoriteId = favoriteId,
         placeName = placeAlias ?: placeName,
+        address = address,
+        isDefault = isDefault
+    )
+}
+
+fun FavoritePlace.toPlaceData(): PlaceData {
+    return PlaceData(
+        patientId = patientId,
+        favoriteId = favoriteId,
+        placeName = placeAlias.ifEmpty { placeName },
         address = address,
         isDefault = isDefault
     )
