@@ -1,10 +1,8 @@
 package kr.co.ongil.presentation.navigation
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,10 +25,7 @@ import kr.co.ongil.presentation.ui.signup.SignupViewModel
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
 import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
-import kr.co.ongil.presentation.ui.notification.NotificationScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
-import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
-import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 
 /**
  * 앱 Navigation Graph
@@ -41,73 +36,41 @@ fun AppNavGraph(
     modifier: Modifier = Modifier,
     startDestination: String = Routes.MyInfo.route
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-        modifier = modifier
-    ) {
-        // 위치 화면
-        composable(Routes.Location.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilBrandHeaderCard(
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
-                )
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = modifier
+        ) {
+            // 위치 화면
+            composable(Routes.Location.route) {
                 PlaceholderScreen("위치")
             }
-        }
 
-        // 즐겨찾기 화면
-        composable(Routes.Favorite.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilBrandHeaderCard(
-                    onBellClick = { /* TODO: 알림 화면 이동 */ }
-                )
+            // 즐겨찾기 화면
+            composable(Routes.Favorite.route) {
                 PlaceholderScreen("즐겨찾기")
             }
-        }
 
-        // 홈 화면
-        composable(Routes.Home.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilBrandHeaderCard(
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
-                )
+            // 홈 화면
+            composable(Routes.Home.route) {
                 PlaceholderScreen("홈")
             }
-        }
 
-        // 환자 정보 화면
-        composable(Routes.PatientList.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilBrandHeaderCard(
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
-                )
+            // 환자 정보 화면
+            composable(Routes.PatientList.route) {
                 PlaceholderScreen("환자 정보")
             }
-        }
 
-        // 사용자 찾기 화면
-        composable(Routes.SearchUser.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilTopBarForRoute(
-                    route = Routes.SearchUser.route,
-                    onBackClick = { navController.popBackStack() },
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
-                )
+            // 사용자 찾기 화면 (현재 임시)
+            composable(Routes.SearchUser.route) {
                 PlaceholderScreen("사용자 찾기")
             }
-        }
 
-        // 나의 정보 화면
-        composable(Routes.MyInfo.route) {
-            val viewModel: MyInfoViewModel = viewModel()
-            val uiState by viewModel.uiState.collectAsState()
+            // 나의 정보 화면
+            composable(Routes.MyInfo.route) {
+                val viewModel: MyInfoViewModel = viewModel()
+                val uiState by viewModel.uiState.collectAsState()
 
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilBrandHeaderCard(
-                    onBellClick = { navController.navigate(Routes.Notifications.route) },
-                    profileImageUrl = uiState.profileImage
-                )
                 MyInfoScreen(
                     uiState = uiState,
                     onEditInfo = {
@@ -125,18 +88,11 @@ fun AppNavGraph(
                     }
                 )
             }
-        }
 
-        // 내 정보 수정 화면
-        composable(Routes.EditInfo.route) {
-            val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel()
+            // 내 정보 수정 화면
+            composable(Routes.EditInfo.route) {
+                val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel()
 
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilTopBarForRoute(
-                    route = Routes.EditInfo.route,
-                    onBackClick = { navController.popBackStack() },
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
-                )
                 MyInfoEditScreen(
                     viewModel = editViewModel,
                     onNavigateBack = {
@@ -147,16 +103,9 @@ fun AppNavGraph(
                     }
                 )
             }
-        }
 
-        // 최근 통화목록 화면
-        composable(Routes.CallHistory.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilTopBarForRoute(
-                    route = Routes.CallHistory.route,
-                    onBackClick = { navController.popBackStack() },
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
-                )
+            // 최근 통화목록 화면
+            composable(Routes.CallHistory.route) {
                 RecentCallsScreen(
                     onNavigateBack = {
                         navController.popBackStack()
@@ -166,16 +115,9 @@ fun AppNavGraph(
                     }
                 )
             }
-        }
 
-        // 비밀번호 변경 화면
-        composable(Routes.ChangePassword.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilTopBarForRoute(
-                    route = Routes.ChangePassword.route,
-                    onBackClick = { navController.popBackStack() },
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
-                )
+            // 비밀번호 변경 화면
+            composable(Routes.ChangePassword.route) {
                 ChangePasswordScreen(
                     onNavigateBack = {
                         navController.popBackStack()
@@ -185,67 +127,52 @@ fun AppNavGraph(
                     }
                 )
             }
-        }
 
-        // 통화 상세 화면
-        composable(
-            route = Routes.CallDetail.route,
-            arguments = listOf(
-                navArgument("callLogId") { type = NavType.LongType }
-            )
-        ) { backStackEntry ->
-            val callLogId = backStackEntry.arguments?.getLong("callLogId") ?: 0L
-
-            Column(modifier = Modifier.fillMaxSize()) {
-                OngilTopBarForRoute(
-                    route = Routes.CallDetail.route,
-                    onBackClick = { navController.popBackStack() },
-                    onBellClick = { navController.navigate(Routes.Notifications.route) }
+            // 통화 상세 화면
+            composable(
+                route = Routes.CallDetail.route,
+                arguments = listOf(
+                    navArgument("callLogId") { type = NavType.LongType }
                 )
+            ) { backStackEntry ->
+                val callLogId = backStackEntry.arguments?.getLong("callLogId") ?: 0L
+
                 CallDetailScreen(
                     callLogId = callLogId
                 )
             }
-        }
 
-        // 알림 화면
-        composable(Routes.Notifications.route) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                NotificationScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
+            // 회원가입 화면
+            composable(Routes.Signup.route) {
+                val viewModel: SignupViewModel = viewModel()
+                val uiState by viewModel.uiState.collectAsState()
+
+                SignupScreen(
+                    uiState = uiState,
+                    onBackClick = { navController.popBackStack() },
+                    onProfileImageClick = viewModel::onProfileImageClick,
+                    onNameChange = viewModel::onNameChange,
+                    onBirthClick = viewModel::onBirthClick,
+                    onSetBirth = viewModel::onSetBirth,
+                    onDismissDatePicker = viewModel::onDismissDatePicker,
+                    onPhoneChange = viewModel::onPhoneChange,
+                    onRequestVerificationCode = viewModel::onRequestVerificationCode,
+                    onVerificationCodeChange = viewModel::onVerificationCodeChange,
+                    onVerifyCodeClick = viewModel::onVerifyCodeClick,
+                    onPasswordChange = viewModel::onPasswordChange,
+                    onTogglePasswordVisible = viewModel::onTogglePasswordVisible,
+                    onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
+                    onTogglePasswordConfirmVisible = viewModel::onTogglePasswordConfirmVisible,
+                    onSelectGuardian = viewModel::onSelectGuardian,
+                    onSelectPatient = viewModel::onSelectPatient,
+                    onSubmitSignup = viewModel::onSubmitSignup,
+                    onDismissSuccessModal = viewModel::onDismissSuccessModal,
+                    onDismissErrorModal = viewModel::onDismissErrorModal,
                 )
             }
         }
-        // 회원가입 화면
-        composable(Routes.Signup.route) {
-            val viewModel: SignupViewModel = viewModel()
-            val uiState by viewModel.uiState.collectAsState()
-
-            SignupScreen(
-                uiState = uiState,
-                onBackClick = { navController.popBackStack() },
-                onProfileImageClick = viewModel::onProfileImageClick,
-                onNameChange = viewModel::onNameChange,
-                onBirthClick = viewModel::onBirthClick,
-                onPhoneChange = viewModel::onPhoneChange,
-                onRequestVerificationCode = viewModel::onRequestVerificationCode,
-                onVerificationCodeChange = viewModel::onVerificationCodeChange,
-                onVerifyCodeClick = viewModel::onVerifyCodeClick,
-                onPasswordChange = viewModel::onPasswordChange,
-                onTogglePasswordVisible = viewModel::onTogglePasswordVisible,
-                onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
-                onTogglePasswordConfirmVisible = viewModel::onTogglePasswordConfirmVisible,
-                onSelectGuardian = viewModel::onSelectGuardian,
-                onSelectPatient = viewModel::onSelectPatient,
-                onSubmitSignup = viewModel::onSubmitSignup,
-                onDismissSuccessModal = viewModel::onDismissSuccessModal,
-                onDismissErrorModal = viewModel::onDismissErrorModal,
-            )
-        }
     }
-}
+
 
 /**
  * 임시 화면 (실제 화면 구현 전까지 사용)
