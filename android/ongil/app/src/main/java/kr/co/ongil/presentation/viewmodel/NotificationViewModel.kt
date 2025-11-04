@@ -7,15 +7,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kr.co.ongil.data.model.notification.NotificationDto
+import kr.co.ongil.data.repository.FakeNotificationRepositoryImpl
+import kr.co.ongil.domain.repository.NotificationRepository
 import kr.co.ongil.presentation.uistate.NotificationEvent
 import kr.co.ongil.presentation.uistate.NotificationUi
 import kr.co.ongil.presentation.uistate.NotificationUiState
 import kr.co.ongil.presentation.uistate.NotificationType
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 /**
  * 알림 화면 ViewModel
  */
-class NotificationViewModel : ViewModel() {
+class NotificationViewModel(
+    private val repository: NotificationRepository = FakeNotificationRepositoryImpl()
+    // TODO: DI로 주입하도록 변경
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationUiState())
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
@@ -40,15 +50,27 @@ class NotificationViewModel : ViewModel() {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                // TODO: 실제 API 호출로 대체
-                val notifications = getDummyNotifications()
+                val result = repository.getNotifications(page = 1, size = 20)
 
-                _uiState.update {
-                    it.copy(
-                        notifications = notifications,
-                        isLoading = false,
-                        hasUnread = notifications.any { notification -> !notification.isRead }
-                    )
+                result.onSuccess { (notificationDtos, pageInfo) ->
+                    val notifications = notificationDtos.map { dto ->
+                        dto.toNotificationUi()
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            notifications = notifications,
+                            isLoading = false,
+                            hasUnread = notifications.any { notification -> !notification.isRead }
+                        )
+                    }
+                }.onFailure { exception ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message ?: "알림을 불러오는데 실패했습니다."
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -139,66 +161,56 @@ class NotificationViewModel : ViewModel() {
     }
 
     /**
-     * 더미 데이터 (개발용)
+     * NotificationDto를 NotificationUi로 변환
      */
-    private fun getDummyNotifications(): List<NotificationUi> {
-        return listOf(
-            NotificationUi(
-                id = 1,
-                type = NotificationType.SOS,
-                title = "이상 탐지 알림",
-                body = "이상 상황이 감지되었습니다.\n환자의 위치를 확인해보세요.",
-                timeAgo = "1시간 전",
-                isRead = false
-            ),
-            NotificationUi(
-                id = 2,
-                type = NotificationType.FRIEND_REQUEST,
-                title = "친구 요청 알림",
-                body = "김철수님이 친구 등록을 신청하셨습니다.\n카카오톡에서 인증번호를 확인해주세요.",
-                timeAgo = "1시간 전",
-                isRead = false
-            ),
-            NotificationUi(
-                id = 3,
-                type = NotificationType.FRIEND_DONE,
-                title = "친구 등록 완료",
-                body = "이영희님과 친구 등록이 완료되었습니다.",
-                timeAgo = "2시간 전",
-                isRead = true
-            ),
-            NotificationUi(
-                id = 4,
-                type = NotificationType.MISSED_CALL,
-                title = "부재중 전화 알림",
-                body = "박민수님께 걸려온 부재중 전화가 있습니다.",
-                timeAgo = "3시간 전",
-                isRead = true
-            ),
-            NotificationUi(
-                id = 5,
-                type = NotificationType.NAV_START,
-                title = "길찾기 시작",
-                body = "최지현님이 서울역으로 길찾기를 시작하셨습니다.",
-                timeAgo = "5시간 전",
-                isRead = true
-            ),
-            NotificationUi(
-                id = 6,
-                type = NotificationType.NAV_END,
-                title = "길찾기 종료",
-                body = "최지현님이 서울역으로 길찾기를 완료했습니다.",
-                timeAgo = "5시간 전",
-                isRead = true
-            ),
-            NotificationUi(
-                id = 7,
-                type = NotificationType.GEOFENCE_OUT,
-                title = "범위 이탈",
-                body = "정수진님이 2단계 안전구역에서 벗어났습니다.",
-                timeAgo = "1일 전",
-                isRead = true
-            )
+    private fun NotificationDto.toNotificationUi(): NotificationUi {
+        return NotificationUi(
+            id = this.notificationId,
+            type = NotificationType.fromApiString(this.type),
+            title = this.title,
+            body = this.content,
+            timeAgo = calculateTimeAgo(this.createdAt),
+            isRead = this.isRead
         )
     }
+
+    /**
+     * 시간 차이를 "n분 전", "n시간 전" 형식으로 변환
+     */
+    // NotificationViewModel.kt
+    private fun calculateTimeAgo(createdAt: String): String = try {
+        val created = parseIso8601Lenient(createdAt) ?: return createdAt
+        val now = Date()
+        val diff = now.time - created.time
+        val minutes = diff / (1000 * 60)
+        val hours = diff / (1000 * 60 * 60)
+        val days = diff / (1000 * 60 * 60 * 24)
+        when {
+            minutes < 1 -> "방금 전"
+            minutes < 60 -> "${minutes}분 전"
+            hours   < 24 -> "${hours}시간 전"
+            days    < 7  -> "${days}일 전"
+            days    < 30 -> "${days / 7}주 전"
+            else         -> "${days / 30}개월 전"
+        }
+    } catch (e: Exception) { createdAt }
+
+    private fun parseIso8601Lenient(s: String): Date? {
+        val utc = TimeZone.getTimeZone("UTC")
+        val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ssX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+        )
+        for (p in patterns) {
+            try {
+                val sdf = java.text.SimpleDateFormat(p, java.util.Locale.getDefault())
+                if (!p.contains('X')) sdf.timeZone = utc
+                return sdf.parse(s)
+            } catch (_: java.text.ParseException) {}
+        }
+        return null
+    }
+
 }

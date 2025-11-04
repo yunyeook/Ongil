@@ -4,13 +4,31 @@ package kr.co.ongil.presentation.uistate
  * 알림 타입
  */
 enum class NotificationType {
-    SOS,              // 이상 탐지 알림
-    FRIEND_REQUEST,   // 친구 요청 알림
-    FRIEND_DONE,      // 친구 등록 완료
-    MISSED_CALL,      // 부재중 전화
-    NAV_START,        // 길찾기 시작
-    NAV_END,          // 길찾기 종료
-    GEOFENCE_OUT      // 범위 이탈
+    RELATIONSHIP_REGIST,  // 환자-보호자 관계 등록 (API)
+    SAFEZONE_EXIT,        // 안전구역 이탈 (API)
+    NAVIGATION_START,     // 길안내 시작 (API)
+    SOS,                  // 이상 탐지 알림
+    FRIEND_REQUEST,       // 친구 요청 알림
+    FRIEND_DONE,          // 친구 등록 완료
+    MISSED_CALL,          // 부재중 전화
+    NAV_START,            // 길찾기 시작 (레거시)
+    NAV_END,              // 길찾기 종료
+    GEOFENCE_OUT,         // 범위 이탈 (레거시)
+    UNKNOWN;              // 알 수 없는 타입
+
+    companion object {
+        /**
+         * API 문자열을 NotificationType으로 변환
+         */
+        fun fromApiString(type: String): NotificationType {
+            return when (type) {
+                "RELATIONSHIP_REGIST" -> RELATIONSHIP_REGIST
+                "SAFEZONE_EXIT" -> SAFEZONE_EXIT
+                "NAVIGATION_START" -> NAVIGATION_START
+                else -> UNKNOWN
+            }
+        }
+    }
 }
 
 /**

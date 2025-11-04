@@ -76,10 +76,11 @@ fun AlertInfo(
             // 왼쪽 원형 아이콘
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(iconBackgroundColor),
                 contentAlignment = Alignment.Center
+
             ) {
                 if (icon != null) {
                     Icon(

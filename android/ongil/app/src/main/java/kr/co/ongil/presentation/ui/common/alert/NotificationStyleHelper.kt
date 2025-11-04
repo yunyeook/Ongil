@@ -41,6 +41,24 @@ data class NotificationStyle(
  */
 fun getNotificationStyle(type: NotificationType): NotificationStyle {
     return when (type) {
+        // API 타입
+        NotificationType.RELATIONSHIP_REGIST -> NotificationStyle(
+            bubbleColor = BubbleBlue,
+            iconColor = IconBlue,
+            icon = Icons.Outlined.PersonAdd
+        )
+        NotificationType.SAFEZONE_EXIT -> NotificationStyle(
+            bubbleColor = BubbleGray,
+            iconColor = Gray900,
+            icon = Icons.Outlined.Shield
+        )
+        NotificationType.NAVIGATION_START -> NotificationStyle(
+            bubbleColor = BubbleBeige,
+            iconColor = IconBeige,
+            icon = Icons.Outlined.Place
+        )
+
+        // 레거시 타입
         NotificationType.SOS -> NotificationStyle(
             bubbleColor = BubbleSOS,
             iconColor = IconSOS,
@@ -75,6 +93,13 @@ fun getNotificationStyle(type: NotificationType): NotificationStyle {
             bubbleColor = BubbleGray,
             iconColor = Gray900,
             icon = Icons.Outlined.Shield
+        )
+
+        // 알 수 없는 타입
+        NotificationType.UNKNOWN -> NotificationStyle(
+            bubbleColor = BubbleGray,
+            iconColor = Gray900,
+            icon = Icons.Outlined.ErrorOutline
         )
     }
 }
