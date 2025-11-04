@@ -170,7 +170,18 @@ fun AppNavGraph(
                 viewModel = vm
             )
         }
-        // 나의 정보 화면
+
+        // 알림 화면
+        composable(Routes.Notifications.route) {
+            NotificationScreen(
+                onNavigateBack = {
+                    navController.navigate(Routes.MyInfo.route)
+                }
+            )
+        }
+
+
+                        // 나의 정보 화면
         composable(Routes.MyInfo.route) {
             val viewModel: MyInfoViewModel = viewModel()
             val uiState by viewModel.uiState.collectAsState()
