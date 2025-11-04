@@ -16,10 +16,6 @@ public record CreateCallRequest(
 
     @Schema(description = "통화 유형 (NORMAL, EMERGENCY)", example = "NORMAL")
     @NotNull(message = "통화 유형은 필수입니다.")
-    CallType callType,
-
-    @Schema(description = "VoIP 세션 ID (WebRTC 등)", example = "webrtc-session-12345")
-    @NotNull(message = "세션 ID는 필수입니다.")
-    String sessionId
+    CallType callType
 ) {
 }

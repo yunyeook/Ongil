@@ -7,7 +7,9 @@ import jakarta.validation.Valid;
 import kr.co.ongil.domain.call.dto.request.CreateCallRequest;
 import kr.co.ongil.domain.call.dto.request.UpdateCallStatusRequest;
 import kr.co.ongil.domain.call.dto.response.CallResponse;
+import kr.co.ongil.domain.call.dto.response.TurnCredentialsResponse;
 import kr.co.ongil.domain.call.service.CallService;
+import kr.co.ongil.domain.call.service.TurnCredentialsService;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 public class CallController {
 
     private final CallService callService;
+    private final TurnCredentialsService turnCredentialsService;
 
     /**
      * VoIP 통화 요청 생성
@@ -86,6 +89,20 @@ public class CallController {
         @PathVariable Integer callId
     ) {
         CallResponse response = callService.getCallById(callId);
+
+        return ApiResponse.success(ResponseMessage.CALL_ACCEPTED, response);
+    }
+
+    /**
+     * TURN/STUN 서버 자격증명 발급
+     */
+    @GetMapping("/rtc/turn-credentials")
+    @Operation(
+        summary = "TURN/STUN 자격증명 발급",
+        description = "WebRTC P2P 연결을 위한 TURN/STUN 서버 자격증명을 발급합니다. (TTL: 1시간)"
+    )
+    public ApiResponse<TurnCredentialsResponse> getTurnCredentials() {
+        TurnCredentialsResponse response = turnCredentialsService.generateCredentials();
 
         return ApiResponse.success(ResponseMessage.CALL_ACCEPTED, response);
     }

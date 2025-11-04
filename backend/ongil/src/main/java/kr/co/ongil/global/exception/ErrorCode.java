@@ -69,6 +69,7 @@ public enum ErrorCode {
     RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "수신자를 찾을 수 없습니다."),
     USER_ALREADY_IN_CALL(HttpStatus.CONFLICT, "이미 통화 중인 사용자입니다."),
     CALL_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "통화 권한이 없습니다."),
+    CANNOT_CALL_SELF(HttpStatus.BAD_REQUEST, "자기 자신에게 통화할 수 없습니다."),
     INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "올바르지 않은 통화 상태입니다."),
     CALL_CONNECTION_FAILED(HttpStatus.BAD_GATEWAY, "통화 연결 중 오류가 발생했습니다."),
     EMERGENCY_CALL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "긴급 통화 요청에 실패했습니다."),

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * VoIP 통화 서비스
@@ -34,6 +35,7 @@ public class CallService {
     private final CallRepository callRepository;
     private final CallLogRepository callLogRepository;
     private final UserRepository userRepository;
+    private final kr.co.ongil.domain.call.controller.CallSignalController callSignalController;
 
     /**
      * VoIP 통화 요청 생성
@@ -49,28 +51,47 @@ public class CallService {
         User receiver = userRepository.findById(request.receiverId())
             .orElseThrow(() -> new BusinessException(ErrorCode.RECEIVER_NOT_FOUND));
 
-        // 2. 발신자가 이미 통화 중인지 확인
+        // 2. 자기 자신에게 전화 금지
+        if (caller.getId().equals(receiver.getId())) {
+            throw new BusinessException(ErrorCode.CANNOT_CALL_SELF);
+        }
+
+        // 3. 보호자-환자 관계 검증
+        // TODO: RelationshipRepository를 통해 두 사용자 간 관계가 존재하는지 확인
+        // validateRelationship(caller, receiver);
+
+        // 4. 발신자가 이미 통화 중인지 확인
         if (callRepository.findActiveCallByUser(caller).isPresent()) {
             throw new BusinessException(ErrorCode.USER_ALREADY_IN_CALL);
         }
 
-        // 3. 수신자가 이미 통화 중인지 확인
+        // 5. 수신자가 이미 통화 중인지 확인
         if (callRepository.findActiveCallByUser(receiver).isPresent()) {
             throw new BusinessException(ErrorCode.USER_ALREADY_IN_CALL);
         }
 
-        // 4. VoIP 통화 세션 생성
+        // 6. 서버에서 세션 ID 생성 (UUID)
+        String sessionId = UUID.randomUUID().toString();
+
+        // 7. VoIP 통화 세션 생성
         Call call = Call.builder()
             .caller(caller)
             .receiver(receiver)
             .callType(request.callType())
             .status(CallStatus.CREATED)
-            .sessionId(request.sessionId())
+            .sessionId(sessionId)
             .startedAt(LocalDateTime.now())
             .build();
 
         Call savedCall = callRepository.save(call);
-        log.info("VoIP 통화 세션 생성 완료: callId={}", savedCall.getId());
+        log.info("VoIP 통화 세션 생성 완료: callId={}, sessionId={}", savedCall.getId(), sessionId);
+
+        // 8. 수신자에게 INCOMING 시그널 전송 (WebSocket + TODO: FCM)
+        callSignalController.sendIncomingCall(
+            savedCall.getId(),
+            caller.getId(),
+            receiver.getId()
+        );
 
         return CallResponse.from(savedCall);
     }

@@ -55,7 +55,7 @@ public class Call extends BaseEntity {
     /**
      * VoIP 세션 ID (WebRTC 등에서 사용)
      */
-    @Column(name = "session_id", length = 100)
+    @Column(name = "session_id", length = 100, unique = true)
     private String sessionId;
 
     /**
@@ -81,6 +81,12 @@ public class Call extends BaseEntity {
      */
     @Column
     private Integer duration;
+
+    /**
+     * 낙관적 락 버전 (동시성 제어)
+     */
+    @Version
+    private Long version;
 
     // 비즈니스 메서드
 
