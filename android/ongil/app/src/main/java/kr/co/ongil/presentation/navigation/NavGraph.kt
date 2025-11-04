@@ -25,6 +25,7 @@ import kr.co.ongil.presentation.ui.signup.SignupViewModel
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
 import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
+import kr.co.ongil.presentation.ui.notification.NotificationScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 
 /**
@@ -36,142 +37,151 @@ fun AppNavGraph(
     modifier: Modifier = Modifier,
     startDestination: String = Routes.MyInfo.route
 ) {
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = modifier
-        ) {
-            // 위치 화면
-            composable(Routes.Location.route) {
-                PlaceholderScreen("위치")
-            }
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = modifier
+    ) {
+        // 위치 화면
+        composable(Routes.Location.route) {
+            PlaceholderScreen("위치")
+        }
 
-            // 즐겨찾기 화면
-            composable(Routes.Favorite.route) {
-                PlaceholderScreen("즐겨찾기")
-            }
+        // 즐겨찾기 화면
+        composable(Routes.Favorite.route) {
+            PlaceholderScreen("즐겨찾기")
+        }
 
-            // 홈 화면
-            composable(Routes.Home.route) {
-                PlaceholderScreen("홈")
-            }
+        // 홈 화면
+        composable(Routes.Home.route) {
+            PlaceholderScreen("홈")
+        }
 
-            // 환자 정보 화면
-            composable(Routes.PatientList.route) {
-                PlaceholderScreen("환자 정보")
-            }
+        // 환자 정보 화면
+        composable(Routes.PatientList.route) {
+            PlaceholderScreen("환자 정보")
+        }
 
-            // 사용자 찾기 화면 (현재 임시)
-            composable(Routes.SearchUser.route) {
-                PlaceholderScreen("사용자 찾기")
-            }
+        // 사용자 찾기 화면 (현재 임시)
+        composable(Routes.SearchUser.route) {
+            PlaceholderScreen("사용자 찾기")
+        }
 
-            // 나의 정보 화면
-            composable(Routes.MyInfo.route) {
-                val viewModel: MyInfoViewModel = viewModel()
-                val uiState by viewModel.uiState.collectAsState()
+        // 알림 화면
+        composable(Routes.Notifications.route) {
+            NotificationScreen(
+                onNavigateBack = {
+                    navController.navigate(Routes.MyInfo.route)
+                }
+            )
+        }
 
-                MyInfoScreen(
-                    uiState = uiState,
-                    onEditInfo = {
-                        navController.navigate(Routes.EditInfo.route)
-                    },
-                    onRecentCalls = {
-                        navController.navigate(Routes.CallHistory.route)
-                    },
-                    onLogout = {
-                        viewModel.logout()
-                        // TODO: 로그아웃 성공시 로그인 화면으로 이동
-                        // navController.navigate(Routes.Login.route) {
-                        //     popUpTo(Routes.MyInfo.route) { inclusive = true }
-                        // }
-                    }
-                )
-            }
+        // 나의 정보 화면
+        composable(Routes.MyInfo.route) {
+            val viewModel: MyInfoViewModel = viewModel()
+            val uiState by viewModel.uiState.collectAsState()
 
-            // 내 정보 수정 화면
-            composable(Routes.EditInfo.route) {
-                val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel()
+            MyInfoScreen(
+                uiState = uiState,
+                onEditInfo = {
+                    navController.navigate(Routes.EditInfo.route)
+                },
+                onRecentCalls = {
+                    navController.navigate(Routes.CallHistory.route)
+                },
+                onLogout = {
+                    viewModel.logout()
+                    // TODO: 로그아웃 성공시 로그인 화면으로 이동
+                    // navController.navigate(Routes.Login.route) {
+                    //     popUpTo(Routes.MyInfo.route) { inclusive = true }
+                    // }
+                }
+            )
+        }
 
-                MyInfoEditScreen(
-                    viewModel = editViewModel,
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onChangePasswordClick = {
-                        navController.navigate(Routes.ChangePassword.route)
-                    }
-                )
-            }
+        // 내 정보 수정 화면
+        composable(Routes.EditInfo.route) {
+            val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel()
 
-            // 최근 통화목록 화면
-            composable(Routes.CallHistory.route) {
-                RecentCallsScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onNavigateToCallDetail = { callId ->
-                        navController.navigate(Routes.CallDetail.createRoute(callId))
-                    }
-                )
-            }
+            MyInfoEditScreen(
+                viewModel = editViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onChangePasswordClick = {
+                    navController.navigate(Routes.ChangePassword.route)
+                }
+            )
+        }
 
-            // 비밀번호 변경 화면
-            composable(Routes.ChangePassword.route) {
-                ChangePasswordScreen(
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onPasswordChanged = {
-                        // 비밀번호 변경 성공 시 추가 동작이 필요하면 여기에 구현
-                    }
-                )
-            }
+        // 최근 통화목록 화면
+        composable(Routes.CallHistory.route) {
+            RecentCallsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToCallDetail = { callId ->
+                    navController.navigate(Routes.CallDetail.createRoute(callId))
+                }
+            )
+        }
 
-            // 통화 상세 화면
-            composable(
-                route = Routes.CallDetail.route,
-                arguments = listOf(
-                    navArgument("callLogId") { type = NavType.LongType }
-                )
-            ) { backStackEntry ->
-                val callLogId = backStackEntry.arguments?.getLong("callLogId") ?: 0L
+        // 비밀번호 변경 화면
+        composable(Routes.ChangePassword.route) {
+            ChangePasswordScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onPasswordChanged = {
+                    // 비밀번호 변경 성공 시 추가 동작이 필요하면 여기에 구현
+                }
+            )
+        }
 
-                CallDetailScreen(
-                    callLogId = callLogId
-                )
-            }
+        // 통화 상세 화면
+        composable(
+            route = Routes.CallDetail.route,
+            arguments = listOf(
+                navArgument("callLogId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val callLogId = backStackEntry.arguments?.getLong("callLogId") ?: 0L
 
-            // 회원가입 화면
-            composable(Routes.Signup.route) {
-                val viewModel: SignupViewModel = viewModel()
-                val uiState by viewModel.uiState.collectAsState()
+            CallDetailScreen(
+                callLogId = callLogId
+            )
+        }
 
-                SignupScreen(
-                    uiState = uiState,
-                    onBackClick = { navController.popBackStack() },
-                    onProfileImageClick = viewModel::onProfileImageClick,
-                    onNameChange = viewModel::onNameChange,
-                    onBirthClick = viewModel::onBirthClick,
-                    onSetBirth = viewModel::onSetBirth,
-                    onDismissDatePicker = viewModel::onDismissDatePicker,
-                    onPhoneChange = viewModel::onPhoneChange,
-                    onRequestVerificationCode = viewModel::onRequestVerificationCode,
-                    onVerificationCodeChange = viewModel::onVerificationCodeChange,
-                    onVerifyCodeClick = viewModel::onVerifyCodeClick,
-                    onPasswordChange = viewModel::onPasswordChange,
-                    onTogglePasswordVisible = viewModel::onTogglePasswordVisible,
-                    onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
-                    onTogglePasswordConfirmVisible = viewModel::onTogglePasswordConfirmVisible,
-                    onSelectGuardian = viewModel::onSelectGuardian,
-                    onSelectPatient = viewModel::onSelectPatient,
-                    onSubmitSignup = viewModel::onSubmitSignup,
-                    onDismissSuccessModal = viewModel::onDismissSuccessModal,
-                    onDismissErrorModal = viewModel::onDismissErrorModal,
-                )
-            }
+        // 회원가입 화면
+        composable(Routes.Signup.route) {
+            val viewModel: SignupViewModel = viewModel()
+            val uiState by viewModel.uiState.collectAsState()
+
+            SignupScreen(
+                uiState = uiState,
+                onBackClick = { navController.popBackStack() },
+                onProfileImageClick = viewModel::onProfileImageClick,
+                onNameChange = viewModel::onNameChange,
+                onBirthClick = viewModel::onBirthClick,
+                onSetBirth = viewModel::onSetBirth,
+                onDismissDatePicker = viewModel::onDismissDatePicker,
+                onPhoneChange = viewModel::onPhoneChange,
+                onRequestVerificationCode = viewModel::onRequestVerificationCode,
+                onVerificationCodeChange = viewModel::onVerificationCodeChange,
+                onVerifyCodeClick = viewModel::onVerifyCodeClick,
+                onPasswordChange = viewModel::onPasswordChange,
+                onTogglePasswordVisible = viewModel::onTogglePasswordVisible,
+                onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
+                onTogglePasswordConfirmVisible = viewModel::onTogglePasswordConfirmVisible,
+                onSelectGuardian = viewModel::onSelectGuardian,
+                onSelectPatient = viewModel::onSelectPatient,
+                onSubmitSignup = viewModel::onSubmitSignup,
+                onDismissSuccessModal = viewModel::onDismissSuccessModal,
+                onDismissErrorModal = viewModel::onDismissErrorModal,
+            )
         }
     }
+}
 
 
 /**

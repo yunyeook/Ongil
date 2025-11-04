@@ -26,8 +26,8 @@ class MainActivity : ComponentActivity() {
 
 //                // 테스트용 플레이그라운드 (필요시 주석 해제)
 //                Column(modifier = Modifier.fillMaxSize()) {
-                    PlayGroundMJ()
-//                    PlayGroundSH()
+//                    PlayGroundMJ()
+ //                   PlayGroundSH()
 //                }
             }
         }

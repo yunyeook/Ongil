@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
+import kr.co.ongil.presentation.ui.common.OngilTopBar
 import kr.co.ongil.presentation.ui.common.alert.AlertInfo
 import kr.co.ongil.presentation.ui.common.alert.getNotificationStyle
 import kr.co.ongil.presentation.uistate.NotificationEvent
@@ -56,28 +57,89 @@ private fun NotificationContent(
 ) {
     var showDeleteAllDialog by remember { mutableStateOf(false) }
     var showMarkAllReadDialog by remember { mutableStateOf(false) }
+    var showDropdownMenu by remember { mutableStateOf(false) }
 
     Surface(
         color = Color.White,
         modifier = modifier.fillMaxSize()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 공통 TopBar
-            OngilTopBarForRoute(
-                route = "notifications",
+            // TopBar with custom actions (점 3개 메뉴)
+            OngilTopBar(
+                title = "알림",
                 onBackClick = onNavigateBack,
-                onBellClick = { /* 알림 화면에서는 동작 없음 */ }
-            )
+                customActions = {
+                    if (uiState.notifications.isNotEmpty()) {
+                        Box {
+                            IconButton(onClick = { showDropdownMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.MoreVert,
+                                    contentDescription = "더보기",
+                                    tint = Color(0xFF364046)
+                                )
+                            }
 
-            // 액션 버튼 영역 (전체 읽음, 전체 삭제)
-            if (uiState.notifications.isNotEmpty()) {
-                ActionBar(
-                    hasUnread = uiState.hasUnread,
-                    onMarkAllRead = { showMarkAllReadDialog = true },
-                    onDeleteAll = { showDeleteAllDialog = true }
-                )
-                HorizontalDivider(color = Color(0xFFEFEFEF), thickness = 1.dp)
-            }
+                            DropdownMenu(
+                                expanded = showDropdownMenu,
+                                onDismissRequest = { showDropdownMenu = false }
+                            ) {
+                                // 전체 읽음 (읽지 않은 알림이 있을 때만 표시)
+                                if (uiState.hasUnread) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.DoneAll,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFF8CA898),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Text(
+                                                    "전체 읽음",
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            showDropdownMenu = false
+                                            showMarkAllReadDialog = true
+                                        }
+                                    )
+                                }
+
+                                // 전체 삭제
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Delete,
+                                                contentDescription = null,
+                                                tint = Color(0xFFEF4444),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                "전체 삭제",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = Color(0xFFEF4444)
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        showDropdownMenu = false
+                                        showDeleteAllDialog = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            )
 
             // 알림 목록
             when {
@@ -145,61 +207,6 @@ private fun NotificationContent(
 }
 
 /**
- * 액션 버튼 영역 (전체 읽음, 전체 삭제)
- */
-@Composable
-private fun ActionBar(
-    hasUnread: Boolean,
-    onMarkAllRead: () -> Unit,
-    onDeleteAll: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // 전체 읽음 버튼
-        if (hasUnread) {
-            TextButton(
-                onClick = onMarkAllRead,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFF8CA898)
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.DoneAll,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("전체 읽음", style = MaterialTheme.typography.labelLarge)
-            }
-
-            Spacer(Modifier.width(8.dp))
-        }
-
-        // 전체 삭제 버튼
-        TextButton(
-            onClick = onDeleteAll,
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = Color(0xFFEF4444)
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Delete,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(4.dp))
-            Text("전체 삭제", style = MaterialTheme.typography.labelLarge)
-        }
-    }
-}
-
-/**
  * 알림 목록
  */
 @Composable
@@ -222,7 +229,7 @@ private fun NotificationList(
                 iconColor = style.iconColor,
                 iconBackgroundColor = style.bubbleColor,
                 isRead = notification.isRead,
-                showActionMenu = true,
+                showActionMenu = false,
                 enableSwipeToDelete = true,
                 onItemClick = {
                     onEvent(NotificationEvent.OnNotificationClick(notification))
