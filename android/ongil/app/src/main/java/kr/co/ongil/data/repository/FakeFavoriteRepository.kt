@@ -2,16 +2,16 @@ package kr.co.ongil.data.repository
 
 import kr.co.ongil.presentation.ui.favorite.PlaceData
 import kr.co.ongil.presentation.ui.favorite.PatientData
-import kr.co.ongil.data.model.favorite.FavoritePlaceDto
-class FavoriteRepository {
+
+class FakeFavoriteRepository {
 
     companion object {
         @Volatile
-        private var INSTANCE: FavoriteRepository? = null
+        private var INSTANCE: FakeFavoriteRepository? = null
 
-        fun getInstance(): FavoriteRepository {
+        fun getInstance(): FakeFavoriteRepository {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: FavoriteRepository().also { INSTANCE = it }
+                INSTANCE ?: FakeFavoriteRepository().also { INSTANCE = it }
             }
         }
     }

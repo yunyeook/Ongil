@@ -6,9 +6,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kr.co.ongil.data.repository.FavoriteRepository
+import kr.co.ongil.data.repository.FakeFavoriteRepository
 class FavoriteViewModel(
-    private val favoriteRepository: FavoriteRepository,
+    private val fakeFavoriteRepository: FakeFavoriteRepository,
     private val initialPatientId: Long
 ) : ViewModel() {
 
@@ -29,8 +29,8 @@ class FavoriteViewModel(
     fun loadData(patientId: Long) {
         viewModelScope.launch {
             // 로컬 저장소(Repository)에서 즐겨찾기 환자 / 장소 목록 불러오기
-            val patients = favoriteRepository.getFavoritePatients()
-            val places = favoriteRepository.getFavoritePlaces(patientId)
+            val patients = fakeFavoriteRepository.getFavoritePatients()
+            val places = fakeFavoriteRepository.getFavoritePlaces(patientId)
 
             _uiState.update {
                 it.copy(
@@ -55,7 +55,7 @@ class FavoriteViewModel(
                 // TODO 환자 상세 화면으로 네비게이션 로직 넣기
             }
 
-            FavoriteUiEvent.OnAddPatientClick -> {
+            FavoriteUiEvent.onGoSearchUserClick -> {
                 // TODO 새로운 환자 등록 로직 넣기
             }
 

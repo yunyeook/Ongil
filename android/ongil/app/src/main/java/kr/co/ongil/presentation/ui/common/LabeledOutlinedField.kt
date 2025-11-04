@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -12,6 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -23,6 +27,8 @@ fun LabeledOutlinedField(
     readOnly: Boolean = false,
     trailing: @Composable (() -> Unit)? = null
 ) {
+    val focusManager = LocalFocusManager.current
+
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -39,6 +45,12 @@ fun LabeledOutlinedField(
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
             trailingIcon = trailing,
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp),

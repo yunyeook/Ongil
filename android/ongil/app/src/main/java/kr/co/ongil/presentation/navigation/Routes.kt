@@ -1,5 +1,9 @@
 package kr.co.ongil.presentation.navigation
 
+import android.net.Uri
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+
 /**
  * 앱 내 화면 라우트 정의
  */
@@ -46,7 +50,19 @@ sealed class Routes(val route: String) {
             name: String,
             phoneNumber: String,
             gender: String
-        ): String = "patient_detail/$patientId/$name/$phoneNumber/$gender"
+        ): String {
+            val encodedName = Uri.encode(name)
+            val encodedPhone = Uri.encode(phoneNumber)
+            val encodedGender = Uri.encode(gender)
+            return "patient_detail/$patientId/$encodedName/$encodedPhone/$encodedGender"
+        }
+
+        val arguments = listOf(
+            navArgument("patientId") { type = NavType.LongType },
+            navArgument("name") { type = NavType.StringType },
+            navArgument("phoneNumber") { type = NavType.StringType },
+            navArgument("gender") { type = NavType.StringType },
+        )
     }
 
     // 장소 상세
@@ -55,6 +71,16 @@ sealed class Routes(val route: String) {
             favoriteId: Long,
             placeName: String,
             address: String
-        ): String = "place_detail/$favoriteId/$placeName/$address"
+        ): String {
+            val encodedName = Uri.encode(placeName)
+            val encodedAddress = Uri.encode(address)
+            return "place_detail/$favoriteId/$encodedName/$encodedAddress"
+        }
+
+        val arguments = listOf(
+            navArgument("favoriteId") { type = NavType.LongType },
+            navArgument("placeName") { type = NavType.StringType },
+            navArgument("address") { type = NavType.StringType },
+        )
     }
 }

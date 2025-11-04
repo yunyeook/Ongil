@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
+import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 
 /**
  * 앱의 메인 화면 - Scaffold + BottomBar + NavGraph 조합
@@ -19,7 +20,10 @@ import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: Routes.MyInfo.route
+    val currentRoute = navBackStackEntry?.destination?.route ?: Routes.Home.route
+    val baseRoute = currentRoute
+        .substringBefore("/")
+        .substringBefore("?")
 
     // BottomBar를 표시할 화면들 (모든 페이지)
     val bottomBarRoutes = listOf(
@@ -36,15 +40,22 @@ fun MainScreen() {
 
     // 현재 라우트가 BottomBar를 표시해야 하는 화면인지 확인
     // CallDetail은 동적 라우트이므로 별도 체크
-    val showBottomBar = currentRoute in bottomBarRoutes || currentRoute?.startsWith("call_detail/") == true
+    val showBottomBar = currentRoute in bottomBarRoutes || currentRoute.startsWith("call_detail/")
 
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
         containerColor = Color.White,
+        topBar = {
+            OngilTopBarForRoute(
+                route = baseRoute,
+                onBackClick = { navController.popBackStack() },
+                onBellClick = { /* TODO: 알림 화면 이동 시 navController.navigate(Routes.Notifications.route) */ }
+            )
+        },
         bottomBar = {
             if (showBottomBar) {
                 OngilBottomBar(
-                    selectedRoute = currentRoute,
+                    selectedRoute = baseRoute,
                     onClick = { route ->
                         navController.navigate(route) {
                             // 같은 화면을 다시 클릭하면 스택을 정리

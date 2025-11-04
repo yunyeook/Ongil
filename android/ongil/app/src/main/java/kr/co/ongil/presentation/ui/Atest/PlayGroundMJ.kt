@@ -10,8 +10,8 @@ import androidx.navigation.navArgument
 import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
 import kr.co.ongil.presentation.ui.placedetail.PlaceDetailScreen
 import kr.co.ongil.presentation.ui.placedetail.PlaceDetailViewModel
-import kr.co.ongil.data.repository.FavoriteRepository
-import kr.co.ongil.presentation.navigation.Screen
+import kr.co.ongil.data.repository.FakeFavoriteRepository
+import kr.co.ongil.presentation.navigation.Routes
 import kr.co.ongil.presentation.ui.home.HomeScreen
 import android.net.Uri
 import kr.co.ongil.presentation.ui.patientdetail.PatientDetailScreen
@@ -36,24 +36,21 @@ fun PlayGroundMJ() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Routes.Home.route
     ) {
-        composable(route = Screen.Home.route) {
+        composable(route = Routes.Home.route) {
             HomeScreen(
-                onGoFavoriteClick = {
-                    navController.navigate(Screen.Favorite.route)
-                },
                 onGoSearchUserClick = {
-                    navController.navigate(Screen.SearchUser.route)
+                    navController.navigate(Routes.SearchUser.route)
                 },
                 onGoSignupClick = {
-                    navController.navigate(Screen.Signup.route)
+                    navController.navigate(Routes.Signup.route)
                 }
             )
         }
 
         // 회원가입
-        composable(route = Screen.Signup.route) {
+        composable(route = Routes.Signup.route) {
             val viewModel: SignupViewModel = viewModel()
             val uiState by viewModel.uiState.collectAsState()
 
@@ -82,7 +79,7 @@ fun PlayGroundMJ() {
         }
 
         // 사용자 찾기 화면
-        composable(route = Screen.SearchUser.route) {
+        composable(route = Routes.SearchUser.route) {
             val viewModel: SearchUserViewModel = viewModel()
             SearchUserScreen(
                 navController = navController,
@@ -91,7 +88,7 @@ fun PlayGroundMJ() {
         }
 
         // 즐겨찾기 화면
-        composable(route = Screen.Favorite.route) {
+        composable(route = Routes.Favorite.route) {
             FavoriteScreen(
                 patientId = 1L,
                 onNavigateToPlaceDetail = { favoriteId, placeName, address ->
@@ -99,7 +96,7 @@ fun PlayGroundMJ() {
                     val encodedAddress = Uri.encode(address)
 
                     navController.navigate(
-                        Screen.PlaceDetail.createRoute(
+                        Routes.PlaceDetail.createRoute(
                             favoriteId = favoriteId,
                             placeName = encodedName,
                             address = encodedAddress
@@ -112,20 +109,24 @@ fun PlayGroundMJ() {
                     val encodedGender = Uri.encode(gender)
 
                     navController.navigate(
-                        Screen.PatientDetail.createRoute(
+                        Routes.PatientDetail.createRoute(
                             patientId = id,
                             name = encodedName,
                             phoneNumber = encodedPhone,
                             gender = encodedGender
                         )
                     )
-                }
+                },
+                onGoSearchUserClick = {
+                    navController.navigate(Routes.SearchUser.route)
+                },
+
             )
         }
 
         // 장소 상세 화면
         composable(
-            route = Screen.PlaceDetail.route,
+            route = Routes.PlaceDetail.route,
             arguments = listOf(
                 navArgument("favoriteId") {type = NavType.LongType},
                 navArgument("placeName") {type = NavType.StringType},
@@ -137,7 +138,7 @@ fun PlayGroundMJ() {
             val addressArg = backStackEntry.arguments?.getString("address") ?: ""
 
             // 싱글톤 Repository 사용
-            val repository = remember { FavoriteRepository.getInstance() }
+            val repository = remember { FakeFavoriteRepository.getInstance() }
 
             // Repository에서 실제 데이터 조회
             var actualPlaceData by remember { mutableStateOf<kr.co.ongil.presentation.ui.favorite.PlaceData?>(null) }
@@ -193,7 +194,7 @@ fun PlayGroundMJ() {
 
         // 환자 상세 화면
         composable(
-            route = Screen.PatientDetail.route,
+            route = Routes.PatientDetail.route,
             arguments = listOf(
                 navArgument("patientId") { type = NavType.LongType },
                 navArgument("name") { type = NavType.StringType },
@@ -215,7 +216,7 @@ fun PlayGroundMJ() {
                     ?.let { Uri.decode(it) } ?: ""
 
             // 싱글톤 Repository 사용
-            val repository = remember { FavoriteRepository.getInstance() }
+            val repository = remember { FakeFavoriteRepository.getInstance() }
 
             // Repository에서 실제 환자 데이터 조회
             var actualPatientData by remember { mutableStateOf<kr.co.ongil.presentation.ui.favorite.PatientData?>(null) }

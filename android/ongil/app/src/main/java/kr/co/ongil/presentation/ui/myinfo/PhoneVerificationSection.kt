@@ -2,13 +2,16 @@ package kr.co.ongil.presentation.ui.myinfo
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.uistate.PhoneUiState
@@ -118,6 +121,8 @@ private fun PhoneEditingState(
     onPhoneChange: (String) -> Unit,
     onSendClick: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -129,7 +134,13 @@ private fun PhoneEditingState(
             placeholder = { Text("새로운 번호를 입력하세요") },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Phone,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            ),
             modifier = Modifier.weight(1f).heightIn(min = 56.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFFCBD5D0),
@@ -164,6 +175,8 @@ private fun PhoneVerifyingState(
     onResendClick: () -> Unit,
     onVerifyClick: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+
     Column {
         // 번호 입력 + 재발송 버튼
         Row(
@@ -176,7 +189,13 @@ private fun PhoneVerifyingState(
                 onValueChange = { onPhoneChange(it.filter { ch -> ch.isDigit() || ch == '-' }) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Phone,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
                 modifier = Modifier.weight(1f).heightIn(min = 56.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFCBD5D0),
@@ -219,7 +238,13 @@ private fun PhoneVerifyingState(
                 singleLine = true,
                 placeholder = { Text("인증번호 6자리") },
                 shape = RoundedCornerShape(14.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.NumberPassword,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
                 modifier = Modifier.weight(1f).heightIn(min = 56.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFCBD5D0),

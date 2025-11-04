@@ -31,12 +31,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.co.ongil.presentation.ui.favorite.FavoriteUiEvent.onGoSearchUserClick
 
 @Composable
 fun FavoriteScreen(
     patientId: Long? = null,
     onNavigateToPlaceDetail: (favoriteId: Long, placeName: String, address: String) -> Unit,
-    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit
+    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit,
+    onGoSearchUserClick: () -> Unit
 )
 //    viewModel: FavoriteViewModel = viewModel()
 //    - 이거 더미테스트용이니까 일단 빼고 나중에 위에 집어넣기
@@ -77,14 +79,7 @@ fun FavoriteScreen(
                 .fillMaxSize()
         ) {
 
-            // 1. 상단 헤더 영역 (프로필, 알림)
-            TopHeaderBar(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 20.dp)
-            )
-
-            // 2. 타이틀 / 설명 영역
+            // 타이틀 / 설명 영역
             FavoriteTitleSection(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -93,7 +88,7 @@ fun FavoriteScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. 탭 바 (환자 목록 / 장소 목록)
+            // 탭 바 (환자 목록 / 장소 목록)
             FavoriteTabBar(
                 selectedTab = uiState.selectedTab,
                 onTabSelected = { tab ->
@@ -105,7 +100,7 @@ fun FavoriteScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 4. 탭 컨텐츠
+            // 탭 컨텐츠
             when (uiState.selectedTab) {
                 FavoriteTab.PATIENTS -> {
                     PatientList(
@@ -122,9 +117,8 @@ fun FavoriteScreen(
                                 gender
                             )
                         },
-                        onAddPatientClick = {
-                            viewModel.onEvent(FavoriteUiEvent.OnAddPatientClick)
-                            // TODO: 신규 환자 등록 화면으로 네비게이션 연결 예정
+                        onGoSearchUserClick = {
+                            onGoSearchUserClick()
                         }
                     )
                 }
@@ -148,45 +142,9 @@ fun FavoriteScreen(
                     )
                 }
             }
-
-            // 5. 하단 네비게이션 바 영역
-            // 이건 presentation/ui/common 하단탭 컴포넌트 만들어서 붙일 예정
         }
     }
 }
-
-
-
-// 헤더 일단 임시로 만들어뒀음
-@Composable
-private fun TopHeaderBar(
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-
-        // 왼쪽: 로고대신
-        Text(
-            text = "온길",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // 오른쪽: 알림 아이콘
-        Icon(
-            imageVector = Icons.Default.Notifications,
-            contentDescription = "알림",
-            tint = Color(0xFF4B5563),
-            modifier = Modifier.size(24.dp)
-        )
-    }
-}
-
 
 @Composable
 private fun FavoriteTitleSection(
