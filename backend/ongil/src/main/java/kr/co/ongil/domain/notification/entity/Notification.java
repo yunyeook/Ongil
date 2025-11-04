@@ -1,6 +1,7 @@
 package kr.co.ongil.domain.notification.entity;
 
 import jakarta.persistence.*;
+import kr.co.ongil.domain.notification.dto.request.NotificationRequest;
 import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.global.common.entity.BaseEntity;
 import lombok.AccessLevel;
@@ -40,5 +41,15 @@ public class Notification extends BaseEntity {
      */
     public void markAsRead() {
         this.isRead = true;
+    }
+
+    public static Notification from(NotificationRequest request, User user) {
+        return Notification.builder()
+            .user(user)
+            .title(request.title())
+            .content(request.content())
+            .type(request.type())
+            .isRead(false)
+            .build();
     }
 }
