@@ -2,10 +2,6 @@ package kr.co.ongil.domain.fcm.service;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
-import kr.co.ongil.domain.fcm.entity.FcmToken;
-import kr.co.ongil.domain.fcm.repository.FcmTokenRepository;
-import kr.co.ongil.domain.user.entity.User;
-import kr.co.ongil.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,10 +14,10 @@ public class FcmService {
     private final FcmTokenRedisService fcmTokenRedisService;
     private final FcmTokenService fcmTokenService;
 
-    public void registerFcmToken(Integer userId, String token, String deviceInfo) {
+    public void registerFcmToken(Integer userId, String token) {
         if (token == null || token.isBlank()) return;
         //DB 저장
-       fcmTokenService.saveToken(userId,token,deviceInfo);
+       fcmTokenService.saveToken(userId,token);
 
         // Redis 저장
         fcmTokenRedisService.saveToken(userId, token);
@@ -65,5 +61,10 @@ public class FcmService {
         } catch (Exception e) {
             log.error("푸시 알림 전송 실패", e);
         }
+    }
+
+    public void deleteFcmToken(Integer userId) {
+        fcmTokenService.deleteAllTokensByUserId(userId);
+        fcmTokenRedisService.deleteAllTokens(userId);
     }
 }

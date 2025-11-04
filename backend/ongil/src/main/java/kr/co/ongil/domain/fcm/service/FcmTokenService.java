@@ -9,9 +9,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import kr.co.ongil.domain.fcm.entity.FcmToken;
 import kr.co.ongil.domain.fcm.repository.FcmTokenRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class FcmTokenService {
 
     private final FcmTokenRepository fcmTokenRepository;
@@ -20,7 +22,8 @@ public class FcmTokenService {
     /**
      * FCM 토큰 저장
      */
-    public FcmToken saveToken(Integer userId, String token, String deviceInfo) {
+    @Transactional
+    public FcmToken saveToken(Integer userId, String token) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -29,7 +32,6 @@ public class FcmTokenService {
             .orElseGet(() -> fcmTokenRepository.save(FcmToken.builder()
                 .user(user)
                 .token(token)
-                .deviceInfo(deviceInfo)
                 .build()));
     }
 
@@ -40,10 +42,12 @@ public class FcmTokenService {
         return fcmTokenRepository.findAllByUserId(userId);
     }
 
+    @Transactional
     public void deleteAllTokensByUserId(Integer userId) {
         fcmTokenRepository.deleteAllByUserId(userId);
     }
 
+    @Transactional
     public void deleteTokenByValue(String token) {
         fcmTokenRepository.findByToken(token).ifPresent(fcmTokenRepository::delete);
     }

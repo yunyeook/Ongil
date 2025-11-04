@@ -29,8 +29,4 @@ public class FcmToken extends BaseEntity {
     @Column(nullable = false, unique = true, length = 512)
     private String token;
 
-    @Column(nullable = false)
-    private String deviceInfo;
-
-
 }
