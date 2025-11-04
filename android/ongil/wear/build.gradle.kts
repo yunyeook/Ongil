@@ -33,7 +33,7 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    useLibrary("wear-sdk")
+    // useLibrary("wear-sdk")
     buildFeatures {
         compose = true
     }
