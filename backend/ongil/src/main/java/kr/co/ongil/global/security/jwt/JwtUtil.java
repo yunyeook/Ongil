@@ -78,14 +78,24 @@ public class JwtUtil {
     }
 
     private Claims parseClaims(String token) {
+//        log.info("▶▶▶ parseClaims 호출 - token length: {}, prefix: {}",
+                token != null ? token.length() : "null",
+                token != null ? token.substring(0, Math.min(30, token.length())) : "null");
         try {
-            return Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(secretKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (JwtException | IllegalArgumentException e) {
-            log.error("JWT 토큰 파싱 실패: {}", e.getMessage());
+//            log.info("▶▶▶ parseClaims 성공 - subject: {}, claims: {}",
+                    claims.getSubject(), claims.keySet());
+            return claims;
+        } catch (JwtException e) {
+//            log.error("▶▶▶ JWT 토큰 파싱 실패 - 에러 타입: {}, 메시지: {}",
+                    e.getClass().getSimpleName(), e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        } catch (IllegalArgumentException e) {
+//            log.error("▶▶▶ JWT 토큰 파싱 실패 - IllegalArgumentException: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
     }
@@ -111,11 +121,13 @@ public class JwtUtil {
     }
 
     public boolean validateToken(String token) {
+//        log.info("▶▶▶ validateToken 호출됨");
         try {
             parseClaims(token);
+//            log.info("▶▶▶ validateToken 성공!");
             return true;
         } catch (BusinessException e) {
-            log.error("JWT 토큰 검증 실패: {}", e.getMessage());
+//            log.error("▶▶▶ JWT 토큰 검증 실패: {}", e.getMessage());
             return false;
         }
     }
@@ -152,8 +164,11 @@ public class JwtUtil {
      * @return 전화번호
      */
     public String getPhoneNumberFromToken(String token) {
+//        log.info("▶▶▶ getPhoneNumberFromToken 호출됨");
         Claims claims = parseClaims(token);
-        return claims.get("phoneNumber", String.class);
+        String phoneNumber = claims.get("phoneNumber", String.class);
+//        log.info("▶▶▶ getPhoneNumberFromToken 성공 - phoneNumber: {}", phoneNumber);
+        return phoneNumber;
     }
 
     /**
@@ -163,8 +178,11 @@ public class JwtUtil {
      * @return Grant (SELF, RELATIONSHIP)
      */
     public String getGrantFromToken(String token) {
+//        log.info("▶▶▶ getGrantFromToken 호출됨");
         Claims claims = parseClaims(token);
-        return claims.get("grant", String.class);
+        String grant = claims.get("grant", String.class);
+//        log.info("▶▶▶ getGrantFromToken 성공 - grant: {}", grant);
+        return grant;
     }
 
     /**
@@ -174,11 +192,15 @@ public class JwtUtil {
      * @return 만료되었으면 true, 아니면 false
      */
     public boolean isTokenExpired(String token) {
+//        log.info("▶▶▶ isTokenExpired 호출됨");
         try {
             Claims claims = parseClaims(token);
             Date expiration = claims.getExpiration();
-            return expiration.before(new Date());
+            boolean expired = expiration.before(new Date());
+//            log.info("▶▶▶ isTokenExpired 결과 - expired: {}, expiration: {}", expired, expiration);
+            return expired;
         } catch (BusinessException e) {
+//            log.error("▶▶▶ isTokenExpired 실패 - 예외 발생, true 반환");
             return true;
         }
     }

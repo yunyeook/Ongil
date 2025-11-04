@@ -53,6 +53,17 @@ public enum ErrorCode {
     NO_GUARDIAN_FOUND(HttpStatus.NOT_FOUND, "관계 등록된 보호자가 없습니다."),
     PATIENT_ALREADY_LINKED(HttpStatus.CONFLICT, "이미 보호자와 연결된 환자입니다."),
 
+    // RELATIONSHIP
+    RELATIONSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 관계를 찾을 수 없습니다."),
+    RELATIONSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 관계입니다."),
+    RELATIONSHIP_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 관계에 대한 권한이 없습니다."),
+    SAME_USER_TYPE_RELATIONSHIP(HttpStatus.FORBIDDEN, "동일한 역할 간에는 등록할 수 없습니다."),
+    SELF_RELATIONSHIP_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신과는 관계를 등록할 수 없습니다."),
+    INVALID_VERIFICATION_TOKEN(HttpStatus.UNPROCESSABLE_ENTITY, "토큰이 유효하지 않습니다."),
+    VERIFICATION_TOKEN_EXPIRED(HttpStatus.GONE, "토큰이 만료되었거나 이미 사용되었습니다."),
+    COUNTERPART_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다."),
+    INVALID_RELATIONSHIP_GRANT(HttpStatus.UNPROCESSABLE_ENTITY, "관계 등록용 토큰이 아닙니다."),
+
     // FAVORITE
     FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "즐겨찾기를 찾을 수 없습니다."),
     FAVORITE_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일한 즐겨찾기가 이미 존재합니다."),
