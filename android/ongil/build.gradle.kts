@@ -8,15 +8,6 @@ plugins {
     alias(libs.plugins.android.library) apply false
 }
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("${rootDir}/local-maven-repo") }  // 추가
-    }
-}
-
 sonar {
     properties {
         property("sonar.projectKey", "android-ongil")
