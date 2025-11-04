@@ -2,11 +2,11 @@ spring:
   application:
     name: ongil
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    active: ${SPRING_PROFILES_ACTIVE:devl}
 
   # Environment Variables
   config:
-    import: optional:file:.env[.properties]
+    import: optional:file:.env.${spring.profiles.active}[.properties]
 
   # PostgreSQL (AWS RDS)
   datasource:
@@ -111,3 +111,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+
+turn:
+  server:
+    shared-secret: ${TURN_SERVER_SHARED_SECRET}
+    host: ${TURN_SERVER_HOST}
+    port: ${TURN_SERVER_PORT}
+  ttl: ${TURN_SERVER_CREDENTIAL_TTL:86400} # 24 hours

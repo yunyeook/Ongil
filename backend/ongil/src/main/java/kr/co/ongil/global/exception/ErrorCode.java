@@ -17,10 +17,14 @@ public enum ErrorCode {
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 회원입니다."),
     DUPLICATE_MEMBER(HttpStatus.CONFLICT, "이미 존재하는 회원입니다."),
     PASSWORD_MISMATCH(HttpStatus.UNAUTHORIZED, "비밀번호가 올바르지 않습니다."),
+    OLD_PASSWORD_INCORRECT(HttpStatus.UNAUTHORIZED, "현재 비밀번호가 올바르지 않습니다."),
+    SAME_AS_OLD_PASSWORD(HttpStatus.BAD_REQUEST, "새 비밀번호는 현재 비밀번호와 달라야 합니다."),
+    PASSWORD_CONFIRMATION_MISMATCH(HttpStatus.BAD_REQUEST, "새 비밀번호와 비밀번호 확인이 일치하지 않습니다."),
     SOCIAL_AUTH_FAILED(HttpStatus.BAD_REQUEST, "소셜 로그인 인증에 실패했습니다."),
     TOKEN_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "토큰 발급 중 오류가 발생했습니다."),
     INVALID_PROVIDER(HttpStatus.BAD_REQUEST, "유효하지 않은 인증 제공자입니다."),
     INVALID_USER_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 사용자 유형입니다."),
+    LOGIN_REQUEST_PARSE_FAILED(HttpStatus.BAD_REQUEST, "로그인 요청 파싱에 실패했습니다."),
 
     // USER
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
@@ -35,6 +39,8 @@ public enum ErrorCode {
     PHONE_VERIFICATION_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
     PHONE_VERIFICATION_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "인증번호 재요청은 1분 후에 가능합니다."),
     IP_RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+    VERIFICATION_TOKEN_REQUIRED(HttpStatus.BAD_REQUEST, "전화번호 변경 시 인증 토큰이 필요합니다."),
+    PHONE_NUMBER_MISMATCH(HttpStatus.BAD_REQUEST, "인증된 전화번호와 요청한 전화번호가 일치하지 않습니다."),
 
     // SMS
     SMS_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SMS 전송 중 오류가 발생했습니다."),
@@ -44,8 +50,7 @@ public enum ErrorCode {
     DEVICE_NOT_REGISTERED(HttpStatus.NOT_FOUND, "등록되지 않은 기기입니다."),
     DEVICE_CONNECTION_FAILED(HttpStatus.BAD_REQUEST, "기기 연결에 실패했습니다."),
     DUPLICATE_DEVICE(HttpStatus.CONFLICT, "이미 등록된 기기입니다."),
-    CARE_LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "연결된 보호자 또는 환자를 찾을 수 없습니다."),
-    CARE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "보호자 권한이 없습니다."),
+    NO_GUARDIAN_FOUND(HttpStatus.NOT_FOUND, "관계 등록된 보호자가 없습니다."),
     PATIENT_ALREADY_LINKED(HttpStatus.CONFLICT, "이미 보호자와 연결된 환자입니다."),
 
     // FAVORITE
@@ -89,6 +94,7 @@ public enum ErrorCode {
     NOTIFICATION_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "알림 전송 중 오류가 발생했습니다."),
     SSE_CONNECTION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "실시간 연결이 불안정합니다."),
     ALERT_TYPE_INVALID(HttpStatus.BAD_REQUEST, "올바르지 않은 알림 유형입니다."),
+    INVALID_NOTIFICATION_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 알림 유형입니다."),
 
     // CONTENT / RESOURCE / DATA
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 콘텐츠입니다."),
@@ -130,8 +136,6 @@ public enum ErrorCode {
     // REDIS
     REDIS_DESERIALIZATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,"Redis 데이터 역직렬화에 실패했습니다." ),
     REDIS_SESSION_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 세션 저장에 실패했습니다.");
-
-
     private final HttpStatus status;
     private final String message;
 

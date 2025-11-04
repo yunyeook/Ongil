@@ -13,6 +13,8 @@ public enum ResponseMessage {
     LOGOUT_SUCCESS("로그아웃에 성공했습니다."),
     SIGNUP_SUCCESS("회원가입이 성공적으로 완료되었습니다!"),
     TOKEN_REISSUE_SUCCESS("토큰이 성공적으로 재발급되었습니다."),
+    PASSWORD_RESET_SUCCESS("비밀번호가 성공적으로 변경되었습니다."),
+    PASSWORD_RESET_WITH_TOKEN_SUCCESS("비밀번호 재설정이 성공적으로 완료되었습니다."),
 
     // Phone Verification
     PHONE_VERIFICATION_SENT("전화번호 인증 요청이 성공적으로 완료되었습니다."),
@@ -20,6 +22,7 @@ public enum ResponseMessage {
 
     // User
     USER_FOUND("사용자 조회 성공"),
+    USER_SEARCH_SUCCESS("사용자 검색 성공"),
     USER_UPDATED("사용자 정보 수정 성공"),
     USER_DELETE_SUCCESS("회원 탈퇴가 완료되었습니다."),
 
@@ -66,9 +69,18 @@ public enum ResponseMessage {
     CALL_RECORDING_FOUND("통화 녹음 정보를 성공적으로 조회하였습니다."),
     CALL_RECORDING_DELETED("통화 녹음 정보가 성공적으로 삭제되었습니다."),
 
+    // Notification
+    NOTIFICATION_LIST_FOUND("알림 목록 조회에 성공했습니다."),
+    NOTIFICATION_FOUND("알림 조회에 성공했습니다."),
+    NOTIFICATION_READ("알림을 읽음 처리했습니다."),
+    NOTIFICATION_READ_ALL("전체 알림을 읽음 처리했습니다."),
+    NOTIFICATION_DELETED("알림이 삭제되었습니다."),
+    NOTIFICATION_DELETED_ALL("전체 알림이 삭제되었습니다."),
+
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
-    INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요.");
+    INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."),
+    NOTIFICATION_CREATED("알림이 생성되었습니다.");
 
     private final String message;
 }

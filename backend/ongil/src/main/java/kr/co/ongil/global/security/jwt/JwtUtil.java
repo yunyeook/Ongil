@@ -50,25 +50,31 @@ public class JwtUtil {
 
     // ========== Access Token, Refresh Token ==========
 
-    public String generateAccessToken(Integer userId) {
-        return generateToken(userId, accessTokenExpiration, "access");
+    public String generateAccessToken(Integer userId, String phoneNumber, String userType) {
+        return generateToken(userId, phoneNumber, userType, accessTokenExpiration, "access");
     }
 
-    public String generateRefreshToken(Integer userId) {
-        return generateToken(userId, refreshTokenExpiration, "refresh");
+    public String generateRefreshToken(Integer userId, String phoneNumber, String userType) {
+        return generateToken(userId, phoneNumber, userType, refreshTokenExpiration, "refresh");
     }
 
-    private String generateToken(Integer userId, long expiration, String tokenType) {
+    private String generateToken(Integer userId, String phoneNumber, String userType, long expiration, String tokenType) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
-        return Jwts.builder()
-                .subject(userId.toString())
+        JwtBuilder builder = Jwts.builder()
+                .subject(phoneNumber)
+                .claim("userId", userId)
                 .claim("type", tokenType)
                 .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(secretKey)
-                .compact();
+                .expiration(expiryDate);
+
+        // userType이 있으면 claim에 추가
+        if (userType != null) {
+            builder.claim("userType", userType);
+        }
+
+        return builder.signWith(secretKey).compact();
     }
 
     private Claims parseClaims(String token) {
@@ -84,14 +90,24 @@ public class JwtUtil {
         }
     }
 
+    public String getUsernameFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return claims.getSubject();
+    }
+
     public Integer getUserIdFromToken(String token) {
         Claims claims = parseClaims(token);
-        return Integer.parseInt(claims.getSubject());
+        return claims.get("userId", Integer.class);
     }
 
     public String getTokenType(String token) {
         Claims claims = parseClaims(token);
         return claims.get("type", String.class);
+    }
+
+    public String getUserTypeFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return claims.get("userType", String.class);
     }
 
     public boolean validateToken(String token) {
