@@ -2,7 +2,7 @@ spring:
   application:
     name: ongil
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:devl}
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   # Environment Variables
   config:
