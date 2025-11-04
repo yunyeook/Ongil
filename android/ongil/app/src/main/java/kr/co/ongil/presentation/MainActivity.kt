@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import kr.co.ongil.presentation.navigation.MainScreen
 import kr.co.ongil.presentation.theme.OngilTheme
+import kr.co.ongil.presentation.ui.Atest.PlayGroundGK
 import kr.co.ongil.presentation.ui.Atest.PlayGroundMJ
 import kr.co.ongil.presentation.ui.Atest.PlayGroundSH
 
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
 //                Column(modifier = Modifier.fillMaxSize()) {
 //                    PlayGroundMJ()
  //                   PlayGroundSH()
+//                PlayGroundGK()
 //                }
             }
         }
