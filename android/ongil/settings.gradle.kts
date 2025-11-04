@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "ongil"
 include(":app")
 include(":wear")
+include(":common")
