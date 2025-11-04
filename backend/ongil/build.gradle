@@ -62,6 +62,9 @@ dependencies {
     // --- 문자 발송용 SDK ---
     implementation 'net.nurigo:sdk:4.3.2'
 
+    // --- FCM ---
+    implementation 'com.google.firebase:firebase-admin:9.2.0'
+
     // --- 기타 ---
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
