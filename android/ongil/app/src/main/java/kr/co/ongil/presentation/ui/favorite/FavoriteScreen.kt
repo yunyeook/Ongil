@@ -39,7 +39,7 @@ import kr.co.ongil.presentation.ui.favorite.FavoriteUiEvent.onGoSearchUserClick
 @Composable
 fun FavoriteScreen(
     onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
-    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit,
+    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String) -> Unit,
     onGoSearchUserClick: () -> Unit
 )
 {
@@ -87,9 +87,10 @@ fun FavoriteScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
+                        .padding(top = 32.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // 탭 바 (환자 목록 / 장소 목록)
                 FavoriteTabBar(
@@ -111,13 +112,12 @@ fun FavoriteScreen(
                             onCallClick = { id ->
                                 viewModel.onEvent(FavoriteUiEvent.OnCallClick(id))
                             },
-                            onPatientCardClick = { id, name, phoneNumber, gender ->
+                            onPatientCardClick = { id, name, phoneNumber ->
                                 viewModel.onEvent(FavoriteUiEvent.OnPatientCardClick(id))
                                 onNavigateToPatientDetail(
                                     id,
                                     name,
-                                    phoneNumber,
-                                    gender
+                                    phoneNumber
                                 )
                             },
                             onGoSearchUserClick = {
@@ -199,5 +199,63 @@ private fun PlaceholderPlacesSection(
             color = Color(0xFF9CA3AF),
             lineHeight = 20.sp
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FavoriteScreenPatientsPreview() {
+    // 더미 환자 데이터
+    val samplePatients = listOf(
+        PatientData(
+            id = 1L,
+            name = "홍길동",
+            phoneNumber = "010-1234-5678"
+        ),
+        PatientData(
+            id = 2L,
+            name = "김영희",
+            phoneNumber = "010-2345-6789"
+        ),
+        PatientData(
+            id = 3L,
+            name = "이철수",
+            phoneNumber = "010-3456-7890"
+        )
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFFFFFFF)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // 타이틀 영역
+            FavoriteTitleSection(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 탭 바 (현재는 환자 탭)
+            FavoriteTabBar(
+                selectedTab = FavoriteTab.PATIENTS,
+                onTabSelected = { },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 환자 목록
+            PatientList(
+                patients = samplePatients,
+                onCallClick = { },
+                onPatientCardClick = { _, _, _ -> },
+                onGoSearchUserClick = { }
+            )
+        }
     }
 }
