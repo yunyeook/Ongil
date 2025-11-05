@@ -117,6 +117,15 @@ public class RelationshipService {
         // 상대방 입장에서의 관계 자동 설정 (반대 관계 유형)
         relationship.updateRelationshipInfo(counterpartUser, null, counterpartType);
 
+        // 12. 정렬 순서 자동 계산 (각자의 마지막 순서 + 1)
+        Integer guardianMaxOrder = relationshipRepository.findMaxOrderByGuardian(guardian);
+        Integer patientMaxOrder = relationshipRepository.findMaxOrderByPatient(patient);
+        relationship.setDisplayOrder(guardian, guardianMaxOrder + 1);
+        relationship.setDisplayOrder(patient, patientMaxOrder + 1);
+
+        log.info("정렬 순서 설정 완료 - 보호자 순서: {}, 환자 순서: {}",
+                guardianMaxOrder + 1, patientMaxOrder + 1);
+
         relationshipRepository.save(relationship);
         log.info("관계 등록 완료 - relationshipId: {}, guardian: {}, patient: {}, 요청자 타입: {}, 상대방 타입: {}",
                 relationship.getId(), guardian.getId(), patient.getId(),
@@ -129,7 +138,7 @@ public class RelationshipService {
     }
 
     /**
-     * 내 관계 목록 조회
+     * 내 관계 목록 조회 (정렬 순서 적용)
      */
     @Transactional(readOnly = true)
     public List<RelationshipResponse> getMyRelationships(Integer userId) {
@@ -138,7 +147,13 @@ public class RelationshipService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        List<Relationship> relationships = relationshipRepository.findByGuardianOrPatient(user);
+        // UserType에 따라 다른 Repository 쿼리 사용 (정렬 포함)
+        List<Relationship> relationships;
+        if (user.getUserType() == UserType.GUARDIAN) {
+            relationships = relationshipRepository.findByGuardianOrderByOrder(user);
+        } else {
+            relationships = relationshipRepository.findByPatientOrderByOrder(user);
+        }
 
         return relationships.stream()
                 .map(relationship -> RelationshipResponse.from(relationship, user))
@@ -185,13 +200,19 @@ public class RelationshipService {
         // 비즈니스 로직: 요청자에 따라 다른 필드 업데이트
         relationship.updateRelationshipInfo(user, request.relationshipName(), relationshipType);
 
+        // 정렬 순서 업데이트 (요청된 경우에만)
+        if (request.displayOrder() != null) {
+            relationship.setDisplayOrder(user, request.displayOrder());
+            log.info("정렬 순서 수정 완료 - displayOrder: {}", request.displayOrder());
+        }
+
         log.info("관계 정보 수정 완료 - relationshipId: {}", relationshipId);
 
         return RelationshipResponse.from(relationship, user);
     }
 
     /**
-     * 관계 삭제 (양방향 해제)
+     * 관계 삭제 (양방향 해제 + 정렬 순서 재정렬)
      */
     @Transactional
     public void deleteRelationship(Integer userId, Integer relationshipId) {
@@ -203,8 +224,91 @@ public class RelationshipService {
         Relationship relationship = relationshipRepository.findByIdAndUser(relationshipId, user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RELATIONSHIP_NOT_FOUND));
 
+        // 삭제 전에 정렬 순서 저장
+        Integer deletedOrder = relationship.getDisplayOrder(user);
+
         relationshipRepository.delete(relationship);
         log.info("관계 삭제 완료 - relationshipId: {}", relationshipId);
+
+        // 삭제 후 재정렬 (삭제된 순서 이후의 관계들을 -1씩)
+        if (deletedOrder != null) {
+            resequenceAfterDelete(user, deletedOrder);
+        }
+    }
+
+    /**
+     * 관계 목록 일괄 재정렬
+     */
+    @Transactional
+    public List<RelationshipResponse> reorderMyRelationships(Integer userId, List<Integer> orderedRelationshipIds) {
+        log.info("관계 목록 일괄 재정렬 요청 - userId: {}, count: {}", userId, orderedRelationshipIds.size());
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // Pessimistic Lock으로 관계 목록 조회 (동시성 제어)
+        List<Relationship> relationships;
+        if (user.getUserType() == UserType.GUARDIAN) {
+            relationships = relationshipRepository.findByGuardianWithLock(user);
+        } else {
+            relationships = relationshipRepository.findByPatientWithLock(user);
+        }
+
+        // ID로 매핑 (빠른 조회를 위해)
+        var relationshipMap = relationships.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        r -> r.getId(),
+                        r -> r
+                ));
+
+        // 정렬 순서 업데이트 (orderedRelationshipIds 순서대로 1, 2, 3, ...)
+        for (int i = 0; i < orderedRelationshipIds.size(); i++) {
+            Integer relationshipId = orderedRelationshipIds.get(i);
+            Relationship relationship = relationshipMap.get(relationshipId);
+
+            if (relationship == null) {
+                log.warn("존재하지 않거나 권한이 없는 관계 ID: {}", relationshipId);
+                throw new BusinessException(ErrorCode.RELATIONSHIP_NOT_FOUND);
+            }
+
+            relationship.setDisplayOrder(user, i + 1);  // 1부터 시작
+            log.debug("정렬 순서 업데이트 - relationshipId: {}, order: {}", relationshipId, i + 1);
+        }
+
+        log.info("관계 목록 일괄 재정렬 완료");
+
+        // 정렬된 결과 반환
+        return orderedRelationshipIds.stream()
+                .map(relationshipMap::get)
+                .map(relationship -> RelationshipResponse.from(relationship, user))
+                .toList();
+    }
+
+    /**
+     * 대표 관계 설정
+     */
+    @Transactional
+    public RelationshipResponse setDefaultRelationship(Integer userId, Integer relationshipId) {
+        log.info("대표 관계 설정 요청 - userId: {}, relationshipId: {}", userId, relationshipId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Relationship relationship = relationshipRepository.findByIdAndUser(relationshipId, user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RELATIONSHIP_NOT_FOUND));
+
+        // 1. 기존 대표 관계 모두 해제
+        if (user.getUserType() == UserType.GUARDIAN) {
+            relationshipRepository.clearDefaultForGuardian(user);
+        } else {
+            relationshipRepository.clearDefaultForPatient(user);
+        }
+
+        // 2. 새로운 대표 관계 설정
+        relationship.setDefault(user, true);
+        log.info("대표 관계 설정 완료 - relationshipId: {}", relationshipId);
+
+        return RelationshipResponse.from(relationship, user);
     }
 
     // ========== Private 메서드 ==========
@@ -268,5 +372,35 @@ public class RelationshipService {
             log.error("관계 등록 알림 전송 실패", e);
             // 알림 실패는 관계 등록을 막지 않음
         }
+    }
+
+    /**
+     * 삭제 후 정렬 순서 재정렬 (삭제된 순서 이후의 관계들을 -1씩 이동)
+     */
+    private void resequenceAfterDelete(User user, Integer deletedOrder) {
+        log.info("삭제 후 재정렬 시작 - deletedOrder: {}", deletedOrder);
+
+        // 사용자의 모든 관계 조회
+        List<Relationship> relationships;
+        if (user.getUserType() == UserType.GUARDIAN) {
+            relationships = relationshipRepository.findByGuardianOrderByOrder(user);
+        } else {
+            relationships = relationshipRepository.findByPatientOrderByOrder(user);
+        }
+
+        // 삭제된 순서보다 큰 순서를 가진 관계들을 -1씩 이동
+        relationships.stream()
+                .filter(r -> {
+                    Integer order = r.getDisplayOrder(user);
+                    return order != null && order > deletedOrder;
+                })
+                .forEach(r -> {
+                    Integer currentOrder = r.getDisplayOrder(user);
+                    r.setDisplayOrder(user, currentOrder - 1);
+                    log.debug("정렬 순서 재정렬 - relationshipId: {}, {} -> {}",
+                            r.getId(), currentOrder, currentOrder - 1);
+                });
+
+        log.info("삭제 후 재정렬 완료");
     }
 }
