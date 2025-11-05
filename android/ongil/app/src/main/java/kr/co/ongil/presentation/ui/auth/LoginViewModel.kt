@@ -1,54 +1,60 @@
-package kr.co.ongil.presentation.viewmodel
+// presentation/ui/auth/LoginViewModel.kt
+package kr.co.ongil.presentation.ui.auth
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import androidx.lifecycle.viewModelScope
 
-data class LoginUiState(
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val isLoggedIn: Boolean = false
-)
+sealed interface LoginEffect {
+    object NavigateHome : LoginEffect  // 홈 화면으로 이동
+    data class ShowSnack(val message: String) : LoginEffect  // 스낵바 메시지 표시
+}
 
-/**
- * 아직 서버 없으니까 Fake 로직으로 성공/실패만 분기
- * - 비번이 "1234"면 성공, 아니면 실패
- */
-class LoginViewModel : ViewModel() {
+@HiltViewModel
+class LoginViewModel @Inject constructor() : ViewModel() {
 
-    private val _ui = MutableStateFlow(LoginUiState())
-    val ui: StateFlow<LoginUiState> = _ui
+    private val _state = MutableStateFlow(LoginUiState())
+    val state: StateFlow<LoginUiState> = _state
 
-    fun login(phone: String, password: String) {
-        if (phone.isBlank()) {
-            fail("전화번호를 입력해주세요.")
-            return
-        }
-        if (password.isBlank()) {
-            fail("비밀번호를 입력해주세요.")
+    private val _effect = MutableSharedFlow<LoginEffect>()
+    val effect: SharedFlow<LoginEffect> = _effect
+
+    // 전화번호 입력 처리
+    fun onPhoneChange(v: String) = _state.update { it.copy(phone = v).revalidate() }
+
+    // 비밀번호 입력 처리
+    fun onPasswordChange(v: String) = _state.update { it.copy(password = v).revalidate() }
+
+    // 로그인 버튼 클릭 처리
+    fun onClickLogin() {
+        val s = _state.value
+        if (s.isLoading) return
+        if (!s.isLoginEnabled) {
+            viewModelScope.launch {
+                _effect.emit(LoginEffect.ShowSnack("전화번호/비밀번호를 확인해주세요."))
+            }
             return
         }
 
         viewModelScope.launch {
-            _ui.update { it.copy(isLoading = true, error = null) }
-            delay(800) // 로딩 흉내
-            if (password == "1234") {
-                _ui.update { it.copy(isLoading = false, isLoggedIn = true) }
+            _state.update { it.copy(isLoading = true) }  // 로딩 상태로 업데이트
+
+            // 임시 로그인 로직 (나중에 UseCase로 교체)
+            if (s.password == "1234") {
+                _state.update { it.copy(isLoading = false) }
+                _effect.emit(LoginEffect.NavigateHome)  // 로그인 성공 시 홈 화면으로 이동
             } else {
-                fail("전화번호 또는 비밀번호가 올바르지 않습니다.")
+                _state.update { it.copy(isLoading = false) }
+                _effect.emit(LoginEffect.ShowSnack("전화번호 또는 비밀번호가 올바르지 않습니다."))
             }
         }
     }
 
-    private fun fail(message: String) {
-        _ui.update { it.copy(isLoading = false, error = message, isLoggedIn = false) }
-    }
-
-    fun consumeError() {
-        _ui.update { it.copy(error = null) }
+    private fun LoginUiState.revalidate(): LoginUiState {
+        val enabled = phone.length in 10..11 && password.length >= 4
+        return copy(isLoginEnabled = enabled)
     }
 }

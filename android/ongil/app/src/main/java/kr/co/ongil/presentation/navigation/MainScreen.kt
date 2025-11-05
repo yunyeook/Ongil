@@ -17,36 +17,35 @@ import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 
-/**
- * 앱의 메인 화면 - Scaffold + BottomBar + NavGraph 조합
- */
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Routes.Home.route
-    val baseRoute = currentRoute
-        .substringBefore("/")
-        .substringBefore("?")
+    val baseRoute = currentRoute.substringBefore("/").substringBefore("?")
 
-    // BottomBar를 표시할 화면들 (모든 페이지)
+    // ✅ 인증 관련 라우트(앱 크롬 숨김 대상)
+    val authRoutes = setOf(
+        Routes.Login.route,
+        Routes.Signup.route,
+        Routes.ChangePassword.route
+    )
+
+    // BottomBar를 표시할 화면들 (메인 탭 위주)
     val bottomBarRoutes = listOf(
         Routes.Location.route,
         Routes.Favorite.route,
         Routes.Home.route,
         Routes.PatientList.route,
-        Routes.MyInfo.route,
-        Routes.EditInfo.route,
-        Routes.CallHistory.route,
-        Routes.ChangePassword.route,
-        Routes.SearchUser.route
+        Routes.MyInfo.route
+        // 필요하면 여기에만 탭 대상 추가: EditInfo/CallHistory/SearchUser 등은 보통 탭 아님
     )
 
-    // ✅ baseRoute를 기준으로 BottomBar 표시 여부 결정
-    val showBottomBar = baseRoute in bottomBarRoutes || currentRoute.startsWith("call_detail/")
+    // ✅ 인증 화면에서는 BottomBar 숨김
+    val showBottomBar = baseRoute in bottomBarRoutes && baseRoute !in authRoutes
 
-    // TopBar를 표시할 화면 (알림 화면은 자체 TopBar 사용)
-    val showTopBar = baseRoute != Routes.Notifications.route
+    // ✅ 인증 화면/알림 화면에서는 TopBar 숨김(알림은 자체 TopBar)
+    val showTopBar = baseRoute !in authRoutes && baseRoute != Routes.Notifications.route
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -82,15 +81,11 @@ fun MainScreen() {
                 OngilBottomBar(
                     selectedRoute = baseRoute,
                     onClick = { route ->
-                        val navigationRoute = if (route == Routes.Favorite.route) {
-                            "${Routes.Favorite.route}/1"
-                        } else {
-                            route
-                        }
+                        val navigationRoute =
+                            if (route == Routes.Favorite.route) "${Routes.Favorite.route}/1"
+                            else route
                         navController.navigate(navigationRoute) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -102,7 +97,7 @@ fun MainScreen() {
         AppNavGraph(
             navController = navController,
             modifier = Modifier.padding(paddingValues).imePadding(),
-            startDestination = Routes.MyInfo.route
+            startDestination = Routes.Login.route  // ✅ 여기만 로그인으로 변경
         )
     }
 }

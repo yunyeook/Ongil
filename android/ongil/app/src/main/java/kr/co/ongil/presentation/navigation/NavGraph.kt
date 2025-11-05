@@ -38,7 +38,7 @@ import kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel
 import kr.co.ongil.presentation.ui.favorite.favoriteGraph
 //import kr.co.ongil.presentation.ui.patientdetail.patientGraph
 import kr.co.ongil.presentation.ui.placedetail.placeDetailGraph
-
+import kr.co.ongil.presentation.ui.auth.loginGraph
 /**
  * 앱 Navigation Graph
  */
@@ -46,7 +46,7 @@ import kr.co.ongil.presentation.ui.placedetail.placeDetailGraph
 fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: String = "favorite_graph"
+    startDestination: String = Routes.Login.route
 ) {
     NavHost(
         navController = navController,
@@ -73,6 +73,8 @@ fun AppNavGraph(
                 viewModel = vm
             )
         }
+
+        loginGraph(navController)
 
         // 즐겨찾기
         favoriteGraph(navController)
