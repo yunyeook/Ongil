@@ -43,4 +43,4 @@ out/
 .env.prod
 
 ### firebase ###
-backend/ongil/src/main/resources/firebase/ongil-firebase-adminsdk-key-exmple.json
+src/main/resources/firebase/ongil-firebase-adminsdk-key.json
