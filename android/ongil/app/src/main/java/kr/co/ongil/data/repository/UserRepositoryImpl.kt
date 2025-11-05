@@ -19,39 +19,21 @@ import javax.inject.Inject
  * 사용자 Repository 구현체
  */
 class UserRepositoryImpl @Inject constructor(
-    // TODO: UserApi 주입 활성화
-    // TODO: AuthApi 주입 활성화
+    private val userApi: UserApi,
+    private val authApi: AuthApi
     // TODO: TokenManager 추가하여 accessToken 자동으로 가져오기
 ) : UserRepository {
 
-    // Mock 데이터를 위해 임시로 null 설정
-    private val userApi: UserApi? = null
-    private val authApi: AuthApi? = null
-
     override suspend fun getMyInfo(): Result<UserDto> {
         return try {
-            // 네트워크 지연 시뮬레이션
-            delay(500)
+            // TODO: TokenManager에서 accessToken 가져오기
+            val accessToken = "Bearer YOUR_ACCESS_TOKEN"
 
-            // 하드코딩된 Mock 데이터
-            val mockUser = UserDto(
-                id = 1,
-                name = "홍길동",
-                birth = "19980919",
-                phoneNumber = "01012341234",
-                userType = "PATIENT",
-                profileImage = null // 또는 "https://example.com/profile.jpg"
-            )
-
-            Result.success(mockUser)
-
-            /* TODO: 실제 API 연동 (위의 하드코딩 부분을 아래로 교체)
-            val accessToken = tokenManager.getAccessToken()
-            val response = userApi.getMyInfo("Bearer $accessToken")
+            val response = userApi.getMyInfo(accessToken)
             Result.success(response.data.user)
-            */
         } catch (e: Exception) {
-            Result.failure(e)
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
         }
     }
 
@@ -103,50 +85,25 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun sendVerificationCode(phoneNumber: String): Result<Unit> {
         return try {
-            // 네트워크 지연 시뮬레이션
-            delay(1000)
-
-            // Mock 인증번호 발송 (개발/테스트용)
-            // TODO: 실제 API 연동 시 아래 주석 해제하고 위의 Mock 코드 제거
-            /*
+            // TODO: TokenManager에서 accessToken 가져오기
             val accessToken = "Bearer YOUR_ACCESS_TOKEN"
-
-            if (authApi == null) {
-                throw IllegalStateException("AuthApi가 주입되지 않았습니다. DI를 통해 주입해주세요.")
-            }
 
             authApi.sendVerificationCode(
                 accessToken = accessToken,
                 request = SendVerificationRequest(phoneNumber = phoneNumber)
             )
-            */
 
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
         }
     }
 
     override suspend fun verifyCode(phoneNumber: String, code: String): Result<String> {
         return try {
-            // 네트워크 지연 시뮬레이션
-            delay(500)
-
-            // Mock 인증번호 확인 (개발/테스트용)
-            // 인증번호가 "1234"이면 성공, 아니면 실패
-            if (code == "1234") {
-                Result.success("mock_verification_token_12345")
-            } else {
-                Result.failure(Exception("인증번호가 올바르지 않습니다."))
-            }
-
-            // TODO: 실제 API 연동 시 아래 주석 해제하고 위의 Mock 코드 제거
-            /*
+            // TODO: TokenManager에서 accessToken 가져오기
             val accessToken = "Bearer YOUR_ACCESS_TOKEN"
-
-            if (authApi == null) {
-                throw IllegalStateException("AuthApi가 주입되지 않았습니다. DI를 통해 주입해주세요.")
-            }
 
             val response = authApi.verifyCode(
                 accessToken = accessToken,
@@ -154,9 +111,9 @@ class UserRepositoryImpl @Inject constructor(
             )
 
             Result.success(response.data.verificationToken)
-            */
         } catch (e: Exception) {
-            Result.failure(e)
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
         }
     }
 

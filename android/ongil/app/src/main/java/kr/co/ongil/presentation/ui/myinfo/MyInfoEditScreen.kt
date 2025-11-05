@@ -303,7 +303,14 @@ fun BirthDatePickerDialog(
 @Composable
 fun PreviewMyInfoEditScreen_All() {
     MaterialTheme(colorScheme = lightColorScheme()) {
-        val previewViewModel = MyInfoEditViewModel()
+        val fakeUserRepository = kr.co.ongil.data.repository.fake.FakeUserRepository()
+        val getUserUseCase = kr.co.ongil.domain.usecase.user.GetUserUseCase(fakeUserRepository)
+        val updateUserUseCase = kr.co.ongil.domain.usecase.user.UpdateUserUseCase(fakeUserRepository)
+        val previewViewModel = MyInfoEditViewModel(
+            getUserUseCase = getUserUseCase,
+            updateUserUseCase = updateUserUseCase,
+            userRepository = fakeUserRepository
+        )
         MyInfoEditScreen(viewModel = previewViewModel)
     }
 }

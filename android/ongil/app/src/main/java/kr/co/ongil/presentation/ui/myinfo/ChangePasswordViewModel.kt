@@ -2,6 +2,7 @@ package kr.co.ongil.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,13 +13,14 @@ import kr.co.ongil.core.utils.validatePasswordChange
 import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.presentation.uistate.ChangePasswordEvent
 import kr.co.ongil.presentation.uistate.ChangePasswordUiState
+import javax.inject.Inject
 
 /**
  * 비밀번호 변경 화면 ViewModel
  */
-class ChangePasswordViewModel(
-    private val userRepository: UserRepository? = null
-    // TODO: DI(Hilt/Koin)로 주입하도록 변경
+@HiltViewModel
+class ChangePasswordViewModel @Inject constructor(
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChangePasswordUiState())
