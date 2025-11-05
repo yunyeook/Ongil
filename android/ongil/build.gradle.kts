@@ -23,8 +23,8 @@ sonar {
 project(":app") {
     sonar {
         properties {
-            property("sonar.sources", "src/main/java,src/main/kotlin")
-            property("sonar.tests", "src/test/java,src/test/kotlin")
+            property("sonar.sources", "src/main/java")
+            property("sonar.tests", "src/test/java")
             property("sonar.java.binaries", "build/intermediates/javac/debug/classes")
             property("sonar.kotlin.binaries", "build/tmp/kotlin-classes/debug")
             property("sonar.exclusions", "**/R.java,**/BuildConfig.java")
@@ -35,10 +35,9 @@ project(":app") {
 project(":wear") {
     sonar {
         properties {
-            property("sonar.sources", "src/main/java,src/main/kotlin")
-            property("sonar.tests", "src/test/java,src/test/kotlin")
+            property("sonar.sources", "src/main/java")
+            property("sonar.tests", "src/test/java")
             property("sonar.java.binaries", "build/intermediates/javac/debug/classes")
-            property("sonar.kotlin.binaries", "build/tmp/kotlin-classes/debug")
             property("sonar.exclusions", "**/R.java,**/BuildConfig.java")
         }
     }
