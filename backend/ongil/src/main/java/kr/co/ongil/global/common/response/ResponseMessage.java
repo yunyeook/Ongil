@@ -68,10 +68,17 @@ public enum ResponseMessage {
     NOTIFICATION_READ_ALL("전체 알림을 읽음 처리했습니다."),
     NOTIFICATION_DELETED("알림이 삭제되었습니다."),
     NOTIFICATION_DELETED_ALL("전체 알림이 삭제되었습니다."),
+    NOTIFICATION_CREATED("알림이 생성되었습니다."),
+
+    //FCM
+    FCM_TOKEN_REGISTED("FCM 토큰이 저장되었습니다."),
+    FCM_TOKEN_DELETED("FCM 토큰이 삭제되었습니다."),
+
+
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
     INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."),
-    NOTIFICATION_CREATED("알림이 생성되었습니다.");
+    REQUEST_SUCCESS("요청이 성공적으로 처리되었습니다.");
 
     private final String message;
 }
