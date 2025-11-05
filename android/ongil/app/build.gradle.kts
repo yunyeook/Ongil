@@ -98,4 +98,9 @@ dependencies {
     // JSON 파싱
     implementation("org.json:json:20240303")
 
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0")
+    // viewModelScope 지원
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.4.0")
+    // lifecycleScope 및 flow 지원
+
 }
