@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.lifecycle.viewModelScope
+import kr.co.ongil.domain.usecase.auth.LoginUseCase
 
 sealed interface LoginEffect {
     object NavigateHome : LoginEffect  // 홈 화면으로 이동
@@ -14,7 +15,9 @@ sealed interface LoginEffect {
 }
 
 @HiltViewModel
-class LoginViewModel @Inject constructor() : ViewModel() {
+class LoginViewModel @Inject constructor(
+    private val loginUseCase: LoginUseCase
+) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginUiState())
     val state: StateFlow<LoginUiState> = _state
@@ -42,14 +45,19 @@ class LoginViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }  // 로딩 상태로 업데이트
 
-            // 임시 로그인 로직 (나중에 UseCase로 교체)
-            if (s.password == "1234") {
-                _state.update { it.copy(isLoading = false) }
-                _effect.emit(LoginEffect.NavigateHome)  // 로그인 성공 시 홈 화면으로 이동
-            } else {
-                _state.update { it.copy(isLoading = false) }
-                _effect.emit(LoginEffect.ShowSnack("전화번호 또는 비밀번호가 올바르지 않습니다."))
-            }
+            // LoginUseCase를 통한 로그인 처리
+            loginUseCase(phoneNumber = s.phone, password = s.password)
+                .onSuccess { loginResponse ->
+                    // 로그인 성공
+                    // TODO: 토큰 저장 처리 (TokenManager에서 처리하도록 변경 필요)
+                    _state.update { it.copy(isLoading = false) }
+                    _effect.emit(LoginEffect.NavigateHome)  // 홈 화면으로 이동
+                }
+                .onFailure { exception ->
+                    // 로그인 실패
+                    _state.update { it.copy(isLoading = false) }
+                    _effect.emit(LoginEffect.ShowSnack(exception.message ?: "로그인에 실패했습니다."))
+                }
         }
     }
 

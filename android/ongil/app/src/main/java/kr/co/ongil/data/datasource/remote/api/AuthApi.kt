@@ -11,6 +11,17 @@ import retrofit2.http.POST
 interface AuthApi {
 
     /**
+     * 로그인
+     * POST/api/v1/auth/login
+     */
+    @POST("api/v1/auth/login")
+    suspend fun login(
+        @Body request : LoginRequest
+    ): LoginResponse
+
+
+
+    /**
      * 로그아웃
      * POST /api/v1/auth/logout
      */

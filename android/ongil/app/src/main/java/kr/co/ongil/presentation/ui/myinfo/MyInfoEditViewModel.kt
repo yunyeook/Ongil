@@ -2,6 +2,7 @@ package kr.co.ongil.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,16 +11,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.repository.UserRepository
+import kr.co.ongil.domain.usecase.user.GetUserUseCase
+import kr.co.ongil.domain.usecase.user.UpdateUserUseCase
 import kr.co.ongil.presentation.uistate.MyInfoEditEvent
 import kr.co.ongil.presentation.uistate.MyInfoEditUiState
 import kr.co.ongil.presentation.uistate.PhoneUiState
 import java.io.File
+import javax.inject.Inject
 
 /**
  * 내 정보 수정 화면 ViewModel
  */
-class MyInfoEditViewModel(
-    private val userRepository: UserRepository = kr.co.ongil.data.repository.UserRepositoryImpl()
+@HiltViewModel
+class MyInfoEditViewModel @Inject constructor(
+    private val getUserUseCase: GetUserUseCase,
+    private val updateUserUseCase: UpdateUserUseCase,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyInfoEditUiState())
@@ -38,7 +45,7 @@ class MyInfoEditViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            userRepository.getMyInfo()
+            getUserUseCase()
                 .onSuccess { userDto ->
                     _uiState.update { currentState ->
                         currentState.copy(
@@ -265,14 +272,14 @@ class MyInfoEditViewModel(
                 val phoneChanged = phone != currentState.phone
                 val verificationToken = if (phoneChanged) currentState.verificationToken else null
 
-                // API 호출
-                userRepository.updateMyInfo(
+                // UpdateUserUseCase 호출
+                updateUserUseCase(
                     name = name,
                     birth = birth,
                     phoneNumber = if (phoneChanged) phone else null,
                     verificationToken = verificationToken,
                     profileImage = null // TODO: 프로필 이미지 선택 기능 구현 후 추가
-                )?.getOrThrow()
+                ).getOrThrow()
 
                 _uiState.update { it.copy(isLoading = false) }
             } catch (e: Exception) {

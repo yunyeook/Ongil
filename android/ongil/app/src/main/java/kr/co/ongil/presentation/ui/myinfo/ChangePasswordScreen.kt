@@ -239,7 +239,8 @@ private fun PasswordInputField(
 @Composable
 fun PreviewChangePasswordScreen() {
     MaterialTheme {
-        val previewViewModel = ChangePasswordViewModel()
+        val fakeUserRepository = kr.co.ongil.data.repository.fake.FakeUserRepository()
+        val previewViewModel = ChangePasswordViewModel(userRepository = fakeUserRepository)
         ChangePasswordScreen(viewModel = previewViewModel)
     }
 }
