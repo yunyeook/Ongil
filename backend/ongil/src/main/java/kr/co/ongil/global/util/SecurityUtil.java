@@ -16,6 +16,7 @@ public class SecurityUtil {
         }
 
         Object principal = authentication.getPrincipal();
+
         // CustomUserDetails에서 userId 추출
         if (principal instanceof CustomUserDetails userDetails) {
             return userDetails.getUserId();
