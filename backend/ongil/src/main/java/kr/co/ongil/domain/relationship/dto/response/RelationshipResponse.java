@@ -2,6 +2,7 @@ package kr.co.ongil.domain.relationship.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import kr.co.ongil.domain.relationship.entity.Relationship;
+import kr.co.ongil.domain.relationship.entity.RelationshipType;
 import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.entity.UserType;
 
@@ -22,7 +23,7 @@ public record RelationshipResponse(
         @Schema(description = "관계 별칭", example = "첫째 딸")
         String relationshipName,
 
-        @Schema(description = "관계 유형", example = "딸")
+        @Schema(description = "관계 유형 (부모/배우자/자녀/기타)", example = "자녀")
         String relationshipType,
 
         @Schema(description = "생성 시각", example = "2025-10-18T13:00:00")
@@ -33,16 +34,19 @@ public record RelationshipResponse(
         User counterpartUser = relationship.getCounterpartUser(requestUser);
 
         String relationshipName;
-        String relationshipType;
+        RelationshipType relationshipTypeEnum;
 
         // 요청자가 보호자인지 환자인지에 따라 다른 필드 사용
         if (requestUser.getUserType() == UserType.GUARDIAN) {
             relationshipName = relationship.getNameSetByGuardian();
-            relationshipType = relationship.getTypeSetByGuardian();
+            relationshipTypeEnum = relationship.getTypeSetByGuardian();
         } else {
             relationshipName = relationship.getNameSetByPatient();
-            relationshipType = relationship.getTypeSetByPatient();
+            relationshipTypeEnum = relationship.getTypeSetByPatient();
         }
+
+        // RelationshipType enum → String 변환
+        String relationshipType = relationshipTypeEnum != null ? relationshipTypeEnum.getDescription() : null;
 
         return new RelationshipResponse(
                 relationship.getId(),

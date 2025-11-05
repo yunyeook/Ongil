@@ -63,6 +63,7 @@ public enum ErrorCode {
     VERIFICATION_TOKEN_EXPIRED(HttpStatus.GONE, "토큰이 만료되었거나 이미 사용되었습니다."),
     COUNTERPART_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다."),
     INVALID_RELATIONSHIP_GRANT(HttpStatus.UNPROCESSABLE_ENTITY, "관계 등록용 토큰이 아닙니다."),
+    INVALID_RELATIONSHIP_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 관계 유형입니다. (부모/배우자/자녀/형제/기타)"),
 
     // FAVORITE
     FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "즐겨찾기를 찾을 수 없습니다."),

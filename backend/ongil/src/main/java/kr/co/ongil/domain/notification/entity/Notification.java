@@ -29,7 +29,7 @@ public class Notification extends BaseEntity {
     private String content;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "notification_type_enum")
+    @Column(name = "notification_type", nullable = false, length = 50)
     private NotificationType type;
 
     @Column(name = "is_read", nullable = false)

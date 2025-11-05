@@ -98,17 +98,28 @@ public class RelationshipService {
         User guardian = requestUser.getUserType() == UserType.GUARDIAN ? requestUser : counterpartUser;
         User patient = requestUser.getUserType() == UserType.PATIENT ? requestUser : counterpartUser;
 
+        // 10. String → RelationshipType enum 변환 및 검증
+        RelationshipType requestUserType = RelationshipType.fromDescription(request.relationshipType());
+        RelationshipType counterpartType = requestUserType.getCounterpart();
+
+        log.info("관계 유형 변환 완료 - 요청자: {}, 상대방: {}",
+                requestUserType.getDescription(), counterpartType.getDescription());
+
         Relationship relationship = Relationship.builder()
                 .guardian(guardian)
                 .patient(patient)
                 .build();
 
-        // 10. 요청자 입장에서의 관계 정보 설정
-        relationship.updateRelationshipInfo(requestUser, request.relationshipName(), request.relationshipType());
+        // 11. 양방향 관계 정보 설정
+        // 요청자 입장에서의 관계 설정
+        relationship.updateRelationshipInfo(requestUser, request.relationshipName(), requestUserType);
+        // 상대방 입장에서의 관계 자동 설정 (반대 관계 유형)
+        relationship.updateRelationshipInfo(counterpartUser, null, counterpartType);
 
         relationshipRepository.save(relationship);
-        log.info("관계 등록 완료 - relationshipId: {}, guardian: {}, patient: {}",
-                relationship.getId(), guardian.getId(), patient.getId());
+        log.info("관계 등록 완료 - relationshipId: {}, guardian: {}, patient: {}, 요청자 타입: {}, 상대방 타입: {}",
+                relationship.getId(), guardian.getId(), patient.getId(),
+                requestUserType.getDescription(), counterpartType.getDescription());
 
         // 11. 상대방에게 알림 전송
         sendRelationshipNotification(requestUser, counterpartUser);
@@ -163,8 +174,15 @@ public class RelationshipService {
         Relationship relationship = relationshipRepository.findByIdAndUser(relationshipId, user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RELATIONSHIP_NOT_FOUND));
 
+        // String → RelationshipType enum 변환 (relationshipType이 null이 아닌 경우에만)
+        RelationshipType relationshipType = null;
+        if (request.relationshipType() != null) {
+            relationshipType = RelationshipType.fromDescription(request.relationshipType());
+            log.info("관계 유형 변환 완료 - {}", relationshipType.getDescription());
+        }
+
         // 비즈니스 로직: 요청자에 따라 다른 필드 업데이트
-        relationship.updateRelationshipInfo(user, request.relationshipName(), request.relationshipType());
+        relationship.updateRelationshipInfo(user, request.relationshipName(), relationshipType);
 
         log.info("관계 정보 수정 완료 - relationshipId: {}", relationshipId);
 

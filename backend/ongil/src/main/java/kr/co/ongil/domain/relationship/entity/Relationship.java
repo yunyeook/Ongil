@@ -21,14 +21,16 @@ public class Relationship extends BaseEntity {
     @JoinColumn(name = "patient_id", nullable = false)
     private User patient;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_set_by_guardian", length = 20)
-    private String typeSetByGuardian;
+    private RelationshipType typeSetByGuardian;
 
     @Column(name = "name_set_by_guardian", length = 30)
     private String nameSetByGuardian;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_set_by_patient", length = 20)
-    private String typeSetByPatient;
+    private RelationshipType typeSetByPatient;
 
     @Column(name = "name_set_by_patient", length = 30)
     private String nameSetByPatient;
@@ -43,7 +45,7 @@ public class Relationship extends BaseEntity {
     private boolean thirdAlarm = false;
 
     // 비즈니스 메서드
-    public void updateRelationshipInfo(User requestUser, String relationshipName, String relationshipType) {
+    public void updateRelationshipInfo(User requestUser, String relationshipName, RelationshipType relationshipType) {
         if (requestUser.equals(guardian)) {
             if (relationshipName != null) {
                 this.nameSetByGuardian = relationshipName;
