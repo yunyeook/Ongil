@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,13 @@ plugins {
     alias(libs.plugins.dagger.hilt.android)
     kotlin("kapt")
     id("com.google.gms.google-services")
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
 }
 
 android {
@@ -20,6 +29,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // local.properties의 BASE_URL을 BuildConfig 필드로 추가
+        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty("BASE_URL") ?: "https://staging.on-gil.co.kr/"}\"")
     }
 
     buildTypes {
@@ -40,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -102,5 +115,4 @@ dependencies {
     // viewModelScope 지원
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.4.0")
     // lifecycleScope 및 flow 지원
-
 }
