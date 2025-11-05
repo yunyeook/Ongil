@@ -13,6 +13,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
 import kr.co.ongil.core.constants.Constants
+import kr.co.ongil.BuildConfig
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -47,7 +48,7 @@ object NetworkModule {
     ): Retrofit {
         val contentType = "application/json".toMediaType()
         return Retrofit.Builder()
-            .baseUrl(Constants.BASE_URL)
+            .baseUrl(BuildConfig.BASE_URL)
             .client(client)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
