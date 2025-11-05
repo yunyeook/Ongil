@@ -46,7 +46,7 @@ import kr.co.ongil.presentation.ui.auth.loginGraph
 fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: String = "favorite_graph"
+    startDestination: String = Routes.Login.route
 ) {
     NavHost(
         navController = navController,
