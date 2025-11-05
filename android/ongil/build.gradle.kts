@@ -6,6 +6,7 @@ plugins {
     id("org.sonarqube") version "4.4.1.3373"
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.dagger.hilt.android) apply false
+    id("com.google.gms.google-services") version "4.4.4" apply false
 }
 
 subprojects {

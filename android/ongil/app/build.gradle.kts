@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.dagger.hilt.android)
     kotlin("kapt")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -84,5 +85,17 @@ dependencies {
     kapt(libs.dagger.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
     kapt(libs.androidx.hilt.compiler)
+
+    // Firebase BOM (버전 통합)
+    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+
+    // FCM Messaging
+    implementation("com.google.firebase:firebase-messaging")
+
+    // HTTP 통신용
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // JSON 파싱
+    implementation("org.json:json:20240303")
 
 }
