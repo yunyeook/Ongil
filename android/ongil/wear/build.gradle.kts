@@ -40,7 +40,7 @@ android {
 }
 
 dependencies {
-    implementation("com.google.android.wearable:wear:2.9.0")
+    // implementation("com.google.android.wearable:wear:2.9.0")
     compileOnly("com.google.android.wearable:wearable:2.9.0")
     implementation(libs.play.services.wearable)
     implementation(platform(libs.androidx.compose.bom))
