@@ -10,6 +10,7 @@ import kr.co.ongil.domain.patient.safezone.dto.response.SafeZoneResponse;
 import kr.co.ongil.domain.patient.safezone.service.SafezoneService;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
+import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
@@ -36,7 +37,8 @@ public class SafezoneController {
 
         @Valid @RequestBody SafeZoneUpsertRequest request
     ) {
-        SafeZoneResponse response = safezoneService.upsertSafeZone(patientId, request);
+        Integer callerId = SecurityUtil.getCurrentUserId();
+        SafeZoneResponse response = safezoneService.upsertSafeZone(patientId, request, callerId);
 
         // 신규 생성인지 수정인지 구분하여 메시지 반환
         ResponseMessage message = response.updatedAt().equals(response.updatedAt())
@@ -55,7 +57,8 @@ public class SafezoneController {
         @Parameter(description = "환자 ID", required = true, example = "1")
         @PathVariable Integer patientId
     ) {
-        SafeZoneResponse response = safezoneService.resetSafeZone(patientId);
+        Integer callerId = SecurityUtil.getCurrentUserId();
+        SafeZoneResponse response = safezoneService.resetSafeZone(patientId, callerId);
         return ApiResponse.success(ResponseMessage.SAFEZONE_RESET, response);
     }
 
@@ -70,7 +73,8 @@ public class SafezoneController {
 
         @Valid @RequestBody SafeZonePatchRequest request
     ) {
-        SafeZoneResponse response = safezoneService.patchSafeZone(patientId, request);
+        Integer callerId = SecurityUtil.getCurrentUserId();
+        SafeZoneResponse response = safezoneService.patchSafeZone(patientId, request, callerId);
         return ApiResponse.success(ResponseMessage.SAFEZONE_PARTIALLY_UPDATED, response);
     }
 
@@ -83,7 +87,8 @@ public class SafezoneController {
         @Parameter(description = "환자 ID", required = true, example = "1")
         @PathVariable Integer patientId
     ) {
-        SafeZoneResponse response = safezoneService.getSafeZone(patientId);
+        Integer callerId = SecurityUtil.getCurrentUserId();
+        SafeZoneResponse response = safezoneService.getSafeZone(patientId, callerId);
         return ApiResponse.success(ResponseMessage.SAFEZONE_FOUND, response);
     }
 }

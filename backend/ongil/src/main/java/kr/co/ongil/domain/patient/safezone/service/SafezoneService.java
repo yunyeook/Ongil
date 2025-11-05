@@ -35,23 +35,26 @@ public class SafezoneService {
      * 안전범위 생성 또는 전체 교체 (Upsert)
      */
     @Transactional
-    public SafeZoneResponse upsertSafeZone(Integer patientId, SafeZoneUpsertRequest request) {
-        log.info("안전범위 생성/교체 요청: patientId={}", patientId);
+    public SafeZoneResponse upsertSafeZone(Integer patientId, SafeZoneUpsertRequest request, Integer callerId) {
+        log.info("안전범위 생성/교체 요청: patientId={}, callerId={}", patientId, callerId);
 
         // 1. 환자 조회
         User patient = userRepository.findById(patientId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 2. 유효성 검증
+        // 2. 권한 검증 (본인 또는 보호자)
+        validateAccess(patientId, callerId);
+
+        // 3. 유효성 검증
         validateBoundaries(request.firstBoundary(), request.secondBoundary(), request.thirdBoundary());
 
-        // 3. 기존 안전범위 조회 또는 신규 생성
+        // 4. 기존 안전범위 조회 또는 신규 생성
         SafeZone safeZone = safeZoneRepository.findByPatientId(patientId)
             .orElseGet(() -> SafeZone.builder()
                 .patient(patient)
                 .build());
 
-        // 4. 값 업데이트
+        // 5. 값 업데이트
         safeZone.updateBoundaries(
             request.firstBoundary(),
             request.secondBoundary() != null ? request.secondBoundary() : 500.0,
@@ -64,7 +67,7 @@ public class SafezoneService {
             request.thirdTime() != null ? request.thirdTime() : 15
         );
 
-        // 5. 저장
+        // 6. 저장
         SafeZone saved = safeZoneRepository.save(safeZone);
         log.info("안전범위 저장 완료: id={}", saved.getId());
 
@@ -75,23 +78,26 @@ public class SafezoneService {
      * 안전범위 기본값으로 복원
      */
     @Transactional
-    public SafeZoneResponse resetSafeZone(Integer patientId) {
-        log.info("안전범위 기본값 복원 요청: patientId={}", patientId);
+    public SafeZoneResponse resetSafeZone(Integer patientId, Integer callerId) {
+        log.info("안전범위 기본값 복원 요청: patientId={}, callerId={}", patientId, callerId);
 
         // 1. 환자 조회
         User patient = userRepository.findById(patientId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // 2. 기존 안전범위 조회 또는 신규 생성
+        // 2. 권한 검증 (본인 또는 보호자)
+        validateAccess(patientId, callerId);
+
+        // 3. 기존 안전범위 조회 또는 신규 생성
         SafeZone safeZone = safeZoneRepository.findByPatientId(patientId)
             .orElseGet(() -> SafeZone.builder()
                 .patient(patient)
                 .build());
 
-        // 3. 기본값으로 리셋
+        // 4. 기본값으로 리셋
         safeZone.resetToDefault();
 
-        // 4. 저장
+        // 5. 저장
         SafeZone saved = safeZoneRepository.save(safeZone);
         log.info("안전범위 기본값 복원 완료: id={}", saved.getId());
 
@@ -102,22 +108,25 @@ public class SafezoneService {
      * 안전범위 부분 수정
      */
     @Transactional
-    public SafeZoneResponse patchSafeZone(Integer patientId, SafeZonePatchRequest request) {
-        log.info("안전범위 부분 수정 요청: patientId={}", patientId);
+    public SafeZoneResponse patchSafeZone(Integer patientId, SafeZonePatchRequest request, Integer callerId) {
+        log.info("안전범위 부분 수정 요청: patientId={}, callerId={}", patientId, callerId);
 
-        // 1. 기존 안전범위 조회
+        // 1. 권한 검증 (본인 또는 보호자)
+        validateAccess(patientId, callerId);
+
+        // 2. 기존 안전범위 조회
         SafeZone safeZone = safeZoneRepository.findByPatientId(patientId)
             .orElseThrow(() -> new BusinessException(ErrorCode.SAFEZONE_SETTING_NOT_FOUND));
 
-        // 2. 수정할 값 결정
+        // 3. 수정할 값 결정
         Double newFirst = request.firstBoundary() != null ? request.firstBoundary() : safeZone.getFirstBoundary();
         Double newSecond = request.secondBoundary() != null ? request.secondBoundary() : safeZone.getSecondBoundary();
         Double newThird = request.thirdBoundary() != null ? request.thirdBoundary() : safeZone.getThirdBoundary();
 
-        // 3. 유효성 검증
+        // 4. 유효성 검증
         validateBoundaries(newFirst, newSecond, newThird);
 
-        // 4. 업데이트
+        // 5. 업데이트
         safeZone.updateBoundaries(
             request.firstBoundary(),
             request.secondBoundary(),
@@ -139,15 +148,18 @@ public class SafezoneService {
      * 안전범위 조회
      */
     @Transactional(readOnly = true)
-    public SafeZoneResponse getSafeZone(Integer patientId) {
-        log.info("안전범위 조회 요청: patientId={}", patientId);
+    public SafeZoneResponse getSafeZone(Integer patientId, Integer callerId) {
+        log.info("안전범위 조회 요청: patientId={}, callerId={}", patientId, callerId);
 
         // 1. 환자 존재 확인
         if (!userRepository.existsById(patientId)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        // 2. 안전범위 조회 (없으면 기본값 반환)
+        // 2. 권한 검증 (본인 또는 보호자)
+        validateAccess(patientId, callerId);
+
+        // 3. 안전범위 조회 (없으면 기본값 반환)
         SafeZone safeZone = safeZoneRepository.findByPatientId(patientId)
             .orElseGet(() -> {
                 User patient = userRepository.findById(patientId).get();
@@ -179,5 +191,22 @@ public class SafezoneService {
         if (third < thirdMin || third > THIRD_MAX) {
             throw new BusinessException(ErrorCode.SAFEZONE_BOUNDARY_OUT_OF_RANGE);
         }
+    }
+
+    /**
+     * 권한 검증 (본인 또는 보호자)
+     */
+    private void validateAccess(Integer patientId, Integer callerId) {
+        // TODO: 본인 또는 보호자 관계 확인
+        // 임시로 본인만 허용
+        if (!patientId.equals(callerId)) {
+            throw new BusinessException(ErrorCode.SAFEZONE_ACCESS_DENIED);
+        }
+
+        // 보호자 권한 확인이 필요한 경우:
+        // boolean isCaregiver = relationshipRepository.existsByPatientIdAndCaregiverId(patientId, callerId);
+        // if (!patientId.equals(callerId) && !isCaregiver) {
+        //     throw new BusinessException(ErrorCode.SAFEZONE_ACCESS_DENIED);
+        // }
     }
 }
