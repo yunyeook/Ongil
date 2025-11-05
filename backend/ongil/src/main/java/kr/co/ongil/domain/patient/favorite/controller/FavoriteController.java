@@ -5,9 +5,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.co.ongil.domain.patient.favorite.dto.request.CreateFavoriteRequest;
+import kr.co.ongil.domain.patient.favorite.dto.request.ReorderFavoritesRequest;
 import kr.co.ongil.domain.patient.favorite.dto.request.UpdateFavoriteRequest;
 import kr.co.ongil.domain.patient.favorite.dto.response.FavoriteListResponse;
 import kr.co.ongil.domain.patient.favorite.dto.response.FavoriteResponse;
+
+import java.util.List;
 import kr.co.ongil.domain.patient.favorite.service.FavoriteService;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
@@ -92,5 +95,24 @@ public class FavoriteController {
         Integer callerId = SecurityUtil.getCurrentUserId();
         FavoriteResponse response = favoriteService.setDefaultFavorite(patientId, favoriteId, callerId);
         return ApiResponse.success(ResponseMessage.FAVORITE_DEFAULT_SET, response);
+    }
+
+    @PatchMapping("/order")
+    @Operation(
+            summary = "즐겨찾기 목록 일괄 재정렬",
+            description = "드래그 앤 드롭으로 변경된 즐겨찾기 순서를 일괄 업데이트합니다. " +
+                    "orderedFavoriteIds에 원하는 순서대로 즐겨찾기 ID를 배열로 전달하세요."
+    )
+    public ApiResponse<List<FavoriteResponse>> reorderFavorites(
+            @Parameter(description = "환자 ID") @PathVariable Integer patientId,
+            @Valid @RequestBody ReorderFavoritesRequest request
+    ) {
+        Integer callerId = SecurityUtil.getCurrentUserId();
+        List<FavoriteResponse> response = favoriteService.reorderFavorites(
+                patientId,
+                request.orderedFavoriteIds(),
+                callerId
+        );
+        return ApiResponse.success(ResponseMessage.FAVORITE_REORDERED, response);
     }
 }

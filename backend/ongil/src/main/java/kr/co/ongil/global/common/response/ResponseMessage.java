@@ -46,6 +46,7 @@ public enum ResponseMessage {
     FAVORITE_UPDATED("즐겨찾기가 성공적으로 수정되었습니다."),
     FAVORITE_DELETED("즐겨찾기가 성공적으로 삭제되었습니다."),
     FAVORITE_DEFAULT_SET("기본 목적지가 설정되었습니다."),
+    FAVORITE_REORDERED("즐겨찾기 정렬 순서가 성공적으로 변경되었습니다."),
 
     // Map
     ADDRESS_FOUND("주소를 성공적으로 조회하였습니다."),
