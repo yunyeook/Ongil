@@ -30,6 +30,13 @@ public enum ResponseMessage {
     PATIENT_FOUND("환자 조회 성공"),
     SAFEZONE_UPDATED("안전구역이 수정되었습니다."),
 
+    // Relationship
+    RELATIONSHIP_CREATED("관계가 성공적으로 생성되었습니다."),
+    RELATIONSHIP_LIST_FOUND("관계 목록 조회가 성공적으로 완료되었습니다."),
+    RELATIONSHIP_FOUND("관계 상세 조회가 성공적으로 완료되었습니다."),
+    RELATIONSHIP_UPDATED("관계 정보가 성공적으로 수정되었습니다."),
+    RELATIONSHIP_DELETED("관계가 성공적으로 삭제되었습니다."),
+
     // Favorite
     FAVORITE_CREATED("즐겨찾기가 성공적으로 추가되었습니다."),
     FAVORITE_LIST_FOUND("즐겨찾기 목록 조회에 성공했습니다."),

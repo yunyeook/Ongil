@@ -37,6 +37,10 @@ out/
 .vscode/
 
 ### env
-.env.dev
 .env
+.env.dev
+.env.local
 .env.prod
+
+### firebase ###
+src/main/resources/firebase/ongil-firebase-adminsdk-key.json
