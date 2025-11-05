@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kr.co.ongil.core.utils.formatPhoneNumber
 import kr.co.ongil.domain.repository.AuthRepository
-import kr.co.ongil.domain.repository.UserRepository
+import kr.co.ongil.domain.usecase.user.GetUserUseCase
 import kr.co.ongil.presentation.ui.myinfo.MyInfoUiState
 
 /**
@@ -28,7 +28,7 @@ import kr.co.ongil.presentation.ui.myinfo.MyInfoUiState
  * ```
  */
 class MyInfoViewModel(
-    private val userRepository: UserRepository = kr.co.ongil.data.repository.UserRepositoryImpl(),
+    private val getUserUseCase: GetUserUseCase = GetUserUseCase(kr.co.ongil.data.repository.UserRepositoryImpl()),
     private val authRepository: AuthRepository = kr.co.ongil.data.repository.AuthRepositoryImpl()
     // TODO: DI(Hilt/Koin)로 주입하도록 변경
 ) : ViewModel() {
@@ -47,7 +47,8 @@ class MyInfoViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            userRepository.getMyInfo()
+            // GetUserUseCase를 통한 사용자 정보 조회
+            getUserUseCase()
                 .onSuccess { userDto ->
                     // DTO → UiState 변환
                     _uiState.value = MyInfoUiState(

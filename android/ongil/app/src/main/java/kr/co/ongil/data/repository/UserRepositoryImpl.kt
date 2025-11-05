@@ -13,16 +13,20 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
+import javax.inject.Inject
 
 /**
  * 사용자 Repository 구현체
  */
-class UserRepositoryImpl(
-    private val userApi: UserApi? = null,
-    private val authApi: AuthApi? = null
+class UserRepositoryImpl @Inject constructor(
+    // TODO: UserApi 주입 활성화
+    // TODO: AuthApi 주입 활성화
     // TODO: TokenManager 추가하여 accessToken 자동으로 가져오기
-    // TODO: DI(Hilt/Koin)로 주입하도록 변경
 ) : UserRepository {
+
+    // Mock 데이터를 위해 임시로 null 설정
+    private val userApi: UserApi? = null
+    private val authApi: AuthApi? = null
 
     override suspend fun getMyInfo(): Result<UserDto> {
         return try {
