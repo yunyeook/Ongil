@@ -9,6 +9,7 @@ import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
+import kr.co.ongil.global.util.PatientAccessValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class SafezoneService {
 
     private final SafeZoneRepository safeZoneRepository;
     private final UserRepository userRepository;
+    private final PatientAccessValidator patientAccessValidator;
 
     // 상수 정의
     private static final double FIRST_MIN = 50.0;
@@ -197,16 +199,6 @@ public class SafezoneService {
      * 권한 검증 (본인 또는 보호자)
      */
     private void validateAccess(Integer patientId, Integer callerId) {
-        // TODO: 본인 또는 보호자 관계 확인
-        // 임시로 본인만 허용
-        if (!patientId.equals(callerId)) {
-            throw new BusinessException(ErrorCode.SAFEZONE_ACCESS_DENIED);
-        }
-
-        // 보호자 권한 확인이 필요한 경우:
-        // boolean isCaregiver = relationshipRepository.existsByPatientIdAndCaregiverId(patientId, callerId);
-        // if (!patientId.equals(callerId) && !isCaregiver) {
-        //     throw new BusinessException(ErrorCode.SAFEZONE_ACCESS_DENIED);
-        // }
+        patientAccessValidator.validateAccess(patientId, callerId, ErrorCode.SAFEZONE_ACCESS_DENIED);
     }
 }
