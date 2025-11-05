@@ -41,3 +41,6 @@ out/
 .env.dev
 .env.local
 .env.prod
+
+### firebase ###
+*/resources/firebase/ongil-firebase-adminsdk-key.json
