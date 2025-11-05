@@ -74,6 +74,7 @@ ongil:
 # Server Configuration
 server:
   port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework  # HTTPS/프록시 환경에서 X-Forwarded-* 헤더 신뢰
   servlet:
     encoding:
       charset: UTF-8
