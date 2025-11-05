@@ -1,4 +1,5 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+apply(from = "publish-local-aars.gradle.kts")
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
@@ -32,8 +33,8 @@ sonar {
 project(":app") {
     sonar {
         properties {
-            property("sonar.sources", "src/main/java,src/main/kotlin")
-            property("sonar.tests", "src/test/java,src/test/kotlin")
+            property("sonar.sources", "src/main/java")
+            property("sonar.tests", "src/test/java")
             property("sonar.java.binaries", "build/intermediates/javac/debug/classes")
             property("sonar.kotlin.binaries", "build/tmp/kotlin-classes/debug")
             property("sonar.exclusions", "**/R.java,**/BuildConfig.java")
@@ -44,10 +45,9 @@ project(":app") {
 project(":wear") {
     sonar {
         properties {
-            property("sonar.sources", "src/main/java,src/main/kotlin")
-            property("sonar.tests", "src/test/java,src/test/kotlin")
+            property("sonar.sources", "src/main/java")
+            property("sonar.tests", "src/test/java")
             property("sonar.java.binaries", "build/intermediates/javac/debug/classes")
-            property("sonar.kotlin.binaries", "build/tmp/kotlin-classes/debug")
             property("sonar.exclusions", "**/R.java,**/BuildConfig.java")
         }
     }
