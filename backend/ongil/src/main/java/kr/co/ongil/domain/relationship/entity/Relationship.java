@@ -28,6 +28,9 @@ public class Relationship extends BaseEntity {
     @Column(name = "name_set_by_guardian", length = 30)
     private String nameSetByGuardian;
 
+    @Column(name = "order_set_by_guardian")
+    private Integer orderSetByGuardian;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "type_set_by_patient", length = 20)
     private RelationshipType typeSetByPatient;
@@ -35,12 +38,26 @@ public class Relationship extends BaseEntity {
     @Column(name = "name_set_by_patient", length = 30)
     private String nameSetByPatient;
 
+    @Column(name = "order_set_by_patient")
+    private Integer orderSetByPatient;
+
+    @Builder.Default
+    @Column(name = "is_default_for_guardian", nullable = false)
+    private boolean isDefaultForGuardian = false;
+
+    @Builder.Default
+    @Column(name = "is_default_for_patient", nullable = false)
+    private boolean isDefaultForPatient = false;
+
+    @Builder.Default
     @Column(name = "first_alarm", nullable = false)
     private boolean firstAlarm = true;
 
+    @Builder.Default
     @Column(name = "second_alarm", nullable = false)
     private boolean secondAlarm = false;
 
+    @Builder.Default
     @Column(name = "third_alarm", nullable = false)
     private boolean thirdAlarm = false;
 
@@ -63,6 +80,29 @@ public class Relationship extends BaseEntity {
         }
     }
 
+    /**
+     * 정렬 순서 설정
+     */
+    public void setDisplayOrder(User requestUser, Integer displayOrder) {
+        if (requestUser.equals(guardian)) {
+            this.orderSetByGuardian = displayOrder;
+        } else if (requestUser.equals(patient)) {
+            this.orderSetByPatient = displayOrder;
+        }
+    }
+
+    /**
+     * 정렬 순서 조회
+     */
+    public Integer getDisplayOrder(User requestUser) {
+        if (requestUser.equals(guardian)) {
+            return orderSetByGuardian;
+        } else if (requestUser.equals(patient)) {
+            return orderSetByPatient;
+        }
+        return null;
+    }
+
     public boolean isRelatedUser(User user) {
         return guardian.equals(user) || patient.equals(user);
     }
@@ -74,5 +114,28 @@ public class Relationship extends BaseEntity {
             return guardian;
         }
         return null;
+    }
+
+    /**
+     * 대표(기본) 관계 설정
+     */
+    public void setDefault(User requestUser, boolean isDefault) {
+        if (requestUser.equals(guardian)) {
+            this.isDefaultForGuardian = isDefault;
+        } else if (requestUser.equals(patient)) {
+            this.isDefaultForPatient = isDefault;
+        }
+    }
+
+    /**
+     * 대표(기본) 관계 여부 조회
+     */
+    public boolean isDefault(User requestUser) {
+        if (requestUser.equals(guardian)) {
+            return isDefaultForGuardian;
+        } else if (requestUser.equals(patient)) {
+            return isDefaultForPatient;
+        }
+        return false;
     }
 }

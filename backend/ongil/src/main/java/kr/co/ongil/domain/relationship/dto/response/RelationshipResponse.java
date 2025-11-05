@@ -26,6 +26,12 @@ public record RelationshipResponse(
         @Schema(description = "관계 유형 (부모/배우자/자녀/기타)", example = "자녀")
         String relationshipType,
 
+        @Schema(description = "정렬 순서 (낮을수록 앞에 표시)", example = "1")
+        Integer displayOrder,
+
+        @Schema(description = "대표(기본) 관계 여부", example = "true")
+        Boolean isDefault,
+
         @Schema(description = "생성 시각", example = "2025-10-18T13:00:00")
         LocalDateTime createdAt
 ) {
@@ -35,18 +41,24 @@ public record RelationshipResponse(
 
         String relationshipName;
         RelationshipType relationshipTypeEnum;
+        Integer displayOrder;
 
         // 요청자가 보호자인지 환자인지에 따라 다른 필드 사용
         if (requestUser.getUserType() == UserType.GUARDIAN) {
             relationshipName = relationship.getNameSetByGuardian();
             relationshipTypeEnum = relationship.getTypeSetByGuardian();
+            displayOrder = relationship.getOrderSetByGuardian();
         } else {
             relationshipName = relationship.getNameSetByPatient();
             relationshipTypeEnum = relationship.getTypeSetByPatient();
+            displayOrder = relationship.getOrderSetByPatient();
         }
 
         // RelationshipType enum → String 변환
         String relationshipType = relationshipTypeEnum != null ? relationshipTypeEnum.getDescription() : null;
+
+        // isDefault 조회
+        boolean isDefault = relationship.isDefault(requestUser);
 
         return new RelationshipResponse(
                 relationship.getId(),
@@ -54,6 +66,8 @@ public record RelationshipResponse(
                 counterpartUser != null ? counterpartUser.getId() : null,
                 relationshipName,
                 relationshipType,
+                displayOrder,
+                isDefault,
                 relationship.getCreatedAt()
         );
     }
