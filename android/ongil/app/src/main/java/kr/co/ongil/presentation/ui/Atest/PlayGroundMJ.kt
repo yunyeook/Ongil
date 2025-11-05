@@ -104,17 +104,15 @@ fun PlayGroundMJ() {
                         )
                     )
                 },
-                onNavigateToPatientDetail = { id, name, phone, gender ->
+                onNavigateToPatientDetail = { id, name, phone ->
                     val encodedName = Uri.encode(name)
                     val encodedPhone = Uri.encode(phone)
-                    val encodedGender = Uri.encode(gender)
 
                     navController.navigate(
                         Routes.PatientDetail.createRoute(
                             patientId = id,
                             name = encodedName,
-                            phoneNumber = encodedPhone,
-                            gender = encodedGender
+                            phoneNumber = encodedPhone
                         )
                     )
                 },

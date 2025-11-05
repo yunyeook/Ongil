@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.sp
 fun PatientCard(
     patientName: String,
     phoneNumber: String,
-    gender: String,
     onClickCard: () -> Unit,
     onClickCall: () -> Unit,
     modifier: Modifier = Modifier
@@ -63,7 +62,7 @@ fun PatientCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "$phoneNumber · $gender",
+                    text = phoneNumber,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color(0xFF6B7280),
@@ -103,7 +102,6 @@ fun PatientCardPreview() {
         PatientCard(
             patientName = "김철수 할아버지",
             phoneNumber = "010-1234-5678",
-            gender = "남성",
             onClickCard = {},
             onClickCall = {},
             modifier = Modifier

@@ -74,6 +74,7 @@ fun SignupScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
+            .padding(top = 32.dp)
     ) {
 
         Column(
@@ -83,7 +84,6 @@ fun SignupScreen(
                 .imePadding() // 키보드가 올라올 때 자동으로 padding 추가
         ) {
             // 상단 헤더
-            SignupHeader(onBackClick = onBackClick)
 
             // 본문 내용
             Column(
@@ -438,47 +438,6 @@ fun BirthDatePickerDialog(
             }
         ) {
             DatePicker(state = datePickerState)
-        }
-    }
-}
-
-/**
- * 상단 헤더: ← 회원가입
- * 높이 80dp
- */
-@Composable
-private fun SignupHeader(
-    onBackClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(80.dp),
-        color = Color.White
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Filled.ArrowBack,
-                contentDescription = "back",
-                tint = Color(0xFF1A1D21),
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable { onBackClick() }
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = "회원가입",
-                color = Color(0xFF1A1D21),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
