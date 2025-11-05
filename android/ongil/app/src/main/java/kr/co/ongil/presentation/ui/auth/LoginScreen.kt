@@ -24,8 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kr.co.ongil.presentation.theme.OngilTheme
 import kr.co.ongil.R
+import kr.co.ongil.presentation.theme.OngilTheme
 
 // ---- 로컬 컬러 정의 (이 파일에서만 사용) ----
 private val BrandGreen   = Color(0xFF8CA898)
@@ -38,14 +38,16 @@ private val GoogleBorder = Color(0xFFE5E7EB)
 
 @Composable
 fun LoginScreen(
-    onLoginClick: (phone: String, password: String) -> Unit = { _, _ -> },
+    state: LoginUiState,
+    onPhoneChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onLoginClick: () -> Unit,
     onClickFindPw: () -> Unit = {},
     onClickSignup: () -> Unit = {},
     onClickKakao: () -> Unit = {},
     onClickGoogle: () -> Unit = {}
 ) {
-    var phone by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    // 비밀번호 보기/숨기기 토글은 로컬 UI 상태로 유지
     var pwVisible by remember { mutableStateOf(false) }
 
     Column(
@@ -80,8 +82,8 @@ fun LoginScreen(
             Text("전화번호", color = TitleGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(6.dp))
             OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
+                value = state.phone,
+                onValueChange = onPhoneChange,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
@@ -110,8 +112,8 @@ fun LoginScreen(
             Text("비밀번호", color = TitleGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(6.dp))
             OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
+                value = state.password,
+                onValueChange = onPasswordChange,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(60.dp),
@@ -135,7 +137,7 @@ fun LoginScreen(
                     }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                keyboardActions = KeyboardActions(onDone = { onLoginClick(phone, password) }),
+                keyboardActions = KeyboardActions(onDone = { onLoginClick() }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BrandGreen,
                     unfocusedBorderColor = FieldBorder,
@@ -163,13 +165,22 @@ fun LoginScreen(
 
         // 로그인 버튼
         Button(
-            onClick = { onLoginClick(phone, password) },
+            onClick = onLoginClick,
+            enabled = state.isLoginEnabled && !state.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
             shape = MaterialTheme.shapes.medium
         ) {
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(18.dp),
+                    color = Color.White
+                )
+                Spacer(Modifier.width(8.dp))
+            }
             Text("로그인", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         }
 
@@ -238,6 +249,15 @@ fun LoginScreen(
 @Composable
 private fun PreviewLoginLight() {
     OngilTheme(darkTheme = false) {
-        LoginScreen()
+        LoginScreen(
+            state = LoginUiState(), // 기본값(비활성)
+            onPhoneChange = {},
+            onPasswordChange = {},
+            onLoginClick = {},
+            onClickFindPw = {},
+            onClickSignup = {},
+            onClickKakao = {},
+            onClickGoogle = {}
+        )
     }
 }
