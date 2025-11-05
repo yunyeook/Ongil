@@ -142,17 +142,8 @@ public class NotificationService {
 
         notificationRepository.saveAll(notifications);
 
-        // FCM 알림 전송 (주석 처리된 부분 수정)
-        // targetUsers.forEach(user -> {
-        //     String token = fcmTokenRedisService.getToken(user.getId());
-        //     if (token != null && !token.isBlank()) {
-        //         fcmService.sendNotification(
-        //             token,
-        //             type.name(),  // 영어 타입명
-        //             type.getDescription()  // 한글 설명
-        //         );
-        //     }
-        // });
+//         FCM 알림 전송 (주석 처리된 부분 수정)
+
 
         log.info("알림 생성 완료 - type: {}, senderId: {}, receiverCount: {}",
             type, senderId, notifications.size());

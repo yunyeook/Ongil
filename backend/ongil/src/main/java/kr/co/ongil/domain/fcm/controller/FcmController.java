@@ -37,15 +37,15 @@ public class FcmController {
         return kr.co.ongil.global.common.response.ApiResponse.success(ResponseMessage.FCM_TOKEN_REGISTED);
     }
 
-    @Operation(summary = "FCM 테스트 전송", description = "특정 사용자에게 테스트 푸시 알림을 전송합니다.")
-    @PostMapping("/test")
-    public kr.co.ongil.global.common.response.ApiResponse<String> sendTestFcm(
-        @Parameter(description = "대상 사용자 ID", required = true, example = "1")
-        @RequestParam Integer userId) {
-        String token = fcmTokenRedisService.getToken(userId); // Redis 또는 DB에서 조회
-        fcmService.sendNotification(token, "FCM 테스트", "서버에서 보낸 테스트 메시지입니다");
-        return kr.co.ongil.global.common.response.ApiResponse.success(ResponseMessage.REQUEST_SUCCESS);
-    }
+//    @Operation(summary = "FCM 테스트 전송", description = "특정 사용자에게 테스트 푸시 알림을 전송합니다.")
+//    @PostMapping("/test")
+//    public kr.co.ongil.global.common.response.ApiResponse<String> sendTestFcm(
+//        @Parameter(description = "대상 사용자 ID", required = true, example = "1")
+//        @RequestParam Integer userId) {
+//        String token = fcmTokenRedisService.getToken(userId); // Redis 또는 DB에서 조회
+//        fcmService.sendNotification(token, "FCM 테스트", "서버에서 보낸 테스트 메시지입니다");
+//        return kr.co.ongil.global.common.response.ApiResponse.success(ResponseMessage.REQUEST_SUCCESS);
+//    }
 
     @Operation(summary = "FCM 토큰 삭제", description = "현재 사용자의 FCM 토큰을 삭제합니다.")
     @DeleteMapping

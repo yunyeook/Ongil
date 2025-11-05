@@ -36,9 +36,7 @@ public class NavigationController {
     public ApiResponse<NavigationSessionResponse> startNavigation(
         @RequestBody  StartNavigationRequest request
     ) {
-        Integer userId = SecurityUtil.getCurrentUserId();
-        String token = fcmTokenRedisService.getToken(userId); // Redis 또는 DB에서 조회
-        fcmService.sendNotification(token, "FCM 테스트", "서버에서 보낸 테스트 메시지입니다");
+
         NavigationSessionResponse response = navigationService.startNavigation(request);
         return ApiResponse.success(ResponseMessage.NAVIGATION_START_SUCCESS, response);
     }
