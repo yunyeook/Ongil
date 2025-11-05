@@ -72,8 +72,12 @@ public enum ErrorCode {
 
     // LOCATION / SAFEZONE / ABNORMAL DETECTION
     SAFEZONE_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 안전구역이 없습니다."),
+    SAFEZONE_SETTING_NOT_FOUND(HttpStatus.NOT_FOUND, "안전범위 설정이 존재하지 않습니다."),
     SAFEZONE_DUPLICATED(HttpStatus.CONFLICT, "이미 등록된 안전구역입니다."),
     OUT_OF_SAFEZONE(HttpStatus.BAD_REQUEST, "안전구역을 벗어났습니다."),
+    INVALID_SAFEZONE_BOUNDARY(HttpStatus.BAD_REQUEST, "잘못된 안전범위 값입니다."),
+    SAFEZONE_BOUNDARY_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "안전범위가 허용 범위를 벗어났습니다."),
+    SAFEZONE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 수정 권한이 없습니다."),
     ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "경로를 찾을 수 없습니다."),
     ROUTE_GUIDE_FAILED(HttpStatus.BAD_GATEWAY, "길찾기 안내 중 오류가 발생했습니다."),
     ABNORMAL_EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 이상탐지 이벤트를 찾을 수 없습니다."),

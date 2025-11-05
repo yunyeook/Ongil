@@ -105,4 +105,11 @@ public interface RelationshipRepository extends JpaRepository<Relationship, Inte
      */
     @Query("SELECT r FROM Relationship r WHERE r.patient = :patient AND r.isDefaultForPatient = true")
     Optional<Relationship> findDefaultByPatient(@Param("patient") User patient);
+
+    /**
+     * 환자 ID와 보호자 ID로 관계 존재 여부 확인 (권한 검증용)
+     */
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Relationship r " +
+            "WHERE r.patient.id = :patientId AND r.guardian.id = :guardianId")
+    boolean existsByPatientIdAndGuardianId(@Param("patientId") Integer patientId, @Param("guardianId") Integer guardianId);
 }

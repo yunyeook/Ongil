@@ -28,7 +28,13 @@ public enum ResponseMessage {
 
     // Patient
     PATIENT_FOUND("환자 조회 성공"),
-    SAFEZONE_UPDATED("안전구역이 수정되었습니다."),
+
+    // SafeZone
+    SAFEZONE_CREATED("안전범위가 성공적으로 설정되었습니다."),
+    SAFEZONE_UPDATED("안전범위가 성공적으로 갱신되었습니다."),
+    SAFEZONE_PARTIALLY_UPDATED("안전범위가 성공적으로 수정되었습니다."),
+    SAFEZONE_RESET("안전범위가 기본값으로 복원되었습니다."),
+    SAFEZONE_FOUND("환자의 안전 범위와 시간이 성공적으로 조회되었습니다."),
 
     // Relationship
     RELATIONSHIP_CREATED("관계가 성공적으로 생성되었습니다."),
