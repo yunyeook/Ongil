@@ -7,6 +7,7 @@ import kr.co.ongil.domain.relationship.dto.request.CreateRelationshipRequest;
 import kr.co.ongil.domain.relationship.dto.request.UpdateRelationshipRequest;
 import kr.co.ongil.domain.relationship.dto.response.RelationshipResponse;
 import kr.co.ongil.domain.relationship.entity.Relationship;
+import kr.co.ongil.domain.relationship.entity.RelationshipType;
 import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
 import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.entity.UserType;
