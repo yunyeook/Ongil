@@ -115,7 +115,7 @@ private fun SearchUserScreenContent(
     Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                .background(Color(0xFFFFFFFF))
         ) {
             when (uiState.mode) {
                 SearchUserMode.SEARCH_INPUT -> {

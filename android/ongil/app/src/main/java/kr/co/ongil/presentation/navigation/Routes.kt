@@ -30,9 +30,11 @@ sealed class Routes(val route: String) {
     object CallHistory : Routes("call_history")
 
     // 즐겨찾기
+    // MOVED: FavoriteRoutes.kt 참조
     object Favorite : Routes("favorite")
 
     // 사용자 등록(검색)
+    // MOVED: SearchUserRoutes.kt 참조
     object SearchUser : Routes("search_user")
 
     // 비밀번호 변경
@@ -47,28 +49,27 @@ sealed class Routes(val route: String) {
     }
 
     // 환자 상세
-    object PatientDetail : Routes("patient_detail/{patientId}/{name}/{phoneNumber}/{gender}") {
+    // MOVED: PatientDetailRoutes.kt 참조
+    object PatientDetail : Routes("patient_detail/{patientId}/{name}/{phoneNumber}") {
         fun createRoute(
             patientId: Long,
             name: String,
-            phoneNumber: String,
-            gender: String
+            phoneNumber: String
         ): String {
             val encodedName = Uri.encode(name)
             val encodedPhone = Uri.encode(phoneNumber)
-            val encodedGender = Uri.encode(gender)
-            return "patient_detail/$patientId/$encodedName/$encodedPhone/$encodedGender"
+            return "patient_detail/$patientId/$encodedName/$encodedPhone"
         }
 
         val arguments = listOf(
             navArgument("patientId") { type = NavType.LongType },
             navArgument("name") { type = NavType.StringType },
-            navArgument("phoneNumber") { type = NavType.StringType },
-            navArgument("gender") { type = NavType.StringType },
+            navArgument("phoneNumber") { type = NavType.StringType }
         )
     }
 
     // 장소 상세
+    // MOVED: PlaceDetailRoutes.kt 참조
     object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}") {
         fun createRoute(patientId: Long, favoriteId: Long): String {
             return "place_detail/$patientId/$favoriteId"

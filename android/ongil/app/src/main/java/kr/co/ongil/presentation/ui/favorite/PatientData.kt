@@ -8,9 +8,7 @@ import kr.co.ongil.data.model.favorite.RelationshipDto
 data class PatientData(
     val id: Long,
     val name: String,
-    val phoneNumber: String,
-    val gender: String,
-    val registeredDate: String
+    val phoneNumber: String
 )
 
 
@@ -18,8 +16,6 @@ fun RelationshipDto.toPatientData(): PatientData {
     return PatientData(
         id = counterpartUserId,
         name = relationshipName,
-        phoneNumber = "",
-        gender = "",
-        registeredDate = createdAt
+        phoneNumber = ""
     )
 }

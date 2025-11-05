@@ -1,17 +1,20 @@
 package kr.co.ongil.presentation.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
+import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 
 /**
@@ -39,38 +42,38 @@ fun MainScreen() {
         Routes.SearchUser.route
     )
 
-    // 현재 라우트가 BottomBar를 표시해야 하는 화면인지 확인
-    // CallDetail은 동적 라우트이므로 별도 체크
-    val showBottomBar = currentRoute in bottomBarRoutes || currentRoute.startsWith("call_detail/")
+    // ✅ baseRoute를 기준으로 BottomBar 표시 여부 결정
+    val showBottomBar = baseRoute in bottomBarRoutes || currentRoute.startsWith("call_detail/")
 
     // TopBar를 표시할 화면 (알림 화면은 자체 TopBar 사용)
     val showTopBar = baseRoute != Routes.Notifications.route
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0.dp),
+        contentWindowInsets = WindowInsets.safeDrawing,
         containerColor = Color.White,
         topBar = {
-            if (showTopBar) {
-                // 홈 화면은 로고 헤더, 나머지는 일반 TopBar
-                if (baseRoute == Routes.Home.route) {
-                    OngilBrandHeaderCard(
-                        onBellClick = {
-                            navController.navigate(Routes.Notifications.route) {
-                                launchSingleTop = true
+            Box(modifier = Modifier.statusBarsPadding()) {
+                if (showTopBar) {
+                    if (baseRoute == Routes.Home.route) {
+                        OngilBrandHeaderCard(
+                            onBellClick = {
+                                navController.navigate(Routes.Notifications.route) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            profileImageUrl = null // TODO: 프로필 이미지 URL 연동
+                        )
+                    } else {
+                        OngilTopBarForRoute(
+                            route = baseRoute,
+                            onBackClick = { navController.popBackStack() },
+                            onBellClick = {
+                                navController.navigate(Routes.Notifications.route) {
+                                    launchSingleTop = true
+                                }
                             }
-                        },
-                        profileImageUrl = null // TODO: 프로필 이미지 URL 연동
-                    )
-                } else {
-                    OngilTopBarForRoute(
-                        route = baseRoute,
-                        onBackClick = { navController.popBackStack() },
-                        onBellClick = {
-                            navController.navigate(Routes.Notifications.route) {
-                                launchSingleTop = true
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         },
@@ -79,20 +82,16 @@ fun MainScreen() {
                 OngilBottomBar(
                     selectedRoute = baseRoute,
                     onClick = { route ->
-                        // favorite 경로는 patientId가 필요하므로 기본값 추가
                         val navigationRoute = if (route == Routes.Favorite.route) {
                             "${Routes.Favorite.route}/1"
                         } else {
                             route
                         }
                         navController.navigate(navigationRoute) {
-                            // 같은 화면을 다시 클릭하면 스택을 정리
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
                             }
-                            // 중복 방지
                             launchSingleTop = true
-                            // 상태 복원
                             restoreState = true
                         }
                     }
@@ -102,7 +101,7 @@ fun MainScreen() {
     ) { paddingValues ->
         AppNavGraph(
             navController = navController,
-            modifier = Modifier.padding(paddingValues),
+            modifier = Modifier.padding(paddingValues).imePadding(),
             startDestination = Routes.MyInfo.route
         )
     }

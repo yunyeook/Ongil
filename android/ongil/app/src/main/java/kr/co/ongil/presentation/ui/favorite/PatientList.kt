@@ -18,7 +18,7 @@ import kr.co.ongil.presentation.ui.favorite.PatientData
 fun PatientList(
     patients: List<PatientData>,
     onCallClick: (Long) -> Unit,
-    onPatientCardClick: (patientId: Long, name: String, phoneNumber: String, gender: String) -> Unit,
+    onPatientCardClick: (patientId: Long, name: String, phoneNumber: String) -> Unit,
     onGoSearchUserClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -47,13 +47,11 @@ fun PatientList(
                 PatientCard(
                     patientName = patient.name,
                     phoneNumber = patient.phoneNumber,
-                    gender = patient.gender,
                     onClickCard = {
                         onPatientCardClick(
                             patient.id,
                             patient.name,
                             patient.phoneNumber,
-                            patient.gender
                         )
                     },
                     onClickCall = {
@@ -77,30 +75,24 @@ fun PatientListPreview() {
         PatientData(
             id = 1L,
             name = "김철수 할아버지",
-            phoneNumber = "010-1234-5678",
-            gender = "남성",
-            registeredDate = "2025-10-18T13:00:00Z"
+            phoneNumber = "010-1234-5678"
         ),
         PatientData(
             id = 2L,
             name = "이영희 할머니",
-            phoneNumber = "010-2222-3333",
-            gender = "여성",
-            registeredDate = "2025-10-18T13:05:00Z"
+            phoneNumber = "010-2222-3333"
         ),
         PatientData(
             id = 3L,
             name = "박민수 어르신",
-            phoneNumber = "010-9999-0000",
-            gender = "남성",
-            registeredDate = "2025-10-18T13:10:00Z"
+            phoneNumber = "010-9999-0000"
         )
     )
 
     PatientList(
         patients = samplePatients,
         onCallClick = {  },
-        onPatientCardClick = { _, _, _, _ ->  },
+        onPatientCardClick = { _, _, _ ->  },
         onGoSearchUserClick = {  }
     )
 }
