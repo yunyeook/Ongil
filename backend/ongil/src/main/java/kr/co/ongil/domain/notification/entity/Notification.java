@@ -19,8 +19,11 @@ import lombok.NoArgsConstructor;
 public class Notification extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "sender_id", nullable = false)
+    private User sender;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_id", nullable = false)
+    private User receiver;
 
     @Column(nullable = false, length = 100)
     private String title;
@@ -29,7 +32,7 @@ public class Notification extends BaseEntity {
     private String content;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "notification_type_enum")
+    @Column(nullable = false)
     private NotificationType type;
 
     @Column(name = "is_read", nullable = false)
@@ -43,9 +46,10 @@ public class Notification extends BaseEntity {
         this.isRead = true;
     }
 
-    public static Notification from(NotificationRequest request, User user) {
+    public static Notification from(NotificationRequest request, User sender, User receiver) {
         return Notification.builder()
-            .user(user)
+            .sender(sender)
+            .receiver(receiver)
             .title(request.title())
             .content(request.content())
             .type(request.type())

@@ -8,6 +8,7 @@ import kr.co.ongil.domain.notification.dto.response.NotificationReadResponse;
 import kr.co.ongil.domain.notification.dto.response.NotificationResponse;
 import kr.co.ongil.domain.notification.entity.Notification;
 import kr.co.ongil.domain.notification.entity.NotificationType;
+import kr.co.ongil.domain.fcm.service.FcmService;
 import kr.co.ongil.domain.notification.repository.NotificationRepository;
 import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
 import kr.co.ongil.domain.user.entity.User;
@@ -32,10 +33,11 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final RelationshipRepository relationshipRepository;
+    private final FcmService fcmService;
 
 
 
-    public NotificationListResponse getNotifications(Integer userId, int page, int size, Boolean read) {
+    public NotificationListResponse getNotifications(Integer receiverId, int page, int size, Boolean read) {
         validatePagingParameters(page, size);
 
         int pageIndex = page - 1;
@@ -43,21 +45,21 @@ public class NotificationService {
 
         Page<Notification> notificationPage;
         if (read == null) {
-            notificationPage = notificationRepository.findByUserId(userId, pageable);
+            notificationPage = notificationRepository.findByReceiverId(receiverId, pageable);
         } else {
-            notificationPage = notificationRepository.findByUserIdAndIsRead(userId, read, pageable);
+            notificationPage = notificationRepository.findByReceiverIdAndIsRead(receiverId, read, pageable);
         }
 
         Page<NotificationResponse> responsePage = notificationPage.map(NotificationResponse::from);
         log.info("알림 목록 조회 완료 - userId: {}, page: {}, size: {}, read: {}, totalElements: {}",
-            userId, page, size, read, responsePage.getTotalElements());
+            receiverId, page, size, read, responsePage.getTotalElements());
 
         return NotificationListResponse.of(responsePage);
     }
 
     @Transactional
-    public NotificationReadResponse markAsRead(Integer userId, Integer notificationId) {
-        Notification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
+    public NotificationReadResponse markAsRead(Integer receiverId, Integer notificationId) {
+        Notification notification = notificationRepository.findByIdAndReceiverId(notificationId, receiverId)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         notification.markAsRead();
@@ -66,15 +68,15 @@ public class NotificationService {
         return NotificationReadResponse.from(notification);
     }
     @Transactional
-    public List<NotificationResponse> markAsReadAll(Integer userId) {
-        List<Notification> notifications = notificationRepository.findByUserId(userId);
+    public List<NotificationResponse> markAsReadAll(Integer receiverId) {
+        List<Notification> notifications = notificationRepository.findByReceiverId(receiverId);
 
         if (notifications.isEmpty()) {
             throw new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
 
         notifications.forEach(Notification::markAsRead);
-        log.info("알림 {}건 읽음 처리 완료 - userId: {}", notifications.size(), userId);
+        log.info("알림 {}건 읽음 처리 완료 - userId: {}", notifications.size(), receiverId);
 
         return notifications.stream()
             .map(NotificationResponse::from)
@@ -82,8 +84,8 @@ public class NotificationService {
     }
 
     @Transactional
-    public Map<String, Integer> deleteNotification(Integer userId, Integer notificationId) {
-        Notification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
+    public Map<String, Integer> deleteNotification(Integer receiverId, Integer notificationId) {
+        Notification notification = notificationRepository.findByIdAndReceiverId(notificationId, receiverId)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         notificationRepository.delete(notification);
@@ -94,15 +96,15 @@ public class NotificationService {
 
 
     @Transactional
-    public Map<String, Integer> deleteAllNotifications(Integer userId) {
-        List<Notification> notifications = notificationRepository.findByUserId(userId);
+    public Map<String, Integer> deleteAllNotifications(Integer receiverId) {
+        List<Notification> notifications = notificationRepository.findByReceiverId(receiverId);
 
         if (notifications.isEmpty()) {
             throw new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
 
         notificationRepository.deleteAll(notifications);
-        log.info("알림 전체 삭제 완료 - userId: {}, 삭제된 알림 수: {}", userId, notifications.size());
+        log.info("알림 전체 삭제 완료 - userId: {}, 삭제된 알림 수: {}", receiverId, notifications.size());
         return Map.of("deleteCount", notifications.size());
 
     }
@@ -113,6 +115,10 @@ public class NotificationService {
         Integer receiverId = request.receiverId();
         NotificationType type = request.type();
 
+        // Sender 조회
+        User sender = userRepository.findById(senderId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         List<User> targetUsers;
 
         if (receiverId != null) {
@@ -121,18 +127,32 @@ public class NotificationService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
             targetUsers = List.of(receiver);
         } else {
-            // 수신자가 없으면, sender 기준 보호자 조회
+            // 수신자가 없으면, 관계등록시 연결된 보호자들
             targetUsers = relationshipRepository.findGuardiansByPatientId(senderId);
             if (targetUsers.isEmpty()) {
                 throw new BusinessException(ErrorCode.NO_GUARDIAN_FOUND);
             }
         }
 
+        //본인도 포함
+        targetUsers.add(sender);
         List<Notification> notifications = targetUsers.stream()
-            .map(user -> Notification.from(request, user))
+            .map(receiver -> Notification.from(request, sender, receiver))
             .toList();
 
         notificationRepository.saveAll(notifications);
+
+        // FCM 알림 전송 (주석 처리된 부분 수정)
+        // targetUsers.forEach(user -> {
+        //     String token = fcmTokenRedisService.getToken(user.getId());
+        //     if (token != null && !token.isBlank()) {
+        //         fcmService.sendNotification(
+        //             token,
+        //             type.name(),  // 영어 타입명
+        //             type.getDescription()  // 한글 설명
+        //         );
+        //     }
+        // });
 
         log.info("알림 생성 완료 - type: {}, senderId: {}, receiverCount: {}",
             type, senderId, notifications.size());
@@ -141,7 +161,6 @@ public class NotificationService {
             .map(NotificationResponse::from)
             .toList();
     }
-
     private void validatePagingParameters(int page, int size) {
         if (page < 1) {
             throw new IllegalArgumentException("페이지 번호는 1 이상이어야 합니다.");
