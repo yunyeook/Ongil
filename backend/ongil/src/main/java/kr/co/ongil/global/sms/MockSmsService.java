@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Primary
 @Service
-@Profile({"local, dev"})
+@Profile({"local, dev, prod"})
 public class MockSmsService implements SmsService {
 
     @Override
