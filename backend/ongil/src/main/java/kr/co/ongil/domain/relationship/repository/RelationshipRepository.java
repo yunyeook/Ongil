@@ -41,6 +41,15 @@ public interface RelationshipRepository extends JpaRepository<Relationship, Inte
     Optional<Relationship> findByIdAndUser(@Param("relationshipId") Integer relationshipId, @Param("user") User user);
 
     /**
+     * 두 사용자 ID로 관계 조회 (guardian-patient 또는 patient-guardian 관계 모두 조회)
+     */
+    @Query("SELECT r FROM Relationship r WHERE " +
+        "(r.guardian.id = :userId1 AND r.patient.id = :userId2) OR " +
+        "(r.guardian.id = :userId2 AND r.patient.id = :userId1)")
+    Optional<Relationship> findByTwoUserIds(@Param("userId1") Integer userId1, @Param("userId2") Integer userId2);
+
+
+    /**
      * 보호자의 가장 큰 정렬 순서 조회 (새 관계 등록 시 사용)
      */
     @Query("SELECT COALESCE(MAX(r.orderSetByGuardian), 0) FROM Relationship r WHERE r.guardian = :guardian")

@@ -360,7 +360,7 @@ public class RelationshipService {
     private void sendRelationshipNotification(User sender, User receiver) {
         try {
             NotificationRequest notificationRequest = NotificationRequest.of(
-                    "관계 등록",
+                    NotificationType.RELATIONSHIP_REGIST.getDescription(),
                     sender.getName() + "님과 관계가 등록되었습니다.",
                     NotificationType.RELATIONSHIP_REGIST,
                     sender.getId(),

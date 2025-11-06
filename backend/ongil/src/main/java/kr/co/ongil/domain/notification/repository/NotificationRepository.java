@@ -10,10 +10,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Integer> {
-    Optional<Notification> findByIdAndUserId(Integer id, Integer userId);
+    Optional<Notification> findByIdAndReceiverId(Integer id, Integer receiverId);
 
-    Page<Notification> findByUserId(Integer userId, Pageable pageable);
-    List<Notification> findByUserId(Integer userId);
+    Page<Notification> findByReceiverId(Integer userId, Pageable pageable);
+    List<Notification> findByReceiverId(Integer userId);
 
-    Page<Notification> findByUserIdAndIsRead(Integer userId, Boolean isRead, Pageable pageable);
+    Page<Notification> findByReceiverIdAndIsRead(Integer userId, Boolean isRead, Pageable pageable);
 }
