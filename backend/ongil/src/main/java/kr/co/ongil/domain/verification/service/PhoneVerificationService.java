@@ -83,8 +83,16 @@ public class PhoneVerificationService {
         // 8. 인증 시도 횟수 초기화
         resetVerifyAttempts(phoneNumber);
 
-        // 9. SMS 발송
-        smsService.sendVerificationCode(phoneNumber, code);
+        // 9. SMS 발송 (콘솔 출력으로 대체)
+        // TODO: 실제 SMS 서비스 연동 필요
+        log.info("====================================");
+        log.info("📱 [SMS 발송 시뮬레이션]");
+        log.info("전화번호: {}", phoneNumber);
+        log.info("인증번호: {}", code);
+        log.info("유효시간: 3분");
+        log.info("====================================");
+        // // 9. SMS 발송
+        // smsService.sendVerificationCode(phoneNumber, code);
 
         log.info("인증번호 발송 완료: phoneNumber={}", phoneNumber);
     }
