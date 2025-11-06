@@ -50,6 +50,16 @@ interface TokenManager {
      * AccessToken과 RefreshToken을 동시에 저장
      */
     suspend fun saveTokens(accessToken: String, refreshToken: String)
+
+    /**
+     * FCM 토큰 저장
+     */
+    suspend fun saveFcmToken(token: String)
+
+    /**
+     * FCM 토큰 불러오기
+     */
+    fun getFcmToken(): Flow<String?>
 }
 
 /**
@@ -65,6 +75,7 @@ class TokenManagerImpl @Inject constructor(
     companion object {
         private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
         private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
+        private val FCM_TOKEN_KEY = stringPreferencesKey("fcm_token")
     }
 
     override suspend fun saveAccessToken(token: String) {
@@ -102,6 +113,18 @@ class TokenManagerImpl @Inject constructor(
         dataStore.edit { preferences ->
             preferences[ACCESS_TOKEN_KEY] = accessToken
             preferences[REFRESH_TOKEN_KEY] = refreshToken
+        }
+    }
+
+    override suspend fun saveFcmToken(token: String) {
+        dataStore.edit { preferences ->
+            preferences[FCM_TOKEN_KEY] = token
+        }
+    }
+
+    override fun getFcmToken(): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[FCM_TOKEN_KEY]
         }
     }
 }
