@@ -351,7 +351,7 @@
 
         const data = await response.json();
         accessToken = data.data.accessToken;
-        userId = data.data.userId;
+        userId = data.data.user.id;
 
         log(`✅ 로그인 성공! User ID: ${userId}`, 'success');
         updateAuthStatus('connected', `로그인됨 (User ID: ${userId})`);
@@ -433,7 +433,7 @@
           document.getElementById('wsDisconnectBtn').disabled = false;
 
           // 모든 통화 메시지 구독
-          stompClient.subscribe(`/user/queue/calls/*`, (message) => {
+          stompClient.subscribe(`/user/queue/calls`, (message) => {
             const signal = JSON.parse(message.body);
             handleSignalMessage(signal);
           });
@@ -490,7 +490,7 @@
         const data = await response.json();
         const call = data.data;
 
-        currentCallId = call.callId;
+        currentCallId = call.id;
         currentSessionId = call.sessionId;
 
         log(`✅ 통화 요청 성공! Call ID: ${currentCallId}`, 'success');

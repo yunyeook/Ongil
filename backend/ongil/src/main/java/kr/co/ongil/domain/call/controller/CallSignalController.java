@@ -59,7 +59,7 @@ public class CallSignalController {
 
         // 3. 대상 사용자에게 메시지 전달
         Integer toUserId = message.toUserId();
-        String destination = "/queue/calls/" + callId;
+        String destination = "/queue/calls";  // 통합 destination 사용
 
         messagingTemplate.convertAndSendToUser(
             toUserId.toString(),
@@ -80,7 +80,7 @@ public class CallSignalController {
 
         messagingTemplate.convertAndSendToUser(
             toUserId.toString(),
-            "/queue/calls/" + callId,
+            "/queue/calls",  // 통합 destination 사용
             message
         );
 
@@ -98,7 +98,7 @@ public class CallSignalController {
 
         messagingTemplate.convertAndSendToUser(
             toUserId.toString(),
-            "/queue/calls/" + callId,
+            "/queue/calls",  // 통합 destination 사용
             message
         );
 
