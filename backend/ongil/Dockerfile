@@ -1,0 +1,42 @@
+FROM gradle:8.14.3-jdk21 AS build
+
+WORKDIR /app
+
+# 그래들 파일 복사
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
+# RUN apt-get update && apt-get install -y dos2unix && dos2unix gradlew
+RUN chmod +x ./gradlew
+RUN ./gradlew dependencies --no-daemon
+
+COPY src src
+
+# 권한 설정 및 빌드
+
+
+RUN ./gradlew bootJar --no-daemon
+
+
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# 빌드 단계에서 생성된 jar 파일 복사
+COPY --from=build /app/build/libs/*.jar app.jar
+COPY --from=build /app/build ./build
+
+# 메모리 및 GC 최적화
+ENV JAVA_OPTS="-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+
+# 애플리케이션 프로파일은 환경 변수로 지정
+ENV SPRING_PROFILES_ACTIVE=default
+
+ENV SERVER_PORT=8080
+
+EXPOSE ${SERVER_PORT}
+
+# 시작 명령어
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.profiles.active=$SPRING_PROFILES_ACTIVE --server.port=$SERVER_PORT"]
+
