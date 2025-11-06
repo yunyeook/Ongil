@@ -21,7 +21,7 @@ public record NotificationResponse(
     @Schema(description = "내용", example = "도움 요청이 접수되었습니다.")
     String content,
 
-    @Schema(description = "알림 유형", implementation = NotificationType.class, example = "SOST")
+    @Schema(description = "알림 유형", implementation = NotificationType.class, example = "SOS_REQUEST")
     NotificationType type,
 
     @Schema(description = "읽음 여부", example = "false")

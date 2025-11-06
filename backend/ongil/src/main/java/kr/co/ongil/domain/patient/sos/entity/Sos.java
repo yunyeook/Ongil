@@ -6,7 +6,7 @@ import kr.co.ongil.global.common.entity.BaseEntity;
 import lombok.*;
 
 @Entity
-@Table(name = "sos_log")
+@Table(name = "sos_logs")
 @Getter
 @Builder
 @AllArgsConstructor
