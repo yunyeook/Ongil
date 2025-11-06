@@ -99,6 +99,9 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     kapt(libs.androidx.hilt.compiler)
 
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+
 //    // Firebase BOM (버전 통합)
 //    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
 //

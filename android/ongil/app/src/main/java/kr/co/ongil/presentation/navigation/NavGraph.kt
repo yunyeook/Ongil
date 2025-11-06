@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,6 +29,7 @@ import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
 import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
 import kr.co.ongil.presentation.ui.notification.NotificationScreen
+import kr.co.ongil.presentation.viewmodel.MyInfoSideEffect
 import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
 import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
 import kr.co.ongil.presentation.ui.searchuser.SearchUserScreen
@@ -39,6 +41,7 @@ import kr.co.ongil.presentation.ui.favorite.favoriteGraph
 //import kr.co.ongil.presentation.ui.patientdetail.patientGraph
 import kr.co.ongil.presentation.ui.placedetail.placeDetailGraph
 import kr.co.ongil.presentation.ui.auth.loginGraph
+import kotlinx.coroutines.flow.collectLatest
 /**
  * 앱 Navigation Graph
  */
@@ -93,6 +96,22 @@ fun AppNavGraph(
         composable(Routes.MyInfo.route) {
             val viewModel: kr.co.ongil.presentation.viewmodel.MyInfoViewModel = viewModel()
             val uiState by viewModel.uiState.collectAsState()
+
+            // SideEffect 처리 (로그아웃 시 로그인 화면으로 이동)
+            LaunchedEffect(Unit) {
+                viewModel.sideEffect.collectLatest { effect ->
+                    when (effect) {
+                        is MyInfoSideEffect.NavigateToLogin -> {
+                            // 모든 백스택 제거하고 로그인 화면으로 이동
+                            navController.navigate(Routes.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                }
+            }
+
             MyInfoScreen(
                 uiState = uiState,
                 onEditInfo = { navController.navigate(Routes.EditInfo.route) },
