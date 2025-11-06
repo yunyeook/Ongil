@@ -55,7 +55,7 @@ class AuthInterceptor @Inject constructor(
         private val NO_AUTH_ENDPOINTS = setOf(
             "/api/v1/auth/login",
             "/api/v1/auth/refresh",
-            "/api/v1/auth/signup"
+            "/api/v1/auth/register"
         )
     }
 

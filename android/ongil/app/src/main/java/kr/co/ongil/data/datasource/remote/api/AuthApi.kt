@@ -4,6 +4,13 @@ import kr.co.ongil.data.model.auth.*
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
+// 회원가입
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.Multipart
+import retrofit2.http.Part
+// 여기까지 회원가입
+
 
 /**
  * 인증 관련 API
@@ -58,4 +65,18 @@ interface AuthApi {
     suspend fun refreshToken(
         @Body request: RefreshTokenRequest
     ): RefreshTokenResponse
+
+   // 회원가입
+    @Multipart
+    @POST("/api/v1/auth/register")
+    suspend fun registerUser(
+        @Part("provider") provider: RequestBody,
+        @Part("name") name: RequestBody,
+        @Part("birth") birth: RequestBody?,
+        @Part("phoneNumber") phoneNumber: RequestBody,
+        @Part("verificationToken") verificationToken: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part("userType") userType: RequestBody,
+        @Part profileImage: MultipartBody.Part? = null
+    ): RegisterResponse
 }

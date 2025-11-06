@@ -20,36 +20,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import kr.co.ongil.presentation.ui.myinfo.MyInfoEditScreen
 import kr.co.ongil.presentation.ui.myinfo.MyInfoScreen
-import kr.co.ongil.presentation.ui.signup.SignupScreen
-import kr.co.ongil.presentation.ui.signup.SignupViewModel
-import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.myinfo.RecentCallsScreen
 import kr.co.ongil.presentation.ui.myinfo.CallDetailScreen
 import kr.co.ongil.presentation.ui.notification.NotificationScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoSideEffect
-import kr.co.ongil.presentation.viewmodel.MyInfoViewModel
-import kr.co.ongil.presentation.ui.favorite.FavoriteScreen
-import kr.co.ongil.presentation.ui.searchuser.SearchUserScreen
-import kr.co.ongil.presentation.ui.patientdetail.PatientDetailViewModel
-import kr.co.ongil.presentation.ui.patientdetail.PatientDetailScreen
 import kr.co.ongil.presentation.ui.home.HomeScreen
-import kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel
 import kr.co.ongil.presentation.ui.favorite.favoriteGraph
 //import kr.co.ongil.presentation.ui.patientdetail.patientGraph
 import kr.co.ongil.presentation.ui.placedetail.placeDetailGraph
 import kr.co.ongil.presentation.ui.auth.loginGraph
 import kotlinx.coroutines.flow.collectLatest
-/**
- * 앱 Navigation Graph
- */
+import kr.co.ongil.presentation.ui.auth.register.registerGraph
+import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
+
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
@@ -65,7 +54,7 @@ fun AppNavGraph(
         composable(Routes.Home.route) {
             HomeScreen(
                 onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) },
-                onGoSignupClick = { navController.navigate(Routes.Signup.route) }
+                onGoSignupClick = { navController.navigate(Routes.Register.route) }
             )
         }
         // 위치 - 아마도 지도
@@ -83,6 +72,7 @@ fun AppNavGraph(
         }
 
         loginGraph(navController)
+        registerGraph(navController)
 
         // 즐겨찾기
         favoriteGraph(navController)
@@ -90,6 +80,10 @@ fun AppNavGraph(
 //        patientGraph(navController)
         // 장소
         placeDetailGraph(navController)
+
+        // 회원가입
+        registerGraph(navController)
+
 
         // 알림
         composable(Routes.Notifications.route) {
@@ -185,33 +179,6 @@ fun AppNavGraph(
         }
 
 
-        // 회원가입
-        composable(Routes.Signup.route) {
-            val viewModel: SignupViewModel = viewModel()
-            val uiState by viewModel.uiState.collectAsState()
-            SignupScreen(
-                uiState = uiState,
-                onBackClick = { navController.popBackStack() },
-                onProfileImageClick = viewModel::onProfileImageClick,
-                onNameChange = viewModel::onNameChange,
-                onBirthClick = viewModel::onBirthClick,
-                onSetBirth = viewModel::onSetBirth,
-                onDismissDatePicker = viewModel::onDismissDatePicker,
-                onPhoneChange = viewModel::onPhoneChange,
-                onRequestVerificationCode = viewModel::onRequestVerificationCode,
-                onVerificationCodeChange = viewModel::onVerificationCodeChange,
-                onVerifyCodeClick = viewModel::onVerifyCodeClick,
-                onPasswordChange = viewModel::onPasswordChange,
-                onTogglePasswordVisible = viewModel::onTogglePasswordVisible,
-                onPasswordConfirmChange = viewModel::onPasswordConfirmChange,
-                onTogglePasswordConfirmVisible = viewModel::onTogglePasswordConfirmVisible,
-                onSelectGuardian = viewModel::onSelectGuardian,
-                onSelectPatient = viewModel::onSelectPatient,
-                onSubmitSignup = viewModel::onSubmitSignup,
-                onDismissSuccessModal = viewModel::onDismissSuccessModal,
-                onDismissErrorModal = viewModel::onDismissErrorModal,
-            )
-        }
 
 
     }

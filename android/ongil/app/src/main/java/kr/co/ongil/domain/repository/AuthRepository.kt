@@ -19,4 +19,17 @@ interface AuthRepository {
      * 로그아웃
      */
     suspend fun logout(): Result<String>
+
+    /**
+     * 회원가입
+     */
+    suspend fun registerUser(
+        name: String,
+        birth: String?,
+        phoneNumber: String,
+        verificationToken: String,
+        password: String,
+        userType: String,
+        profileImagePath: String?
+    ): Result<Unit>
 }

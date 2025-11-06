@@ -11,6 +11,14 @@ import kr.co.ongil.data.model.user.UserDto
 import kr.co.ongil.data.util.ErrorHandler
 import kr.co.ongil.domain.repository.AuthRepository
 import javax.inject.Inject
+// 회원가입 관련
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+// 여기까지
 
 /**
  * 인증 Repository 구현체
@@ -76,4 +84,65 @@ class AuthRepositoryImpl @Inject constructor(
             Result.success("로그아웃되었습니다. (서버와 동기화 실패)")
         }
     }
+
+    // 회원가입
+    override suspend fun registerUser(
+        name: String,
+        birth: String?,
+        phoneNumber: String,
+        verificationToken: String,
+        password: String,
+        userType: String,
+        profileImagePath: String?
+    ): Result<Unit> {
+        return try {
+            // client-side normalization
+            val digitsPhone = phoneNumber.filter { it.isDigit() }
+
+            val providerBody = "LOCAL".toPlain()
+            val nameBody = name.toPlain()
+            val birthBody = birth?.toPlain()
+            val phoneBody = digitsPhone.toPlain()
+            val tokenBody = verificationToken.toPlain()
+            val passwordBody = password.toPlain()
+            val userTypeBody = userType.toPlain()
+
+            val imagePart = profileImagePath
+                ?.takeIf { it.isNotBlank() }
+                ?.let { path ->
+                    val file = File(path)
+                    file.toImagePart(field = "profileImage")
+                }
+
+            val response = authApi.registerUser(
+                provider = providerBody,
+                name = nameBody,
+                birth = birthBody,
+                phoneNumber = phoneBody,
+                verificationToken = tokenBody,
+                password = passwordBody,
+                userType = userTypeBody,
+                profileImage = imagePart
+            )
+
+            android.util.Log.d("AuthRepositoryImpl", "registerUser response: message=${response.message}")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepositoryImpl", "registerUser error", e)
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
+        }
+    }
+
+
+    // 멀티파트 헬퍼
+    private fun String.toPlain(): RequestBody =
+        this.toRequestBody("text/plain".toMediaType())
+
+    private fun File.toImagePart(field: String = "profileImage"): MultipartBody.Part =
+        MultipartBody.Part.createFormData(
+            field,
+            this.name,
+            this.asRequestBody("image/*".toMediaType())
+        )
 }

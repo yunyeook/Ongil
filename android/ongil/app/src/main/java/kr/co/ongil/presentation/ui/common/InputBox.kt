@@ -75,7 +75,8 @@ fun InputBox(
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
-                onDone = { focusManager.clearFocus() }
+                onDone = { focusManager.clearFocus() },
+                onNext = { focusManager.clearFocus() }
             ),
             singleLine = true
         )

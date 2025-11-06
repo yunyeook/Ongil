@@ -48,7 +48,7 @@ fun MainScreen(
     // ✅ 인증 관련 라우트(앱 크롬 숨김 대상)
     val authRoutes = setOf(
         Routes.Login.route,
-        Routes.Signup.route,
+        Routes.Register.route,
         Routes.ChangePassword.route
     )
 
@@ -69,7 +69,7 @@ fun MainScreen(
     val showTopBar = baseRoute !in authRoutes && baseRoute != Routes.Notifications.route
 
     Scaffold(
-        contentWindowInsets = WindowInsets.safeDrawing,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = Color.White,
         topBar = {
             Box(modifier = Modifier.statusBarsPadding()) {
