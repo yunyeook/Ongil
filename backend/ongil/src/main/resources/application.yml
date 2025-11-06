@@ -124,11 +124,10 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-webrtc:
-  ice-servers:
-    stun:
-      url: stun:43.202.55.40:3478
-    turn:
-      url: turn:43.202.55.40:3478
-      username: ${TURN_USERNAME}
-      credential: ${TURN_CREDENTIAL}
+# TURN/STUN Server Configuration
+turn:
+  server:
+    host: ${TURN_SERVER_HOST:43.202.55.40}
+    port: ${TURN_SERVER_PORT:3478}
+  shared-secret: ${TURN_SHARED_SECRET:your-turn-secret-key-here}
+  ttl: ${TURN_TTL:3600}  # 1시간

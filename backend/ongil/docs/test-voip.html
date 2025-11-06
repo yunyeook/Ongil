@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ongil VoIP 통화 테스트</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .card h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background: #764ba2;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status.calling {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    #logs {
+      background: #1e1e1e;
+      color: #00ff00;
+      padding: 15px;
+      border-radius: 8px;
+      height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+    }
+
+    .log-entry.info {
+      color: #00ff00;
+    }
+
+    .log-entry.warn {
+      color: #ffaa00;
+    }
+
+    .log-entry.error {
+      color: #ff4444;
+    }
+
+    .log-entry.success {
+      color: #00ffff;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .video-container {
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-label {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📞 Ongil VoIP 통화 테스트</h1>
+
+    <!-- 설정 -->
+    <div class="card">
+      <h2>⚙️ 설정</h2>
+      <div class="form-group">
+        <label>서버 URL:</label>
+        <input type="text" id="serverUrl" value="http://localhost:8080">
+      </div>
+      <div class="form-group">
+        <label>전화번호:</label>
+        <input type="text" id="phoneNumber" placeholder="01012345678">
+      </div>
+      <div class="form-group">
+        <label>비밀번호:</label>
+        <input type="password" id="password" placeholder="password">
+      </div>
+      <button onclick="login()">🔑 로그인</button>
+      <div id="authStatus" class="status disconnected" style="margin-top: 15px;">
+        미로그인
+      </div>
+    </div>
+
+    <!-- 통화 제어 -->
+    <div class="card">
+      <h2>📞 통화 제어</h2>
+      <div class="form-group">
+        <label>수신자 ID:</label>
+        <input type="number" id="receiverId" placeholder="2">
+      </div>
+      <div class="form-group">
+        <label>통화 유형:</label>
+        <select id="callType" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+          <option value="NORMAL">일반 통화</option>
+          <option value="EMERGENCY">긴급 통화</option>
+        </select>
+      </div>
+      <button onclick="createCall()" id="callBtn" disabled>📞 통화 요청</button>
+      <button onclick="acceptCall()" id="acceptBtn" disabled>✅ 수락</button>
+      <button onclick="rejectCall()" id="rejectBtn" disabled>❌거절</button>
+      <button onclick="hangup()" id="hangupBtn" disabled>📴 종료</button>
+
+      <div id="callStatus" class="status disconnected" style="margin-top: 15px;">
+        통화 대기 중
+      </div>
+    </div>
+
+    <!-- WebSocket 연결 -->
+    <div class="card">
+      <h2>🔌 WebSocket 연결</h2>
+      <button onclick="connectWebSocket()" id="wsConnectBtn" disabled>연결</button>
+      <button onclick="disconnectWebSocket()" id="wsDisconnectBtn" disabled>연결 해제</button>
+      <div id="wsStatus" class="status disconnected" style="margin-top: 15px;">
+        WebSocket 연결 끊김
+      </div>
+    </div>
+
+    <!-- 비디오 -->
+    <div class="card">
+      <h2>📹 비디오</h2>
+      <div class="grid">
+        <div class="video-container">
+          <video id="localVideo" autoplay muted playsinline></video>
+          <div class="video-label">로컬 비디오</div>
+        </div>
+        <div class="video-container">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <div class="video-label">원격 비디오</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 로그 -->
+    <div class="card">
+      <h2>📋 로그</h2>
+      <div id="logs"></div>
+      <button onclick="clearLogs()" style="margin-top: 10px;">🗑️ 로그 지우기</button>
+    </div>
+  </div>
+
+  <script>
+    // 전역 변수
+    let stompClient = null;
+    let accessToken = null;
+    let userId = null;
+    let currentCallId = null;
+    let currentSessionId = null;
+    let peerConnection = null;
+    let localStream = null;
+    let iceServers = null;
+
+    // 로그 함수
+    function log(message, type = 'info') {
+      const logsDiv = document.getElementById('logs');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logsDiv.appendChild(entry);
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function clearLogs() {
+      document.getElementById('logs').innerHTML = '';
+    }
+
+    // 상태 업데이트
+    function updateAuthStatus(status, message) {
+      const statusDiv = document.getElementById('authStatus');
+      statusDiv.className = `status ${status}`;
+      statusDiv.textContent = message;
+    }
+
+    function updateCallStatus(status, message) {
+      const statusDiv = document.getElementById('callStatus');
+      statusDiv.className = `status ${status}`;
+      statusDiv.textContent = message;
+    }
+
+    function updateWsStatus(status, message) {
+      const statusDiv = document.getElementById('wsStatus');
+      statusDiv.className = `status ${status}`;
+      statusDiv.textContent = message;
+    }
+
+    // 로그인
+    async function login() {
+      const serverUrl = document.getElementById('serverUrl').value;
+      const phoneNumber = document.getElementById('phoneNumber').value;
+      const password = document.getElementById('password').value;
+
+      if (!phoneNumber || !password) {
+        log('전화번호와 비밀번호를 입력하세요', 'error');
+        return;
+      }
+
+      try {
+        log('로그인 시도 중...', 'info');
+
+        const response = await fetch(`${serverUrl}/api/v1/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber, password })
+        });
+
+        if (!response.ok) {
+          throw new Error(`로그인 실패: ${response.status}`);
+        }
+
+        const data = await response.json();
+        accessToken = data.data.accessToken;
+        userId = data.data.userId;
+
+        log(`✅ 로그인 성공! User ID: ${userId}`, 'success');
+        updateAuthStatus('connected', `로그인됨 (User ID: ${userId})`);
+
+        // TURN 자격증명 가져오기
+        await fetchTurnCredentials();
+
+        // 버튼 활성화
+        document.getElementById('wsConnectBtn').disabled = false;
+        document.getElementById('callBtn').disabled = false;
+
+      } catch (error) {
+        log(`❌ 로그인 실패: ${error.message}`, 'error');
+        updateAuthStatus('disconnected', '로그인 실패');
+      }
+    }
+
+    // TURN 자격증명 가져오기
+    async function fetchTurnCredentials() {
+      const serverUrl = document.getElementById('serverUrl').value;
+
+      try {
+        log('TURN 자격증명 요청 중...', 'info');
+
+        const response = await fetch(`${serverUrl}/api/v1/calls/rtc/turn-credentials`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (!response.ok) {
+          throw new Error(`TURN 자격증명 실패: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const turnData = data.data;
+
+        iceServers = [
+          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: turnData.uris,
+            username: turnData.username,
+            credential: turnData.credential
+          }
+        ];
+
+        log(`✅ TURN 자격증명 획득 성공`, 'success');
+        log(`   Username: ${turnData.username}`, 'info');
+        log(`   URIs: ${turnData.uris.join(', ')}`, 'info');
+
+      } catch (error) {
+        log(`⚠️ TURN 자격증명 실패: ${error.message}`, 'warn');
+        // 기본 STUN만 사용
+        iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+      }
+    }
+
+    // WebSocket 연결
+    function connectWebSocket() {
+      if (stompClient && stompClient.connected) {
+        log('⚠️ 이미 WebSocket이 연결되어 있습니다', 'warn');
+        return;
+      }
+
+      const serverUrl = document.getElementById('serverUrl').value;
+      const wsUrl = `${serverUrl}/api/ws`;
+
+      log(`WebSocket 연결 시도: ${wsUrl}`, 'info');
+
+      const socket = new SockJS(wsUrl);
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect(
+        { Authorization: `Bearer ${accessToken}` },
+        (frame) => {
+          log('✅ WebSocket 연결 성공', 'success');
+          updateWsStatus('connected', 'WebSocket 연결됨');
+
+          // 버튼 상태 변경
+          document.getElementById('wsConnectBtn').disabled = true;
+          document.getElementById('wsDisconnectBtn').disabled = false;
+
+          // 모든 통화 메시지 구독
+          stompClient.subscribe(`/user/queue/calls/*`, (message) => {
+            const signal = JSON.parse(message.body);
+            handleSignalMessage(signal);
+          });
+
+          log('📡 시그널 메시지 구독 시작', 'info');
+        },
+        (error) => {
+          log(`❌ WebSocket 연결 실패: ${error}`, 'error');
+          updateWsStatus('disconnected', 'WebSocket 연결 실패');
+        }
+      );
+    }
+
+    // WebSocket 연결 해제
+    function disconnectWebSocket() {
+      if (stompClient) {
+        stompClient.disconnect();
+        stompClient = null;
+        log('🔌 WebSocket 연결 해제', 'info');
+        updateWsStatus('disconnected', 'WebSocket 연결 끊김');
+
+        document.getElementById('wsConnectBtn').disabled = false;
+        document.getElementById('wsDisconnectBtn').disabled = true;
+      }
+    }
+
+    // 통화 요청 생성
+    async function createCall() {
+      const serverUrl = document.getElementById('serverUrl').value;
+      const receiverId = document.getElementById('receiverId').value;
+      const callType = document.getElementById('callType').value;
+
+      if (!receiverId) {
+        log('수신자 ID를 입력하세요', 'error');
+        return;
+      }
+
+      try {
+        log(`📞 통화 요청 생성 중... (수신자: ${receiverId})`, 'info');
+
+        const response = await fetch(`${serverUrl}/api/v1/calls`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({ receiverId: parseInt(receiverId), callType })
+        });
+
+        if (!response.ok) {
+          throw new Error(`통화 요청 실패: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const call = data.data;
+
+        currentCallId = call.callId;
+        currentSessionId = call.sessionId;
+
+        log(`✅ 통화 요청 성공! Call ID: ${currentCallId}`, 'success');
+        updateCallStatus('calling', `통화 요청 중... (Call ID: ${currentCallId})`);
+
+        // WebRTC 초기화
+        await initializePeerConnection();
+
+        // 버튼 상태
+        document.getElementById('callBtn').disabled = true;
+        document.getElementById('hangupBtn').disabled = false;
+
+      } catch (error) {
+        log(`❌ 통화 요청 실패: ${error.message}`, 'error');
+      }
+    }
+
+    // PeerConnection 초기화
+    async function initializePeerConnection() {
+      try {
+        log('🎥 로컬 미디어 스트림 가져오는 중...', 'info');
+
+        // 로컬 스트림 가져오기
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+
+        document.getElementById('localVideo').srcObject = localStream;
+        log('✅ 로컬 미디어 스트림 획득', 'success');
+
+        // PeerConnection 생성
+        peerConnection = new RTCPeerConnection({ iceServers });
+
+        // 로컬 스트림 추가
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
+
+        // ICE candidate 이벤트
+        peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            log(`🧊 ICE Candidate 생성: ${event.candidate.type}`, 'info');
+            sendSignal({
+              type: 'ICE',
+              candidate: JSON.stringify(event.candidate),
+              callId: currentCallId,
+              fromUserId: userId,
+              toUserId: parseInt(document.getElementById('receiverId').value)
+            });
+          }
+        };
+
+        // 원격 스트림 수신
+        peerConnection.ontrack = (event) => {
+          log('📹 원격 미디어 스트림 수신', 'success');
+          document.getElementById('remoteVideo').srcObject = event.streams[0];
+        };
+
+        // Offer 생성
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        log('📤 OFFER SDP 생성 및 전송', 'info');
+
+        sendSignal({
+          type: 'OFFER',
+          sdp: offer.sdp,
+          callId: currentCallId,
+          fromUserId: userId,
+          toUserId: parseInt(document.getElementById('receiverId').value)
+        });
+
+      } catch (error) {
+        log(`❌ PeerConnection 초기화 실패: ${error.message}`, 'error');
+      }
+    }
+
+    // 시그널 메시지 전송
+    function sendSignal(signal) {
+      if (!stompClient || !stompClient.connected) {
+        log('❌ WebSocket이 연결되지 않음', 'error');
+        return;
+      }
+
+      stompClient.send(`/app/calls/${signal.callId}/signal`, {}, JSON.stringify(signal));
+      log(`📤 시그널 전송: ${signal.type}`, 'info');
+    }
+
+    // 시그널 메시지 처리
+    async function handleSignalMessage(signal) {
+      log(`📥 시그널 수신: ${signal.type}`, 'info');
+
+      switch (signal.type) {
+        case 'INCOMING':
+          log(`📞 수신 통화: Call ID ${signal.callId}`, 'success');
+          updateCallStatus('calling', `수신 통화 (Call ID: ${signal.callId})`);
+          currentCallId = signal.callId;
+
+          document.getElementById('acceptBtn').disabled = false;
+          document.getElementById('rejectBtn').disabled = false;
+          break;
+
+        case 'OFFER':
+          log('📥 OFFER 수신, ANSWER 생성 중...', 'info');
+          await handleOffer(signal);
+          break;
+
+        case 'ANSWER':
+          log('📥 ANSWER 수신, 연결 설정 중...', 'info');
+          await handleAnswer(signal);
+          break;
+
+        case 'ICE':
+          log('🧊 ICE Candidate 수신', 'info');
+          await handleIceCandidate(signal);
+          break;
+
+        case 'HANGUP':
+          log('📴 상대방이 통화를 종료했습니다', 'warn');
+          hangup();
+          break;
+      }
+    }
+
+    // OFFER 처리
+    async function handleOffer(signal) {
+      if (!peerConnection) {
+        await initializePeerConnection();
+      }
+
+      await peerConnection.setRemoteDescription(new RTCSessionDescription({
+        type: 'offer',
+        sdp: signal.sdp
+      }));
+
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      sendSignal({
+        type: 'ANSWER',
+        sdp: answer.sdp,
+        callId: signal.callId,
+        fromUserId: userId,
+        toUserId: signal.fromUserId
+      });
+
+      log('📤 ANSWER 전송 완료', 'success');
+    }
+
+    // ANSWER 처리
+    async function handleAnswer(signal) {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription({
+        type: 'answer',
+        sdp: signal.sdp
+      }));
+
+      log('✅ 통화 연결 완료', 'success');
+      updateCallStatus('connected', '통화 중');
+    }
+
+    // ICE Candidate 처리
+    async function handleIceCandidate(signal) {
+      if (peerConnection) {
+        const candidate = JSON.parse(signal.candidate);
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    }
+
+    // 통화 수락
+    function acceptCall() {
+      log('✅ 통화 수락', 'success');
+      updateCallStatus('connected', '통화 중');
+
+      document.getElementById('acceptBtn').disabled = true;
+      document.getElementById('rejectBtn').disabled = true;
+      document.getElementById('hangupBtn').disabled = false;
+
+      sendSignal({
+        type: 'ACCEPT',
+        callId: currentCallId,
+        fromUserId: userId,
+        toUserId: parseInt(document.getElementById('receiverId').value)
+      });
+    }
+
+    // 통화 거절
+    function rejectCall() {
+      log('❌ 통화 거절', 'warn');
+      updateCallStatus('disconnected', '통화 거절됨');
+
+      document.getElementById('acceptBtn').disabled = true;
+      document.getElementById('rejectBtn').disabled = true;
+
+      sendSignal({
+        type: 'REJECT',
+        callId: currentCallId,
+        fromUserId: userId,
+        toUserId: parseInt(document.getElementById('receiverId').value)
+      });
+
+      currentCallId = null;
+      currentSessionId = null;
+    }
+
+    // 통화 종료
+    function hangup() {
+      log('📴 통화 종료', 'info');
+      updateCallStatus('disconnected', '통화 종료됨');
+
+      if (stompClient && currentCallId) {
+        sendSignal({
+          type: 'HANGUP',
+          callId: currentCallId,
+          fromUserId: userId,
+          toUserId: parseInt(document.getElementById('receiverId').value)
+        });
+      }
+
+      // PeerConnection 정리
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+
+      // 로컬 스트림 정지
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      // 비디오 초기화
+      document.getElementById('localVideo').srcObject = null;
+      document.getElementById('remoteVideo').srcObject = null;
+
+      // 버튼 상태
+      document.getElementById('callBtn').disabled = false;
+      document.getElementById('acceptBtn').disabled = true;
+      document.getElementById('rejectBtn').disabled = true;
+      document.getElementById('hangupBtn').disabled = true;
+
+      currentCallId = null;
+      currentSessionId = null;
+    }
+
+    // 페이지 로드 시
+    window.addEventListener('load', () => {
+      log('🚀 VoIP 테스트 페이지 준비 완료', 'success');
+      log('1. 로그인 → 2. WebSocket 연결 → 3. 통화 요청 순서로 진행하세요', 'info');
+    });
+  </script>
+</body>
+</html>
