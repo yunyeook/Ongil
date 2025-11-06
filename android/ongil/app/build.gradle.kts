@@ -102,11 +102,11 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
-//    // Firebase BOM (버전 통합)
-//    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
-//
-//    // FCM Messaging
-//    implementation("com.google.firebase:firebase-messaging")
+    // Firebase BOM (버전 통합)
+    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+
+    // FCM Messaging
+    implementation("com.google.firebase:firebase-messaging")
 
     // HTTP 통신용
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
