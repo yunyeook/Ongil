@@ -10,7 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "safe_zones")
+@Table(name = "safe_zone")
 @Getter
 @Builder
 @AllArgsConstructor

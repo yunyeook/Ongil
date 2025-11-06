@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  * 통화가 종료되면 자동으로 CallLog가 생성됩니다.
  */
 @Entity
-@Table(name = "calls")
+@Table(name = "call")
 @Getter
 @Builder
 @AllArgsConstructor
