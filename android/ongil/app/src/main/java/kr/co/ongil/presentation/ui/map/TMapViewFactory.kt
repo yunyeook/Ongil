@@ -1,4 +1,4 @@
-package kr.co.ongil.map
+package kr.co.ongil.presentation.ui.map
 
 import android.content.Context
 import android.util.Log
@@ -9,12 +9,11 @@ import kr.co.ongil.common.BuildConfig
 
 /**
  * TMap 초기화 로직을 담당하는 매니저
- * 앱과 워치에서 공통으로 사용할 수 있습니다.
  */
-object TMapManager {
+object TMapViewFactory {
 
     /**
-     * TMapView를 백그라운드 스레드에서 생성하고 초기화합니다.
+     * TMapView를 생성하고 초기화합니다.
      *
      * @param context 애플리케이션 컨텍스트
      * @param latitude 지도 중심 위도
@@ -27,8 +26,7 @@ object TMapManager {
         latitude: Double = 37.5665,
         longitude: Double = 126.9780,
         zoomLevel: Int = 15
-    ): TMapView = withContext(Dispatchers.IO) {
-        Log.d("TMapManager", "Creating TMapView in background thread")
+    ): TMapView = withContext(Dispatchers.Main) {
 
         TMapView(context).apply {
             // API 키 설정
