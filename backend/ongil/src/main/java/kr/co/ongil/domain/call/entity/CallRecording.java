@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
  * 실제 녹음 파일은 클라이언트 로컬에 저장되며, 서버에는 메타데이터만 저장됩니다.
  */
 @Entity
-@Table(name = "call_recordings")
+@Table(name = "call_recording")
 @Getter
 @Builder
 @AllArgsConstructor
