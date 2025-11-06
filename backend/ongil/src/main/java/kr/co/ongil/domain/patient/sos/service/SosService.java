@@ -100,9 +100,9 @@ public class SosService {
     private void sendSosNotification(User sender, User receiver,Integer sosLogId) {
         try {
             NotificationRequest notificationRequest = NotificationRequest.of(
-                NotificationType.SOS.getDescription(),
+                NotificationType.SOS_REQUEST.getDescription(),
                 sender.getName() + "님이 SOS 음성 재생을 요청하였습니다.",
-                NotificationType.SOS,
+                NotificationType.SOS_REQUEST,
                 sender.getId(),
                 receiver.getId()
             );

@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table(name = "navigation_log", indexes = {
+@Table(name = "navigation_logs", indexes = {
     @Index(name = "idx_patient_id_started_at", columnList = "patient_id, started_at")
 })
 @Getter
