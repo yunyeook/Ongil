@@ -1,6 +1,8 @@
 package kr.co.ongil.data.repository
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.firstOrNull
+import kr.co.ongil.data.datasource.local.preferences.TokenManager
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.model.auth.LoginRequest
 import kr.co.ongil.data.model.auth.LoginResponse
@@ -14,8 +16,8 @@ import javax.inject.Inject
  * 인증 Repository 구현체
  */
 class AuthRepositoryImpl @Inject constructor(
-    private val authApi: AuthApi
-    // TODO: TokenManager 추가
+    private val authApi: AuthApi,
+    private val tokenManager: TokenManager
 ) : AuthRepository {
 
     override suspend fun login(phoneNumber: String, password: String): Result<LoginResponse> {
@@ -28,8 +30,7 @@ class AuthRepositoryImpl @Inject constructor(
                 )
             )
 
-            // TODO: 토큰 저장
-            // tokenManager.saveTokens(response.data.accessToken, response.data.refreshToken)
+            // 토큰 저장은 LoginUseCase에서 처리
 
             Result.success(response)
         } catch (e: Exception) {
@@ -41,17 +42,22 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(): Result<String> {
         return try {
-            // TODO: TokenManager에서 accessToken, refreshToken 가져오기
-            val accessToken = "Bearer YOUR_ACCESS_TOKEN"
-            val refreshToken = "YOUR_REFRESH_TOKEN"
+            // TokenManager에서 저장된 토큰 가져오기
+            val accessToken = tokenManager.getAccessToken().firstOrNull()
+            val refreshToken = tokenManager.getRefreshToken().firstOrNull()
+
+            // 토큰이 없는 경우 에러 처리
+            if (accessToken == null || refreshToken == null) {
+                return Result.failure(IllegalStateException("토큰이 없습니다. 로그인이 필요합니다."))
+            }
 
             val response = authApi.logout(
-                accessToken = accessToken,
+                accessToken = "Bearer $accessToken",
                 request = LogoutRequest(refreshToken = refreshToken)
             )
 
-            // TODO: 로컬 토큰 삭제
-            // tokenManager.clearTokens()
+            // 로컬 토큰 삭제
+            tokenManager.clearTokens()
 
             Result.success(response.message)
         } catch (e: Exception) {

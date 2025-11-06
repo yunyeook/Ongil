@@ -1,5 +1,6 @@
 package kr.co.ongil.domain.usecase.auth
 
+import kr.co.ongil.data.datasource.local.preferences.TokenManager
 import kr.co.ongil.data.model.auth.LoginResponse
 import kr.co.ongil.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -10,7 +11,8 @@ import javax.inject.Inject
  * 사용자 로그인 처리를 담당합니다.
  */
 class LoginUseCase @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val tokenManager: TokenManager
 ) {
     /**
      * 로그인 실행
@@ -28,6 +30,12 @@ class LoginUseCase @Inject constructor(
         }
 
         // Repository를 통해 로그인 처리
-        return authRepository.login(phoneNumber, password)
+        return authRepository.login(phoneNumber, password).onSuccess { response ->
+            // 로그인 성공 시 토큰 저장
+            tokenManager.saveTokens(
+                accessToken = response.data.accessToken,
+                refreshToken = response.data.refreshToken
+            )
+        }
     }
 }

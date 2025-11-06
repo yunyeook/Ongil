@@ -3,8 +3,11 @@ package kr.co.ongil.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kr.co.ongil.core.utils.formatPhoneNumber
@@ -37,6 +40,9 @@ class MyInfoViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(MyInfoUiState())
     val uiState: StateFlow<MyInfoUiState> = _uiState.asStateFlow()
+
+    private val _sideEffect = MutableSharedFlow<MyInfoSideEffect>()
+    val sideEffect: SharedFlow<MyInfoSideEffect> = _sideEffect.asSharedFlow()
 
     init {
         loadUserInfo()
@@ -78,9 +84,9 @@ class MyInfoViewModel @Inject constructor(
 
             authRepository.logout()
                 .onSuccess { message ->
-                    // 로그아웃 성공
-                    // Navigation은 UI에서 처리
+                    // 로그아웃 성공 - 로그인 화면으로 이동
                     _uiState.value = _uiState.value.copy(isLoading = false)
+                    _sideEffect.emit(MyInfoSideEffect.NavigateToLogin)
                 }
                 .onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
@@ -90,4 +96,14 @@ class MyInfoViewModel @Inject constructor(
                 }
         }
     }
+}
+
+/**
+ * MyInfo 화면 SideEffect
+ */
+sealed interface MyInfoSideEffect {
+    /**
+     * 로그인 화면으로 이동 (로그아웃 성공 시)
+     */
+    object NavigateToLogin : MyInfoSideEffect
 }

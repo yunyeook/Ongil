@@ -14,11 +14,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-interface FindPasswordAuthRepository {
-    suspend fun sendVerificationCode(phone: String): Result<Unit>
-    suspend fun verifyCode(phone: String, code: String): Result<Boolean>
-}
+import kr.co.ongil.domain.repository.FindPasswordAuthRepository
 
 @HiltViewModel
 class FindPasswordViewModel @Inject constructor(
