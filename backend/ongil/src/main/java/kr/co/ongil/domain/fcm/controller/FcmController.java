@@ -35,7 +35,8 @@ public class FcmController {
         @Parameter(description = "FCM 토큰", required = true)
         @RequestBody Map<String, String> request) {
        Integer userId = SecurityUtil.getCurrentUserId();
-//        Integer userId = 5; // TODO : 로컬 개발시  이거 쓰기
+//        Integer userId = 5; // TODO : 로컬 개발시  환자 이거 쓰기
+//        Integer userId = 2; // TODO : 로컬 개발시  보호자 이거 쓰기
         String token = request.get("token");
         fcmService.registerFcmToken(userId, token);
         return ApiResponse.success(ResponseMessage.FCM_TOKEN_REGISTED);
@@ -46,7 +47,7 @@ public class FcmController {
     public ApiResponse<String> sendTestFcm(
         @Parameter(description = "대상 사용자 ID", required = true, example = "1")
         @RequestBody NotificationRequest notificationRequest) {
-        notificationService.createNotifications(notificationRequest);
+        notificationService.createNotifications(notificationRequest,1);
         return ApiResponse.success(ResponseMessage.REQUEST_SUCCESS);
     }
 

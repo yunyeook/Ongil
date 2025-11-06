@@ -98,6 +98,10 @@ public enum ResponseMessage {
     FCM_TOKEN_REGISTED("FCM 토큰이 저장되었습니다."),
     FCM_TOKEN_DELETED("FCM 토큰이 삭제되었습니다."),
 
+    //SOS
+    SOS_REQUEST_CREATED("도움 요청이 접수되었습니다."),
+    SOS_ACK_PROCESSED("워치 재생 완료 콜백이 정상적으로 처리되었습니다."),
+
 
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),

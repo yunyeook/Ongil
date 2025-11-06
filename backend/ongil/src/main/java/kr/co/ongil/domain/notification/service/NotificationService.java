@@ -109,8 +109,9 @@ public class NotificationService {
 
     }
 
+
     @Transactional
-    public NotificationResponse createNotifications(NotificationRequest notificationRequest) {
+    public NotificationResponse createNotifications(NotificationRequest notificationRequest,Integer relatedTableId) {
         User sender = userRepository.findById(notificationRequest.senderId()).orElse(null);
         User receiver = userRepository.findById(notificationRequest.receiverId()).orElse(null);
 
@@ -120,13 +121,16 @@ public class NotificationService {
         notificationRepository.save(notification);
 
         //FCM 알림 발송
-        fcmService.sendNotification(notification);
+        fcmService.sendNotification(notification,relatedTableId);
 
         log.info("알림 생성 완료 - type: {}, senderId: {}",
             notificationRequest.type(), sender.getId());
 
         return NotificationResponse.from(notification);
     }
+
+
+
     private void validatePagingParameters(int page, int size) {
         if (page < 1) {
             throw new IllegalArgumentException("페이지 번호는 1 이상이어야 합니다.");

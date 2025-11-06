@@ -12,7 +12,8 @@ public enum NotificationType {
     NAVIGATION_END("길안내 종료"),
     ABNORMAL_DETECTED("이상행동 감지"),
     CALL_REQUEST("통화 요청"),
-    HELP_REQUEST("도움 요청");
+    SOS("SOS 요청"),
+    SOS_ACK("SOS 재생 완료 여부 응답");
 
     private final String description;
 }

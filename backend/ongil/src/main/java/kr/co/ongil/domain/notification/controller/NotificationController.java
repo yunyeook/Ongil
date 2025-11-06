@@ -3,7 +3,6 @@ package kr.co.ongil.domain.notification.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
 import java.util.Map;
 import kr.co.ongil.domain.notification.dto.request.NotificationRequest;
 import kr.co.ongil.domain.notification.dto.response.NotificationListResponse;
@@ -80,7 +79,7 @@ public class NotificationController {
     @PostMapping
     @Operation(summary = "알림 생성", description = "알림을 생성합니다.")
     public ApiResponse<NotificationResponse> createNotification(@RequestBody NotificationRequest request) {
-        NotificationResponse response = notificationService.createNotifications(request);
+        NotificationResponse response = notificationService.createNotifications(request,null);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_CREATED, response);
     }
 }

@@ -19,7 +19,7 @@ public interface RelationshipRepository extends JpaRepository<Relationship, Inte
     List<User> findGuardiansByPatientId(@Param("patientId") Integer patientId);
 
     @Query("SELECT r.patient FROM Relationship r WHERE r.guardian.id = :guardianId")
-    Optional<User> findPatientByGuardianId(@Param("guardianId") Integer guardianId);
+    List<User> findPatientByGuardianId(@Param("guardianId") Integer guardianId);
 
     /**
      * 특정 사용자가 보호자 또는 환자로 등록된 모든 관계 조회
@@ -121,4 +121,9 @@ public interface RelationshipRepository extends JpaRepository<Relationship, Inte
     @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Relationship r " +
             "WHERE r.patient.id = :patientId AND r.guardian.id = :guardianId")
     boolean existsByPatientIdAndGuardianId(@Param("patientId") Integer patientId, @Param("guardianId") Integer guardianId);
-}
+
+    /**
+     * 환자의 대표보호자 조회
+     */
+    @Query("SELECT r FROM Relationship r WHERE r.patient.id = :patientId AND r.isDefaultForPatient = true")
+    Optional<Relationship> findDefaultRelationshipByPatient(@Param("patientId") Integer patientId);}

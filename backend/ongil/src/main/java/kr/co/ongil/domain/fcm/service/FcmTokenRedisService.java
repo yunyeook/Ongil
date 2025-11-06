@@ -14,8 +14,15 @@ public class FcmTokenRedisService {
 
     public void saveToken(Integer userId, String token) {
         String key = KEY_PREFIX + userId;
+
+        // 기존 토큰들 모두 삭제
+        redisTemplate.delete(key);
+
+        // 새 토큰 저장
         redisTemplate.opsForSet().add(key, token);
-//        redisTemplate.expire(key, 30, TimeUnit.DAYS);  // TTL 설정
+
+        // TTL 설정 (선택사항)
+        // redisTemplate.expire(key, 30, TimeUnit.DAYS);
     }
 
     public String getToken(Integer userId) {

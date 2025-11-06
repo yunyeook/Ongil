@@ -105,20 +105,18 @@ public enum ErrorCode {
     CALL_RECORDING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 통화에 녹음 정보가 등록되어 있습니다."),
 
     // NOTIFICATION / SSE / ALERT
+    // SOS
+    SOS_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 도움 요청 내역을 찾을 수 없습니다."),
+    SOS_CALLBACK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자 워치의 콜백 권한이 없습니다."),
+    SOS_ALREADY_ACKNOWLEDGED(HttpStatus.CONFLICT, "이미 재생 완료로 처리된 요청입니다."),
+
+    // NOTIFICATION
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림 정보를 찾을 수 없습니다."),
     NOTIFICATION_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "알림 전송 중 오류가 발생했습니다."),
     SSE_CONNECTION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "실시간 연결이 불안정합니다."),
     ALERT_TYPE_INVALID(HttpStatus.BAD_REQUEST, "올바르지 않은 알림 유형입니다."),
     INVALID_NOTIFICATION_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 알림 유형입니다."),
 
-    // CONTENT / RESOURCE / DATA
-    CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 콘텐츠입니다."),
-    INVALID_CONTENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 콘텐츠 형식입니다."),
-    DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 데이터를 찾을 수 없습니다."),
-    DATA_CONFLICT(HttpStatus.CONFLICT, "데이터 충돌이 발생했습니다."),
-    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다."),
-    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 파일이 존재하지 않습니다."),
-    UNSUPPORTED_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다."),
 
     //SYSTEM / REQUEST / COMMON
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 형식이 올바르지 않습니다."),
