@@ -25,19 +25,19 @@ private sealed class RefreshResult {
  * 인증 토큰 자동 갱신 Interceptor
  *
  * 기능:
- * 1. 모든 요청에 자동으로 Authorization 헤더 추가
- * 2. 401 Unauthorized 발생 시 refresh token으로 토큰 갱신
- * 3. 갱신 성공 시 원래 요청 재시도
- * 4. 갱신 실패 시 토큰 삭제 (자동 로그아웃)
+ * 1) 모든 요청에 Authorization 헤더 자동 추가
+ * 2) 401 시 RefreshToken으로 갱신
+ * 3) 갱신 성공 시 원요청 재시도
+ * 4) 갱신 실패 시 토큰 삭제(자동 로그아웃)
  *
- * Token Refresh API 상태 코드 처리:
- * - 200: 정상 재발급 → 토큰 저장 및 요청 재시도
- * - 400: 잘못된 요청 → 재시도 없이 실패
- * - 401: Refresh Token 만료/유효하지 않음 → 토큰 삭제, 재로그인 필요
- * - 403: Refresh Token 미등록 (로그아웃/탈취) → 토큰 삭제, 재로그인 필요
- * - 409: 토큰 재사용 감지 → 토큰 삭제, 재로그인 필요
- * - 429: 레이트 리밋 → 재시도 없이 실패
- * - 500: 서버 내부 오류 → 재시도 없이 실패
+ * 상태 코드 처리:
+ * - 200: 정상 재발급 → 저장 후 재시도
+ * - 400: 잘못된 요청 → 실패 반환
+ * - 401: RT 만료/유효X → 토큰 삭제, 재로그인 필요
+ * - 403: RT 미등록/탈취 → 토큰 삭제, 재로그인 필요
+ * - 409: 재사용 감지 → 토큰 삭제, 재로그인 필요
+ * - 429: 레이트 리밋 → 실패 반환
+ * - 500: 서버 내부 오류 → 실패 반환
  */
 @Singleton
 class AuthInterceptor @Inject constructor(
@@ -49,8 +49,9 @@ class AuthInterceptor @Inject constructor(
         private const val TAG = "AuthInterceptor"
         private const val HEADER_AUTHORIZATION = "Authorization"
         private const val TOKEN_TYPE = "Bearer"
+        private const val HEADER_RETRY = "X-Retry"
 
-        // 토큰이 필요 없는 엔드포인트
+        // 토큰 불필요(완전 공개) 엔드포인트만 포함
         private val NO_AUTH_ENDPOINTS = setOf(
             "/api/v1/auth/login",
             "/api/v1/auth/refresh",
@@ -60,136 +61,116 @@ class AuthInterceptor @Inject constructor(
 
     @Volatile
     private var isRefreshing = false
-    private val lock = Any()
+
+    // wait/notifyAll은 java.lang.Object의 메서드 → 명시적으로 Object 사용
+    private val refreshLock = java.lang.Object()
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val path = originalRequest.url.encodedPath
+        val isRetry = originalRequest.header(HEADER_RETRY) == "true"
+        val isLogout = path.startsWith("/api/v1/auth/logout")
 
-        // 로그인, 회원가입, 토큰 갱신 요청은 토큰 불필요
-        if (NO_AUTH_ENDPOINTS.any { path.contains(it) }) {
+        Log.d(TAG, "→ Intercept: path=$path, isRetry=$isRetry, isLogout=$isLogout")
+
+        // (A) 재시도 요청은 절대 refresh 하지 않음 (루프 차단)
+        if (isRetry) {
+            Log.d(TAG, "Retry request detected. Skip auth & refresh.")
             return chain.proceed(originalRequest)
         }
 
-        // 저장된 accessToken 가져오기
-        val accessToken = runBlocking {
-            tokenManager.getAccessToken().firstOrNull()
+        // (B) 공개 엔드포인트는 스킵
+        if (NO_AUTH_ENDPOINTS.any { path.startsWith(it) }) {
+            Log.d(TAG, "Skip auth for public endpoint: $path")
+            return chain.proceed(originalRequest)
         }
 
-        // accessToken이 없으면 그냥 진행
+        // (C) accessToken 조회
+        val accessToken = runBlocking { tokenManager.getAccessToken().firstOrNull() }
         if (accessToken.isNullOrEmpty()) {
-            Log.w(TAG, "No access token available")
+            Log.w(TAG, "No access token. Proceed without auth for $path")
             return chain.proceed(originalRequest)
         }
 
-        // Authorization 헤더 추가
-        val requestWithAuth = originalRequest.newBuilder()
+        // (D) Authorization 헤더 부착
+        val authed = originalRequest.newBuilder()
             .header(HEADER_AUTHORIZATION, "$TOKEN_TYPE $accessToken")
             .build()
 
-        // 요청 실행
-        val response = chain.proceed(requestWithAuth)
+        // (E) 요청 실행
+        val response = chain.proceed(authed)
+        Log.d(TAG, "← Response: path=$path, code=${response.code}")
 
-        // 401 에러 발생 시 토큰 갱신 시도
+        // (F) 401 처리
         if (response.code == 401) {
-            response.close()
+            // 로그아웃 요청은 refresh 금지. 응답은 그대로 반환(닫지 않음)
+            if (isLogout) {
+                Log.d(TAG, "401 on logout. Skip refresh, clear tokens.")
+                clearTokens()
+                return response
+            }
 
             Log.d(TAG, "401 Unauthorized - attempting token refresh")
 
-            synchronized(lock) {
-                // 다른 스레드가 이미 갱신 중이면 대기
+            synchronized(refreshLock) {
+                // 이미 다른 스레드가 refresh 중이면 대기 → 갱신된 토큰으로 1회 재시도
                 if (isRefreshing) {
-                    // 갱신 완료 대기
                     while (isRefreshing) {
                         try {
-                            (lock as Object).wait(100)
+                            refreshLock.wait(100)
                         } catch (e: InterruptedException) {
                             Thread.currentThread().interrupt()
                         }
                     }
-
-                    // 갱신된 토큰으로 재시도
-                    val newAccessToken = runBlocking {
-                        tokenManager.getAccessToken().firstOrNull()
-                    }
-
-                    return if (!newAccessToken.isNullOrEmpty()) {
-                        val newRequest = originalRequest.newBuilder()
-                            .header(HEADER_AUTHORIZATION, "$TOKEN_TYPE $newAccessToken")
+                    val newAccess = runBlocking { tokenManager.getAccessToken().firstOrNull() }
+                    return if (!newAccess.isNullOrEmpty()) {
+                        val retried = originalRequest.newBuilder()
+                            .header(HEADER_AUTHORIZATION, "$TOKEN_TYPE $newAccess")
+                            .header(HEADER_RETRY, "true") // 재시도 플래그
                             .build()
-                        chain.proceed(newRequest)
+                        response.close()
+                        chain.proceed(retried)
                     } else {
-                        response
+                        Log.w(TAG, "No new access token after wait. Propagate original 401.")
+                        return response
                     }
                 }
-
                 isRefreshing = true
             }
 
             try {
-                // refreshToken으로 토큰 갱신
-                val refreshToken = runBlocking {
-                    tokenManager.getRefreshToken().firstOrNull()
-                }
-
+                // refreshToken 조회
+                val refreshToken = runBlocking { tokenManager.getRefreshToken().firstOrNull() }
                 if (refreshToken.isNullOrEmpty()) {
-                    Log.e(TAG, "No refresh token available - clearing tokens")
+                    Log.e(TAG, "No refresh token - clearing tokens.")
                     clearTokens()
-                    return response
+                    return response // 기존 응답 그대로 전달
                 }
 
-                // 토큰 갱신 API 호출
+                // refresh 호출
                 val refreshResult = runBlocking {
                     try {
-                        val rawResponse = authApi.refreshToken(RefreshTokenRequest(refreshToken))
-                        RefreshResult.Success(rawResponse)
+                        val raw = authApi.refreshToken(RefreshTokenRequest(refreshToken))
+                        RefreshResult.Success(raw)
                     } catch (e: retrofit2.HttpException) {
                         val code = e.code()
-                        Log.e(TAG, "Token refresh HTTP error: $code - ${e.message()}")
-
+                        Log.e(TAG, "Refresh HTTP error: $code - ${e.message()}")
                         when (code) {
-                            401 -> {
-                                // Refresh Token 만료 또는 유효하지 않음 → 재로그인 필요
-                                Log.e(TAG, "Refresh token expired or invalid - re-login required")
-                                RefreshResult.NeedReLogin("Refresh Token이 만료되었거나 유효하지 않습니다.")
-                            }
-                            403 -> {
-                                // Refresh Token이 서버에 등록되어 있지 않음 → 로그아웃/탈취
-                                Log.e(TAG, "Refresh token not registered - possible token theft")
-                                RefreshResult.NeedReLogin("Refresh Token이 서버에 등록되어 있지 않습니다.")
-                            }
-                            409 -> {
-                                // 토큰 재사용 감지 → 전 토큰 전면 폐기
-                                Log.e(TAG, "Token reuse detected - all tokens invalidated")
-                                RefreshResult.NeedReLogin("토큰 재사용이 감지되었습니다. 보안을 위해 로그아웃되었습니다.")
-                            }
-                            400 -> {
-                                // 잘못된 요청 → 재시도 없이 실패
-                                Log.e(TAG, "Bad request - invalid token format")
-                                RefreshResult.Failed("잘못된 요청입니다. 토큰 형식을 확인해주세요.")
-                            }
-                            429 -> {
-                                // 레이트 리밋 → 재시도 없이 실패
-                                Log.w(TAG, "Rate limit exceeded")
-                                RefreshResult.Failed("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.")
-                            }
-                            500 -> {
-                                // 서버 내부 오류 → 재시도 없이 실패
-                                Log.e(TAG, "Server internal error")
-                                RefreshResult.Failed("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
-                            }
-                            else -> {
-                                Log.e(TAG, "Unknown HTTP error: $code")
-                                RefreshResult.Failed("토큰 갱신에 실패했습니다.")
-                            }
+                            401 -> RefreshResult.NeedReLogin("Refresh Token expired/invalid")
+                            403 -> RefreshResult.NeedReLogin("Refresh Token not registered")
+                            409 -> RefreshResult.NeedReLogin("Token reuse detected")
+                            400 -> RefreshResult.Failed("Bad request (invalid token format)")
+                            429 -> RefreshResult.Failed("Rate limit exceeded")
+                            500 -> RefreshResult.Failed("Server internal error")
+                            else -> RefreshResult.Failed("Unknown HTTP error")
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Token refresh network error", e)
-                        RefreshResult.Failed("네트워크 오류가 발생했습니다.")
+                        Log.e(TAG, "Refresh network error", e)
+                        RefreshResult.Failed("Network error")
                     }
                 }
 
-                when (refreshResult) {
+                return when (refreshResult) {
                     is RefreshResult.Success -> {
                         // 새 토큰 저장
                         runBlocking {
@@ -198,32 +179,32 @@ class AuthInterceptor @Inject constructor(
                                 refreshToken = refreshResult.response.data.refreshToken
                             )
                         }
+                        Log.d(TAG, "Token refresh successful. Retrying original request.")
 
-                        Log.d(TAG, "Token refresh successful")
-
-                        // 원래 요청 재시도 (새 토큰으로)
-                        val newRequest = originalRequest.newBuilder()
+                        val retried = originalRequest.newBuilder()
                             .header(HEADER_AUTHORIZATION, "$TOKEN_TYPE ${refreshResult.response.data.accessToken}")
+                            .header(HEADER_RETRY, "true") // 루프 방지
                             .build()
 
-                        return chain.proceed(newRequest)
+                        response.close()
+                        chain.proceed(retried)
                     }
                     is RefreshResult.NeedReLogin -> {
-                        // 재로그인 필요 → 토큰 삭제
                         Log.e(TAG, "Re-login required: ${refreshResult.message}")
                         clearTokens()
-                        return response
+                        // 기존 응답 그대로 전달 (닫힌 응답 반환 금지)
+                        response
                     }
                     is RefreshResult.Failed -> {
-                        // 재시도 없이 실패
                         Log.e(TAG, "Token refresh failed: ${refreshResult.message}")
-                        return response
+                        // 기존 응답 그대로 전달
+                        response
                     }
                 }
             } finally {
-                synchronized(lock) {
+                synchronized(refreshLock) {
                     isRefreshing = false
-                    (lock as Object).notifyAll()
+                    refreshLock.notifyAll()
                 }
             }
         }
@@ -232,8 +213,6 @@ class AuthInterceptor @Inject constructor(
     }
 
     private fun clearTokens() {
-        runBlocking {
-            tokenManager.clearTokens()
-        }
+        runBlocking { tokenManager.clearTokens() }
     }
 }

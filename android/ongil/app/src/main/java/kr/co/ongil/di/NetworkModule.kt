@@ -28,6 +28,10 @@ annotation class AuthOkHttpClient
 @Retention(AnnotationRetention.BINARY)
 annotation class AuthRetrofit
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ForInterceptor
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -64,7 +68,7 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         tokenManager: TokenManager,
-        authApi: AuthApi
+        @ForInterceptor authApi: AuthApi
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
@@ -112,9 +116,22 @@ object NetworkModule {
             .build()
     }
 
+    /**
+     * AuthInterceptor 전용 AuthApi (비인증 - 순환 참조 방지)
+     * refresh 호출용
+     */
     @Provides
     @Singleton
-    fun provideAuthApi(@AuthRetrofit retrofit: Retrofit): AuthApi =
+    @ForInterceptor
+    fun provideAuthApiForInterceptor(@AuthRetrofit retrofit: Retrofit): AuthApi =
+        retrofit.create(AuthApi::class.java)
+
+    /**
+     * Repository에서 사용하는 AuthApi (인증 - logout에 Authorization 헤더 필요)
+     */
+    @Provides
+    @Singleton
+    fun provideAuthApi(retrofit: Retrofit): AuthApi =
         retrofit.create(AuthApi::class.java)
 
     @Provides

@@ -7,6 +7,10 @@ import retrofit2.http.POST
 
 /**
  * 인증 관련 API
+ *
+ * 참고:
+ * - login, signup, refresh는 Authorization 헤더 불필요
+ * - logout, sendVerificationCode, verifyCode는 AuthInterceptor가 자동으로 헤더 추가
  */
 interface AuthApi {
 
@@ -19,15 +23,12 @@ interface AuthApi {
         @Body request : LoginRequest
     ): LoginResponse
 
-
-
     /**
      * 로그아웃
      * POST /api/v1/auth/logout
      */
     @POST("/api/v1/auth/logout")
     suspend fun logout(
-        @Header("Authorization") accessToken: String,
         @Body request: LogoutRequest
     ): LogoutResponse
 
@@ -37,7 +38,6 @@ interface AuthApi {
      */
     @POST("/api/v1/auth/verification/send")
     suspend fun sendVerificationCode(
-        @Header("Authorization") accessToken: String,
         @Body request: SendVerificationRequest
     ): SendVerificationResponse
 
@@ -47,7 +47,6 @@ interface AuthApi {
      */
     @POST("/api/v1/auth/verification/verify")
     suspend fun verifyCode(
-        @Header("Authorization") accessToken: String,
         @Body request: VerifyCodeRequest
     ): VerifyCodeResponse
 

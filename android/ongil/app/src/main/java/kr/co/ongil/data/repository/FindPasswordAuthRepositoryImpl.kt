@@ -9,6 +9,9 @@ import javax.inject.Inject
 
 /**
  * 비밀번호 찾기 인증 Repository 구현체
+ *
+ * 참고: 비밀번호 찾기는 로그인 전이므로 Authorization 헤더 불필요
+ * AuthInterceptor는 토큰이 없으면 헤더를 추가하지 않습니다.
  */
 class FindPasswordAuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi
@@ -16,9 +19,7 @@ class FindPasswordAuthRepositoryImpl @Inject constructor(
 
     override suspend fun sendVerificationCode(phone: String): Result<Unit> {
         return try {
-            // 비밀번호 찾기는 로그인 전이므로 빈 토큰 전송
             authApi.sendVerificationCode(
-                accessToken = "",
                 request = SendVerificationRequest(
                     phoneNumber = phone,
                     grant = "PASSWORD_RESET"  // 비밀번호 찾기용
@@ -33,9 +34,7 @@ class FindPasswordAuthRepositoryImpl @Inject constructor(
 
     override suspend fun verifyCode(phone: String, code: String): Result<Boolean> {
         return try {
-            // 비밀번호 찾기는 로그인 전이므로 빈 토큰 전송
             val response = authApi.verifyCode(
-                accessToken = "",
                 request = VerifyCodeRequest(
                     phoneNumber = phone,
                     code = code,

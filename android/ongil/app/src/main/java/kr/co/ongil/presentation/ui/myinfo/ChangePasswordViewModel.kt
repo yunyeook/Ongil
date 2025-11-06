@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +23,10 @@ import javax.inject.Inject
 class ChangePasswordViewModel @Inject constructor(
     private val userRepository: UserRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "ChangePasswordVM"
+    }
 
     private val _uiState = MutableStateFlow(ChangePasswordUiState())
     val uiState: StateFlow<ChangePasswordUiState> = _uiState.asStateFlow()
@@ -66,6 +71,7 @@ class ChangePasswordViewModel @Inject constructor(
      */
     private fun changePassword() {
         val currentState = _uiState.value
+        Log.d(TAG, "changePassword() called")
 
         // 유효성 검사 (ValidationUtils 사용)
         val validationResult = validatePasswordChange(
@@ -76,24 +82,27 @@ class ChangePasswordViewModel @Inject constructor(
 
         when (validationResult) {
             is PasswordValidationResult.Invalid -> {
+                Log.w(TAG, "Validation failed: ${validationResult.message}")
                 _uiState.update { it.copy(error = validationResult.message) }
                 return
             }
             is PasswordValidationResult.Valid -> {
-                // 검증 통과, API 호출 진행
+                Log.d(TAG, "Validation passed, proceeding with API call")
             }
         }
 
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
+                Log.d(TAG, "Calling changePassword API")
 
                 // API 호출
-                userRepository?.changePassword(
+                userRepository.changePassword(
                     currentPassword = currentState.currentPassword,
                     newPassword = currentState.newPassword
-                )?.getOrThrow()
+                ).getOrThrow()
 
+                Log.d(TAG, "Password change successful")
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -101,6 +110,7 @@ class ChangePasswordViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Password change failed", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
