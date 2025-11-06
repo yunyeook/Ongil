@@ -16,9 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.skt.tmap.TMapView
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kr.co.ongil.map.TMapManager
 
 /**
  * TMap을 표시하는 Composable 컴포넌트 (앱 전용)
@@ -43,20 +40,18 @@ fun TMapComposable(
 
     // 백그라운드 스레드에서 TMap 초기화 (common 모듈의 TMapManager 사용)
     LaunchedEffect(Unit) {
-        val tmapView = TMapManager.createTMapView(
+        val tmapView = TMapViewFactory.createTMapView(
             context = context,
             latitude = latitude,
             longitude = longitude,
             zoomLevel = zoomLevel
         )
 
-        // 메인 스레드로 돌아와서 상태 업데이트
-        withContext(Dispatchers.Main) {
-            mapView = tmapView
-            isLoading = false
-            onMapReady?.invoke(tmapView)
-            Log.d("TMapComposable", "TMapView initialization complete")
-        }
+        mapView = tmapView
+        isLoading = false
+        onMapReady?.invoke(tmapView)
+        Log.d("TMapComposable", "TMapView initialization complete")
+
     }
 
     Box(modifier = modifier.fillMaxSize()) {
