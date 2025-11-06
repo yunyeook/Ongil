@@ -1,5 +1,6 @@
 package kr.co.ongil.data.repository
 
+import android.util.Log
 import kotlinx.coroutines.delay
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
@@ -25,11 +26,18 @@ class UserRepositoryImpl @Inject constructor(
     private val authApi: AuthApi
 ) : UserRepository {
 
+    companion object {
+        private const val TAG = "UserRepositoryImpl"
+    }
+
     override suspend fun getMyInfo(): Result<UserDto> {
         return try {
+            Log.d(TAG, "getMyInfo() - API 호출 시작")
             val response = userApi.getMyInfo()
-            Result.success(response.data.user)
+            Log.d(TAG, "getMyInfo() - API 호출 성공: ${response.data}")
+            Result.success(response.data)  // data에 바로 UserDto
         } catch (e: Exception) {
+            Log.e(TAG, "getMyInfo() - API 호출 실패", e)
             val apiException = ErrorHandler.handleException(e)
             Result.failure(apiException)
         }
@@ -64,7 +72,7 @@ class UserRepositoryImpl @Inject constructor(
                 profileImage = profileImagePart
             )
 
-            Result.success(response.data.user)
+            Result.success(response.data)  // data에 바로 UserDto
         } catch (e: Exception) {
             // HTTP 에러를 ApiException으로 변환
             val apiException = ErrorHandler.handleException(e)

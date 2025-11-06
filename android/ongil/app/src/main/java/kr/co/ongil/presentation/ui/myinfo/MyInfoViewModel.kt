@@ -53,21 +53,26 @@ class MyInfoViewModel @Inject constructor(
      * 사용자 정보 로드
      */
     fun loadUserInfo() {
+        Log.d(TAG, "loadUserInfo() called")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            Log.d(TAG, "Starting getUserUseCase call")
 
             // GetUserUseCase를 통한 사용자 정보 조회
             getUserUseCase()
                 .onSuccess { userDto ->
                     // DTO → UiState 변환
+                    Log.d(TAG, "getUserUseCase success: $userDto")
                     _uiState.value = MyInfoUiState(
                         name = userDto.name,
                         phoneNumber = formatPhoneNumber(userDto.phoneNumber),
                         profileImage = userDto.profileImage,
                         isLoading = false
                     )
+                    Log.d(TAG, "UiState updated: ${_uiState.value}")
                 }
                 .onFailure { exception ->
+                    Log.e(TAG, "getUserUseCase failed", exception)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
