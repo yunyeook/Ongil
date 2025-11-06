@@ -36,13 +36,12 @@ spring:
   # Redis (AWS ElastiCache)
   data:
     redis:
-      url: rediss://${REDIS_HOST}:${REDIS_PORT}
-     # host: ${REDIS_HOST}
-     # port: ${REDIS_PORT:6379}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       ssl:
         enabled: true
-        # enabled: ${REDIS_SSL_ENABLED:false}
+        # enabled: ${REDIS_SSL_ENABLED}
 
   cache:
     type: redis
