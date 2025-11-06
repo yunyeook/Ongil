@@ -39,4 +39,15 @@ public interface CallRepository extends JpaRepository<Call, Integer> {
            "WHERE ((c.caller = :user1 AND c.receiver = :user2) OR (c.caller = :user2 AND c.receiver = :user1)) " +
            "AND c.status NOT IN ('ENDED', 'CANCELED', 'REJECTED', 'FAILED', 'MISSED', 'DROPPED')")
     boolean existsActiveCallBetweenUsers(@Param("user1") User user1, @Param("user2") User user2);
+
+    /**
+     * 만료된 통화 조회 (타임아웃 시간 기준)
+     * CREATED, RINGING 상태이면서 startedAt이 특정 시간 이전인 통화들
+     *
+     * @param expiryTime 만료 기준 시간 (현재 시간 - 타임아웃 초)
+     * @return 만료된 통화 목록
+     */
+    @Query("SELECT c FROM Call c WHERE c.status IN ('CREATED', 'RINGING') " +
+           "AND c.startedAt < :expiryTime")
+    List<Call> findExpiredCalls(@Param("expiryTime") java.time.LocalDateTime expiryTime);
 }

@@ -139,3 +139,7 @@ cors:
   allowed-headers: ${CORS_ALLOWED_HEADERS:*}
   allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
   max-age: ${CORS_MAX_AGE:3600}
+
+# Call Configuration
+call:
+  timeout-seconds: ${CALL_TIMEOUT_SECONDS:60}  # 통화 타임아웃 (초), 기본 60초

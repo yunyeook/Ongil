@@ -130,4 +130,33 @@ public class Call extends BaseEntity {
             || status == CallStatus.MISSED
             || status == CallStatus.DROPPED;
     }
+
+    /**
+     * 통화가 타임아웃되었는지 확인
+     * @param timeoutSeconds 타임아웃 시간(초)
+     * @return 타임아웃 여부
+     */
+    public boolean isExpired(int timeoutSeconds) {
+        if (isEnded()) {
+            return false;  // 이미 종료된 통화는 만료 대상이 아님
+        }
+
+        if (this.startedAt == null) {
+            return false;
+        }
+
+        LocalDateTime expiryTime = this.startedAt.plusSeconds(timeoutSeconds);
+        return LocalDateTime.now().isAfter(expiryTime);
+    }
+
+    /**
+     * 통화를 타임아웃으로 종료
+     * - CREATED, RINGING 상태 → MISSED
+     * - CONNECTED 상태는 타임아웃 안됨 (실제 통화 중)
+     */
+    public void expireCall() {
+        if (status == CallStatus.CREATED || status == CallStatus.RINGING) {
+            end(CallStatus.MISSED);
+        }
+    }
 }

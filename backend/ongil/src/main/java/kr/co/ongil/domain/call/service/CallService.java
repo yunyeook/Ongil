@@ -93,6 +93,11 @@ public class CallService {
             receiver.getId()
         );
 
+        // 9. INCOMING 시그널 전송 후 자동으로 RINGING 상태로 전환
+        savedCall.ring();
+        savedCall = callRepository.save(savedCall);
+        log.info("통화 상태 RINGING으로 전환: callId={}", savedCall.getId());
+
         return CallResponse.from(savedCall);
     }
 
