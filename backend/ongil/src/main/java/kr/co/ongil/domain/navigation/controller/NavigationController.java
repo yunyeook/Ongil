@@ -34,8 +34,8 @@ public class NavigationController {
     public ApiResponse<NavigationSessionResponse> startNavigation(
         @RequestBody  StartNavigationRequest request
     ) {
-
-        NavigationSessionResponse response = navigationService.startNavigation(request);
+        Integer senderId = SecurityUtil.getCurrentUserId();
+        NavigationSessionResponse response = navigationService.startNavigation(request,senderId);
         return ApiResponse.success(ResponseMessage.NAVIGATION_START_SUCCESS, response);
     }
 
@@ -44,7 +44,8 @@ public class NavigationController {
     public ApiResponse<EndNavigationResponse> endNavigation(
         @RequestBody @Valid EndNavigationRequest request
     ) {
-        EndNavigationResponse response = navigationService.endNavigation(request);
+        Integer senderId = SecurityUtil.getCurrentUserId();
+        EndNavigationResponse response = navigationService.endNavigation(request,senderId);
         return ApiResponse.success(ResponseMessage.NAVIGATION_END_SUCCESS, response);
     }
 
