@@ -16,6 +16,7 @@ import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -27,6 +28,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public void register(RegisterRequest request) {
 
@@ -65,6 +67,45 @@ public class AuthService {
         User savedUser = userRepository.save(user);
 
         log.info("회원가입 완료: phoneNumber={}, userType={}", request.getPhoneNumber(), request.getUserType());
+    }
+
+    public LoginResponse login(LoginRequest request) {
+        log.info("로그인 시도: phoneNumber={}", request.getPhoneNumber());
+
+        // 1. 사용자 조회
+        User user = userRepository.findByPhoneNumber(request.getPhoneNumber())
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+
+        // 2. 비밀번호 검증
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
+        }
+
+        // 3. JWT 토큰 생성
+        String userType = user.getUserType().name();
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getPhoneNumber(), userType);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getPhoneNumber(), userType);
+
+        // 4. Redis에 리프레시 토큰 저장
+        refreshTokenRepository.storeRefreshToken(user.getId(), refreshToken, jwtUtil.getRefreshTokenExpiration());
+
+        log.info("로그인 성공: userId={}, userType={}", user.getId(), userType);
+
+        // 5. 응답 생성
+        LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .birth(user.getBirth())
+                .phoneNumber(user.getPhoneNumber())
+                .userType(user.getUserType().name())
+                .profileImage(user.getProfileImage())
+                .build();
+
+        return LoginResponse.builder()
+                .user(userInfo)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
     }
 
     public RefreshResponse refresh(RefreshRequest request) {
