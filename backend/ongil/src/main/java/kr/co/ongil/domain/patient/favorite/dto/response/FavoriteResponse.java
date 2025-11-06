@@ -22,6 +22,7 @@ public class FavoriteResponse {
     private Double longitude;
     private Integer count;
     private Boolean isDefault;
+    private Integer displayOrder;
     private LocalDateTime createdAt;
 
     public static FavoriteResponse from(Favorite favorite) {
@@ -36,6 +37,7 @@ public class FavoriteResponse {
             .longitude(favorite.getLongitude())
             .count(favorite.getCount())
             .isDefault(favorite.getIsDefault())
+            .displayOrder(favorite.getDisplayOrder())
             .createdAt(favorite.getCreatedAt())
             .build();
     }

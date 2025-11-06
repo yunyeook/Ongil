@@ -28,7 +28,13 @@ public enum ResponseMessage {
 
     // Patient
     PATIENT_FOUND("환자 조회 성공"),
-    SAFEZONE_UPDATED("안전구역이 수정되었습니다."),
+
+    // SafeZone
+    SAFEZONE_CREATED("안전범위가 성공적으로 설정되었습니다."),
+    SAFEZONE_UPDATED("안전범위가 성공적으로 갱신되었습니다."),
+    SAFEZONE_PARTIALLY_UPDATED("안전범위가 성공적으로 수정되었습니다."),
+    SAFEZONE_RESET("안전범위가 기본값으로 복원되었습니다."),
+    SAFEZONE_FOUND("환자의 안전 범위와 시간이 성공적으로 조회되었습니다."),
 
     // Relationship
     RELATIONSHIP_CREATED("관계가 성공적으로 생성되었습니다."),
@@ -36,6 +42,8 @@ public enum ResponseMessage {
     RELATIONSHIP_FOUND("관계 상세 조회가 성공적으로 완료되었습니다."),
     RELATIONSHIP_UPDATED("관계 정보가 성공적으로 수정되었습니다."),
     RELATIONSHIP_DELETED("관계가 성공적으로 삭제되었습니다."),
+    RELATIONSHIP_REORDERED("관계 정렬 순서가 성공적으로 변경되었습니다."),
+    RELATIONSHIP_DEFAULT_SET("대표 관계가 성공적으로 설정되었습니다."),
 
     // Favorite
     FAVORITE_CREATED("즐겨찾기가 성공적으로 추가되었습니다."),
@@ -44,6 +52,7 @@ public enum ResponseMessage {
     FAVORITE_UPDATED("즐겨찾기가 성공적으로 수정되었습니다."),
     FAVORITE_DELETED("즐겨찾기가 성공적으로 삭제되었습니다."),
     FAVORITE_DEFAULT_SET("기본 목적지가 설정되었습니다."),
+    FAVORITE_REORDERED("즐겨찾기 정렬 순서가 성공적으로 변경되었습니다."),
 
     // Map
     ADDRESS_FOUND("주소를 성공적으로 조회하였습니다."),

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.co.ongil.domain.relationship.dto.request.CreateRelationshipRequest;
+import kr.co.ongil.domain.relationship.dto.request.ReorderRelationshipsRequest;
 import kr.co.ongil.domain.relationship.dto.request.UpdateRelationshipRequest;
 import kr.co.ongil.domain.relationship.dto.response.RelationshipResponse;
 import kr.co.ongil.domain.relationship.service.RelationshipService;
@@ -82,6 +83,44 @@ public class RelationshipController {
         Integer userId = SecurityUtil.getCurrentUserId();
         RelationshipResponse response = relationshipService.updateRelationship(userId, relationshipId, request);
         return ApiResponse.success(ResponseMessage.RELATIONSHIP_UPDATED, response);
+    }
+
+    /**
+     * 관계 목록 일괄 재정렬 (드래그 앤 드롭)
+     */
+    @PatchMapping("/me/order")
+    @Operation(
+            summary = "관계 목록 일괄 재정렬",
+            description = "드래그 앤 드롭으로 변경된 관계 순서를 일괄 업데이트합니다. " +
+                    "orderedRelationshipIds에 원하는 순서대로 관계 ID를 배열로 전달하세요."
+    )
+    public ApiResponse<List<RelationshipResponse>> reorderMyRelationships(
+            @Valid @RequestBody ReorderRelationshipsRequest request
+    ) {
+        Integer userId = SecurityUtil.getCurrentUserId();
+        List<RelationshipResponse> response = relationshipService.reorderMyRelationships(
+                userId,
+                request.orderedRelationshipIds()
+        );
+        return ApiResponse.success(ResponseMessage.RELATIONSHIP_REORDERED, response);
+    }
+
+    /**
+     * 대표 관계 설정
+     */
+    @PostMapping("/{relationshipId}/default")
+    @Operation(
+            summary = "대표 관계 설정",
+            description = "특정 관계를 대표(기본) 관계로 설정합니다. " +
+                    "기존에 대표로 설정된 관계가 있으면 자동으로 해제됩니다."
+    )
+    public ApiResponse<RelationshipResponse> setDefaultRelationship(
+            @Parameter(description = "관계 ID", example = "1", required = true)
+            @PathVariable Integer relationshipId
+    ) {
+        Integer userId = SecurityUtil.getCurrentUserId();
+        RelationshipResponse response = relationshipService.setDefaultRelationship(userId, relationshipId);
+        return ApiResponse.success(ResponseMessage.RELATIONSHIP_DEFAULT_SET, response);
     }
 
     /**

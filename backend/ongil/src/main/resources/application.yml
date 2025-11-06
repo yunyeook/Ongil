@@ -111,3 +111,12 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     enabled: true
+
+webrtc:
+  ice-servers:
+    stun:
+      url: stun:43.202.55.40:3478
+    turn:
+      url: turn:43.202.55.40:3478
+      username: ${TURN_USERNAME}
+      credential: ${TURN_CREDENTIAL}
