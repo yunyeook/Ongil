@@ -27,8 +27,6 @@ import org.springframework.web.bind.annotation.*;
 public class NavigationController {
 
     private final NavigationService navigationService;
-    private final FcmService fcmService;
-    private final FcmTokenRedisService fcmTokenRedisService;
 
 
     @PostMapping("/start")

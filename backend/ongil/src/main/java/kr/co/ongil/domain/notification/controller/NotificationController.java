@@ -79,8 +79,8 @@ public class NotificationController {
 
     @PostMapping
     @Operation(summary = "알림 생성", description = "알림을 생성합니다.")
-    public ApiResponse<List<NotificationResponse>> createNotification(@RequestBody NotificationRequest request) {
-        List<NotificationResponse> response = notificationService.createNotifications(request);
+    public ApiResponse<NotificationResponse> createNotification(@RequestBody NotificationRequest request) {
+        NotificationResponse response = notificationService.createNotifications(request);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_CREATED, response);
     }
 }

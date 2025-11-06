@@ -28,7 +28,7 @@ public class Notification extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(nullable = false)
     private String content;
 
     @Enumerated(EnumType.STRING)
@@ -46,7 +46,7 @@ public class Notification extends BaseEntity {
         this.isRead = true;
     }
 
-    public static Notification from(NotificationRequest request, User sender, User receiver) {
+    public static Notification of(NotificationRequest request,User sender, User receiver) {
         return Notification.builder()
             .sender(sender)
             .receiver(receiver)
