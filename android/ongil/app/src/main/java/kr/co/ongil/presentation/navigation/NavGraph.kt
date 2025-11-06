@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavGraphBuilder
@@ -94,7 +95,7 @@ fun AppNavGraph(
 
         // 나의정보
         composable(Routes.MyInfo.route) {
-            val viewModel: kr.co.ongil.presentation.viewmodel.MyInfoViewModel = viewModel()
+            val viewModel: kr.co.ongil.presentation.viewmodel.MyInfoViewModel = hiltViewModel()
             val uiState by viewModel.uiState.collectAsState()
 
             // SideEffect 처리 (로그아웃 시 로그인 화면으로 이동)
@@ -123,7 +124,7 @@ fun AppNavGraph(
 
         // 나의정보 수정
         composable(Routes.EditInfo.route) {
-            val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = viewModel()
+            val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = hiltViewModel()
             MyInfoEditScreen(
                 viewModel = editViewModel,
                 onNavigateBack = { navController.popBackStack() },

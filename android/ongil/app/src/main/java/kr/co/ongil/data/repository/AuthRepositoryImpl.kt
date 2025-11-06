@@ -42,17 +42,15 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(): Result<String> {
         return try {
-            // TokenManager에서 저장된 토큰 가져오기
-            val accessToken = tokenManager.getAccessToken().firstOrNull()
+            // TokenManager에서 저장된 refreshToken 가져오기
             val refreshToken = tokenManager.getRefreshToken().firstOrNull()
 
             // 토큰이 없는 경우 에러 처리
-            if (accessToken == null || refreshToken == null) {
+            if (refreshToken == null) {
                 return Result.failure(IllegalStateException("토큰이 없습니다. 로그인이 필요합니다."))
             }
 
             val response = authApi.logout(
-                accessToken = "Bearer $accessToken",
                 request = LogoutRequest(refreshToken = refreshToken)
             )
 

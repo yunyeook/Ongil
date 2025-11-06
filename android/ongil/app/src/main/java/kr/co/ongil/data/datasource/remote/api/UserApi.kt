@@ -9,6 +9,8 @@ import retrofit2.http.*
 
 /**
  * 사용자 관련 API
+ *
+ * 참고: Authorization 헤더는 AuthInterceptor가 자동으로 추가합니다.
  */
 interface UserApi {
 
@@ -17,9 +19,7 @@ interface UserApi {
      * GET /api/v1/users/me
      */
     @GET("/api/v1/users/me")
-    suspend fun getMyInfo(
-        @Header("Authorization") accessToken: String
-    ): UserResponse
+    suspend fun getMyInfo(): UserResponse
 
     /**
      * 로그인한 회원의 기본 정보 수정
@@ -28,7 +28,6 @@ interface UserApi {
     @Multipart
     @PATCH("/api/v1/users/me")
     suspend fun updateMyInfo(
-        @Header("Authorization") accessToken: String,
         @Part("name") name: RequestBody? = null,
         @Part("birth") birth: RequestBody? = null,
         @Part("phoneNumber") phoneNumber: RequestBody? = null,
@@ -42,7 +41,6 @@ interface UserApi {
      */
     @PATCH("/api/v1/password/reset")
     suspend fun changePassword(
-        @Header("Authorization") accessToken: String,
         @Body request: ChangePasswordRequest
     ): ChangePasswordResponse
 }
