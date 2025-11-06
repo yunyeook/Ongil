@@ -38,11 +38,10 @@ fun ChangePasswordScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 비밀번호 변경 성공 시 자동으로 뒤로가기
+    // 비밀번호 변경 성공 시 내정보 화면으로 이동
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            onPasswordChanged()
-            onNavigateBack()
+            onPasswordChanged()  // NavGraph에서 MyInfo로 이동 처리
         }
     }
 

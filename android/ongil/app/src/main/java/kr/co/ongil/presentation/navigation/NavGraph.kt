@@ -132,6 +132,18 @@ fun AppNavGraph(
             )
         }
 
+        // 비밀번호 변경
+        composable(Routes.ChangePassword.route) {
+            val changePasswordViewModel: kr.co.ongil.presentation.viewmodel.ChangePasswordViewModel = hiltViewModel()
+            ChangePasswordScreen(
+                viewModel = changePasswordViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onPasswordChanged = {
+                    // 비밀번호 변경 성공 시 내정보 화면으로 이동 (EditInfo 화면 건너뛰기)
+                    navController.popBackStack(Routes.MyInfo.route, inclusive = false)
+                }
+            )
+        }
 
         // 통화 내역
         composable(Routes.CallHistory.route) {
