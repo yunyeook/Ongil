@@ -31,8 +31,8 @@ public class SwaggerConfig {
                 .description("Ongil 프로젝트 API 문서")
                 .version("v1.0.0"))
             .addServersItem(new Server()
-                .url("http://localhost:8080")
-                .description("Local Server"))
+                .url("/")
+                .description("Current Host"))
             .components(new Components()
                 .addSecuritySchemes("bearerAuth", securityScheme))
             .addSecurityItem(securityRequirement);

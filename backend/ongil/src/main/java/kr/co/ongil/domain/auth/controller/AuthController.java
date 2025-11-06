@@ -36,6 +36,14 @@ public class AuthController {
         return ApiResponse.success(ResponseMessage.SIGNUP_SUCCESS);
     }
 
+    @PostMapping("/login")
+    @Operation(summary = "로그인", description = "전화번호와 비밀번호로 로그인하여 액세스 토큰과 리프레시 토큰을 발급받습니다.")
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+
+        LoginResponse loginResponse = authService.login(request);
+        return ApiResponse.success(ResponseMessage.LOGIN_SUCCESS, loginResponse);
+    }
+
     @PostMapping("/refresh")
     @Operation(summary = "토큰 재발급", description = "리프레시 토큰을 사용하여 새로운 액세스 토큰과 리프레시 토큰을 발급받습니다.")
     public ApiResponse<RefreshResponse> refresh(@Valid @RequestBody RefreshRequest request) {

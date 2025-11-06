@@ -315,3 +315,7 @@ tmp/
 scratch/
 test_*.sh
 debug_*.sh
+
+
+### firebase ###
+backend/ongil/src/main/resources/firebase/ongil-firebase-adminsdk-key.json

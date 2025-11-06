@@ -53,15 +53,30 @@ public enum ErrorCode {
     NO_GUARDIAN_FOUND(HttpStatus.NOT_FOUND, "관계 등록된 보호자가 없습니다."),
     PATIENT_ALREADY_LINKED(HttpStatus.CONFLICT, "이미 보호자와 연결된 환자입니다."),
 
+    // RELATIONSHIP
+    RELATIONSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 관계를 찾을 수 없습니다."),
+    RELATIONSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 관계입니다."),
+    RELATIONSHIP_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 관계에 대한 권한이 없습니다."),
+    SAME_USER_TYPE_RELATIONSHIP(HttpStatus.FORBIDDEN, "동일한 역할 간에는 등록할 수 없습니다."),
+    SELF_RELATIONSHIP_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자기 자신과는 관계를 등록할 수 없습니다."),
+    INVALID_VERIFICATION_TOKEN(HttpStatus.UNPROCESSABLE_ENTITY, "토큰이 유효하지 않습니다."),
+    VERIFICATION_TOKEN_EXPIRED(HttpStatus.GONE, "토큰이 만료되었거나 이미 사용되었습니다."),
+    COUNTERPART_USER_NOT_FOUND(HttpStatus.NOT_FOUND, "대상을 찾을 수 없습니다."),
+    INVALID_RELATIONSHIP_GRANT(HttpStatus.UNPROCESSABLE_ENTITY, "관계 등록용 토큰이 아닙니다."),
+    INVALID_RELATIONSHIP_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 관계 유형입니다. (부모/배우자/자녀/형제/기타)"),
+
     // FAVORITE
     FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "즐겨찾기를 찾을 수 없습니다."),
     FAVORITE_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일한 즐겨찾기가 이미 존재합니다."),
     FAVORITE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 접근 권한이 없습니다."),
 
     // LOCATION / SAFEZONE / ABNORMAL DETECTION
-    SAFEZONE_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 안전구역이 없습니다."),
-    SAFEZONE_DUPLICATED(HttpStatus.CONFLICT, "이미 등록된 안전구역입니다."),
-    OUT_OF_SAFEZONE(HttpStatus.BAD_REQUEST, "안전구역을 벗어났습니다."),
+    SAFEZONE_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 안전범위이 없습니다."),
+    SAFEZONE_SETTING_NOT_FOUND(HttpStatus.NOT_FOUND, "안전범위 설정이 존재하지 않습니다."),
+    OUT_OF_SAFEZONE(HttpStatus.BAD_REQUEST, "안전범위을 벗어났습니다."),
+    INVALID_SAFEZONE_BOUNDARY(HttpStatus.BAD_REQUEST, "잘못된 안전범위 값입니다."),
+    SAFEZONE_BOUNDARY_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "안전범위가 허용 범위를 벗어났습니다."),
+    SAFEZONE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 수정 권한이 없습니다."),
     ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "경로를 찾을 수 없습니다."),
     ROUTE_GUIDE_FAILED(HttpStatus.BAD_GATEWAY, "길찾기 안내 중 오류가 발생했습니다."),
     ABNORMAL_EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 이상탐지 이벤트를 찾을 수 없습니다."),

@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -22,6 +23,9 @@ public class RedisConfig {
     @Value("${spring.data.redis.password:redis}")  // 환경변수 주입 (없으면 빈 문자열)
     private String redisPassword;
 
+    @Value("${redis.ssl-enabled:false}")
+    private boolean sslEnabled;
+
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
@@ -30,7 +34,12 @@ public class RedisConfig {
         if (redisPassword != null && !redisPassword.isEmpty()) {
             config.setPassword(redisPassword); // 여기서 비밀번호 설정
         }
-        return new LettuceConnectionFactory(config);
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder builder =
+                LettuceClientConfiguration.builder();
+        if (sslEnabled) {
+            builder.useSsl();  // ← 이게 호출되고 있나?
+        }
+        return new LettuceConnectionFactory(config, builder.build());
     }
 
     @Bean
