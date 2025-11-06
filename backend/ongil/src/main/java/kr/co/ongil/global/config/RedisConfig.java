@@ -23,7 +23,7 @@ public class RedisConfig {
     @Value("${spring.data.redis.password:redis}")  // ✅ 환경변수 주입 (없으면 빈 문자열)
     private String redisPassword;
 
-    @Value("${redis.ssl-enabled:false}")
+    @Value("${REDIS_SSL_ENABLED:false}")
     private boolean sslEnabled;
 
     @Bean
