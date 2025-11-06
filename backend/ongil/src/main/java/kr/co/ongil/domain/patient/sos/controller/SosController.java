@@ -30,7 +30,6 @@ public class SosController {
      * SOS 요청 생성
      */
     @PostMapping("/{patientId}/sos")
-    @ResponseStatus(HttpStatus.CREATED)
     @Operation( summary = "SOS 음성 재생 요청 전송", description = "보호자가 환자에게 sos 음성을 재생하도록 요청합니다.")
     public ApiResponse<SosResponse> createSosRequest(
         @Parameter(description = "도움 요청 음성을 재생할 대상 환자 고유 ID", example = "1", required = true)
@@ -46,7 +45,6 @@ public class SosController {
      * SOS 음성 재생 완료 콜백
      */
     @PostMapping("/sos/{sosId}/ack")
-    @ResponseStatus(HttpStatus.OK)
     @Operation(
         summary = "SOS 음성 재생 완료 콜백",
         description = "환자의 워치가 SOS 음성 재생 완료를 응답합니다."
@@ -61,6 +59,23 @@ public class SosController {
         sosService.createSosCallbackAckRequest(patientId, sosId);
         return ApiResponse.success(ResponseMessage.SOS_ACK_PROCESSED);
     }
+    /**
+     * SOS 음성 재생 종료
+     */
+    @DeleteMapping("/{patientId}/sos")
+    @Operation(
+        summary = "SOS 음성 재생 종료",
+        description = "보호자가 환자에게 재생 중인 SOS 음성을 종료합니다."
+    )
+    public ApiResponse<String> stopSosRequest(
+        @Parameter(description = "도움 요청 음성이 재생되고 있는 환자 고유 ID", example = "1", required = true)
+        @PathVariable Integer patientId
+    ) {
+//    Integer guardianId = SecurityUtil.getCurrentUserId();
+        Integer guardianId = 2; //TODO : 개발시
 
+        sosService.stopSosRequest(guardianId, patientId);
+        return ApiResponse.success(ResponseMessage.SOS_STOPPED);
+    }
 
 }

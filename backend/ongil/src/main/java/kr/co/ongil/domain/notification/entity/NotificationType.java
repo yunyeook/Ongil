@@ -13,7 +13,8 @@ public enum NotificationType {
     ABNORMAL_DETECTED("이상행동 감지"),
     CALL_REQUEST("통화 요청"),
     SOS_REQUEST("SOS 요청"),
-    SOS_ACK("SOS 재생 완료 여부 응답");
+    SOS_ACK("SOS 재생 완료 여부 응답"),
+    SOS_STOP("SOS 음성 재생 종료");
 
     private final String description;
 }
