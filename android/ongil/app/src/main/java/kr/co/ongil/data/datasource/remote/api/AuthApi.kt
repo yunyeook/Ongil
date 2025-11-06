@@ -50,4 +50,13 @@ interface AuthApi {
         @Header("Authorization") accessToken: String,
         @Body request: VerifyCodeRequest
     ): VerifyCodeResponse
+
+    /**
+     * 토큰 재발급
+     * POST /api/v1/auth/refresh
+     */
+    @POST("/api/v1/auth/refresh")
+    suspend fun refreshToken(
+        @Body request: RefreshTokenRequest
+    ): RefreshTokenResponse
 }
