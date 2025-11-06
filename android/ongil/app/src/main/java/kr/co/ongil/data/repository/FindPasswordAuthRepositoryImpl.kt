@@ -20,10 +20,7 @@ class FindPasswordAuthRepositoryImpl @Inject constructor(
     override suspend fun sendVerificationCode(phone: String): Result<Unit> {
         return try {
             authApi.sendVerificationCode(
-                request = SendVerificationRequest(
-                    phoneNumber = phone,
-                    grant = "PASSWORD_RESET"  // 비밀번호 찾기용
-                )
+                request = SendVerificationRequest(phoneNumber = phone)
             )
             Result.success(Unit)
         } catch (e: Exception) {
@@ -37,12 +34,12 @@ class FindPasswordAuthRepositoryImpl @Inject constructor(
             val response = authApi.verifyCode(
                 request = VerifyCodeRequest(
                     phoneNumber = phone,
-                    code = code,
-                    grant = "PASSWORD_RESET"  // 비밀번호 찾기용
+                    verificationCode = code,
+                    grants = "PASSWORD_RESET"  // 비밀번호 찾기용
                 )
             )
-            // verificationToken이 있으면 성공
-            Result.success(response.data.verificationToken.isNotEmpty())
+            // verified 필드로 성공 여부 확인
+            Result.success(response.data.verified)
         } catch (e: Exception) {
             val apiException = ErrorHandler.handleException(e)
             Result.failure(apiException)

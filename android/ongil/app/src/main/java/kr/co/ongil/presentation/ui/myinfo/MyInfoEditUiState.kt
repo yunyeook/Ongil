@@ -36,7 +36,8 @@ data class MyInfoEditUiState(
 
     // 전역 상태
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isSaveSuccess: Boolean = false  // 저장 성공 시 true
 )
 
 /**
@@ -67,5 +68,5 @@ sealed interface MyInfoEditEvent {
 
     // 기타
     data object ChangePassword : MyInfoEditEvent
-    data class SaveInfo(val name: String, val birth: String, val phone: String) : MyInfoEditEvent
+    data object SaveInfo : MyInfoEditEvent  // 파라미터 제거 - ViewModel에서 uiState 사용
 }
