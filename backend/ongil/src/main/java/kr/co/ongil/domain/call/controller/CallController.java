@@ -12,10 +12,9 @@ import kr.co.ongil.domain.call.service.CallService;
 import kr.co.ongil.domain.call.service.TurnCredentialsService;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
+import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,10 +39,9 @@ public class CallController {
     @PostMapping
     @Operation(summary = "VoIP 통화 요청 생성", description = "앱 내 VoIP 통화 세션을 생성합니다.")
     public ApiResponse<CallResponse> createCall(
-        @AuthenticationPrincipal UserDetails userDetails,
         @Valid @RequestBody CreateCallRequest request
     ) {
-        Integer callerId = Integer.parseInt(userDetails.getUsername());
+        Integer callerId = SecurityUtil.getCurrentUserId();
         CallResponse response = callService.createCall(callerId, request);
 
         return ApiResponse.success(ResponseMessage.CALL_REQUESTED, response);

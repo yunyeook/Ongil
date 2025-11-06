@@ -21,11 +21,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     /**
      * STOMP 엔드포인트 등록
-     * 클라이언트는 /ws로 연결
+     * 클라이언트는 /api/ws로 연결 (WebMvcConfig의 /api/v1 prefix와 별개)
      */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
+        registry.addEndpoint("/api/ws")
             .setAllowedOriginPatterns("*")  // CORS 설정 (운영에서는 구체적으로 지정)
             .withSockJS();  // SockJS fallback 지원
     }
