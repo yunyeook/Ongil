@@ -422,10 +422,16 @@
       const socket = new SockJS(wsUrl);
       stompClient = Stomp.over(socket);
 
+      // 디버그 모드 활성화
+      stompClient.debug = (str) => {
+        log(`[STOMP] ${str}`, 'info');
+      };
+
       stompClient.connect(
         { Authorization: `Bearer ${accessToken}` },
         (frame) => {
           log('✅ WebSocket 연결 성공', 'success');
+          log(`Frame: ${JSON.stringify(frame)}`, 'info');
           updateWsStatus('connected', 'WebSocket 연결됨');
 
           // 버튼 상태 변경
@@ -433,15 +439,16 @@
           document.getElementById('wsDisconnectBtn').disabled = false;
 
           // 모든 통화 메시지 구독
-          stompClient.subscribe(`/user/queue/calls`, (message) => {
+          const subscription = stompClient.subscribe(`/user/queue/calls`, (message) => {
+            log(`📥 메시지 수신 원본: ${message.body}`, 'info');
             const signal = JSON.parse(message.body);
             handleSignalMessage(signal);
           });
 
-          log('📡 시그널 메시지 구독 시작', 'info');
+          log(`📡 시그널 메시지 구독 시작: ${subscription.id}`, 'success');
         },
         (error) => {
-          log(`❌ WebSocket 연결 실패: ${error}`, 'error');
+          log(`❌ WebSocket 연결 실패: ${JSON.stringify(error)}`, 'error');
           updateWsStatus('disconnected', 'WebSocket 연결 실패');
         }
       );
