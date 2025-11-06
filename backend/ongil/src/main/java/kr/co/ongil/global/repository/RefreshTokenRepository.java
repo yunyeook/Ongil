@@ -80,4 +80,18 @@ public class RefreshTokenRepository {
     private String createKey(Integer userId) {
         return REFRESH_TOKEN_PREFIX + userId;
     }
+
+    // 액세스 토큰 블랙리스트 관련 메서드
+    private static final String ACCESS_TOKEN_BLACKLIST_PREFIX = "blacklist_access:";
+
+    public void addAccessTokenToBlacklist(String accessToken, long expiration) {
+        String key = ACCESS_TOKEN_BLACKLIST_PREFIX + accessToken;
+        redisTemplate.opsForValue().set(key, "logout", expiration, TimeUnit.MILLISECONDS);
+        log.info("액세스 토큰을 블랙리스트에 추가했습니다.");
+    }
+
+    public boolean isAccessTokenBlacklisted(String accessToken) {
+        String key = ACCESS_TOKEN_BLACKLIST_PREFIX + accessToken;
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
 }

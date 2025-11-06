@@ -4,7 +4,10 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import kr.co.ongil.global.security.jwt.JwtUtil;
+import kr.co.ongil.global.security.userdetails.CustomUserDetails;
+import kr.co.ongil.global.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,7 +18,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 @Slf4j
 @Component
@@ -23,6 +25,7 @@ import java.util.ArrayList;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
@@ -31,7 +34,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        
         String token = extractTokenFromRequest(request);
 
         if (token != null && jwtUtil.validateToken(token)) {
@@ -44,18 +46,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
+            // 블랙리스트 체크 (로그아웃된 토큰인지 확인)
+            if (refreshTokenRepository.isAccessTokenBlacklisted(token)) {
+                log.warn("블랙리스트에 등록된 토큰입니다. (로그아웃된 토큰)");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             Integer userId = jwtUtil.getUserIdFromToken(token);
+            String username = jwtUtil.getUsernameFromToken(token);
+            String userType = jwtUtil.getUserTypeFromToken(token);
+
+            // 토큰에서 추출한 정보로 UserDetails 생성 (DB 조회 없음)
+            CustomUserDetails userDetails = CustomUserDetails.fromToken(userId, username, userType);
 
             // Spring Security Context에 인증 정보 설정
             UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(userId, null, new ArrayList<>());
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.debug("JWT 토큰 인증 성공: userId={}", userId);
+            log.debug("JWT 토큰 인증 성공: userId={}, userType={}", userId, userType);
         }
-        
+
         filterChain.doFilter(request, response);
     }
 

@@ -5,13 +5,16 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.co.ongil.domain.patient.favorite.dto.request.CreateFavoriteRequest;
+import kr.co.ongil.domain.patient.favorite.dto.request.ReorderFavoritesRequest;
 import kr.co.ongil.domain.patient.favorite.dto.request.UpdateFavoriteRequest;
 import kr.co.ongil.domain.patient.favorite.dto.response.FavoriteListResponse;
 import kr.co.ongil.domain.patient.favorite.dto.response.FavoriteResponse;
+
+import java.util.List;
 import kr.co.ongil.domain.patient.favorite.service.FavoriteService;
-import kr.co.ongil.global.api.BaseController;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
+import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/patients/{patientId}/favorites")
 @RequiredArgsConstructor
 @Tag(name = "Favorite API", description = "즐겨찾기 관련 API")
-public class FavoriteController extends BaseController {
+public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
@@ -34,7 +37,7 @@ public class FavoriteController extends BaseController {
         @Valid @RequestBody CreateFavoriteRequest request
         // @AuthenticationPrincipal CustomUserDetails userDetails // 실제 인증 사용 시
     ) {
-        Integer callerId = patientId; // TODO: SecurityContext에서 추출
+        Integer callerId = SecurityUtil.getCurrentUserId();
         FavoriteResponse response = favoriteService.createFavorite(patientId, request, callerId);
         return ApiResponse.success(ResponseMessage.FAVORITE_CREATED, response);
     }
@@ -44,7 +47,7 @@ public class FavoriteController extends BaseController {
     public ApiResponse<FavoriteListResponse> getFavorites(
         @Parameter(description = "환자 ID") @PathVariable Integer patientId
     ) {
-        Integer callerId = patientId; // TODO: SecurityContext에서 추출
+        Integer callerId = SecurityUtil.getCurrentUserId();
         FavoriteListResponse response = favoriteService.getFavorites(patientId, callerId);
         return ApiResponse.success(ResponseMessage.FAVORITE_LIST_FOUND, response);
     }
@@ -54,7 +57,7 @@ public class FavoriteController extends BaseController {
         @Parameter(description = "환자 ID") @PathVariable Integer patientId,
         @Parameter(description = "즐겨찾기 ID") @PathVariable Integer favoriteId
     ) {
-        Integer callerId = patientId; // TODO: SecurityContext에서 추출
+        Integer callerId = SecurityUtil.getCurrentUserId();
         FavoriteResponse response = favoriteService.getFavorite(patientId, favoriteId, callerId);
         return ApiResponse.success(ResponseMessage.FAVORITE_FOUND, response);
     }
@@ -66,7 +69,7 @@ public class FavoriteController extends BaseController {
         @Parameter(description = "즐겨찾기 ID") @PathVariable Integer favoriteId,
         @RequestBody UpdateFavoriteRequest request
     ) {
-        Integer callerId = patientId; // TODO: SecurityContext에서 추출
+        Integer callerId = SecurityUtil.getCurrentUserId();
         FavoriteResponse response = favoriteService.updateFavorite(patientId, favoriteId, request, callerId);
         return ApiResponse.success(ResponseMessage.FAVORITE_UPDATED, response);
     }
@@ -77,7 +80,7 @@ public class FavoriteController extends BaseController {
         @Parameter(description = "환자 ID") @PathVariable Integer patientId,
         @Parameter(description = "즐겨찾기 ID") @PathVariable Integer favoriteId
     ) {
-        Integer callerId = patientId; // TODO: SecurityContext에서 추출
+        Integer callerId = SecurityUtil.getCurrentUserId();
         favoriteService.deleteFavorite(patientId, favoriteId, callerId);
         return ApiResponse.success(ResponseMessage.FAVORITE_DELETED,"");
 
@@ -89,8 +92,27 @@ public class FavoriteController extends BaseController {
         @Parameter(description = "환자 ID") @PathVariable Integer patientId,
         @Parameter(description = "즐겨찾기 ID") @PathVariable Integer favoriteId
     ) {
-        Integer callerId = patientId; // TODO: SecurityContext에서 추출
+        Integer callerId = SecurityUtil.getCurrentUserId();
         FavoriteResponse response = favoriteService.setDefaultFavorite(patientId, favoriteId, callerId);
         return ApiResponse.success(ResponseMessage.FAVORITE_DEFAULT_SET, response);
+    }
+
+    @PatchMapping("/order")
+    @Operation(
+            summary = "즐겨찾기 목록 일괄 재정렬",
+            description = "드래그 앤 드롭으로 변경된 즐겨찾기 순서를 일괄 업데이트합니다. " +
+                    "orderedFavoriteIds에 원하는 순서대로 즐겨찾기 ID를 배열로 전달하세요."
+    )
+    public ApiResponse<List<FavoriteResponse>> reorderFavorites(
+            @Parameter(description = "환자 ID") @PathVariable Integer patientId,
+            @Valid @RequestBody ReorderFavoritesRequest request
+    ) {
+        Integer callerId = SecurityUtil.getCurrentUserId();
+        List<FavoriteResponse> response = favoriteService.reorderFavorites(
+                patientId,
+                request.orderedFavoriteIds(),
+                callerId
+        );
+        return ApiResponse.success(ResponseMessage.FAVORITE_REORDERED, response);
     }
 }

@@ -45,8 +45,15 @@ public class Favorite extends BaseEntity {
     @Builder.Default
     private Boolean isDefault = false;
 
+    @Column(name = "display_order")
+    private Integer displayOrder;
+
     public void incrementCount() {
         this.count++;
+    }
+
+    public void setDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
     }
 
     public void setAsDefault() {

@@ -16,6 +16,7 @@ import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -27,8 +28,20 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public void register(RegisterRequest request) {
+
+        // 전화번호 인증 토큰 검증
+        if (!jwtUtil.validateToken(request.getVerificationToken())) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰에서 전화번호 추출 및 검증
+        String verifiedPhoneNumber = jwtUtil.getPhoneNumberFromToken(request.getVerificationToken());
+        if (!request.getPhoneNumber().equals(verifiedPhoneNumber)) {
+            throw new BusinessException(ErrorCode.PHONE_NUMBER_MISMATCH);
+        }
 
         // 중복 확인
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
@@ -52,33 +65,33 @@ public class AuthService {
 
         // 사용자 저장
         User savedUser = userRepository.save(user);
+
+        log.info("회원가입 완료: phoneNumber={}, userType={}", request.getPhoneNumber(), request.getUserType());
     }
 
     public LoginResponse login(LoginRequest request) {
-        log.info("로그인 시도: {}", request.getPhoneNumber());
+        log.info("로그인 시도: phoneNumber={}", request.getPhoneNumber());
 
-        // 사용자 조회
+        // 1. 사용자 조회
         User user = userRepository.findByPhoneNumber(request.getPhoneNumber())
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
-        // 비밀번호 확인
-        if (!user.getPassword().equals(request.getPassword())) {
-            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
+        // 2. 비밀번호 검증
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
-        // 소프트 삭제 확인
-        if (user.getDeletedAt() != null) {
-            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
-        }
+        // 3. JWT 토큰 생성
+        String userType = user.getUserType().name();
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getPhoneNumber(), userType);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getPhoneNumber(), userType);
 
-        // JWT 토큰 생성
-        String accessToken = jwtUtil.generateAccessToken(user.getId());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
-
-        // Redis에 토큰 저장
+        // 4. Redis에 리프레시 토큰 저장
         refreshTokenRepository.storeRefreshToken(user.getId(), refreshToken, jwtUtil.getRefreshTokenExpiration());
 
-        // 사용자 정보 구성
+        log.info("로그인 성공: userId={}, userType={}", user.getId(), userType);
+
+        // 5. 응답 생성
         LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
                 .id(user.getId())
                 .name(user.getName())
@@ -87,8 +100,6 @@ public class AuthService {
                 .userType(user.getUserType().name())
                 .profileImage(user.getProfileImage())
                 .build();
-
-        log.info("로그인 성공: {}", user.getPhoneNumber());
 
         return LoginResponse.builder()
                 .user(userInfo)
@@ -116,27 +127,23 @@ public class AuthService {
 
         // 리프레시 토큰 소비 시도
         if (!refreshTokenRepository.consumeRefreshToken(userId, refreshToken)) {
-            
+
             log.warn("잠재적인 리프레시 토큰 재사용 시도 감지: userId={}", userId);
-            
+
             // 모든 리프레시 토큰 삭제 (보안 조치)
             refreshTokenRepository.deleteAllTokensForUser(userId);
 
             throw new BusinessException(ErrorCode.EXPIRED_REFRESH_TOKEN);
         }
 
-        // 사용자 존재 확인
+        // 사용자 존재 확인 (삭제된 사용자는 @SQLRestriction에 의해 자동으로 필터링됨)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 소프트 삭제 확인
-        if (user.getDeletedAt() != null) {
-            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
-        }
-
-        // 새로운 토큰 생성
-        String newAccessToken = jwtUtil.generateAccessToken(userId);
-        String newRefreshToken = jwtUtil.generateRefreshToken(userId);
+        // 새로운 토큰 생성 (userType 포함)
+        String userType = user.getUserType().name();
+        String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getPhoneNumber(), userType);
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getPhoneNumber(), userType);
 
         // Redis에 새로운 리프레시 토큰 저장 (기존 토큰 덮어쓰기)
         refreshTokenRepository.storeRefreshToken(userId, newRefreshToken, jwtUtil.getRefreshTokenExpiration());
@@ -147,6 +154,35 @@ public class AuthService {
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
                 .build();
+    }
+
+    public void logout(String accessToken) {
+        // 액세스 토큰 검증
+        if (!jwtUtil.validateToken(accessToken)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰 타입 확인
+        String tokenType = jwtUtil.getTokenType(accessToken);
+        if (!"access".equals(tokenType)) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰에서 사용자 ID 추출
+        Integer userId = jwtUtil.getUserIdFromToken(accessToken);
+
+        // 액세스 토큰의 남은 만료 시간 계산
+        long remainingExpiration = jwtUtil.getRemainingExpiration(accessToken);
+
+        // 액세스 토큰을 블랙리스트에 추가 (남은 만료 시간만큼만 유지)
+        if (remainingExpiration > 0) {
+            refreshTokenRepository.addAccessTokenToBlacklist(accessToken, remainingExpiration);
+        }
+
+        // 리프레시 토큰 삭제 (모든 세션 무효화)
+        refreshTokenRepository.deleteAllTokensForUser(userId);
+
+        log.info("로그아웃 완료: userId={}", userId);
     }
 
 }

@@ -50,43 +50,64 @@ public class JwtUtil {
 
     // ========== Access Token, Refresh Token ==========
 
-    public String generateAccessToken(Integer userId) {
-        return generateToken(userId, accessTokenExpiration, "access");
+    public String generateAccessToken(Integer userId, String phoneNumber, String userType) {
+        return generateToken(userId, phoneNumber, userType, accessTokenExpiration, "access");
     }
 
-    public String generateRefreshToken(Integer userId) {
-        return generateToken(userId, refreshTokenExpiration, "refresh");
+    public String generateRefreshToken(Integer userId, String phoneNumber, String userType) {
+        return generateToken(userId, phoneNumber, userType, refreshTokenExpiration, "refresh");
     }
 
-    private String generateToken(Integer userId, long expiration, String tokenType) {
+    private String generateToken(Integer userId, String phoneNumber, String userType, long expiration, String tokenType) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
-        return Jwts.builder()
-                .subject(userId.toString())
+        JwtBuilder builder = Jwts.builder()
+                .subject(phoneNumber)
+                .claim("userId", userId)
                 .claim("type", tokenType)
                 .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(secretKey)
-                .compact();
+                .expiration(expiryDate);
+
+        // userType이 있으면 claim에 추가
+        if (userType != null) {
+            builder.claim("userType", userType);
+        }
+
+        return builder.signWith(secretKey).compact();
     }
 
     private Claims parseClaims(String token) {
+//        log.info("▶▶▶ parseClaims 호출 - token length: {}, prefix: {}",
+//                token != null ? token.length() : "null",
+//                token != null ? token.substring(0, Math.min(30, token.length())) : "null");
         try {
-            return Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(secretKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (JwtException | IllegalArgumentException e) {
-            log.error("JWT 토큰 파싱 실패: {}", e.getMessage());
+//            log.info("▶▶▶ parseClaims 성공 - subject: {}, claims: {}",
+//                    claims.getSubject(), claims.keySet());
+            return claims;
+        } catch (JwtException e) {
+//            log.error("▶▶▶ JWT 토큰 파싱 실패 - 에러 타입: {}, 메시지: {}",
+//                    e.getClass().getSimpleName(), e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        } catch (IllegalArgumentException e) {
+//            log.error("▶▶▶ JWT 토큰 파싱 실패 - IllegalArgumentException: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
     }
 
+    public String getUsernameFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return claims.getSubject();
+    }
+
     public Integer getUserIdFromToken(String token) {
         Claims claims = parseClaims(token);
-        return Integer.parseInt(claims.getSubject());
+        return claims.get("userId", Integer.class);
     }
 
     public String getTokenType(String token) {
@@ -94,12 +115,19 @@ public class JwtUtil {
         return claims.get("type", String.class);
     }
 
+    public String getUserTypeFromToken(String token) {
+        Claims claims = parseClaims(token);
+        return claims.get("userType", String.class);
+    }
+
     public boolean validateToken(String token) {
+//        log.info("▶▶▶ validateToken 호출됨");
         try {
             parseClaims(token);
+//            log.info("▶▶▶ validateToken 성공!");
             return true;
         } catch (BusinessException e) {
-            log.error("JWT 토큰 검증 실패: {}", e.getMessage());
+//            log.error("▶▶▶ JWT 토큰 검증 실패: {}", e.getMessage());
             return false;
         }
     }
@@ -136,8 +164,11 @@ public class JwtUtil {
      * @return 전화번호
      */
     public String getPhoneNumberFromToken(String token) {
+//        log.info("▶▶▶ getPhoneNumberFromToken 호출됨");
         Claims claims = parseClaims(token);
-        return claims.get("phoneNumber", String.class);
+        String phoneNumber = claims.get("phoneNumber", String.class);
+//        log.info("▶▶▶ getPhoneNumberFromToken 성공 - phoneNumber: {}", phoneNumber);
+        return phoneNumber;
     }
 
     /**
@@ -147,8 +178,11 @@ public class JwtUtil {
      * @return Grant (SELF, RELATIONSHIP)
      */
     public String getGrantFromToken(String token) {
+//        log.info("▶▶▶ getGrantFromToken 호출됨");
         Claims claims = parseClaims(token);
-        return claims.get("grant", String.class);
+        String grant = claims.get("grant", String.class);
+//        log.info("▶▶▶ getGrantFromToken 성공 - grant: {}", grant);
+        return grant;
     }
 
     /**
@@ -158,11 +192,15 @@ public class JwtUtil {
      * @return 만료되었으면 true, 아니면 false
      */
     public boolean isTokenExpired(String token) {
+//        log.info("▶▶▶ isTokenExpired 호출됨");
         try {
             Claims claims = parseClaims(token);
             Date expiration = claims.getExpiration();
-            return expiration.before(new Date());
+            boolean expired = expiration.before(new Date());
+//            log.info("▶▶▶ isTokenExpired 결과 - expired: {}, expiration: {}", expired, expiration);
+            return expired;
         } catch (BusinessException e) {
+//            log.error("▶▶▶ isTokenExpired 실패 - 예외 발생, true 반환");
             return true;
         }
     }
@@ -176,5 +214,18 @@ public class JwtUtil {
     public String getSubjectFromToken(String token) {
         Claims claims = parseClaims(token);
         return claims.getSubject();
+    }
+
+    /**
+     * 토큰의 남은 만료 시간(밀리초) 계산
+     *
+     * @param token JWT 토큰
+     * @return 남은 만료 시간 (밀리초)
+     */
+    public long getRemainingExpiration(String token) {
+        Claims claims = parseClaims(token);
+        Date expiration = claims.getExpiration();
+        Date now = new Date();
+        return expiration.getTime() - now.getTime();
     }
 }
