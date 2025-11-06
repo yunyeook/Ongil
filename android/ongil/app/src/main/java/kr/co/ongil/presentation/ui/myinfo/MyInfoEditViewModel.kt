@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +29,10 @@ class MyInfoEditViewModel @Inject constructor(
     private val updateUserUseCase: UpdateUserUseCase,
     private val userRepository: UserRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "MyInfoEditVM"
+    }
 
     private val _uiState = MutableStateFlow(MyInfoEditUiState())
     val uiState: StateFlow<MyInfoEditUiState> = _uiState.asStateFlow()
@@ -153,7 +158,7 @@ class MyInfoEditViewModel @Inject constructor(
             }
 
             is MyInfoEditEvent.SaveInfo -> {
-                saveInfo(event.name, event.birth, event.phone)
+                saveInfo()
             }
         }
     }
@@ -162,13 +167,16 @@ class MyInfoEditViewModel @Inject constructor(
      * 인증번호 발송
      */
     private fun sendVerificationCode(phone: String) {
+        Log.d(TAG, "sendVerificationCode() called with phone: $phone")
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
+                Log.d(TAG, "Calling sendVerificationCode API")
 
                 // API 호출
                 userRepository.sendVerificationCode(phone).getOrThrow()
 
+                Log.d(TAG, "sendVerificationCode API success - changing state to Verifying")
                 _uiState.update {
                     it.copy(
                         phoneUiState = PhoneUiState.Verifying,
@@ -176,9 +184,11 @@ class MyInfoEditViewModel @Inject constructor(
                         isLoading = false
                     )
                 }
+                Log.d(TAG, "Current phoneUiState: ${_uiState.value.phoneUiState}")
 
                 startTimer(180)
             } catch (e: Exception) {
+                Log.e(TAG, "sendVerificationCode failed", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -261,28 +271,36 @@ class MyInfoEditViewModel @Inject constructor(
     /**
      * 정보 저장
      */
-    private fun saveInfo(name: String, birth: String, phone: String) {
+    private fun saveInfo() {
+        Log.d(TAG, "saveInfo() called")
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true, error = null) }
+                _uiState.update { it.copy(isLoading = true, error = null, isSaveSuccess = false) }
 
                 val currentState = _uiState.value
+                Log.d(TAG, "Current state - name: ${currentState.name}, newPhone: ${currentState.newPhone}, verificationToken: ${currentState.verificationToken}")
 
                 // 전화번호 변경 여부 확인
-                val phoneChanged = phone != currentState.phone
-                val verificationToken = if (phoneChanged) currentState.verificationToken else null
+                val phoneChanged = currentState.newPhone.isNotBlank() &&
+                                   currentState.verificationResult == true &&
+                                   currentState.verificationToken != null
+
+                Log.d(TAG, "Phone changed: $phoneChanged")
 
                 // UpdateUserUseCase 호출
                 updateUserUseCase(
-                    name = name,
-                    birth = birth,
-                    phoneNumber = if (phoneChanged) phone else null,
-                    verificationToken = verificationToken,
+                    name = currentState.name,
+                    birth = currentState.birth,
+                    phoneNumber = if (phoneChanged) currentState.newPhone else null,
+                    verificationToken = if (phoneChanged) currentState.verificationToken else null,
                     profileImage = null // TODO: 프로필 이미지 선택 기능 구현 후 추가
                 ).getOrThrow()
 
-                _uiState.update { it.copy(isLoading = false) }
+                Log.d(TAG, "saveInfo() - API 호출 성공")
+                _uiState.update { it.copy(isLoading = false, isSaveSuccess = true) }
+                Log.d(TAG, "isSaveSuccess set to true")
             } catch (e: Exception) {
+                Log.e(TAG, "saveInfo() failed", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,

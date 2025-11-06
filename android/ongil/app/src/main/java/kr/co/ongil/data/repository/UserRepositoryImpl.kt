@@ -51,6 +51,8 @@ class UserRepositoryImpl @Inject constructor(
         profileImage: File?
     ): Result<UserDto> {
         return try {
+            Log.d(TAG, "updateMyInfo() - name: $name, birth: $birth, phoneNumber: $phoneNumber, hasToken: ${verificationToken != null}")
+
             // RequestBody 생성
             val namePart = name?.toRequestBody("text/plain".toMediaTypeOrNull())
             val birthPart = birth?.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -63,17 +65,21 @@ class UserRepositoryImpl @Inject constructor(
                 MultipartBody.Part.createFormData("profileImage", it.name, requestFile)
             }
 
+            Log.d(TAG, "Calling updateMyInfo API")
             // API 호출
-            val response = userApi.updateMyInfo(
+            val updateResponse = userApi.updateMyInfo(
                 name = namePart,
                 birth = birthPart,
                 phoneNumber = phoneNumberPart,
                 verificationToken = verificationTokenPart,
                 profileImage = profileImagePart
             )
+            Log.d(TAG, "updateMyInfo API 성공: ${updateResponse.message}, user: ${updateResponse.data.user}")
 
-            Result.success(response.data)  // data에 바로 UserDto
+            // 응답에서 바로 수정된 사용자 정보 반환
+            Result.success(updateResponse.data.user)
         } catch (e: Exception) {
+            Log.e(TAG, "updateMyInfo 실패", e)
             // HTTP 에러를 ApiException으로 변환
             val apiException = ErrorHandler.handleException(e)
             Result.failure(apiException)
@@ -82,12 +88,15 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun sendVerificationCode(phoneNumber: String): Result<Unit> {
         return try {
+            Log.d(TAG, "sendVerificationCode() - API 호출 시작: $phoneNumber")
             authApi.sendVerificationCode(
                 request = SendVerificationRequest(phoneNumber = phoneNumber)
             )
+            Log.d(TAG, "sendVerificationCode() - API 호출 성공")
 
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e(TAG, "sendVerificationCode() - API 호출 실패", e)
             val apiException = ErrorHandler.handleException(e)
             Result.failure(apiException)
         }
@@ -96,7 +105,11 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun verifyCode(phoneNumber: String, code: String): Result<String> {
         return try {
             val response = authApi.verifyCode(
-                request = VerifyCodeRequest(phoneNumber = phoneNumber, code = code)
+                request = VerifyCodeRequest(
+                    phoneNumber = phoneNumber,
+                    verificationCode = code,
+                    grants = "PHONE_UPDATE"  // 휴대폰 번호 변경용
+                )
             )
 
             Result.success(response.data.verificationToken)

@@ -4,21 +4,32 @@ import kotlinx.serialization.Serializable
 
 /**
  * 전화번호 인증 발송 요청
- * POST /api/v1/auth/verification/send
+ * POST /api/v1/phone-verifications
+ *
+ * 실제 서버 요청:
+ * {
+ *   "phoneNumber": "01012345678"
+ * }
  */
 @Serializable
 data class SendVerificationRequest(
-    val phoneNumber: String,
-    val grant: String = "PHONE_UPDATE"
+    val phoneNumber: String
 )
 
 /**
  * 인증번호 확인 요청
- * POST /api/v1/auth/verification/verify
+ * POST /api/v1/phone-verifications/verify
+ *
+ * 실제 서버 요청:
+ * {
+ *   "phoneNumber": "01012345678",
+ *   "verificationCode": "839201",
+ *   "grants": "PASSWORD_RESET"  // 선택: PASSWORD_RESET, RELATIONSHIP_BIND, PHONE_UPDATE
+ * }
  */
 @Serializable
 data class VerifyCodeRequest(
     val phoneNumber: String,
-    val code: String,
-    val grant: String = "PHONE_UPDATE"
+    val verificationCode: String,
+    val grants: String? = null  // 선택적 필드
 )

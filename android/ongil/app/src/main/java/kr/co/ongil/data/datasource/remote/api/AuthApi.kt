@@ -34,18 +34,18 @@ interface AuthApi {
 
     /**
      * 전화번호 인증번호 발송
-     * POST /api/v1/auth/verification/send
+     * POST /api/v1/phone-verifications
      */
-    @POST("/api/v1/auth/verification/send")
+    @POST("/api/v1/phone-verifications")
     suspend fun sendVerificationCode(
         @Body request: SendVerificationRequest
     ): SendVerificationResponse
 
     /**
      * 인증번호 확인
-     * POST /api/v1/auth/verification/verify
+     * POST /api/v1/phone-verifications/verify
      */
-    @POST("/api/v1/auth/verification/verify")
+    @POST("/api/v1/phone-verifications/verify")
     suspend fun verifyCode(
         @Body request: VerifyCodeRequest
     ): VerifyCodeResponse

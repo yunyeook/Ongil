@@ -6,9 +6,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -97,6 +101,20 @@ fun AppNavGraph(
         composable(Routes.MyInfo.route) {
             val viewModel: kr.co.ongil.presentation.viewmodel.MyInfoViewModel = hiltViewModel()
             val uiState by viewModel.uiState.collectAsState()
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+
+            // 화면이 다시 표시될 때 정보 새로고침
+            DisposableEffect(lifecycleOwner) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                        viewModel.loadUserInfo()
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
+            }
 
             // SideEffect 처리 (로그아웃 시 로그인 화면으로 이동)
             LaunchedEffect(Unit) {
@@ -127,7 +145,10 @@ fun AppNavGraph(
             val editViewModel: kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel = hiltViewModel()
             MyInfoEditScreen(
                 viewModel = editViewModel,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = {
+                    // 내정보 화면으로 명시적으로 이동 (EditInfo 화면 제거)
+                    navController.popBackStack(Routes.MyInfo.route, inclusive = false)
+                },
                 onChangePasswordClick = { navController.navigate(Routes.ChangePassword.route) }
             )
         }

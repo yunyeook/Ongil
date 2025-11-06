@@ -79,9 +79,17 @@ fun MyInfoEditContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // 에러 메시지 표시
     LaunchedEffect(uiState.error) {
         uiState.error?.let { message ->
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+        }
+    }
+
+    // 저장 성공 시 뒤로가기
+    LaunchedEffect(uiState.isSaveSuccess) {
+        if (uiState.isSaveSuccess) {
+            onNavigateBack()
         }
     }
 
@@ -232,16 +240,20 @@ fun MyInfoEditContent(
 
             Button(
                 onClick = {
-                    onEvent(MyInfoEditEvent.SaveInfo(uiState.name, uiState.birth, uiState.phone))
-                    onNavigateBack()
+                    onEvent(MyInfoEditEvent.SaveInfo)
                 },
+                enabled = !uiState.isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = Accent),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
-                Text("저장하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("저장하기", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                }
             }
 
             Spacer(Modifier.height(32.dp)) // 하단 여유
