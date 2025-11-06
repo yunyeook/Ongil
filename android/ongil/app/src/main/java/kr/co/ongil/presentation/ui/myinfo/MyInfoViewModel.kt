@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -79,22 +80,31 @@ class MyInfoViewModel @Inject constructor(
      * 로그아웃
      */
     fun logout() {
+        Log.d(TAG, "logout() called")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            Log.d(TAG, "Starting logout API call")
 
             authRepository.logout()
                 .onSuccess { message ->
                     // 로그아웃 성공 - 로그인 화면으로 이동
+                    Log.d(TAG, "Logout success: $message")
                     _uiState.value = _uiState.value.copy(isLoading = false)
                     _sideEffect.emit(MyInfoSideEffect.NavigateToLogin)
+                    Log.d(TAG, "NavigateToLogin emitted")
                 }
                 .onFailure { exception ->
+                    Log.e(TAG, "Logout failed", exception)
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = exception.message ?: "로그아웃에 실패했습니다."
                     )
                 }
         }
+    }
+
+    companion object {
+        private const val TAG = "MyInfoViewModel"
     }
 }
 
