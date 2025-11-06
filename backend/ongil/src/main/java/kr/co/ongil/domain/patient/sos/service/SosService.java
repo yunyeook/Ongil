@@ -10,6 +10,7 @@ import kr.co.ongil.domain.patient.sos.entity.Sos;
 import kr.co.ongil.domain.patient.sos.repository.SosRepository;
 import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
 import kr.co.ongil.domain.user.entity.User;
+import kr.co.ongil.domain.user.entity.UserType;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
@@ -94,6 +95,28 @@ public class SosService {
 
     }
 
+    @Transactional
+    public void stopSosRequest(Integer guardianId, Integer patientId) {
+        // 1. 보호자 조회
+        User guardian = userRepository.findById(guardianId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 환자 조회
+        User patient = userRepository.findById(patientId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.PATIENT_NOT_FOUND));
+
+        // 3. 보호자 권한 확인
+        if (guardian.getUserType() != UserType.GUARDIAN) {
+            throw new BusinessException(ErrorCode.SOS_STOP_ACCESS_DENIED);
+        }
+
+        // 4. 관계 확인
+        if (!relationshipRepository.existsByPatientIdAndGuardianId(patientId, guardianId)) {
+            throw new BusinessException(ErrorCode.RELATIONSHIP_ACCESS_DENIED);
+        }
+        sendSosStopNotification(guardian, patient);
+    }
+
     /**
      * sos 요청 알림 전송
      */
@@ -132,5 +155,23 @@ public class SosService {
         }
     }
 
+    /**
+     * 환자에게 종료 알림 전송
+     */
+    private void sendSosStopNotification(User guardian, User patient) {
+        try {
+            NotificationRequest notificationRequest = NotificationRequest.of(
+                "SOS 종료",
+                guardian.getName() + "님이 도움 요청 음성을 종료했습니다.",
+                NotificationType.SOS_STOP,
+                guardian.getId(),
+                patient.getId()
+            );
+            notificationService.createNotifications(notificationRequest, null);
+            log.info("SOS 종료 알림 전송 - patient: {}", patient.getId());
+        } catch (Exception e) {
+            log.error("SOS 종료 알림 전송 실패", e);
+        }
+    }
 
 }

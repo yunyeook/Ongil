@@ -101,6 +101,7 @@ public enum ResponseMessage {
     //SOS
     SOS_REQUEST_CREATED("도움 요청이 접수되었습니다."),
     SOS_ACK_PROCESSED("워치 재생 완료 콜백이 정상적으로 처리되었습니다."),
+    SOS_STOPPED("도움 요청 음성 재생이 성공적으로 종료되었습니다."),
 
 
     // Common

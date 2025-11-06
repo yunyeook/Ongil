@@ -65,7 +65,7 @@ public class FcmService {
                 .putData("senderId",senderId.toString())
                 .putData("receiverId",receiverId.toString())
                 .putData("notificationId",notification.getId().toString())
-                .putData("relatedTableId",relatedTableId.toString())
+                .putData("relatedTableId",relatedTableId!=null?relatedTableId.toString():"")
                 .build();
 
             String response = FirebaseMessaging.getInstance().send(message);

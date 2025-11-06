@@ -109,6 +109,10 @@ public enum ErrorCode {
     SOS_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 도움 요청 내역을 찾을 수 없습니다."),
     SOS_CALLBACK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자 워치의 콜백 권한이 없습니다."),
     SOS_ALREADY_ACKNOWLEDGED(HttpStatus.CONFLICT, "이미 재생 완료로 처리된 요청입니다."),
+    // SOS
+    SOS_STOP_ACCESS_DENIED(HttpStatus.FORBIDDEN, "요청에 대한 접근 권한이 없습니다."),
+    ACTIVE_SOS_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 환자 또는 도움 요청을 찾을 수 없습니다."),
+    SOS_ALREADY_STOPPED(HttpStatus.CONFLICT, "이미 종료된 도움 요청입니다."),
 
     // NOTIFICATION
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림 정보를 찾을 수 없습니다."),
