@@ -64,6 +64,17 @@ spring:
       s3:
         bucket: ${S3_BUCKET}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env,configprops  # ← 추가
+  endpoint:
+    env:
+      enabled: true
+    configprops:
+      enabled: true
+
 # Custom Properties
 ongil:
   aws:
@@ -113,11 +124,22 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-webrtc:
-  ice-servers:
-    stun:
-      url: stun:43.202.55.40:3478
-    turn:
-      url: turn:43.202.55.40:3478
-      username: ${TURN_USERNAME}
-      credential: ${TURN_CREDENTIAL}
+# TURN/STUN Server Configuration
+turn:
+  server:
+    host: ${TURN_SERVER_HOST:43.202.55.40}
+    port: ${TURN_SERVER_PORT:3478}
+  shared-secret: ${TURN_SHARED_SECRET:your-turn-secret-key-here}
+  ttl: ${TURN_TTL:3600}  # 1시간
+
+# CORS Configuration
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}  # local/dev: *, prod: 실제 도메인
+  allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,PATCH,OPTIONS}
+  allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+  allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+  max-age: ${CORS_MAX_AGE:3600}
+
+# Call Configuration
+call:
+  timeout-seconds: ${CALL_TIMEOUT_SECONDS:60}  # 통화 타임아웃 (초), 기본 60초
