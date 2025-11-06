@@ -15,7 +15,7 @@ fun NavGraphBuilder.loginGraph(navController: NavHostController) {
                 }
             },
             onClickFindPw = { navController.navigate(Routes.ChangePassword.route) },
-            onClickSignup = { navController.navigate(Routes.Signup.route) }
+            onClickSignup = { navController.navigate(Routes.Register.route) }
         )
     }
 }

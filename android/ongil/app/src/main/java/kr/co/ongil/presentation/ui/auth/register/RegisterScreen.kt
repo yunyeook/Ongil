@@ -1,7 +1,6 @@
-package kr.co.ongil.presentation.ui.signup
+package kr.co.ongil.presentation.ui.auth.register
 
 import android.content.res.Configuration
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +12,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Person
@@ -24,10 +22,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -40,50 +36,46 @@ import kr.co.ongil.presentation.ui.common.AlertModal
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.InputBox
 import java.util.*
+import kr.co.ongil.presentation.ui.auth.register.RegisterUiState
+import kr.co.ongil.presentation.ui.auth.register.UserType
 
-/**
- * 회원가입 화면
- */
+
+
 @Composable
-fun SignupScreen(
-    uiState: SignupUiState,
+fun RegisterScreen(
+    uiState: RegisterUiState,
     onBackClick: () -> Unit,
     onProfileImageClick: () -> Unit,
     onNameChange: (String) -> Unit,
     onBirthClick: () -> Unit,
-    onSetBirth: (String) -> Unit,
+    onSetBirth: (String?) -> Unit,
     onDismissDatePicker: () -> Unit,
     onPhoneChange: (String) -> Unit,
     onRequestVerificationCode: () -> Unit,
-    onVerificationCodeChange: (String) -> Unit,
-    onVerifyCodeClick: () -> Unit,
+    onVerificationTokenChange: (String) -> Unit,
+    onVerifyTokenClick: () -> Unit,
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisible: () -> Unit,
     onPasswordConfirmChange: (String) -> Unit,
     onTogglePasswordConfirmVisible: () -> Unit,
     onSelectGuardian: () -> Unit,
     onSelectPatient: () -> Unit,
-    onSubmitSignup: () -> Unit,
+    onSubmitRegister: () -> Unit,
     onDismissSuccessModal: () -> Unit,
     onDismissErrorModal: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(top = 32.dp)
-    ) {
-
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.White)
                 .verticalScroll(scrollState)
-                .imePadding() // 키보드가 올라올 때 자동으로 padding 추가
         ) {
-            // 상단 헤더
+            // 상단 여백
+            Spacer(modifier = Modifier.height(32.dp))
 
             // 본문 내용
             Column(
@@ -127,8 +119,8 @@ fun SignupScreen(
                             .clickable { onBirthClick() }
                     ) {
                         Text(
-                            text = if (uiState.birth.isNotEmpty()) uiState.birth else "생년월일을 입력해주세요",
-                            color = if (uiState.birth.isNotEmpty()) Color(0xFF1A1D21) else Color(0xFF9CA1A9),
+                            text = uiState.birth ?: "생년월일을 입력해주세요",
+                            color = if (uiState.birth != null) Color(0xFF1A1D21) else Color(0xFF9CA1A9),
                             fontSize = 16.sp,
                             modifier = Modifier
                                 .weight(1f)
@@ -188,7 +180,7 @@ fun SignupScreen(
                         ) {
                             InputBox(
                                 value = uiState.verificationCode,
-                                onValueChange = onVerificationCodeChange,
+                                onValueChange = onVerificationTokenChange,
                                 label = "인증번호",
                                 placeholder = "인증번호 6자리",
                                 modifier = Modifier.weight(1f)
@@ -197,7 +189,7 @@ fun SignupScreen(
                             GreenButton(
                                 text = if (uiState.isCodeVerified) "확인됨" else "확인",
                                 enabled = !uiState.isCodeVerified,
-                                onClick = onVerifyCodeClick,
+                                onClick = onVerifyTokenClick,
                                 modifier = Modifier
                                     .weight(0.6f)
                                     .height(56.dp)
@@ -270,7 +262,7 @@ fun SignupScreen(
                         },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(
-                            onNext = { /* 포커스를 다음 필드로 이동 */ }
+                            onNext = { focusManager.clearFocus() }
                         ),
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = Color(0xFFDDE0E4),
@@ -349,8 +341,8 @@ fun SignupScreen(
                 // 가입하기 버튼
                 GreenButton(
                     text = "가입하기",
-                    enabled = true,
-                    onClick = onSubmitSignup,
+                    enabled = uiState.canSubmit,
+                    onClick = onSubmitRegister,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
@@ -398,7 +390,7 @@ fun SignupScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BirthDatePickerDialog(
-    onDateSelected: (String) -> Unit,
+    onDateSelected: (String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val locale = Locale.KOREA
@@ -432,7 +424,10 @@ fun BirthDatePickerDialog(
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = {
+                    onDateSelected(null)
+                    onDismiss()
+                }) {
                     Text("취소")
                 }
             }
@@ -447,7 +442,7 @@ fun BirthDatePickerDialog(
  */
 @Composable
 private fun ProfileSection(
-    profileImageUrl: String?,
+    @Suppress("UNUSED_PARAMETER") profileImageUrl: String?,
     onProfileImageClick: () -> Unit,
 ) {
     Column(
@@ -475,21 +470,13 @@ private fun ProfileSection(
                     .clickable { onProfileImageClick() },
                 contentAlignment = Alignment.Center
             ) {
-                if (profileImageUrl.isNullOrEmpty()) {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "profile",
-                        tint = Color(0xFF707680),
-                        modifier = Modifier.size(40.dp)
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(id = android.R.drawable.ic_menu_gallery),
-                        contentDescription = "profile image",
-                        modifier = Modifier.size(120.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                }
+                // TODO: 실제 프로필 이미지 로드 시 coil 등 사용
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "profile",
+                    tint = Color(0xFF707680),
+                    modifier = Modifier.size(40.dp)
+                )
             }
 
             // 카메라 아이콘 배지
@@ -588,20 +575,18 @@ private fun RowScope.UserTypeButton(
 
 @Preview(showBackground = true)
 @Composable
-private fun PreviewSignupScreen() {
-    SignupScreen(
-        uiState = SignupUiState(
+private fun PreviewRegisterScreen() {
+    RegisterScreen(
+        uiState = RegisterUiState(
             name = "",
-            birth = "",
+            birth = null,
             phoneNumber = "",
             isCodeRequested = true,
-            verificationCode = "",
+            verificationToken = "",
             isCodeVerified = false,
             showTimerText = true,
             remainingTimeText = "02:45",
             verificationStatusMessage = "인증번호 등록에 성공했습니다.",
-            passwordMasked = "********",
-            passwordConfirmMasked = "********",
             userType = UserType.GUARDIAN
         ),
         onBackClick = {},
@@ -612,15 +597,15 @@ private fun PreviewSignupScreen() {
         onDismissDatePicker = {},
         onPhoneChange = {},
         onRequestVerificationCode = {},
-        onVerificationCodeChange = {},
-        onVerifyCodeClick = {},
+        onVerificationTokenChange = {},
+        onVerifyTokenClick = {},
         onPasswordChange = {},
         onTogglePasswordVisible = {},
         onPasswordConfirmChange = {},
         onTogglePasswordConfirmVisible = {},
         onSelectGuardian = {},
         onSelectPatient = {},
-        onSubmitSignup = {},
+        onSubmitRegister = {},
         onDismissSuccessModal = {},
         onDismissErrorModal = {},
     )

@@ -18,7 +18,7 @@ sealed class Routes(val route: String) {
     object Login : Routes("login")
 
     // 회원가입
-    object Signup : Routes("signup")
+    object Register : Routes("register")
 
     // 나의 정보
     object MyInfo : Routes("my_info")
