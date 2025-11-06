@@ -29,11 +29,10 @@ public class FcmService {
         fcmTokenRedisService.saveToken(userId, token);
     }
 
-
     /**
-     * fcm token 으로 알림 전송
+     * fcm token 으로 알림 전송 : FCM에 관련된 테이블 ID, notification테이블 ID 전송
      */
-    public void sendNotification(Notification notification) {
+    public void sendNotification(Notification notification, Integer relatedTableId) {
         try {
             Integer senderId = notification.getSender().getId();
             Integer receiverId = notification.getReceiver().getId();
@@ -65,6 +64,8 @@ public class FcmService {
                 .putData("type", notification.getType().name())
                 .putData("senderId",senderId.toString())
                 .putData("receiverId",receiverId.toString())
+                .putData("notificationId",notification.getId().toString())
+                .putData("relatedTableId",relatedTableId.toString())
                 .build();
 
             String response = FirebaseMessaging.getInstance().send(message);
@@ -73,6 +74,7 @@ public class FcmService {
             log.error("푸시 알림 전송 실패", e);
         }
     }
+
 
     public void deleteFcmToken(Integer userId) {
         fcmTokenService.deleteAllTokensByUserId(userId);

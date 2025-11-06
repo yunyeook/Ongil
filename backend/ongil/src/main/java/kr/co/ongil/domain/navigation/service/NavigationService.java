@@ -146,7 +146,7 @@ public class NavigationService {
                         sender.getId(),
                         receiver.getId()
                     );
-                    notificationService.createNotifications(notificationRequest);
+                    notificationService.createNotifications(notificationRequest,null);
                     log.info("길안내 시작 알림 전송 완료 - senderId: {}, receiverId: {}",
                         sender.getId(), receiver.getId());
                 } catch (Exception e) {
@@ -184,7 +184,7 @@ public class NavigationService {
                         sender.getId(),
                         receiver.getId()
                     );
-                    notificationService.createNotifications(notificationRequest);
+                    notificationService.createNotifications(notificationRequest,null);
                     log.info("길안내 종료 알림 전송 완료 - senderId: {}, receiverId: {}",
                         sender.getId(), receiver.getId());
                 } catch (Exception e) {
