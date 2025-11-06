@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/*.html", "/static/**", "/css/**", "/js/**", "/images/**").permitAll()  // static 리소스 허용
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
