@@ -143,8 +143,3 @@ cors:
 # Call Configuration
 call:
   timeout-seconds: ${CALL_TIMEOUT_SECONDS:60}  # 통화 타임아웃 (초), 기본 60초
-
-# FCM/APNs Configuration
-fcm:
-  ios:
-    voip-topic: ${FCM_IOS_VOIP_TOPIC:kr.co.ongil.voip}  # iOS VoIP Push 토픽 (bundleId.voip)

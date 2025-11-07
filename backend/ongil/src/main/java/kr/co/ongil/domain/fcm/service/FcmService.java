@@ -8,7 +8,6 @@ import kr.co.ongil.domain.relationship.entity.Relationship;
 import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -19,9 +18,6 @@ public class FcmService {
     private final FcmTokenRedisService fcmTokenRedisService;
     private final FcmTokenService fcmTokenService;
     private final RelationshipRepository relationshipRepository;
-
-    @Value("${fcm.ios.voip-topic}")
-    private String iosVoipTopic;
 
     public void registerFcmToken(Integer userId, String token) {
         if (token == null || token.isBlank()) return;
@@ -80,7 +76,7 @@ public class FcmService {
 
 
     /**
-     * VoIP 통화 알림 전송 (앱 깨우기용)
+     * VoIP 통화 알림 전송 (Android 앱 깨우기용)
      * 백그라운드 상태의 앱을 깨워서 WebSocket 연결을 시작하도록 합니다.
      */
     public void sendCallNotification(
@@ -116,15 +112,6 @@ public class FcmService {
                 .setAndroidConfig(com.google.firebase.messaging.AndroidConfig.builder()
                     .setPriority(com.google.firebase.messaging.AndroidConfig.Priority.HIGH)
                     .setTtl(30000L)  // 30초 (밀리초)
-                    .build())
-                // iOS 설정: VoIP Push 헤더
-                .setApnsConfig(com.google.firebase.messaging.ApnsConfig.builder()
-                    .putHeader("apns-push-type", "voip")
-                    .putHeader("apns-priority", "10")
-                    .putHeader("apns-topic", iosVoipTopic)
-                    .setAps(com.google.firebase.messaging.Aps.builder()
-                        .setContentAvailable(true)
-                        .build())
                     .build())
                 .putData("type", "INCOMING_CALL")
                 .putData("callId", callId.toString())
