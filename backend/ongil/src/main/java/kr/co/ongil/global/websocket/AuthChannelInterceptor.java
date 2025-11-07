@@ -1,6 +1,7 @@
 package kr.co.ongil.global.websocket;
 
 import kr.co.ongil.global.security.jwt.JwtUtil;
+import kr.co.ongil.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -10,10 +11,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * WebSocket 인증 인터셉터
@@ -38,16 +36,21 @@ public class AuthChannelInterceptor implements ChannelInterceptor {
                 String token = authHeader.substring(7);
 
                 try {
-                    // JWT 토큰 검증 및 userId 추출
+                    // JWT 토큰 검증 및 사용자 정보 추출
                     if (jwtUtil.validateToken(token)) {
                         Integer userId = jwtUtil.getUserIdFromToken(token);
+                        String username = jwtUtil.getUsernameFromToken(token);
+                        String userType = jwtUtil.getUserTypeFromToken(token);
 
-                        // Principal 설정 (userId를 String으로 변환하여 사용)
+                        // CustomUserDetails 생성
+                        CustomUserDetails userDetails = CustomUserDetails.fromToken(userId, username, userType);
+
+                        // Principal 설정
                         UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
-                                userId.toString(),
+                                userDetails,
                                 null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                                userDetails.getAuthorities()
                             );
 
                         accessor.setUser(authentication);
