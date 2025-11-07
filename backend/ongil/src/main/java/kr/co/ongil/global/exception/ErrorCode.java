@@ -69,12 +69,12 @@ public enum ErrorCode {
     FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "즐겨찾기를 찾을 수 없습니다."),
     FAVORITE_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일한 즐겨찾기가 이미 존재합니다."),
     FAVORITE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 접근 권한이 없습니다."),
+    FAVORITE_DEFAULT_NOT_CANCELED(HttpStatus.FORBIDDEN, "기본 길찾기를 해제할 수 없습니다."),
 
     // LOCATION / SAFEZONE / ABNORMAL DETECTION
-    SAFEZONE_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 안전구역이 없습니다."),
+    SAFEZONE_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 안전범위이 없습니다."),
     SAFEZONE_SETTING_NOT_FOUND(HttpStatus.NOT_FOUND, "안전범위 설정이 존재하지 않습니다."),
-    SAFEZONE_DUPLICATED(HttpStatus.CONFLICT, "이미 등록된 안전구역입니다."),
-    OUT_OF_SAFEZONE(HttpStatus.BAD_REQUEST, "안전구역을 벗어났습니다."),
+    OUT_OF_SAFEZONE(HttpStatus.BAD_REQUEST, "안전범위을 벗어났습니다."),
     INVALID_SAFEZONE_BOUNDARY(HttpStatus.BAD_REQUEST, "잘못된 안전범위 값입니다."),
     SAFEZONE_BOUNDARY_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "안전범위가 허용 범위를 벗어났습니다."),
     SAFEZONE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 수정 권한이 없습니다."),
@@ -84,27 +84,44 @@ public enum ErrorCode {
     LOCATION_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "위치 서비스가 일시적으로 사용 불가능합니다."),
 
     // CALL / VOICE / SOS
-    CALL_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 기록을 찾을 수 없습니다."),
+    CALL_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 세션을 찾을 수 없습니다."),
+    CALL_ALREADY_CONNECTED(HttpStatus.CONFLICT, "이미 연결된 통화입니다."),
+    CALL_ALREADY_ENDED(HttpStatus.CONFLICT, "이미 종료된 통화입니다."),
+    RECEIVER_NOT_FOUND(HttpStatus.NOT_FOUND, "수신자를 찾을 수 없습니다."),
+    USER_ALREADY_IN_CALL(HttpStatus.CONFLICT, "이미 통화 중인 사용자입니다."),
+    CALL_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "통화 권한이 없습니다."),
+    CANNOT_CALL_SELF(HttpStatus.BAD_REQUEST, "자기 자신에게 통화할 수 없습니다."),
+    INVALID_CALL_STATUS(HttpStatus.BAD_REQUEST, "올바르지 않은 통화 상태입니다."),
     CALL_CONNECTION_FAILED(HttpStatus.BAD_GATEWAY, "통화 연결 중 오류가 발생했습니다."),
     EMERGENCY_CALL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "긴급 통화 요청에 실패했습니다."),
     INVALID_CALL_TYPE(HttpStatus.BAD_REQUEST, "올바르지 않은 통화 유형입니다."),
     SOS_NOT_REGISTERED(HttpStatus.NOT_FOUND, "등록된 긴급 연락처가 없습니다."),
 
+    // CALL LOG
+    CALL_LOG_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 기록을 찾을 수 없습니다."),
+    CALL_LOG_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "통화 기록 접근 권한이 없습니다."),
+
+    // CALL RECORDING
+    CALL_RECORDING_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 녹음을 찾을 수 없습니다."),
+    CALL_RECORDING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 통화에 녹음 정보가 등록되어 있습니다."),
+
     // NOTIFICATION / SSE / ALERT
+    // SOS
+    SOS_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 도움 요청 내역을 찾을 수 없습니다."),
+    SOS_CALLBACK_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자 워치의 콜백 권한이 없습니다."),
+    SOS_ALREADY_ACKNOWLEDGED(HttpStatus.CONFLICT, "이미 재생 완료로 처리된 요청입니다."),
+    // SOS
+    SOS_STOP_ACCESS_DENIED(HttpStatus.FORBIDDEN, "요청에 대한 접근 권한이 없습니다."),
+    ACTIVE_SOS_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 환자 또는 도움 요청을 찾을 수 없습니다."),
+    SOS_ALREADY_STOPPED(HttpStatus.CONFLICT, "이미 종료된 도움 요청입니다."),
+
+    // NOTIFICATION
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림 정보를 찾을 수 없습니다."),
     NOTIFICATION_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "알림 전송 중 오류가 발생했습니다."),
     SSE_CONNECTION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "실시간 연결이 불안정합니다."),
     ALERT_TYPE_INVALID(HttpStatus.BAD_REQUEST, "올바르지 않은 알림 유형입니다."),
     INVALID_NOTIFICATION_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 알림 유형입니다."),
 
-    // CONTENT / RESOURCE / DATA
-    CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 콘텐츠입니다."),
-    INVALID_CONTENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 콘텐츠 형식입니다."),
-    DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 데이터를 찾을 수 없습니다."),
-    DATA_CONFLICT(HttpStatus.CONFLICT, "데이터 충돌이 발생했습니다."),
-    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다."),
-    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 파일이 존재하지 않습니다."),
-    UNSUPPORTED_FILE_FORMAT(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식입니다."),
 
     //SYSTEM / REQUEST / COMMON
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 형식이 올바르지 않습니다."),

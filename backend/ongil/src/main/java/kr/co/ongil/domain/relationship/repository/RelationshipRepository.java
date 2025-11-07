@@ -19,7 +19,7 @@ public interface RelationshipRepository extends JpaRepository<Relationship, Inte
     List<User> findGuardiansByPatientId(@Param("patientId") Integer patientId);
 
     @Query("SELECT r.patient FROM Relationship r WHERE r.guardian.id = :guardianId")
-    Optional<User> findPatientByGuardianId(@Param("guardianId") Integer guardianId);
+    List<User> findPatientByGuardianId(@Param("guardianId") Integer guardianId);
 
     /**
      * 특정 사용자가 보호자 또는 환자로 등록된 모든 관계 조회
@@ -39,6 +39,15 @@ public interface RelationshipRepository extends JpaRepository<Relationship, Inte
      */
     @Query("SELECT r FROM Relationship r WHERE r.id = :relationshipId AND (r.guardian = :user OR r.patient = :user)")
     Optional<Relationship> findByIdAndUser(@Param("relationshipId") Integer relationshipId, @Param("user") User user);
+
+    /**
+     * 두 사용자 ID로 관계 조회 (guardian-patient 또는 patient-guardian 관계 모두 조회)
+     */
+    @Query("SELECT r FROM Relationship r WHERE " +
+        "(r.guardian.id = :userId1 AND r.patient.id = :userId2) OR " +
+        "(r.guardian.id = :userId2 AND r.patient.id = :userId1)")
+    Optional<Relationship> findByTwoUserIds(@Param("userId1") Integer userId1, @Param("userId2") Integer userId2);
+
 
     /**
      * 보호자의 가장 큰 정렬 순서 조회 (새 관계 등록 시 사용)
@@ -112,4 +121,9 @@ public interface RelationshipRepository extends JpaRepository<Relationship, Inte
     @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM Relationship r " +
             "WHERE r.patient.id = :patientId AND r.guardian.id = :guardianId")
     boolean existsByPatientIdAndGuardianId(@Param("patientId") Integer patientId, @Param("guardianId") Integer guardianId);
-}
+
+    /**
+     * 환자의 대표보호자 조회
+     */
+    @Query("SELECT r FROM Relationship r WHERE r.patient.id = :patientId AND r.isDefaultForPatient = true")
+    Optional<Relationship> findDefaultRelationshipByPatient(@Param("patientId") Integer patientId);}

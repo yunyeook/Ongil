@@ -132,7 +132,7 @@ public class RelationshipService {
                 requestUserType.getDescription(), counterpartType.getDescription());
 
         // 11. 상대방에게 알림 전송
-        sendRelationshipNotification(requestUser, counterpartUser);
+        sendRelationshipNotification(requestUser, counterpartUser,relationship.getId());
 
         return RelationshipResponse.from(relationship, requestUser);
     }
@@ -357,16 +357,16 @@ public class RelationshipService {
     /**
      * 관계 등록 알림 전송
      */
-    private void sendRelationshipNotification(User sender, User receiver) {
+    private void sendRelationshipNotification(User sender, User receiver,Integer relationshipId) {
         try {
             NotificationRequest notificationRequest = NotificationRequest.of(
-                    "관계 등록",
+                    NotificationType.RELATIONSHIP_REGIST.getDescription(),
                     sender.getName() + "님과 관계가 등록되었습니다.",
                     NotificationType.RELATIONSHIP_REGIST,
                     sender.getId(),
                     receiver.getId()
             );
-            notificationService.createNotifications(notificationRequest);
+            notificationService.createNotifications(notificationRequest,relationshipId);
             log.info("관계 등록 알림 전송 완료 - receiver: {}", receiver.getId());
         } catch (Exception e) {
             log.error("관계 등록 알림 전송 실패", e);

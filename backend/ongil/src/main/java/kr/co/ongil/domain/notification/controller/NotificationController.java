@@ -3,7 +3,6 @@ package kr.co.ongil.domain.notification.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
 import java.util.Map;
 import kr.co.ongil.domain.notification.dto.request.NotificationRequest;
 import kr.co.ongil.domain.notification.dto.response.NotificationListResponse;
@@ -29,13 +28,12 @@ public class NotificationController {
     @GetMapping
     @Operation(summary = "알림 목록 조회", description = "로그인한 회원의 알림 목록을 조회합니다.")
     public ApiResponse<NotificationListResponse> getNotifications(
-        // @AuthenticationPrincipal CustomUserDetails userDetails,
         @Parameter(description = "조회할 페이지 번호 (1부터 시작)") @RequestParam(defaultValue = "1") int page,
         @Parameter(description = "페이지당 알림 개수") @RequestParam(defaultValue = "10") int size,
         @Parameter(description = "읽음 여부 필터") @RequestParam(required = false) Boolean read
     ) {
-        Integer userId = SecurityUtil.getCurrentUserId();
-        NotificationListResponse response = notificationService.getNotifications(userId, page, size, read);
+        Integer receiverId = SecurityUtil.getCurrentUserId();
+        NotificationListResponse response = notificationService.getNotifications(receiverId, page, size, read);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_LIST_FOUND, response);
     }
 
@@ -44,8 +42,8 @@ public class NotificationController {
     public ApiResponse<NotificationReadResponse> markAsRead(
         @Parameter(description = "알림 ID") @PathVariable Integer notificationId
     ) {
-        Integer userId = SecurityUtil.getCurrentUserId();
-        NotificationReadResponse response = notificationService.markAsRead(userId, notificationId);
+        Integer receiverId = SecurityUtil.getCurrentUserId();
+        NotificationReadResponse response = notificationService.markAsRead(receiverId, notificationId);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_READ, response);
     }
 
@@ -53,8 +51,8 @@ public class NotificationController {
     @Operation(summary = "전체 알림 읽음 처리", description = "전체 알림을 읽음 처리합니다.")
     public ApiResponse<String> markAsReadAll(
     ) {
-        Integer userId = SecurityUtil.getCurrentUserId();
-        notificationService.markAsReadAll(userId);
+        Integer receiverId = SecurityUtil.getCurrentUserId();
+        notificationService.markAsReadAll(receiverId);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_READ_ALL);
     }
 
@@ -63,8 +61,8 @@ public class NotificationController {
     public ApiResponse<Map<String,Integer>> deleteNotification(
         @Parameter(description = "알림 ID") @PathVariable Integer notificationId
     ) {
-        Integer userId = SecurityUtil.getCurrentUserId();
-        Map<String,Integer>deletedNotification= notificationService.deleteNotification(userId, notificationId);
+        Integer receiverId = SecurityUtil.getCurrentUserId();
+        Map<String,Integer>deletedNotification= notificationService.deleteNotification(receiverId, notificationId);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_DELETED, deletedNotification);
     }
 
@@ -72,15 +70,15 @@ public class NotificationController {
     @Operation(summary = "전체 알림 삭제", description = "전체 알림을 삭제합니다.")
     public ApiResponse<Map<String,Integer>>  deleteAllNotifications(
     ) {
-        Integer userId = SecurityUtil.getCurrentUserId();
-        Map<String,Integer>deletedNotifications=notificationService.deleteAllNotifications(userId);
+        Integer receiverId = SecurityUtil.getCurrentUserId();
+        Map<String,Integer>deletedNotifications=notificationService.deleteAllNotifications(receiverId);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_DELETED_ALL,deletedNotifications);
     }
 
     @PostMapping
     @Operation(summary = "알림 생성", description = "알림을 생성합니다.")
-    public ApiResponse<List<NotificationResponse>> createNotification(@RequestBody NotificationRequest request) {
-        List<NotificationResponse> response = notificationService.createNotifications(request);
+    public ApiResponse<NotificationResponse> createNotification(@RequestBody NotificationRequest request) {
+        NotificationResponse response = notificationService.createNotifications(request,null);
         return ApiResponse.success(ResponseMessage.NOTIFICATION_CREATED, response);
     }
 }

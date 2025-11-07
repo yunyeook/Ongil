@@ -22,11 +22,14 @@ public record UpdateFavoriteRequest (
     Double latitude,
 
     @Schema(description = "경도", example = "127.0342")
-    Double longitude
+    Double longitude,
+
+    @Schema(description = "기본목적지 여부")
+    Boolean isDefault
 ){
 
     public boolean hasAnyUpdate() {
         return placeName != null || placeAlias != null || category != null
-            || address != null || latitude != null || longitude != null;
+            || address != null || latitude != null || longitude != null ||isDefault!=null;
     }
 }

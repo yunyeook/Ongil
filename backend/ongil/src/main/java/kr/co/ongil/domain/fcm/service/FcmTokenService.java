@@ -27,16 +27,17 @@ public class FcmTokenService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // DB없으면 저장.
-        return fcmTokenRepository.findByToken(token)
-            .orElseGet(() -> fcmTokenRepository.save(FcmToken.builder()
-                .user(user)
-                .token(token)
-                .build()));
-    }
+        // 기존 토큰이 있으면 삭제하고 새로 저장 (덮어쓰기)
+        fcmTokenRepository.findByUserId(userId)
+            .ifPresent(fcmTokenRepository::delete);
 
+        return fcmTokenRepository.save(FcmToken.builder()
+            .user(user)
+            .token(token)
+            .build());
+    }
     public FcmToken getTokenByUserId(Integer userId) {
-        return fcmTokenRepository.findByUserId(userId).get();
+        return fcmTokenRepository.findByUserId(userId).orElse(null);
     }
     public List<FcmToken> getTokensByUserId(Integer userId) {
         return fcmTokenRepository.findAllByUserId(userId);

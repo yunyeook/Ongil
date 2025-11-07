@@ -12,7 +12,7 @@ public record NotificationRequest(
     @Schema(description = "알림 내용", example = "도움 요청이 접수되었습니다.")
     String content,
 
-    @Schema(description = "알림 유형", example = "HELP_REQUEST")
+    @Schema(description = "알림 유형", example = "SOS_REQUEST")
     NotificationType type,
 
     @Schema(description = "발신자 유저 ID", example = "101")

@@ -65,12 +65,13 @@ public class Favorite extends BaseEntity {
     }
 
     public void update(String placeName, String placeAlias, String category, String address,
-        Double latitude, Double longitude) {
+        Double latitude, Double longitude, Boolean isDefault) {
         if (placeName != null) this.placeName = placeName;
         if (placeAlias != null) this.placeAlias = placeAlias;
         if (category != null) this.category = category;
         if (address != null) this.address = address;
         if (latitude != null) this.latitude = latitude;
         if (longitude != null) this.longitude = longitude;
+        if (isDefault != null) this.isDefault = isDefault;
     }
 }

@@ -20,7 +20,7 @@ public class RedisConfig {
     @Value("${spring.data.redis.port:6379}")
     private int redisPort;
 
-    @Value("${spring.data.redis.password:}")  // 환경변수 주입 (없으면 빈 문자열)
+    @Value("${spring.data.redis.password:redis}")  // 환경변수 주입 (없으면 빈 문자열)
     private String redisPassword;
 
     @Value("${REDIS_SSL_ENABLED:false}")
@@ -37,7 +37,7 @@ public class RedisConfig {
         LettuceClientConfiguration.LettuceClientConfigurationBuilder builder =
                 LettuceClientConfiguration.builder();
         if (sslEnabled) {
-            builder.useSsl(); 
+            builder.useSsl();  // ← 이게 호출되고 있나?
         }
         return new LettuceConnectionFactory(config, builder.build());
     }
