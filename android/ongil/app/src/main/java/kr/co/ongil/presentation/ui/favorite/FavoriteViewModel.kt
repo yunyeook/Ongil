@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.repository.FavoriteRepository
 import kr.co.ongil.domain.repository.UserRepository
-import kr.co.ongil.presentation.ui.favorite.toPlaceData
 import javax.inject.Inject
 
 @HiltViewModel
@@ -60,7 +59,7 @@ class FavoriteViewModel @Inject constructor(
         if (_uiState.value.isLoading) return
         lastLoadedPatientId = patientId
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(isLoading = true, error = null, currentPatientId = patientId) }
             val currentPatients = _uiState.value.patients
             val result = favoriteRepository.getFavoritePlaces(patientId)
             result.fold(
@@ -68,7 +67,8 @@ class FavoriteViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             patients = currentPatients,
-                            places = placesDomain.items.map { place -> place.toPlaceData() },
+                            places = placesDomain.items,
+                            currentPatientId = patientId,
                             isLoading = false,
                             error = null
                         )

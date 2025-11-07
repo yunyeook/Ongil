@@ -40,7 +40,9 @@ import kr.co.ongil.presentation.ui.common.InputBox
 @Composable
 fun PlaceDetailScreen(
     viewModel: PlaceDetailViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onSavedSuccess: () -> Unit,
+    onDeletedSuccess: () -> Unit
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
 
@@ -51,8 +53,16 @@ fun PlaceDetailScreen(
         isDefault = uiState.isDefault,
         onBackClick = onBackClick,
         onSetDefaultClick = { viewModel.setAsDefault() },
-        onSaveClick = { name, addr -> viewModel.updatePlaceInfo(name, addr) },
-        onDeleteClick = { viewModel.deletePlace { onBackClick() } },
+        onSaveClick = { name, addr, isDefault ->
+            viewModel.updatePlaceInfo(name, addr, isDefault) {
+                onSavedSuccess()
+            }
+        },
+        onDeleteClick = {
+            viewModel.deletePlace {
+                onDeletedSuccess()
+            }
+        },
         isLoading = uiState.isLoading,
         error = uiState.error,
         successMessage = uiState.successMessage
@@ -67,7 +77,7 @@ fun PlaceDetailScreen(
     isDefault: Boolean,
     onBackClick: () -> Unit,
     onSetDefaultClick: () -> Unit,
-    onSaveClick: (String, String) -> Unit,
+    onSaveClick: (String, String, Boolean) -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -77,14 +87,24 @@ fun PlaceDetailScreen(
     var editedPlaceName by remember { mutableStateOf(placeName) }
     var editedAddress by remember { mutableStateOf(address) }
 
+    // 초기 isDefault 값을 저장 (API 로드 완료 후)
+    val initialIsDefault = remember { mutableStateOf<Boolean?>(null) }
+
     // API에서 데이터를 새로 받으면 편집 필드도 업데이트
-    LaunchedEffect(placeName, address) {
+    LaunchedEffect(placeName, address, isDefault) {
         editedPlaceName = placeName
         editedAddress = address
+        // 처음 로드 시에만 초기값 저장
+        if (initialIsDefault.value == null && !isLoading) {
+            initialIsDefault.value = isDefault
+        }
     }
 
-    val hasChanges = remember(placeName, address, editedPlaceName, editedAddress) {
-        editedPlaceName.trim() != placeName || editedAddress.trim() != address
+    val hasChanges = remember(placeName, address, isDefault, editedPlaceName, editedAddress, initialIsDefault.value) {
+        val nameChanged = editedPlaceName.trim() != placeName
+        val addressChanged = editedAddress.trim() != address
+        val defaultChanged = initialIsDefault.value?.let { it != isDefault } ?: false
+        nameChanged || addressChanged || defaultChanged
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -140,10 +160,8 @@ fun PlaceDetailScreen(
 
             // ===== 버튼 영역 =====
             GreenButton(
-                text = "기본 목적지로 설정",
-                onClick = {
-                    if (!isDefault) onSetDefaultClick()
-                },
+                text = if (isDefault) "기본 목적지 설정됨" else "기본 목적지로 설정",
+                onClick = onSetDefaultClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
@@ -156,7 +174,7 @@ fun PlaceDetailScreen(
                     val name = editedPlaceName.trim()
                     val addr = editedAddress.trim()
                     if (name.isNotEmpty() && hasChanges) {
-                        onSaveClick(name, addr)
+                        onSaveClick(name, addr, isDefault)
                     }
                 },
                 modifier = Modifier
@@ -204,7 +222,7 @@ private fun PlaceDetailScreenPreview() {
         isDefault = false,
         onBackClick = {},
         onSetDefaultClick = {},
-        onSaveClick = { _, _ -> },
+        onSaveClick = { _, _, _ -> },
         onDeleteClick = {}
     )
 }

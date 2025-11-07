@@ -14,7 +14,19 @@ fun NavGraphBuilder.placeDetailGraph(navController: NavHostController) {
         val viewModel: PlaceDetailViewModel = hiltViewModel()
         PlaceDetailScreen(
             viewModel = viewModel,
-            onBackClick = { navController.popBackStack() }
+            onBackClick = { navController.popBackStack() },
+            onSavedSuccess = {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("favorite_updated", true)
+                navController.popBackStack()
+            },
+            onDeletedSuccess = {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("favorite_updated", true)
+                navController.popBackStack()
+            }
         )
     }
 }

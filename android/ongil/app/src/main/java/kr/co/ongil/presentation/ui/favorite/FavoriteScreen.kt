@@ -33,11 +33,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kr.co.ongil.presentation.ui.favorite.FavoriteUiEvent.onGoSearchUserClick
-
+import androidx.navigation.NavController
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun FavoriteScreen(
+    navController: NavController,
     onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
     onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String) -> Unit,
     onGoSearchUserClick: () -> Unit
@@ -49,6 +51,21 @@ fun FavoriteScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // 상세 화면에서 수정/삭제 성공 시 갱신 플래그 감지
+    val updatedFlow = navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow("favorite_updated", false)
+    val updated = updatedFlow?.collectAsState() ?: remember { mutableStateOf(false) }
+
+    LaunchedEffect(updated.value) {
+        if (updated.value) {
+            viewModel.refresh()
+            navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.set("favorite_updated", false)
+        }
+    }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { errorMessage ->
@@ -137,7 +154,10 @@ fun FavoriteScreen(
                             onClickPlaceIcon = { placeId ->
                                 // TODO: 지도 화면으로 이동 or 지도 열기 처리 예정
                             },
-                            onClickPlaceCardWithPatient = { patientId, favoriteId -> onNavigateToPlaceDetail(patientId, favoriteId) },
+                            onClickPlaceCardWithPatient = { _, favoriteId ->
+                                // place.patientId 대신 실제 조회에 사용한 currentPatientId 사용 (403 방지)
+                                onNavigateToPlaceDetail(uiState.currentPatientId, favoriteId)
+                            },
                         )
                     }
                 }

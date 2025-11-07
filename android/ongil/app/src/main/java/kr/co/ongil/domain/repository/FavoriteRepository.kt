@@ -1,7 +1,7 @@
 package kr.co.ongil.domain.repository
 
-import kr.co.ongil.domain.model.favorite.FavoritePlace
-import kr.co.ongil.domain.model.favorite.FavoritePlaces
+import kr.co.ongil.domain.model.FavoritePlace
+import kr.co.ongil.domain.model.FavoritePlaces
 import kr.co.ongil.domain.model.placedetail.PlaceDetailUpdate
 
 interface FavoriteRepository {

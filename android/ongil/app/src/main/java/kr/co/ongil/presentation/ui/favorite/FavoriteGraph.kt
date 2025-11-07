@@ -42,6 +42,7 @@ fun NavGraphBuilder.favoriteGraph(navController: NavHostController) {
 
             FavoriteScreen(
 
+                navController = navController,
                 onNavigateToPlaceDetail = { patientId, favoriteId ->
 
                     navController.navigate(
@@ -77,4 +78,3 @@ fun NavGraphBuilder.favoriteGraph(navController: NavHostController) {
     }
 
 }
-

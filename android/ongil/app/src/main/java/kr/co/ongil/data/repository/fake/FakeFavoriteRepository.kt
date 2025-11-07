@@ -1,7 +1,7 @@
 //package kr.co.ongil.data.repository.fake
 //
-//import kr.co.ongil.domain.model.favorite.FavoritePlace
-//import kr.co.ongil.domain.model.favorite.FavoritePlaces
+//import kr.co.ongil.domain.model.FavoritePlace
+//import kr.co.ongil.domain.model.FavoritePlaces
 //import kr.co.ongil.domain.repository.FavoriteRepository
 //import kr.co.ongil.presentation.ui.favorite.PlaceData
 //import kr.co.ongil.presentation.ui.favorite.PatientData

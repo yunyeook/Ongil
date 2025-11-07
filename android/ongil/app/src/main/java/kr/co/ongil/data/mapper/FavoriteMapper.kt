@@ -3,8 +3,8 @@ package kr.co.ongil.data.mapper
 import kr.co.ongil.data.model.favorite.PlaceDetailDto
 import kr.co.ongil.data.model.favorite.FavoritePlaceDto
 import kr.co.ongil.data.model.favorite.FavoritePlacesDto
-import kr.co.ongil.domain.model.favorite.FavoritePlace
-import kr.co.ongil.domain.model.favorite.FavoritePlaces
+import kr.co.ongil.domain.model.FavoritePlace
+import kr.co.ongil.domain.model.FavoritePlaces
 
 fun FavoritePlaceDto.toDomain(): FavoritePlace =
     FavoritePlace(
