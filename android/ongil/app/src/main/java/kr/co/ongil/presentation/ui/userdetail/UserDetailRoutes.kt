@@ -1,12 +1,12 @@
-package kr.co.ongil.presentation.ui.patientdetail
+package kr.co.ongil.presentation.ui.userdetail
 
 import android.net.Uri
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
-sealed class PatientDetailRoutes(val route: String) {
+sealed class UserDetailRoutes(val route: String) {
     // PatientDetail 화면 경로 (patientId, name, phoneNumber를 인자로 받음)
-    data object Detail : PatientDetailRoutes("patient_detail/{patientId}/{name}/{phoneNumber}") {
+    data object Detail : UserDetailRoutes("patient_detail/{patientId}/{name}/{phoneNumber}") {
         fun createRoute(
             patientId: Long,
             name: String,

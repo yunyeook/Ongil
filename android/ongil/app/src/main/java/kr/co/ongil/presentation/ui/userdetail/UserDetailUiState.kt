@@ -1,9 +1,9 @@
-package kr.co.ongil.presentation.ui.patientdetail
+package kr.co.ongil.presentation.ui.userdetail
 
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class PatientDetailUiState(
+data class UserDetailUiState(
     val patientId: Long = -1L,
     val name: String = "",
     val phoneNumber: String = "",

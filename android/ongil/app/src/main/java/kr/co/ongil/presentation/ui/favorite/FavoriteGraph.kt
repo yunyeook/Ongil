@@ -60,13 +60,13 @@ fun NavGraphBuilder.favoriteGraph(navController: NavHostController) {
                 },
 
                 onNavigateToPatientDetail = { id, name, phoneNumber ->
-
                     navController.navigate(
-
-                        Routes.PatientDetail.createRoute(id, name, phoneNumber)
-
+                        kr.co.ongil.presentation.ui.userdetail.UserDetailRoutes.Detail.createRoute(
+                            patientId = id,
+                            name = name,
+                            phoneNumber = phoneNumber
+                        )
                     )
-
                 },
 
                 onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) }

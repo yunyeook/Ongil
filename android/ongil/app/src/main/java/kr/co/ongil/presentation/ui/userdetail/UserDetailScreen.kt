@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.patientdetail
+package kr.co.ongil.presentation.ui.userdetail
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -24,7 +24,7 @@ import kr.co.ongil.presentation.ui.common.InputBox
 
 @Composable
 fun PatientDetailScreen(
-    viewModel: PatientDetailViewModel,
+    viewModel: UserDetailViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {

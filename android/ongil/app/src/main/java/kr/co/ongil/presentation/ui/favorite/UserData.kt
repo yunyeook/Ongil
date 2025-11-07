@@ -16,6 +16,6 @@ fun RelationshipDto.toPatientData(): PatientData {
     return PatientData(
         id = counterpartUserId,
         name = relationshipName,
-        phoneNumber = ""
+        phoneNumber = "-" // 전화번호 정보는 API에서 제공하지 않음
     )
 }

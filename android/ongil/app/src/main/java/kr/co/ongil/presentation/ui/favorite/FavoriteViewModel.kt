@@ -36,6 +36,7 @@ class FavoriteViewModel @Inject constructor(
 
     init {
         loadUserInfo()
+        loadRelationships() // 사용자(환자/보호자) 목록 불러오기
         loadData(initialPatientId)
     }
 
@@ -56,6 +57,33 @@ class FavoriteViewModel @Inject constructor(
                             }
                     }
                     .collect()
+        }
+    }
+
+    private fun loadRelationships() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = favoriteRepository.getMyRelationships()
+            result.fold(
+                onSuccess = { relationships ->
+                    _uiState.update {
+                        it.copy(
+                            patients = relationships,
+                            isLoading = false
+                        )
+                    }
+                    Log.d("FavoriteViewModel", "사용자 목록 로드 성공: ${relationships.size}명")
+                },
+                onFailure = { error ->
+                    Log.e("FavoriteViewModel", "사용자 목록 로드 실패", error)
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error.message ?: "사용자 목록 조회 실패"
+                        )
+                    }
+                }
+            )
         }
     }
 
@@ -97,7 +125,8 @@ class FavoriteViewModel @Inject constructor(
     }
 
     fun refresh() {
-        lastLoadedPatientId?.let { loadData(it) }
+        loadRelationships() // 사용자 목록 새로고침
+        lastLoadedPatientId?.let { loadData(it) } // 장소 목록 새로고침
     }
 
     fun onEvent(event: FavoriteUiEvent) {

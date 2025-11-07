@@ -23,6 +23,18 @@ data class RelationshipDto(
     val relationshipName: String,
     @SerialName("relationshipType")
     val relationshipType: String,
+    @SerialName("isDefault")
+    val isDefault: Boolean,
+    @SerialName("displayOrder")
+    val displayOrder: Int,
     @SerialName("createdAt")
     val createdAt: String // ISO8601 문자열 그대로 보관
+)
+
+@Serializable
+data class RelationshipDetailDto(
+    @SerialName("message")
+    val message: String,
+    @SerialName("data")
+    val data: RelationshipDto?
 )

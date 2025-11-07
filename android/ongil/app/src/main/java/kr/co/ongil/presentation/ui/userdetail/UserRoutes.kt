@@ -1,10 +1,8 @@
-package kr.co.ongil.presentation.ui.patientdetail
+package kr.co.ongil.presentation.ui.userdetail
 
 import android.net.Uri
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 
-object PatientRoutes {
+object UserRoutes {
     // 환자 상세 Graph의 Route (필요하다면 추가)
     const val GRAPH_ROUTE = "patient_graph"
 

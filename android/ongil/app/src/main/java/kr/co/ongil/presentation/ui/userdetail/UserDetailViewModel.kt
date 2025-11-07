@@ -1,7 +1,6 @@
-package kr.co.ongil.presentation.ui.patientdetail
+package kr.co.ongil.presentation.ui.userdetail
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +11,7 @@ import javax.inject.Inject
 
 
 @HiltViewModel
-class PatientDetailViewModel @Inject constructor(
+class UserDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -22,14 +21,14 @@ class PatientDetailViewModel @Inject constructor(
     private val initialGender: String = savedStateHandle["gender"] ?: ""
 
     private val _uiState = MutableStateFlow(
-        PatientDetailUiState(
+        UserDetailUiState(
             patientId = initialPatientId,
             name = initialName,
             phoneNumber = initialPhoneNumber,
             gender = initialGender
         )
     )
-    val uiState: StateFlow<PatientDetailUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<UserDetailUiState> = _uiState.asStateFlow()
 
     // 저장하기
     fun updatePatientInfo(newName: String, newPhoneNumber: String, newGender: String) {

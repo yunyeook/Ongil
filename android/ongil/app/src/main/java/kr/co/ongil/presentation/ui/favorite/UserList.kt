@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.favorite.PatientCard
-import kr.co.ongil.presentation.ui.favorite.PatientData
 
 @Composable
 fun PatientList(
