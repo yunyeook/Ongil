@@ -4,11 +4,10 @@ import kotlinx.serialization.Serializable
 
 /**
  * 알림 목록 조회 API 응답
- * GET /api/v1/notifications?page={page}&size={size}
+ * GET /api/v1/notifications?page={page}&size={size}&read={read}
  */
 @Serializable
 data class NotificationResponse(
-    val success: Boolean,
     val message: String,
     val data: NotificationData
 )

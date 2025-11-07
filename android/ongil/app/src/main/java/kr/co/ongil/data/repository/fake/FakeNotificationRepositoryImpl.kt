@@ -21,12 +21,15 @@ class FakeNotificationRepositoryImpl : NotificationRepository {
 
     override suspend fun getNotifications(
         page: Int,
-        size: Int
+        size: Int,
+        read: Boolean?
     ): Result<Pair<List<NotificationDto>, PageInfo>> {
         val now = System.currentTimeMillis()
-        val sample = listOf(
+        val allSamples = listOf(
             NotificationDto(
                 notificationId = 1L,
+                senderId = 1L,
+                receiverId = 2L,
                 type = "SAFEZONE_EXIT",
                 title = "안전구역 이탈 감지",
                 content = "보호 대상자가 지정된 안전 구역에서 벗어났습니다.",
@@ -35,6 +38,8 @@ class FakeNotificationRepositoryImpl : NotificationRepository {
             ),
             NotificationDto(
                 notificationId = 2L,
+                senderId = 1L,
+                receiverId = 2L,
                 type = "RELATIONSHIP_REGIST",
                 title = "관계 등록 완료",
                 content = "보호자-대상자 관계가 등록되었습니다.",
@@ -43,6 +48,8 @@ class FakeNotificationRepositoryImpl : NotificationRepository {
             ),
             NotificationDto(
                 notificationId = 3L,
+                senderId = 1L,
+                receiverId = 2L,
                 type = "NAVIGATION_START",
                 title = "길안내 시작",
                 content = "목적지까지 길안내가 시작되었습니다.",
@@ -51,15 +58,42 @@ class FakeNotificationRepositoryImpl : NotificationRepository {
             )
         )
 
+        // read 필터 적용
+        val filteredSamples = when (read) {
+            true -> allSamples.filter { it.isRead }
+            false -> allSamples.filter { !it.isRead }
+            null -> allSamples
+        }
+
         val pageInfo = PageInfo(
-            totalElements = sample.size, // Int
+            totalElements = filteredSamples.size,
             totalPages   = 1,
             isLast       = true,
             currPage     = page
         )
 
-        return Result.success(sample to pageInfo)
+        return Result.success(filteredSamples to pageInfo)
+    }
 
+    override suspend fun markAsRead(notificationId: Long): Result<Unit> {
+        // Fake 구현 - 실제로는 아무것도 하지 않음
+        return Result.success(Unit)
+    }
+
+    override suspend fun markAllAsRead(): Result<Unit> {
+        // Fake 구현 - 실제로는 아무것도 하지 않음
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteNotification(notificationId: Long): Result<Unit> {
+        // Fake 구현 - 실제로는 아무것도 하지 않음
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteAllNotifications(): Result<Int> {
+        // Fake 구현 - 실제로는 아무것도 하지 않음
+        // 임의의 삭제 개수 반환
+        return Result.success(3)
     }
 
     private fun toUtcIso(ms: Long): String {

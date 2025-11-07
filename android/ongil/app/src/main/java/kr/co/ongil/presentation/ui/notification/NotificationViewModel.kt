@@ -2,29 +2,28 @@ package kr.co.ongil.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.data.model.notification.NotificationDto
-import kr.co.ongil.data.repository.fake.FakeNotificationRepositoryImpl
 import kr.co.ongil.domain.repository.NotificationRepository
 import kr.co.ongil.presentation.uistate.NotificationEvent
 import kr.co.ongil.presentation.uistate.NotificationUi
 import kr.co.ongil.presentation.uistate.NotificationUiState
 import kr.co.ongil.presentation.uistate.NotificationType
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 import java.util.TimeZone
+import javax.inject.Inject
 
 /**
  * 알림 화면 ViewModel
  */
-class NotificationViewModel(
-    private val repository: NotificationRepository = FakeNotificationRepositoryImpl()
-    // TODO: DI로 주입하도록 변경
+@HiltViewModel
+class NotificationViewModel @Inject constructor(
+    private val repository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationUiState())
@@ -86,16 +85,14 @@ class NotificationViewModel(
     private fun markAsRead(id: Long) {
         viewModelScope.launch {
             try {
-                // TODO: 실제 API 호출로 대체
-                _uiState.update { state ->
-                    val updated = state.notifications.map { notification ->
-                        if (notification.id == id) notification.copy(isRead = true)
-                        else notification
-                    }
-                    state.copy(
-                        notifications = updated,
-                        hasUnread = updated.any { !it.isRead }
-                    )
+                // 실제 API 호출
+                val result = repository.markAsRead(id)
+
+                result.onSuccess {
+                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
+                    loadNotifications()
+                }.onFailure { exception ->
+                    _uiState.update { it.copy(error = exception.message ?: "읽음 처리에 실패했습니다.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "읽음 처리에 실패했습니다.") }
@@ -106,12 +103,14 @@ class NotificationViewModel(
     private fun markAllAsRead() {
         viewModelScope.launch {
             try {
-                // TODO: 실제 API 호출로 대체
-                _uiState.update { state ->
-                    state.copy(
-                        notifications = state.notifications.map { it.copy(isRead = true) },
-                        hasUnread = false
-                    )
+                // 실제 API 호출
+                val result = repository.markAllAsRead()
+
+                result.onSuccess {
+                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
+                    loadNotifications()
+                }.onFailure { exception ->
+                    _uiState.update { it.copy(error = exception.message ?: "전체 읽음 처리에 실패했습니다.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "전체 읽음 처리에 실패했습니다.") }
@@ -122,13 +121,14 @@ class NotificationViewModel(
     private fun deleteNotification(id: Long) {
         viewModelScope.launch {
             try {
-                // TODO: 실제 API 호출로 대체
-                _uiState.update { state ->
-                    val updated = state.notifications.filter { it.id != id }
-                    state.copy(
-                        notifications = updated,
-                        hasUnread = updated.any { !it.isRead }
-                    )
+                // 실제 API 호출
+                val result = repository.deleteNotification(id)
+
+                result.onSuccess {
+                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
+                    loadNotifications()
+                }.onFailure { exception ->
+                    _uiState.update { it.copy(error = exception.message ?: "삭제에 실패했습니다.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "삭제에 실패했습니다.") }
@@ -139,12 +139,15 @@ class NotificationViewModel(
     private fun deleteAllNotifications() {
         viewModelScope.launch {
             try {
-                // TODO: 실제 API 호출로 대체
-                _uiState.update {
-                    it.copy(
-                        notifications = emptyList(),
-                        hasUnread = false
-                    )
+                // 실제 API 호출
+                val result = repository.deleteAllNotifications()
+
+                result.onSuccess { deleteCount ->
+                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
+                    android.util.Log.d("NotificationViewModel", "전체 알림 삭제 완료: ${deleteCount}개")
+                    loadNotifications()
+                }.onFailure { exception ->
+                    _uiState.update { it.copy(error = exception.message ?: "전체 삭제에 실패했습니다.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "전체 삭제에 실패했습니다.") }
