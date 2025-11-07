@@ -22,7 +22,25 @@ interface NotificationRepository {
     ): Result<Pair<List<NotificationDto>, PageInfo>>
 
     /**
+     * 개별 알림 읽음 처리
+     * @param notificationId 읽음 처리할 알림 ID
+     */
+    suspend fun markAsRead(notificationId: Long): Result<Unit>
+
+    /**
      * 전체 읽음 처리
      */
     suspend fun markAllAsRead(): Result<Unit>
+
+    /**
+     * 개별 알림 삭제
+     * @param notificationId 삭제할 알림 ID
+     */
+    suspend fun deleteNotification(notificationId: Long): Result<Unit>
+
+    /**
+     * 전체 알림 삭제
+     * @return Result<Int> 삭제된 알림 개수
+     */
+    suspend fun deleteAllNotifications(): Result<Int>
 }

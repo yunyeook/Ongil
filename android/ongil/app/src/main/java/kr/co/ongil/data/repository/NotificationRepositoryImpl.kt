@@ -61,6 +61,38 @@ class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun markAsRead(notificationId: Long): Result<Unit> {
+        return try {
+            Log.d("NotificationRepository", "알림 읽음 처리 시작 - notificationId: $notificationId")
+
+            val response = notificationApi.markAsRead(notificationId)
+
+            Log.d("NotificationRepository", "응답 코드: ${response.code()}")
+            Log.d("NotificationRepository", "응답 성공 여부: ${response.isSuccessful}")
+
+            if (!response.isSuccessful) {
+                val errorBody = response.errorBody()?.string()
+                Log.e("NotificationRepository", "에러 응답: $errorBody")
+            }
+
+            if (response.isSuccessful && response.body() != null) {
+                val message = response.body()?.message
+                Log.d("NotificationRepository", "알림 읽음 처리 성공: $message")
+                Result.success(Unit)
+            } else {
+                val exception = ErrorHandler.handleException(
+                    retrofit2.HttpException(response)
+                )
+                Log.e("NotificationRepository", "알림 읽음 처리 실패: ${exception.message}")
+                Result.failure(exception)
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationRepository", "알림 읽음 처리 예외 발생", e)
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
+        }
+    }
+
     override suspend fun markAllAsRead(): Result<Unit> {
         return try {
             Log.d("NotificationRepository", "전체 읽음 처리 시작")
@@ -68,9 +100,16 @@ class NotificationRepositoryImpl @Inject constructor(
             val response = notificationApi.markAllAsRead()
 
             Log.d("NotificationRepository", "응답 코드: ${response.code()}")
+            Log.d("NotificationRepository", "응답 성공 여부: ${response.isSuccessful}")
 
-            if (response.isSuccessful) {
-                Log.d("NotificationRepository", "전체 읽음 처리 성공")
+            if (!response.isSuccessful) {
+                val errorBody = response.errorBody()?.string()
+                Log.e("NotificationRepository", "에러 응답: $errorBody")
+            }
+
+            if (response.isSuccessful && response.body() != null) {
+                val message = response.body()?.message
+                Log.d("NotificationRepository", "전체 읽음 처리 성공: $message")
                 Result.success(Unit)
             } else {
                 val exception = ErrorHandler.handleException(
@@ -81,6 +120,71 @@ class NotificationRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("NotificationRepository", "전체 읽음 처리 예외 발생", e)
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
+        }
+    }
+
+    override suspend fun deleteNotification(notificationId: Long): Result<Unit> {
+        return try {
+            Log.d("NotificationRepository", "알림 삭제 시작 - notificationId: $notificationId")
+
+            val response = notificationApi.deleteNotification(notificationId)
+
+            Log.d("NotificationRepository", "응답 코드: ${response.code()}")
+            Log.d("NotificationRepository", "응답 성공 여부: ${response.isSuccessful}")
+
+            if (!response.isSuccessful) {
+                val errorBody = response.errorBody()?.string()
+                Log.e("NotificationRepository", "에러 응답: $errorBody")
+            }
+
+            if (response.isSuccessful && response.body() != null) {
+                val message = response.body()?.message
+                Log.d("NotificationRepository", "알림 삭제 성공: $message")
+                Result.success(Unit)
+            } else {
+                val exception = ErrorHandler.handleException(
+                    retrofit2.HttpException(response)
+                )
+                Log.e("NotificationRepository", "알림 삭제 실패: ${exception.message}")
+                Result.failure(exception)
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationRepository", "알림 삭제 예외 발생", e)
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
+        }
+    }
+
+    override suspend fun deleteAllNotifications(): Result<Int> {
+        return try {
+            Log.d("NotificationRepository", "전체 알림 삭제 시작")
+
+            val response = notificationApi.deleteAllNotifications()
+
+            Log.d("NotificationRepository", "응답 코드: ${response.code()}")
+            Log.d("NotificationRepository", "응답 성공 여부: ${response.isSuccessful}")
+
+            if (!response.isSuccessful) {
+                val errorBody = response.errorBody()?.string()
+                Log.e("NotificationRepository", "에러 응답: $errorBody")
+            }
+
+            if (response.isSuccessful && response.body() != null) {
+                val deleteCount = response.body()?.data?.deleteCount ?: 0
+                val message = response.body()?.message
+                Log.d("NotificationRepository", "전체 알림 삭제 성공: $message, 삭제 개수: $deleteCount")
+                Result.success(deleteCount)
+            } else {
+                val exception = ErrorHandler.handleException(
+                    retrofit2.HttpException(response)
+                )
+                Log.e("NotificationRepository", "전체 알림 삭제 실패: ${exception.message}")
+                Result.failure(exception)
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationRepository", "전체 알림 삭제 예외 발생", e)
             val apiException = ErrorHandler.handleException(e)
             Result.failure(apiException)
         }

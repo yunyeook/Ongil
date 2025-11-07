@@ -75,9 +75,25 @@ class FakeNotificationRepositoryImpl : NotificationRepository {
         return Result.success(filteredSamples to pageInfo)
     }
 
+    override suspend fun markAsRead(notificationId: Long): Result<Unit> {
+        // Fake 구현 - 실제로는 아무것도 하지 않음
+        return Result.success(Unit)
+    }
+
     override suspend fun markAllAsRead(): Result<Unit> {
         // Fake 구현 - 실제로는 아무것도 하지 않음
         return Result.success(Unit)
+    }
+
+    override suspend fun deleteNotification(notificationId: Long): Result<Unit> {
+        // Fake 구현 - 실제로는 아무것도 하지 않음
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteAllNotifications(): Result<Int> {
+        // Fake 구현 - 실제로는 아무것도 하지 않음
+        // 임의의 삭제 개수 반환
+        return Result.success(3)
     }
 
     private fun toUtcIso(ms: Long): String {
