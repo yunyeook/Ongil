@@ -2,6 +2,7 @@ package kr.co.ongil.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,17 +10,17 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.data.mapper.toRecentCallUi
 import kr.co.ongil.domain.repository.CallRepository
-import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
 import kr.co.ongil.presentation.uistate.RecentCallsEvent
 import kr.co.ongil.presentation.uistate.RecentCallsUiState
+import javax.inject.Inject
 
 /**
  * 최근 통화 목록 화면 ViewModel
  */
-class RecentCallsViewModel(
-    private val callRepository: CallRepository? = null
-    // TODO: DI(Hilt/Koin)로 주입하도록 변경
+@HiltViewModel
+class RecentCallsViewModel @Inject constructor(
+    private val callRepository: CallRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecentCallsUiState())
@@ -73,31 +74,11 @@ class RecentCallsViewModel(
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
 
-                if (callRepository == null) {
-                    // Repository가 없으면 Mock 데이터 사용
-                    val mockCalls = listOf(
-                        RecentCallUi(1, "이지현", CallType.VOIP, "오늘 오후 3:24 · 통화시간 5분 12초"),
-                        RecentCallUi(2, "박민수", CallType.NORMAL, "오늘 오후 1:02 · 통화시간 1분 03초"),
-                        RecentCallUi(3, "김수진", CallType.SOS, "오늘 오후 12:10 · 통화시간 20초"),
-                        RecentCallUi(4, "02-1234-5678", CallType.NORMAL, "어제 오후 9:50 · 통화시간 2분 11초"),
-                        RecentCallUi(5, "이지현", CallType.VOIP, "어제 오후 8:30 · 통화시간 30초")
-                    )
-
-                    _uiState.update {
-                        it.copy(
-                            calls = mockCalls,
-                            filteredCalls = mockCalls,
-                            isLoading = false
-                        )
-                    }
-                    return@launch
-                }
-
                 // Repository에서 통화 목록 가져오기
                 val result = callRepository.getCallLogs()
 
                 result.onSuccess { callLogs ->
-                    // TODO: 현재 로그인된 사용자 ID 가져오기
+                    // TODO: 현재 로그인된 사용자 ID 가져오기 (UserRepository 또는 TokenManager에서)
                     val currentUserId = 1L
 
                     // CallLogDto → RecentCallUi 변환

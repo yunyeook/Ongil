@@ -14,6 +14,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kr.co.ongil.data.datasource.local.preferences.TokenManager
 import kr.co.ongil.data.datasource.remote.api.AuthApi
+import kr.co.ongil.data.datasource.remote.api.CallApi
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.datasource.remote.interceptor.AuthInterceptor
@@ -143,4 +144,9 @@ object NetworkModule {
     @Singleton
     fun provideFavoriteApi(retrofit: Retrofit): FavoriteApi =
         retrofit.create(FavoriteApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideCallApi(retrofit: Retrofit): CallApi =
+        retrofit.create(CallApi::class.java)
 }

@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
 import kr.co.ongil.presentation.uistate.RecentCallsEvent
@@ -32,7 +32,7 @@ private val RecentAccent = Color(0xFF8CA898)
 @Composable
 fun RecentCallsScreen(
     modifier: Modifier = Modifier,
-    viewModel: RecentCallsViewModel = viewModel(),
+    viewModel: RecentCallsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToCallDetail: (Long) -> Unit = {}
 ) {
@@ -196,7 +196,7 @@ private fun PreviewRecentCallsScreen() {
         val sampleCalls = listOf(
             RecentCallUi(1, "이지현", CallType.VOIP, "오늘 오후 3:24 · 통화시간 5분 12초"),
             RecentCallUi(2, "박민수", CallType.NORMAL, "오늘 오후 1:02 · 통화시간 1분 03초"),
-            RecentCallUi(3, "김수진", CallType.SOS, "오늘 오후 12:10 · 통화시간 20초"),
+            RecentCallUi(3, "김수진", CallType.EMERGENCY, "오늘 오후 12:10 · 통화시간 20초"),
             RecentCallUi(4, "02-1234-5678", CallType.NORMAL, "어제 오후 9:50 · 통화시간 2분 11초"),
             RecentCallUi(5, "이지현", CallType.VOIP, "어제 오후 8:30 · 통화시간 30초")
         )

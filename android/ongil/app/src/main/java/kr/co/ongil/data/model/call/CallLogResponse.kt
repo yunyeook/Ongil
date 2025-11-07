@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CallLogResponse(
     val message: String,
-    val data: CallLogData
+    val data: CallLogData?=null
 )
 
 @Serializable

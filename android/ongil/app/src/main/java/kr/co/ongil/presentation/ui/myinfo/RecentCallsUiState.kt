@@ -4,9 +4,9 @@ package kr.co.ongil.presentation.uistate
  * 통화 타입
  */
 enum class CallType {
-    VOIP,    // VoIP 통화
-    NORMAL,  // 일반 전화
-    SOS      // 긴급 SOS 통화
+    VOIP,       // VoIP 통화
+    NORMAL,     // 일반 전화
+    EMERGENCY   // 긴급 통화
 }
 
 /**
