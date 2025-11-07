@@ -141,6 +141,7 @@ public class FavoriteService {
         return FavoriteResponse.from(favorite);
     }
 
+
     @Transactional
     public void deleteFavorite(Integer patientId, Integer favoriteId, Integer callerId) {
         // 권한 검증
@@ -150,17 +151,28 @@ public class FavoriteService {
         Favorite favorite = favoriteRepository.findByIdAndPatientId(favoriteId, patientId)
             .orElseThrow(() -> new BusinessException(ErrorCode.FAVORITE_NOT_FOUND));
 
-        // 삭제 전에 정렬 순서 저장
+        // 삭제 전에 기본 여부 및 순서 저장
+        boolean wasDefault = Boolean.TRUE.equals(favorite.getIsDefault());
         Integer deletedOrder = favorite.getDisplayOrder();
 
         favoriteRepository.delete(favorite);
         log.info("즐겨찾기 삭제 완료 - favoriteId: {}", favoriteId);
 
-        // 삭제 후 재정렬 (삭제된 순서 이후의 즐겨찾기들을 -1씩)
+        // 삭제 후 재정렬
         if (deletedOrder != null) {
             resequenceAfterDelete(patientId, deletedOrder);
         }
+
+        // 만약 삭제된 즐겨찾기가 기본 목적지였다면, 남은 즐겨찾기 중 아무거나 기본으로 지정
+        if (wasDefault) {
+            favoriteRepository.findFirstByPatientIdOrderByDisplayOrder(patientId)
+                .ifPresent(next -> {
+                    next.setAsDefault();
+                    log.info("삭제된 기본 목적지 대체 설정 - newDefaultFavoriteId: {}", next.getId());
+                });
+        }
     }
+
 
     @Transactional
     public FavoriteResponse setDefaultFavorite(Integer patientId, Integer favoriteId, Integer callerId) {
