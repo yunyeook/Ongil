@@ -40,7 +40,7 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       ssl:
-        enabled: ${REDIS_SSL_ENABLED:false}
+        enabled: ${REDIS_SSL_ENABLED}
 
   cache:
     type: redis
@@ -96,6 +96,8 @@ logging:
   level:
     root: INFO
     org.hibernate.SQL: WARN
+    io.lettuce.core: DEBUG
+    org.springframework.data.redis: DEBUG
 
 jwt:
   secret: ${JWT_SECRET}
