@@ -33,11 +33,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kr.co.ongil.presentation.ui.favorite.FavoriteUiEvent.onGoSearchUserClick
-
+import androidx.navigation.NavController
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun FavoriteScreen(
+    navController: NavController,
     onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
     onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String) -> Unit,
     onGoSearchUserClick: () -> Unit
@@ -49,6 +51,21 @@ fun FavoriteScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // 상세 화면에서 수정/삭제 성공 시 갱신 플래그 감지
+    val updatedFlow = navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow("favorite_updated", false)
+    val updated = updatedFlow?.collectAsState() ?: remember { mutableStateOf(false) }
+
+    LaunchedEffect(updated.value) {
+        if (updated.value) {
+            viewModel.refresh()
+            navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.set("favorite_updated", false)
+        }
+    }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { errorMessage ->
@@ -84,6 +101,7 @@ fun FavoriteScreen(
 
                 // 타이틀 / 설명 영역
                 FavoriteTitleSection(
+                    userName = uiState.userName,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -95,6 +113,7 @@ fun FavoriteScreen(
                 // 탭 바 (환자 목록 / 장소 목록)
                 FavoriteTabBar(
                     selectedTab = uiState.selectedTab,
+                    userType = uiState.userType,
                     onTabSelected = { tab ->
                         viewModel.onEvent(FavoriteUiEvent.OnTabSelected(tab))
                     },
@@ -135,7 +154,10 @@ fun FavoriteScreen(
                             onClickPlaceIcon = { placeId ->
                                 // TODO: 지도 화면으로 이동 or 지도 열기 처리 예정
                             },
-                            onClickPlaceCardWithPatient = { patientId, favoriteId -> onNavigateToPlaceDetail(patientId, favoriteId) },
+                            onClickPlaceCardWithPatient = { _, favoriteId ->
+                                // place.patientId 대신 실제 조회에 사용한 currentPatientId 사용 (403 방지)
+                                onNavigateToPlaceDetail(uiState.currentPatientId, favoriteId)
+                            },
                         )
                     }
                 }
@@ -152,11 +174,12 @@ fun FavoriteScreen(
 
 @Composable
 private fun FavoriteTitleSection(
+    userName: String,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "사용자님의 즐겨찾기",
+            text = if (userName.isNotEmpty()) "${userName}님의 즐겨찾기" else "사용자님의 즐겨찾기",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF111827),
@@ -233,6 +256,7 @@ private fun FavoriteScreenPatientsPreview() {
         ) {
             // 타이틀 영역
             FavoriteTitleSection(
+                userName = "홍길동",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -243,6 +267,7 @@ private fun FavoriteScreenPatientsPreview() {
             // 탭 바 (현재는 환자 탭)
             FavoriteTabBar(
                 selectedTab = FavoriteTab.PATIENTS,
+                userType = "GUARDIAN",
                 onTabSelected = { },
                 modifier = Modifier.fillMaxWidth()
             )

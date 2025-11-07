@@ -73,7 +73,7 @@ object NetworkModule {
         @ForInterceptor authApi: AuthApi
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = HttpLoggingInterceptor.Level.BODY // BODY로 변경하여 실제 JSON 확인
         }
         val authInterceptor = AuthInterceptor(tokenManager, authApi)
 

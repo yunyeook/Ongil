@@ -5,9 +5,8 @@ import kr.co.ongil.data.model.favorite.PlaceDetailUpdateDto
 
 fun PlaceDetailUpdate.toDto(): PlaceDetailUpdateDto =
     PlaceDetailUpdateDto(
-        placeName  = placeName,
+        placeAlias = placeAlias, // placeName 대신 placeAlias 사용
         address    = address,
-        placeAlias = placeAlias,
         category   = category,
         latitude   = latitude,
         longitude  = longitude,

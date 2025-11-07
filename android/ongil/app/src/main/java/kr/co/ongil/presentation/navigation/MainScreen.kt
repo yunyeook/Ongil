@@ -28,6 +28,7 @@ fun MainScreen(
     authViewModel: AuthStateViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+    val currentUserId by authViewModel.currentUserId.collectAsState()
 
     // 로그인 상태 확인 중
     if (isLoggedIn == null) {
@@ -103,7 +104,11 @@ fun MainScreen(
                     selectedRoute = baseRoute,
                     onClick = { route ->
                         val navigationRoute =
-                            if (route == Routes.Favorite.route) "${Routes.Favorite.route}/1"
+                            if (route == Routes.Favorite.route) {
+                                // 현재 로그인한 사용자의 ID를 사용 (환자는 자신의 즐겨찾기 조회)
+                                val userId = currentUserId ?: 1 // userId가 아직 로드되지 않은 경우 fallback
+                                "${Routes.Favorite.route}/$userId"
+                            }
                             else route
                         navController.navigate(navigationRoute) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
