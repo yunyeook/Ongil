@@ -120,6 +120,8 @@ public class FavoriteService {
         // 새로 기본목적지로 설정한다면
         if(request.isDefault()){
             setDefaultFavorite(patientId,favoriteId,callerId);
+        }else{
+            throw new BusinessException(ErrorCode.FAVORITE_DEFAULT_NOT_CANCELED);
         }
 
         // 수정
