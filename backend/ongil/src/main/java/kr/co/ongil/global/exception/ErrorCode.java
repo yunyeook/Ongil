@@ -69,6 +69,7 @@ public enum ErrorCode {
     FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "즐겨찾기를 찾을 수 없습니다."),
     FAVORITE_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일한 즐겨찾기가 이미 존재합니다."),
     FAVORITE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 접근 권한이 없습니다."),
+    FAVORITE_DEFAULT_NOT_CANCELED(HttpStatus.FORBIDDEN, "기본 길찾기를 해제할 수 없습니다."),
 
     // LOCATION / SAFEZONE / ABNORMAL DETECTION
     SAFEZONE_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 안전범위이 없습니다."),
