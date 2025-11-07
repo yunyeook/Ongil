@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.repository.FavoriteRepository
@@ -40,18 +42,20 @@ class FavoriteViewModel @Inject constructor(
     private fun loadUserInfo() {
         viewModelScope.launch {
             userRepository.getMyInfo()
-                .onSuccess { userDto ->
-                    _uiState.update {
-                        it.copy(
-                            userName = userDto.name,
-                            userType = userDto.userType
-                        )
+                .onEach { result ->
+                    result.onSuccess { userDto ->
+                                _uiState.update {
+                                    it.copy(
+                                        userName = userDto.name,
+                                        userType = userDto.userType
+                                    )
+                                }
+                                Log.d("FavoriteViewModel", "사용자 정보 로드 성공: name=${userDto.name}, type=${userDto.userType}")
+                            }.onFailure { error ->
+                                Log.e("FavoriteViewModel", "사용자 정보 로드 실패", error)
+                            }
                     }
-                    Log.d("FavoriteViewModel", "사용자 정보 로드 성공: name=${userDto.name}, type=${userDto.userType}")
-                }
-                .onFailure { error ->
-                    Log.e("FavoriteViewModel", "사용자 정보 로드 실패", error)
-                }
+                    .collect()
         }
     }
 

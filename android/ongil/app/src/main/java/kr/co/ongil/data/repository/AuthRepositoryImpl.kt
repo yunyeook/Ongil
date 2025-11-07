@@ -1,13 +1,11 @@
 package kr.co.ongil.data.repository
 
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
-import kr.co.ongil.data.datasource.local.preferences.TokenManager
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.model.auth.LoginRequest
 import kr.co.ongil.data.model.auth.LoginResponse
 import kr.co.ongil.data.model.auth.LogoutRequest
-import kr.co.ongil.data.model.user.UserDto
 import kr.co.ongil.data.util.ErrorHandler
 import kr.co.ongil.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -25,7 +23,7 @@ import java.io.File
  */
 class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
-    private val tokenManager: TokenManager
+    private val tokenManager: UserDataStoreManager
 ) : AuthRepository {
 
     override suspend fun login(phoneNumber: String, password: String): Result<LoginResponse> {

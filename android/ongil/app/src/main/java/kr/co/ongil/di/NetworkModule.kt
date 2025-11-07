@@ -12,14 +12,13 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import okhttp3.MediaType.Companion.toMediaType
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
-import kr.co.ongil.data.datasource.local.preferences.TokenManager
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.datasource.remote.api.CallApi
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
 import kr.co.ongil.data.datasource.remote.api.NotificationApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.datasource.remote.interceptor.AuthInterceptor
-import kr.co.ongil.core.constants.Constants
 import kr.co.ongil.BuildConfig
 
 @Qualifier
@@ -69,7 +68,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(
-        tokenManager: TokenManager,
+        tokenManager: UserDataStoreManager,
         @ForInterceptor authApi: AuthApi
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {

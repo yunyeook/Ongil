@@ -1,15 +1,18 @@
 package kr.co.ongil.presentation.ui.auth
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
-import kr.co.ongil.data.datasource.local.preferences.TokenManager
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+import kr.co.ongil.data.model.user.UserDto
 import kr.co.ongil.domain.repository.UserRepository
 import javax.inject.Inject
 
@@ -18,49 +21,63 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class AuthStateViewModel @Inject constructor(
-    private val tokenManager: TokenManager,
+    private val userDataStoreManager: UserDataStoreManager,
     private val userRepository: UserRepository
 ) : ViewModel() {
 
-    private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
-    val isLoggedIn: StateFlow<Boolean?> = _isLoggedIn.asStateFlow()
+//    private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
+//    val isLoggedIn: StateFlow<Boolean?> = _isLoggedIn.asStateFlow()
+//
+//    private val _currentUserId = MutableStateFlow<Int?>(null)
+//    val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
+//
+//    init {
+//        checkLoginState()
+//    }
 
-    private val _currentUserId = MutableStateFlow<Int?>(null)
-    val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
+    val currentUserId: StateFlow<String?> = userDataStoreManager.getLoginUserId().stateIn(viewModelScope,
+        SharingStarted.WhileSubscribed(5000), null)
+    val isLoggedIn: StateFlow<Boolean?> = currentUserId.map { it != null }.stateIn(viewModelScope,
+        SharingStarted.WhileSubscribed(5000), null)
 
-    init {
-        checkLoginState()
-    }
+//    /**
+//     * 저장된 토큰 확인하여 로그인 상태 체크
+//     */
+//    private fun checkLoginState() {
+//        viewModelScope.launch {
+//            val accessToken = tokenManager.getAccessToken().firstOrNull()
+//            val loggedIn = !accessToken.isNullOrEmpty()
+//            _isLoggedIn.value = loggedIn
+//
+//            if (loggedIn) {
+//                loadUserInfo()
+//            }
+//        }
+//    }
 
-    /**
-     * 저장된 토큰 확인하여 로그인 상태 체크
-     */
-    private fun checkLoginState() {
-        viewModelScope.launch {
-            val accessToken = tokenManager.getAccessToken().firstOrNull()
-            val loggedIn = !accessToken.isNullOrEmpty()
-            _isLoggedIn.value = loggedIn
-
-            if (loggedIn) {
-                loadUserInfo()
-            }
-        }
-    }
-
-    /**
-     * 현재 로그인한 사용자 정보 로드
-     */
-    private fun loadUserInfo() {
-        viewModelScope.launch {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val currentUserInfo: Flow<Result<UserDto>?> = currentUserId.flatMapLatest { userId ->
+        if (userId != null) {
             userRepository.getMyInfo()
-                .onSuccess { userDto ->
-                    _currentUserId.value = userDto.id
-                    Log.d("AuthStateViewModel", "사용자 정보 로드 성공: userId=${userDto.id}, name=${userDto.name}, userType=${userDto.userType}")
-                }
-                .onFailure { error ->
-                    Log.e("AuthStateViewModel", "사용자 정보 로드 실패", error)
-                    _currentUserId.value = null
-                }
+        } else {
+            flowOf(null)
         }
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+//    /**
+//     * 현재 로그인한 사용자 정보 로드
+//     */
+//    private fun loadUserInfo() {
+//        viewModelScope.launch {
+//            userRepository.getMyInfo()
+//                .onSuccess { userDto ->
+//                    _currentUserId.value = userDto.id
+//                    Log.d("AuthStateViewModel", "사용자 정보 로드 성공: userId=${userDto.id}, name=${userDto.name}, userType=${userDto.userType}")
+//                }
+//                .onFailure { error ->
+//                    Log.e("AuthStateViewModel", "사용자 정보 로드 실패", error)
+//                    _currentUserId.value = null
+//                }
+//        }
+//    }
 }
