@@ -37,7 +37,7 @@ public class FcmTokenService {
             .build());
     }
     public FcmToken getTokenByUserId(Integer userId) {
-        return fcmTokenRepository.findByUserId(userId).get();
+        return fcmTokenRepository.findByUserId(userId).orElse(null);
     }
     public List<FcmToken> getTokensByUserId(Integer userId) {
         return fcmTokenRepository.findAllByUserId(userId);

@@ -1,5 +1,6 @@
 package kr.co.ongil.domain.call.controller;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -20,6 +21,7 @@ import java.util.Map;
  * 2. 메시지 발행: stompClient.send('/app/signal/room123', {}, JSON.stringify(message))
  * 3. 메시지 구독: stompClient.subscribe('/topic/room/room123', callback)
  */
+@Profile("local")
 @Controller
 public class SignalingController {
 
