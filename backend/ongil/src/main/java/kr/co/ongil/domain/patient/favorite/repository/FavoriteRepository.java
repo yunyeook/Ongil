@@ -52,4 +52,13 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Integer> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Favorite f SET f.isDefault = false WHERE f.patient.id = :patientId")
     void clearAllDefaultsByPatientId(@Param("patientId") Integer patientId);
+
+
+    /**
+     * 환자의 즐겨찾기 중 DisplayOrder가 가장 높은 즐겨찾기 조회
+     */
+    Optional<Favorite> findFirstByPatientIdOrderByDisplayOrder(Integer patientId);
+
+
+
 }
