@@ -9,6 +9,7 @@ import kr.co.ongil.domain.call.dto.response.CallLogResponse;
 import kr.co.ongil.domain.call.service.CallLogService;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
+import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,8 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,10 +44,9 @@ public class CallLogController {
     @PostMapping
     @Operation(summary = "통화 로그 생성", description = "기본 전화 통화 종료 후 클라이언트가 통화 로그를 등록합니다.")
     public ApiResponse<CallLogResponse> createCallLog(
-        @AuthenticationPrincipal UserDetails userDetails,
         @Valid @RequestBody CreateCallLogRequest request
     ) {
-        Integer callerId = Integer.parseInt(userDetails.getUsername());
+        Integer callerId = SecurityUtil.getCurrentUserId();
         CallLogResponse response = callLogService.createCallLog(callerId, request);
 
         return ApiResponse.success(ResponseMessage.CALL_LOG_CREATED, response);
@@ -60,10 +58,9 @@ public class CallLogController {
     @GetMapping
     @Operation(summary = "통화 로그 목록 조회", description = "사용자의 통화 로그 목록을 페이징하여 조회합니다.")
     public ApiResponse<List<CallLogResponse>> getCallLogs(
-        @AuthenticationPrincipal UserDetails userDetails,
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Integer userId = Integer.parseInt(userDetails.getUsername());
+        Integer userId = SecurityUtil.getCurrentUserId();
         Page<CallLogResponse> page = callLogService.getCallLogs(userId, pageable);
 
         return ApiResponse.success(ResponseMessage.CALL_LOG_LIST_FOUND, page.getContent());
@@ -88,10 +85,8 @@ public class CallLogController {
      */
     @GetMapping("/emergency")
     @Operation(summary = "긴급 통화 기록 조회", description = "사용자의 긴급 통화 기록만 조회합니다.")
-    public ApiResponse<List<CallLogResponse>> getEmergencyCallLogs(
-        @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        Integer userId = Integer.parseInt(userDetails.getUsername());
+    public ApiResponse<List<CallLogResponse>> getEmergencyCallLogs() {
+        Integer userId = SecurityUtil.getCurrentUserId();
         List<CallLogResponse> response = callLogService.getEmergencyCallLogs(userId);
 
         return ApiResponse.success(ResponseMessage.CALL_LOG_LIST_FOUND, response);
@@ -103,15 +98,13 @@ public class CallLogController {
     @GetMapping("/date-range")
     @Operation(summary = "기간별 통화 로그 조회", description = "특정 기간 내의 통화 로그를 조회합니다.")
     public ApiResponse<List<CallLogResponse>> getCallLogsByDateRange(
-        @AuthenticationPrincipal UserDetails userDetails,
-
         @Parameter(description = "시작 날짜", example = "2025-01-01T00:00:00")
         @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime startDate,
 
         @Parameter(description = "종료 날짜", example = "2025-01-31T23:59:59")
         @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime endDate
     ) {
-        Integer userId = Integer.parseInt(userDetails.getUsername());
+        Integer userId = SecurityUtil.getCurrentUserId();
         List<CallLogResponse> response = callLogService.getCallLogsByDateRange(userId, startDate, endDate);
 
         return ApiResponse.success(ResponseMessage.CALL_LOG_LIST_FOUND, response);
