@@ -76,6 +76,62 @@ public class FcmService {
     }
 
 
+    /**
+     * VoIP 통화 알림 전송 (앱 깨우기용)
+     * 백그라운드 상태의 앱을 깨워서 WebSocket 연결을 시작하도록 합니다.
+     */
+    public void sendCallNotification(
+        Integer receiverId,
+        Integer callerId,
+        String callerName,
+        Integer callId,
+        String sessionId,
+        String callType
+    ) {
+        try {
+            // Redis에서 FCM 토큰 조회
+            String token = fcmTokenRedisService.getToken(receiverId);
+
+            // Redis에 없으면 DB 조회 & Redis 저장
+            if (token == null) {
+                token = fcmTokenService.getTokenByUserId(receiverId).getToken();
+                if (token != null) {
+                    fcmTokenRedisService.saveToken(receiverId, token);
+                }
+            }
+
+            if (token == null || token.isEmpty()) {
+                log.warn("FCM 토큰 없음 - receiverId={}", receiverId);
+                return;
+            }
+
+            // data-only 메시지 (백그라운드에서 앱 깨우기)
+            Message message = Message.builder()
+                .setToken(token)
+                .putData("type", "INCOMING_CALL")  // 타입 구분
+                .putData("callId", callId.toString())
+                .putData("sessionId", sessionId)
+                .putData("callerId", callerId.toString())
+                .putData("callerName", callerName)
+                .putData("callType", callType)
+                .setAndroidConfig(com.google.firebase.messaging.AndroidConfig.builder()
+                    .setPriority(com.google.firebase.messaging.AndroidConfig.Priority.HIGH)  // ⭐ 높은 우선순위
+                    .build())
+                .setApnsConfig(com.google.firebase.messaging.ApnsConfig.builder()
+                    .setAps(com.google.firebase.messaging.Aps.builder()
+                        .setContentAvailable(true)  // iOS 백그라운드 깨우기
+                        .build())
+                    .build())
+                .build();
+
+            String response = FirebaseMessaging.getInstance().send(message);
+            log.info("통화 푸시 알림 전송 성공 - receiverId={}, callId={}, response={}", receiverId, callId, response);
+
+        } catch (Exception e) {
+            log.error("통화 푸시 알림 전송 실패 - receiverId={}, callId={}", receiverId, callId, e);
+        }
+    }
+
     public void deleteFcmToken(Integer userId) {
         fcmTokenService.deleteAllTokensByUserId(userId);
         fcmTokenRedisService.deleteAllTokens(userId);
