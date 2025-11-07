@@ -29,7 +29,7 @@ sealed interface LoginEffect {
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
-    private val tokenManager: kr.co.ongil.data.datasource.local.preferences.TokenManager
+    private val userDataStoreManager: kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginUiState())
@@ -95,13 +95,13 @@ class LoginViewModel @Inject constructor(
 
                 // 로컬에 저장된 토큰과 비교
                 viewModelScope.launch {
-                    val savedToken = tokenManager.getFcmToken().firstOrNull()
+                    val savedToken = userDataStoreManager.getFcmToken().firstOrNull()
                     if (savedToken != fcmToken) {
                         // 토큰이 변경되었거나 처음 저장하는 경우
                         Log.d("FCM", "토큰이 변경됨 (기존: $savedToken -> 새: $fcmToken)")
                         sendTokenToBackend(fcmToken)
                         // 서버 전송 후 로컬에 저장
-                        tokenManager.saveFcmToken(fcmToken)
+                        userDataStoreManager.saveFcmToken(fcmToken)
                     } else {
                         Log.d("FCM", "토큰이 동일함, 서버 전송 스킵")
                     }
@@ -118,7 +118,7 @@ class LoginViewModel @Inject constructor(
     private fun sendTokenToBackend(token: String) {
         viewModelScope.launch {
             // AccessToken 가져오기
-            val accessToken = tokenManager.getAccessToken().firstOrNull()
+            val accessToken = userDataStoreManager.getAccessToken().firstOrNull()
             if (accessToken == null) {
                 Log.e("FCM", "AccessToken이 없어서 FCM 토큰 전송 실패")
                 return@launch

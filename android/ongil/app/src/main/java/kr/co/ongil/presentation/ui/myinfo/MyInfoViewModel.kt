@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.core.utils.formatPhoneNumber
 import kr.co.ongil.domain.repository.AuthRepository
@@ -60,24 +63,26 @@ class MyInfoViewModel @Inject constructor(
 
             // GetUserUseCase를 통한 사용자 정보 조회
             getUserUseCase()
-                .onSuccess { userDto ->
-                    // DTO → UiState 변환
-                    Log.d(TAG, "getUserUseCase success: $userDto")
-                    _uiState.value = MyInfoUiState(
-                        name = userDto.name,
-                        phoneNumber = formatPhoneNumber(userDto.phoneNumber),
-                        profileImage = userDto.profileImage,
-                        isLoading = false
-                    )
-                    Log.d(TAG, "UiState updated: ${_uiState.value}")
+                .onEach { result ->
+                    result.onSuccess { userDto ->
+                        // DTO → UiState 변환
+                        Log.d(TAG, "getUserUseCase success: $userDto")
+                        _uiState.value = MyInfoUiState(
+                            name = userDto.name,
+                            phoneNumber = formatPhoneNumber(userDto.phoneNumber),
+                            profileImage = userDto.profileImage,
+                            isLoading = false
+                        )
+                        Log.d(TAG, "UiState updated: ${_uiState.value}")
+                    }.onFailure { exception ->
+                        Log.e(TAG, "getUserUseCase failed", exception)
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
+                        )
+                    }
                 }
-                .onFailure { exception ->
-                    Log.e(TAG, "getUserUseCase failed", exception)
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
-                    )
-                }
+                .collect()
         }
     }
 

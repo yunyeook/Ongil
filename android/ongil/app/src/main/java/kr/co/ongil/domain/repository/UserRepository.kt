@@ -1,5 +1,6 @@
 package kr.co.ongil.domain.repository
 
+import kotlinx.coroutines.flow.Flow
 import kr.co.ongil.data.model.user.UserDto
 import java.io.File
 
@@ -11,7 +12,7 @@ interface UserRepository {
     /**
      * 내 정보 조회
      */
-    suspend fun getMyInfo(): Result<UserDto>
+    fun getMyInfo(): Flow<Result<UserDto>>
 
     /**
      * 내 정보 수정

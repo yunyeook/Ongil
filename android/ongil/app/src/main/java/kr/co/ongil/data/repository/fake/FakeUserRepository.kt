@@ -1,5 +1,7 @@
 package kr.co.ongil.data.repository.fake
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kr.co.ongil.data.model.user.UserDto
 import kr.co.ongil.domain.repository.UserRepository
 import java.io.File
@@ -9,8 +11,8 @@ import java.io.File
  */
 class FakeUserRepository : UserRepository {
 
-    override suspend fun getMyInfo(): Result<UserDto> {
-        return Result.success(
+    override fun getMyInfo(): Flow<Result<UserDto>> = flow {
+        emit(Result.success(
             UserDto(
                 id = 1,
                 name = "홍길동",
@@ -18,6 +20,7 @@ class FakeUserRepository : UserRepository {
                 phoneNumber = "01012341234",
                 userType = "PATIENT",
                 profileImage = null
+                )
             )
         )
     }

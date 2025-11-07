@@ -1,6 +1,6 @@
 package kr.co.ongil.domain.usecase.auth
 
-import kr.co.ongil.data.datasource.local.preferences.TokenManager
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.model.auth.LoginResponse
 import kr.co.ongil.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -12,7 +12,7 @@ import javax.inject.Inject
  */
 class LoginUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val tokenManager: TokenManager
+    private val tokenManager: UserDataStoreManager
 ) {
     /**
      * 로그인 실행

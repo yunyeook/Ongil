@@ -2,6 +2,8 @@ package kr.co.ongil.data.repository
 
 import android.util.Log
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.model.auth.SendVerificationRequest
@@ -30,16 +32,16 @@ class UserRepositoryImpl @Inject constructor(
         private const val TAG = "UserRepositoryImpl"
     }
 
-    override suspend fun getMyInfo(): Result<UserDto> {
-        return try {
+    override fun getMyInfo(): Flow<Result<UserDto>> = flow {
+        try {
             Log.d(TAG, "getMyInfo() - API 호출 시작")
             val response = userApi.getMyInfo()
             Log.d(TAG, "getMyInfo() - API 호출 성공: ${response.data}")
-            Result.success(response.data)  // data에 바로 UserDto
+            emit(Result.success(response.data))  // data에 바로 UserDto
         } catch (e: Exception) {
             Log.e(TAG, "getMyInfo() - API 호출 실패", e)
             val apiException = ErrorHandler.handleException(e)
-            Result.failure(apiException)
+            emit(Result.failure(apiException))
         }
     }
 
