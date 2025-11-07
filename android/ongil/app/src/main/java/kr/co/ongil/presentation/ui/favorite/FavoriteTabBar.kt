@@ -25,8 +25,18 @@ import androidx.compose.ui.unit.sp
 fun FavoriteTabBar(
     selectedTab: FavoriteTab,
     onTabSelected: (FavoriteTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    userType: String = ""
 ) {
+    // userType에 따라 탭 이름 결정
+    // PATIENT(환자)가 로그인한 경우: '보호자 목록'
+    // GUARDIAN(보호자)가 로그인한 경우: '환자 목록'
+    val patientsTabText = when (userType.uppercase()) {
+        "PATIENT" -> "보호자 목록"
+        "GUARDIAN" -> "환자 목록"
+        else -> "환자 목록" // 기본값
+    }
+
     Surface(
         color = Color(0xFFF3F4F6),
         shape = RoundedCornerShape(12.dp),
@@ -40,9 +50,9 @@ fun FavoriteTabBar(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
 
-            // 환자 목록 탭
+            // 환자/보호자 목록 탭
             FavoriteTabChip(
-                text = "환자 목록",
+                text = patientsTabText,
                 isSelected = (selectedTab == FavoriteTab.PATIENTS),
                 onClick = { onTabSelected(FavoriteTab.PATIENTS) },
                 modifier = Modifier

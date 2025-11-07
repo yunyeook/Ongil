@@ -49,7 +49,8 @@ class PlaceDetailViewModel @Inject constructor(
                 onSuccess = { detail ->
                     _uiState.update {
                         it.copy(
-                            placeName = detail.placeName,
+                            // placeAlias가 있으면 placeAlias를, 없으면 placeName을 표시
+                            placeName = detail.placeAlias.ifEmpty { detail.placeName },
                             address = detail.address,
                             isDefault = detail.isDefault,
                             favoriteId = detail.favoriteId,
@@ -103,7 +104,8 @@ class PlaceDetailViewModel @Inject constructor(
                 onSuccess = { updated ->
                     _uiState.update {
                         it.copy(
-                            placeName = updated.placeName,
+                            // placeAlias가 있으면 placeAlias를, 없으면 placeName을 표시
+                            placeName = updated.placeAlias.ifEmpty { updated.placeName },
                             address = updated.address,
                             isDefault = updated.isDefault,
                             // 서버가 다른 필드를 갱신했을 수 있으므로 동기화

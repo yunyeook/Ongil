@@ -77,6 +77,12 @@ fun PlaceDetailScreen(
     var editedPlaceName by remember { mutableStateOf(placeName) }
     var editedAddress by remember { mutableStateOf(address) }
 
+    // API에서 데이터를 새로 받으면 편집 필드도 업데이트
+    LaunchedEffect(placeName, address) {
+        editedPlaceName = placeName
+        editedAddress = address
+    }
+
     val hasChanges = remember(placeName, address, editedPlaceName, editedAddress) {
         editedPlaceName.trim() != placeName || editedAddress.trim() != address
     }

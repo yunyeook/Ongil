@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.ui.favorite
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,12 +10,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.repository.FavoriteRepository
+import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.presentation.ui.favorite.toPlaceData
 import javax.inject.Inject
 
 @HiltViewModel
 class FavoriteViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
+    private val userRepository: UserRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -31,7 +34,26 @@ class FavoriteViewModel @Inject constructor(
     val uiState: StateFlow<FavoriteUiState> = _uiState
 
     init {
+        loadUserInfo()
         loadData(initialPatientId)
+    }
+
+    private fun loadUserInfo() {
+        viewModelScope.launch {
+            userRepository.getMyInfo()
+                .onSuccess { userDto ->
+                    _uiState.update {
+                        it.copy(
+                            userName = userDto.name,
+                            userType = userDto.userType
+                        )
+                    }
+                    Log.d("FavoriteViewModel", "사용자 정보 로드 성공: name=${userDto.name}, type=${userDto.userType}")
+                }
+                .onFailure { error ->
+                    Log.e("FavoriteViewModel", "사용자 정보 로드 실패", error)
+                }
+        }
     }
 
     fun loadData(patientId: Long) {

@@ -84,6 +84,7 @@ fun FavoriteScreen(
 
                 // 타이틀 / 설명 영역
                 FavoriteTitleSection(
+                    userName = uiState.userName,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -95,6 +96,7 @@ fun FavoriteScreen(
                 // 탭 바 (환자 목록 / 장소 목록)
                 FavoriteTabBar(
                     selectedTab = uiState.selectedTab,
+                    userType = uiState.userType,
                     onTabSelected = { tab ->
                         viewModel.onEvent(FavoriteUiEvent.OnTabSelected(tab))
                     },
@@ -152,11 +154,12 @@ fun FavoriteScreen(
 
 @Composable
 private fun FavoriteTitleSection(
+    userName: String,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "사용자님의 즐겨찾기",
+            text = if (userName.isNotEmpty()) "${userName}님의 즐겨찾기" else "사용자님의 즐겨찾기",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF111827),
@@ -233,6 +236,7 @@ private fun FavoriteScreenPatientsPreview() {
         ) {
             // 타이틀 영역
             FavoriteTitleSection(
+                userName = "홍길동",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -243,6 +247,7 @@ private fun FavoriteScreenPatientsPreview() {
             // 탭 바 (현재는 환자 탭)
             FavoriteTabBar(
                 selectedTab = FavoriteTab.PATIENTS,
+                userType = "GUARDIAN",
                 onTabSelected = { },
                 modifier = Modifier.fillMaxWidth()
             )
