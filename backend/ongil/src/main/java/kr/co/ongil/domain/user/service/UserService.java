@@ -99,6 +99,7 @@ public class UserService {
         // 프로필 이미지 처리
         String profileImagePath = null;
         if (request.getProfileImage() != null && !request.getProfileImage().isEmpty()) {
+            if(user.getProfileImage()!=null) {fileUtil.deleteS3(user.getProfileImage());}
             profileImagePath = fileUtil.saveProfileImage(request.getProfileImage());
         }
 
