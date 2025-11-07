@@ -57,8 +57,17 @@ public class CallSignalController {
             throw new BusinessException(ErrorCode.CALL_PERMISSION_DENIED);
         }
 
-        // 3. 대상 사용자에게 메시지 전달
+        // 3. 대상 사용자 ID 계산 (toUserId가 null이면 자동 계산)
         Integer toUserId = message.toUserId();
+        if (toUserId == null) {
+            // fromUserId가 caller면 receiver에게, receiver면 caller에게 전송
+            toUserId = call.getCaller().getId().equals(fromUserId)
+                ? call.getReceiver().getId()
+                : call.getCaller().getId();
+            log.info("toUserId가 null이어서 자동 계산: from={}, to={}", fromUserId, toUserId);
+        }
+
+        // 4. 대상 사용자에게 메시지 전달
         String destination = "/queue/calls";  // 통합 destination 사용
 
         messagingTemplate.convertAndSendToUser(
