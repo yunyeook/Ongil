@@ -103,7 +103,8 @@ public enum ResponseMessage {
     SOS_ACK_PROCESSED("워치 재생 완료 콜백이 정상적으로 처리되었습니다."),
     SOS_STOPPED("도움 요청 음성 재생이 성공적으로 종료되었습니다."),
 
-
+    // Location
+    LOCATION_UPDATE("위치 정보가 정상적으로 업데이트되었습니다."),
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
     INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."),

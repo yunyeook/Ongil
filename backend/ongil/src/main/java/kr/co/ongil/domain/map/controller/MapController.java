@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.ongil.domain.map.dto.response.AddressResponse;
-import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
+import kr.co.ongil.domain.map.dto.response.CoordinateInfo;
 import kr.co.ongil.domain.map.dto.response.PlaceDetailResponse;
 import kr.co.ongil.domain.map.dto.response.RouteResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
@@ -41,7 +41,7 @@ public class MapController {
 
     @GetMapping("/coordinate")
     @Operation(summary = "주소로 좌표 조회", description = "주소 정보를 받아 GPS 좌표로 변환합니다.")
-    public ApiResponse<CoordinateResponse> getCoordinate(
+    public ApiResponse<CoordinateInfo> getCoordinate(
         @Parameter(description = "시/도", example = "서울특별시", required = true)
         @RequestParam String cityDo,
 
@@ -54,7 +54,7 @@ public class MapController {
         @Parameter(description = "번지", example = "737")
         @RequestParam(required = false) String bunji
     ) {
-        CoordinateResponse response = mapService.getCoordinate(cityDo, guGun, dong, bunji);
+        CoordinateInfo response = mapService.getCoordinate(cityDo, guGun, dong, bunji);
         return ApiResponse.success(ResponseMessage.COORDINATE_FOUND, response);
     }
 

@@ -82,6 +82,16 @@ public class GlobalExceptionHandler {
             .body(new ApiResponse<>("지원하지 않는 HTTP 메서드입니다.", ""));
     }
 
+    // 지원하지 않는 Content-Type
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<String>> handleHttpMediaTypeNotSupportedException(
+        org.springframework.web.HttpMediaTypeNotSupportedException e) {
+        log.warn("Unsupported Media Type: {}", e.getContentType());
+        return ResponseEntity
+            .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE) // 415
+            .body(ApiResponse.fail(ErrorCode.UNSUPPORTED_MEDIA_TYPE));
+    }
+
     // 그 외 모든 예외
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<String>> handleException(Exception e) {

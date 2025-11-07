@@ -15,7 +15,7 @@ public record PlaceDetailResponse(
     AddressResponse address,
 
     @Schema(description = "좌표 정보")
-    CoordinateResponse coordinate,
+    CoordinateInfo coordinate,
 
     @Schema(description = "카테고리 정보")
     CategoryInfo category,
@@ -41,7 +41,7 @@ public record PlaceDetailResponse(
         String id,
         String name,
         AddressResponse address,
-        CoordinateResponse coordinate,
+        CoordinateInfo coordinate,
         CategoryInfo category,
         String phoneNumber,
         String description,
