@@ -12,7 +12,17 @@ interface NotificationRepository {
      * 알림 목록 조회
      * @param page 페이지 번호 (1부터 시작)
      * @param size 페이지당 데이터 개수
+     * @param read 읽음 여부 필터 (true: 읽은 알림, false: 안 읽은 알림, null: 전체)
      * @return Result<Pair<List<NotificationDto>, PageInfo>>
      */
-    suspend fun getNotifications(page: Int = 1, size: Int = 20): Result<Pair<List<NotificationDto>, PageInfo>>
+    suspend fun getNotifications(
+        page: Int = 1,
+        size: Int = 10,
+        read: Boolean? = null
+    ): Result<Pair<List<NotificationDto>, PageInfo>>
+
+    /**
+     * 전체 읽음 처리
+     */
+    suspend fun markAllAsRead(): Result<Unit>
 }

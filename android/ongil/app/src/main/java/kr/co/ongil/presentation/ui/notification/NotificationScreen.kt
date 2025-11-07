@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import kr.co.ongil.presentation.ui.common.OngilTopBar
 import kr.co.ongil.presentation.ui.common.alert.AlertInfo
 import kr.co.ongil.presentation.ui.common.alert.getNotificationStyle
@@ -32,7 +32,7 @@ import kr.co.ongil.presentation.viewmodel.NotificationViewModel
 @Composable
 fun NotificationScreen(
     modifier: Modifier = Modifier,
-    viewModel: NotificationViewModel = viewModel(),
+    viewModel: NotificationViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()

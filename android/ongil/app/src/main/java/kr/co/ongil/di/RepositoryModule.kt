@@ -8,11 +8,13 @@ import kr.co.ongil.data.repository.AuthRepositoryImpl
 import kr.co.ongil.data.repository.CallRepositoryImpl
 import kr.co.ongil.data.repository.FavoriteRepositoryImpl
 import kr.co.ongil.data.repository.FindPasswordAuthRepositoryImpl
+import kr.co.ongil.data.repository.NotificationRepositoryImpl
 import kr.co.ongil.data.repository.UserRepositoryImpl
 import kr.co.ongil.domain.repository.AuthRepository
 import kr.co.ongil.domain.repository.CallRepository
 import kr.co.ongil.domain.repository.FavoriteRepository
 import kr.co.ongil.domain.repository.FindPasswordAuthRepository
+import kr.co.ongil.domain.repository.NotificationRepository
 import kr.co.ongil.domain.repository.UserRepository
 
 @Module
@@ -43,4 +45,9 @@ abstract class RepositoryModule {
     abstract fun bindCallRepository(
         impl: CallRepositoryImpl
     ): CallRepository
+
+    @Binds
+    abstract fun bindNotificationRepository(
+        impl: NotificationRepositoryImpl
+    ): NotificationRepository
 }

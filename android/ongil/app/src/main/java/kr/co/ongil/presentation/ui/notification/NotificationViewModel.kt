@@ -2,29 +2,28 @@ package kr.co.ongil.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.data.model.notification.NotificationDto
-import kr.co.ongil.data.repository.fake.FakeNotificationRepositoryImpl
 import kr.co.ongil.domain.repository.NotificationRepository
 import kr.co.ongil.presentation.uistate.NotificationEvent
 import kr.co.ongil.presentation.uistate.NotificationUi
 import kr.co.ongil.presentation.uistate.NotificationUiState
 import kr.co.ongil.presentation.uistate.NotificationType
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 import java.util.TimeZone
+import javax.inject.Inject
 
 /**
  * 알림 화면 ViewModel
  */
-class NotificationViewModel(
-    private val repository: NotificationRepository = FakeNotificationRepositoryImpl()
-    // TODO: DI로 주입하도록 변경
+@HiltViewModel
+class NotificationViewModel @Inject constructor(
+    private val repository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationUiState())
@@ -106,12 +105,18 @@ class NotificationViewModel(
     private fun markAllAsRead() {
         viewModelScope.launch {
             try {
-                // TODO: 실제 API 호출로 대체
-                _uiState.update { state ->
-                    state.copy(
-                        notifications = state.notifications.map { it.copy(isRead = true) },
-                        hasUnread = false
-                    )
+                // 실제 API 호출
+                val result = repository.markAllAsRead()
+
+                result.onSuccess {
+                    _uiState.update { state ->
+                        state.copy(
+                            notifications = state.notifications.map { it.copy(isRead = true) },
+                            hasUnread = false
+                        )
+                    }
+                }.onFailure { exception ->
+                    _uiState.update { it.copy(error = exception.message ?: "전체 읽음 처리에 실패했습니다.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "전체 읽음 처리에 실패했습니다.") }

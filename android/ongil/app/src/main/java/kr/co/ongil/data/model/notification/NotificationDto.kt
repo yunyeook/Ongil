@@ -8,9 +8,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class NotificationDto(
     val notificationId: Long,
+    val senderId: Long,
+    val receiverId: Long,
     val title: String,
     val content: String,
-    val type: String,
+    val type: String,           // RELATIONSHIP_REGIST, SAFEZONE_EXIT, NAVIGATION_START, etc.
     val isRead: Boolean,
-    val createdAt: String
+    val createdAt: String       // ISO8601 format
 )
