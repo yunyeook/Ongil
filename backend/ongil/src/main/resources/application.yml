@@ -96,8 +96,6 @@ logging:
   level:
     root: INFO
     org.hibernate.SQL: WARN
-    io.lettuce.core: DEBUG
-    org.springframework.data.redis: DEBUG
 
 jwt:
   secret: ${JWT_SECRET}
