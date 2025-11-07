@@ -21,7 +21,7 @@ public class FileUtil {
     @Value("${file.upload.path:/uploads/}")
     private String basePath;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${spring.cloud.aws.s3.bucket}")
     private String bucket;
 
     private final S3Template s3Template;
