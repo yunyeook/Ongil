@@ -289,6 +289,7 @@
     let peerConnection = null;
     let localStream = null;
     let iceServers = null;
+    let peerUserId = null;  // ✅ 통화 상대방 ID (세션 전체에서 사용)
 
     // 로그 함수
     function log(message, type = 'info') {
@@ -478,6 +479,10 @@
         return;
       }
 
+      // ✅ 통화 상대방 ID 저장 (발신자가 호출할 때)
+      peerUserId = parseInt(receiverId, 10);
+      log(`✅ 상대방 ID 저장: ${peerUserId}`, 'info');
+
       try {
         log(`📞 통화 요청 생성 중... (수신자: ${receiverId})`, 'info');
 
@@ -546,7 +551,7 @@
               candidate: JSON.stringify(event.candidate),
               callId: currentCallId,
               fromUserId: userId,
-              toUserId: parseInt(document.getElementById('receiverId').value)
+              toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
             });
           }
         };
@@ -555,6 +560,21 @@
         peerConnection.ontrack = (event) => {
           log('📹 원격 미디어 스트림 수신', 'success');
           document.getElementById('remoteVideo').srcObject = event.streams[0];
+        };
+
+        // 연결 상태 변화 모니터링 (디버깅용)
+        peerConnection.onconnectionstatechange = () => {
+          log(`🔗 Connection State: ${peerConnection.connectionState}`, 'info');
+          if (peerConnection.connectionState === 'connected') {
+            log('✅ WebRTC P2P 연결 완료!', 'success');
+          } else if (peerConnection.connectionState === 'failed') {
+            log('❌ WebRTC 연결 실패', 'error');
+          }
+        };
+
+        // ICE 연결 상태 모니터링
+        peerConnection.oniceconnectionstatechange = () => {
+          log(`🧊 ICE Connection State: ${peerConnection.iceConnectionState}`, 'info');
         };
 
         // Offer 생성
@@ -568,7 +588,7 @@
           sdp: offer.sdp,
           callId: currentCallId,
           fromUserId: userId,
-          toUserId: parseInt(document.getElementById('receiverId').value)
+          toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
         });
 
       } catch (error) {
@@ -597,12 +617,23 @@
           updateCallStatus('calling', `수신 통화 (Call ID: ${signal.callId})`);
           currentCallId = signal.callId;
 
+          // ✅ 통화 상대방 ID 저장 (수신자가 받을 때)
+          peerUserId = signal.fromUserId;
+          log(`✅ 상대방 ID 저장: ${peerUserId}`, 'info');
+
           document.getElementById('acceptBtn').disabled = false;
           document.getElementById('rejectBtn').disabled = false;
           break;
 
         case 'OFFER':
           log('📥 OFFER 수신, ANSWER 생성 중...', 'info');
+
+          // ✅ 상대방 ID가 없으면 OFFER에서 저장 (안전장치)
+          if (peerUserId == null) {
+            peerUserId = signal.fromUserId;
+            log(`✅ 상대방 ID 저장 (OFFER에서): ${peerUserId}`, 'info');
+          }
+
           await handleOffer(signal);
           break;
 
@@ -680,7 +711,7 @@
         type: 'ACCEPT',
         callId: currentCallId,
         fromUserId: userId,
-        toUserId: parseInt(document.getElementById('receiverId').value)
+        toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
       });
     }
 
@@ -696,11 +727,12 @@
         type: 'REJECT',
         callId: currentCallId,
         fromUserId: userId,
-        toUserId: parseInt(document.getElementById('receiverId').value)
+        toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
       });
 
       currentCallId = null;
       currentSessionId = null;
+      peerUserId = null;  // ✅ 상대방 ID 초기화
     }
 
     // 통화 종료
@@ -713,7 +745,7 @@
           type: 'HANGUP',
           callId: currentCallId,
           fromUserId: userId,
-          toUserId: parseInt(document.getElementById('receiverId').value)
+          toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
         });
       }
 
@@ -741,6 +773,7 @@
 
       currentCallId = null;
       currentSessionId = null;
+      peerUserId = null;  // ✅ 상대방 ID 초기화
     }
 
     // 페이지 로드 시
