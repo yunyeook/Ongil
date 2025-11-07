@@ -28,7 +28,6 @@ public class NotificationController {
     @GetMapping
     @Operation(summary = "알림 목록 조회", description = "로그인한 회원의 알림 목록을 조회합니다.")
     public ApiResponse<NotificationListResponse> getNotifications(
-        // @AuthenticationPrincipal CustomUserDetails userDetails,
         @Parameter(description = "조회할 페이지 번호 (1부터 시작)") @RequestParam(defaultValue = "1") int page,
         @Parameter(description = "페이지당 알림 개수") @RequestParam(defaultValue = "10") int size,
         @Parameter(description = "읽음 여부 필터") @RequestParam(required = false) Boolean read

@@ -117,6 +117,11 @@ public class FavoriteService {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 
+        // 새로 기본목적지로 설정한다면
+        if(request.isDefault()){
+            setDefaultFavorite(patientId,favoriteId,callerId);
+        }
+
         // 수정
         favorite.update(
             request.placeName(),
@@ -124,8 +129,11 @@ public class FavoriteService {
             request.category(),
             request.address(),
             request.latitude(),
-            request.longitude()
+            request.longitude(),
+            request.isDefault()
         );
+
+
 
         log.info("즐겨찾기 수정 완료 - favoriteId: {}", favoriteId);
         return FavoriteResponse.from(favorite);
