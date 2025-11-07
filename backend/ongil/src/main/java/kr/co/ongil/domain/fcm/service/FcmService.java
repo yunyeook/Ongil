@@ -6,9 +6,9 @@ import com.google.firebase.messaging.Message;
 import kr.co.ongil.domain.notification.entity.Notification;
 import kr.co.ongil.domain.relationship.entity.Relationship;
 import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
-import kr.co.ongil.domain.relationship.service.RelationshipService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -19,6 +19,9 @@ public class FcmService {
     private final FcmTokenRedisService fcmTokenRedisService;
     private final FcmTokenService fcmTokenService;
     private final RelationshipRepository relationshipRepository;
+
+    @Value("${fcm.ios.voip-topic}")
+    private String iosVoipTopic;
 
     public void registerFcmToken(Integer userId, String token) {
         if (token == null || token.isBlank()) return;
@@ -94,13 +97,14 @@ public class FcmService {
 
             // Redis에 없으면 DB 조회 & Redis 저장
             if (token == null) {
-                token = fcmTokenService.getTokenByUserId(receiverId).getToken();
+                var fcmToken = fcmTokenService.getTokenByUserId(receiverId);
+                token = (fcmToken != null) ? fcmToken.getToken() : null;
                 if (token != null) {
                     fcmTokenRedisService.saveToken(receiverId, token);
                 }
             }
 
-            if (token == null || token.isEmpty()) {
+            if (token == null || token.isBlank()) {
                 log.warn("FCM 토큰 없음 - receiverId={}", receiverId);
                 return;
             }
@@ -108,20 +112,26 @@ public class FcmService {
             // data-only 메시지 (백그라운드에서 앱 깨우기)
             Message message = Message.builder()
                 .setToken(token)
-                .putData("type", "INCOMING_CALL")  // 타입 구분
+                // Android 설정: HIGH 우선순위 + 30초 TTL
+                .setAndroidConfig(com.google.firebase.messaging.AndroidConfig.builder()
+                    .setPriority(com.google.firebase.messaging.AndroidConfig.Priority.HIGH)
+                    .setTtl(30000L)  // 30초 (밀리초)
+                    .build())
+                // iOS 설정: VoIP Push 헤더
+                .setApnsConfig(com.google.firebase.messaging.ApnsConfig.builder()
+                    .putHeader("apns-push-type", "voip")
+                    .putHeader("apns-priority", "10")
+                    .putHeader("apns-topic", iosVoipTopic)
+                    .setAps(com.google.firebase.messaging.Aps.builder()
+                        .setContentAvailable(true)
+                        .build())
+                    .build())
+                .putData("type", "INCOMING_CALL")
                 .putData("callId", callId.toString())
                 .putData("sessionId", sessionId)
                 .putData("callerId", callerId.toString())
                 .putData("callerName", callerName)
                 .putData("callType", callType)
-                .setAndroidConfig(com.google.firebase.messaging.AndroidConfig.builder()
-                    .setPriority(com.google.firebase.messaging.AndroidConfig.Priority.HIGH)  // ⭐ 높은 우선순위
-                    .build())
-                .setApnsConfig(com.google.firebase.messaging.ApnsConfig.builder()
-                    .setAps(com.google.firebase.messaging.Aps.builder()
-                        .setContentAvailable(true)  // iOS 백그라운드 깨우기
-                        .build())
-                    .build())
                 .build();
 
             String response = FirebaseMessaging.getInstance().send(message);
