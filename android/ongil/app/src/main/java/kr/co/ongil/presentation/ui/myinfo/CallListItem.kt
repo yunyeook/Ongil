@@ -34,7 +34,7 @@ fun CallListItem(
     modifier: Modifier = Modifier
 ) {
     val containerColor = when (item.type) {
-        CallType.SOS -> Color(0xFFF6F4F0)        // SOS 연한 강조
+        CallType.EMERGENCY -> Color(0xFFF6F4F0)  // 긴급 통화 연한 강조
         CallType.VOIP -> Color(0xFFF2F6F4)       // 살짝 민트 톤
         CallType.NORMAL -> Color(0xFFF7F9F8)
     }
@@ -115,10 +115,10 @@ private fun CallInfo(
         val typeText = when (item.type) {
             CallType.VOIP -> "VoIP"
             CallType.NORMAL -> "일반전화"
-            CallType.SOS -> "SOS"
+            CallType.EMERGENCY -> "긴급통화"
         }
         val typeColor = when (item.type) {
-            CallType.SOS -> Color(0xFFD85B4E)
+            CallType.EMERGENCY -> Color(0xFFD85B4E)
             else -> Color(0xFF6B767A)
         }
 

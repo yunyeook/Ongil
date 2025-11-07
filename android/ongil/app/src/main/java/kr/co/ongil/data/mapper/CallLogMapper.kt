@@ -18,9 +18,12 @@ fun CallLogDto.toRecentCallUi(currentUserId: Long): RecentCallUi {
     }
 
     // CallType 매핑
-    val uiCallType = when (callType.uppercase()) {
-        "VOIP" -> CallType.VOIP
-        "BASIC" -> CallType.NORMAL
+    // callType: NORMAL/EMERGENCY, source: APP(VoIP)/SYSTEM_DIALER(일반전화)
+    val uiCallType = when {
+        callType.uppercase() == "EMERGENCY" -> CallType.EMERGENCY
+        source?.uppercase() == "APP" -> CallType.VOIP
+        source?.uppercase() == "SYSTEM_DIALER" -> CallType.NORMAL
+        callType.uppercase() == "VOIP" -> CallType.VOIP  // 기존 스펙 호환
         else -> CallType.NORMAL
     }
 
