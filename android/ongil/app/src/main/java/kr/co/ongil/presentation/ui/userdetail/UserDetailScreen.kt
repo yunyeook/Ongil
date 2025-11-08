@@ -23,19 +23,18 @@ import kr.co.ongil.presentation.ui.common.InputBox
 
 
 @Composable
-fun PatientDetailScreen(
+fun UserDetailScreen(
     viewModel: UserDetailViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    var name by remember(uiState.relationshipId) { mutableStateOf(uiState.name) }
+    var phoneNumber by remember(uiState.relationshipId) { mutableStateOf(uiState.phoneNumber) }
+    var relationshipType by remember(uiState.relationshipId) { mutableStateOf(uiState.relationshipType) }
 
-    var name by remember(uiState.patientId) { mutableStateOf(uiState.name) }
-    var phoneNumber by remember(uiState.patientId) { mutableStateOf(uiState.phoneNumber) }
-    var relationshipType by remember(uiState.patientId) { mutableStateOf(uiState.relationshipType) }
-
-    PatientDetailContent(
+    UserDetailContent(
         name = name,
         phoneNumber = phoneNumber,
         relationshipType = relationshipType,
@@ -43,7 +42,7 @@ fun PatientDetailScreen(
         onPhoneChange = { phoneNumber = it },
         onRelationshipTypeChange = { relationshipType = it },
         onSaveClick = {
-            viewModel.updatePatientInfo(
+            viewModel.updateUserInfo(
                 newName = name,
                 newPhoneNumber = phoneNumber,
                 newRelationshipType = relationshipType
@@ -51,7 +50,7 @@ fun PatientDetailScreen(
             onNavigateBack()
         },
         onDeleteClick = {
-            viewModel.deletePatient {
+            viewModel.deleteUser {
                 onNavigateBack()
             }
         },
@@ -61,7 +60,7 @@ fun PatientDetailScreen(
 
 
 @Composable
-fun PatientDetailContent(
+fun UserDetailContent(
     name: String,
     phoneNumber: String,
     relationshipType: String,
@@ -84,7 +83,7 @@ fun PatientDetailContent(
             horizontalAlignment = Alignment.Start
         ) {
 
-            Spacer(modifier = Modifier.height(150.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 이름
             InputBox(
@@ -148,8 +147,8 @@ fun PatientDetailContent(
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
-fun PatientDetailScreenPreview() {
-    PatientDetailContent(
+fun UserDetailScreenPreview() {
+    UserDetailContent(
         name = "김철수",
         phoneNumber = "010-1234-5678",
         relationshipType = "자녀",

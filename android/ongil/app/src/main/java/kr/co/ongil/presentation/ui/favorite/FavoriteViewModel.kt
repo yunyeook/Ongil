@@ -37,7 +37,23 @@ class FavoriteViewModel @Inject constructor(
     init {
         loadUserInfo()
         loadRelationships() // 사용자(환자/보호자) 목록 불러오기
-        loadData(initialPatientId)
+
+        // initialPatientId가 0L이면 로그인한 사용자의 ID를 사용
+        if (initialPatientId == 0L) {
+            viewModelScope.launch {
+                userRepository.getMyInfo()
+                    .collect { result ->
+                        result.onSuccess { userDto ->
+                            val userId = userDto.id.toLong()
+                            if (lastLoadedPatientId == null) {
+                                loadData(userId)
+                            }
+                        }
+                    }
+            }
+        } else {
+            loadData(initialPatientId)
+        }
     }
 
     private fun loadUserInfo() {
@@ -87,8 +103,8 @@ class FavoriteViewModel @Inject constructor(
         }
     }
 
-    fun loadData(patientId: Long) {
-        if (_uiState.value.isLoading) return
+    fun loadData(patientId: Long, force: Boolean = false) {
+        if (!force && _uiState.value.isLoading) return
         lastLoadedPatientId = patientId
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, currentPatientId = patientId) }
@@ -126,7 +142,7 @@ class FavoriteViewModel @Inject constructor(
 
     fun refresh() {
         loadRelationships() // 사용자 목록 새로고침
-        lastLoadedPatientId?.let { loadData(it) } // 장소 목록 새로고침
+        lastLoadedPatientId?.let { loadData(it, force = true) } // 장소 목록 새로고침
     }
 
     fun onEvent(event: FavoriteUiEvent) {

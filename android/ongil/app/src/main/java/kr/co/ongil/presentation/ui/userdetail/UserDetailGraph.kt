@@ -11,7 +11,7 @@ fun NavGraphBuilder.userDetailGraph(navController: NavHostController) {
         arguments = UserDetailRoutes.Detail.arguments
     ) { backStackEntry ->
         val viewModel: UserDetailViewModel = hiltViewModel()
-        PatientDetailScreen(
+        UserDetailScreen(
             viewModel = viewModel,
             onNavigateBack = { navController.popBackStack() }
         )
