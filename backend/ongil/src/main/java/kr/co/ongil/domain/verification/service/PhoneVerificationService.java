@@ -42,7 +42,8 @@ public class PhoneVerificationService {
     // 제한 정책
 //    private static final int MAX_REQUEST_PER_PHONE = 5; // 전화번호당 1시간 내 최대 요청 횟수
     private static final int MAX_REQUEST_PER_PHONE = 25; // 전화번호당 1시간 내 최대 요청 횟수 (개발용)
-    private static final int MAX_REQUEST_PER_IP = 20;   // IP당 1시간 내 최대 요청 횟수
+//    private static final int MAX_REQUEST_PER_IP = 20;   // IP당 1시간 내 최대 요청 횟수
+    private static final int MAX_REQUEST_PER_IP = 100;   // IP당 1시간 내 최대 요청 횟수 (개발용)
 //    private static final int MAX_VERIFY_ATTEMPTS = 5;   // 인증번호 입력 최대 시도 횟수
     private static final int MAX_VERIFY_ATTEMPTS = 25;   // 인증번호 입력 최대 시도 횟수 (개발용)
     private static final long CODE_TTL_SECONDS = 180;   // 인증번호 유효 시간 (3분)
