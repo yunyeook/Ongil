@@ -33,20 +33,20 @@ fun PatientDetailScreen(
 
     var name by remember(uiState.patientId) { mutableStateOf(uiState.name) }
     var phoneNumber by remember(uiState.patientId) { mutableStateOf(uiState.phoneNumber) }
-    var gender by remember(uiState.patientId) { mutableStateOf(uiState.gender) }
+    var relationshipType by remember(uiState.patientId) { mutableStateOf(uiState.relationshipType) }
 
     PatientDetailContent(
         name = name,
         phoneNumber = phoneNumber,
-        gender = gender,
+        relationshipType = relationshipType,
         onNameChange = { name = it },
         onPhoneChange = { phoneNumber = it },
-        onGenderChange = { gender = it },
+        onRelationshipTypeChange = { relationshipType = it },
         onSaveClick = {
             viewModel.updatePatientInfo(
                 newName = name,
                 newPhoneNumber = phoneNumber,
-                newGender = gender
+                newRelationshipType = relationshipType
             )
             onNavigateBack()
         },
@@ -64,10 +64,10 @@ fun PatientDetailScreen(
 fun PatientDetailContent(
     name: String,
     phoneNumber: String,
-    gender: String,
+    relationshipType: String,
     onNameChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
-    onGenderChange: (String) -> Unit,
+    onRelationshipTypeChange: (String) -> Unit,
     onSaveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -111,11 +111,11 @@ fun PatientDetailContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 성별
+            // 관계
             InputBox(
-                label = "성별",
+                label = "관계",
                 placeholder = "",
-                value = gender,
+                value = relationshipType,
                 onValueChange = {},
                 enabled = false,
                 modifier = Modifier
@@ -152,10 +152,10 @@ fun PatientDetailScreenPreview() {
     PatientDetailContent(
         name = "김철수",
         phoneNumber = "010-1234-5678",
-        gender = "남성",
+        relationshipType = "자녀",
         onNameChange = {},
         onPhoneChange = {},
-        onGenderChange = {},
+        onRelationshipTypeChange = {},
         onSaveClick = {},
         onDeleteClick = {}
     )

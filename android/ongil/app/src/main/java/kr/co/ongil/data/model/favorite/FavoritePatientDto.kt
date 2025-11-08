@@ -28,7 +28,27 @@ data class RelationshipDto(
     @SerialName("displayOrder")
     val displayOrder: Int,
     @SerialName("createdAt")
-    val createdAt: String // ISO8601 문자열 그대로 보관
+    val createdAt: String, // ISO8601 문자열 그대로 보관
+    @SerialName("counterpartUser")
+    val counterpartUser: CounterpartUserDto
+)
+
+@Serializable
+data class CounterpartUserDto(
+    @SerialName("userId")
+    val userId: Long,
+    @SerialName("name")
+    val name: String,
+    @SerialName("birth")
+    val birth: String,
+    @SerialName("phoneNumber")
+    val phoneNumber: String,
+    @SerialName("userType")
+    val userType: String,
+    @SerialName("profileImage")
+    val profileImage: String?,
+    @SerialName("createdAt")
+    val createdAt: String
 )
 
 @Serializable

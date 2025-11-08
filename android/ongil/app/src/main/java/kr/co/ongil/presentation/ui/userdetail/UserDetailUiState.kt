@@ -7,5 +7,5 @@ data class UserDetailUiState(
     val patientId: Long = -1L,
     val name: String = "",
     val phoneNumber: String = "",
-    val gender: String = ""
+    val relationshipType: String = ""
 )

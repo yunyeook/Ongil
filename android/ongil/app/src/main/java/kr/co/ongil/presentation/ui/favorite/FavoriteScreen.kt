@@ -41,7 +41,7 @@ import androidx.compose.runtime.collectAsState
 fun FavoriteScreen(
     navController: NavController,
     onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
-    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String) -> Unit,
+    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String, relationshipType: String) -> Unit,
     onGoSearchUserClick: () -> Unit
 )
 {
@@ -131,12 +131,13 @@ fun FavoriteScreen(
                             onCallClick = { id ->
                                 viewModel.onEvent(FavoriteUiEvent.OnCallClick(id))
                             },
-                            onPatientCardClick = { id, name, phoneNumber ->
+                            onPatientCardClick = { id, name, phoneNumber, relationshipType ->
                                 viewModel.onEvent(FavoriteUiEvent.OnPatientCardClick(id))
                                 onNavigateToPatientDetail(
                                     id,
                                     name,
-                                    phoneNumber
+                                    phoneNumber,
+                                    relationshipType
                                 )
                             },
                             onGoSearchUserClick = {
@@ -233,17 +234,20 @@ private fun FavoriteScreenPatientsPreview() {
         PatientData(
             id = 1L,
             name = "홍길동",
-            phoneNumber = "010-1234-5678"
+            phoneNumber = "010-1234-5678",
+            relationshipType = "자녀"
         ),
         PatientData(
             id = 2L,
             name = "김영희",
-            phoneNumber = "010-2345-6789"
+            phoneNumber = "010-2345-6789",
+            relationshipType = "부모"
         ),
         PatientData(
             id = 3L,
             name = "이철수",
-            phoneNumber = "010-3456-7890"
+            phoneNumber = "010-3456-7890",
+            relationshipType = "친구"
         )
     )
 
@@ -278,7 +282,7 @@ private fun FavoriteScreenPatientsPreview() {
             PatientList(
                 patients = samplePatients,
                 onCallClick = { },
-                onPatientCardClick = { _, _, _ -> },
+                onPatientCardClick = { _, _, _, _ -> },
                 onGoSearchUserClick = { }
             )
         }

@@ -18,25 +18,25 @@ class UserDetailViewModel @Inject constructor(
     private val initialPatientId: Long = savedStateHandle["patientId"] ?: 0L
     private val initialName: String = savedStateHandle["name"] ?: ""
     private val initialPhoneNumber: String = savedStateHandle["phoneNumber"] ?: ""
-    private val initialGender: String = savedStateHandle["gender"] ?: ""
+    private val initialRelationshipType: String = savedStateHandle["relationshipType"] ?: ""
 
     private val _uiState = MutableStateFlow(
         UserDetailUiState(
             patientId = initialPatientId,
             name = initialName,
             phoneNumber = initialPhoneNumber,
-            gender = initialGender
+            relationshipType = initialRelationshipType
         )
     )
     val uiState: StateFlow<UserDetailUiState> = _uiState.asStateFlow()
 
     // 저장하기
-    fun updatePatientInfo(newName: String, newPhoneNumber: String, newGender: String) {
+    fun updatePatientInfo(newName: String, newPhoneNumber: String, newRelationshipType: String) {
         _uiState.update { current ->
             current.copy(
                 name = newName,
                 phoneNumber = newPhoneNumber,
-                gender = newGender
+                relationshipType = newRelationshipType
             )
         }
     }
