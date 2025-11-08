@@ -99,6 +99,16 @@ public class GPSWebSocketHandler extends TextWebSocketHandler {
 
                 log.debug("GPS 위치 업데이트 완료: patientId={}, lat={}, lng={}",
                     patientId, coordinate.latitude(), coordinate.longitude());
+            }  else if ("GPS_DISCONNECT".equals(wsMessage.getType())) {
+                // GPS 추적 종료 요청 처리
+                log.info("GPS 추적 종료 요청: patientId={}", patientId);
+
+                // 세션 정상 종료
+                session.close(CloseStatus.NORMAL);
+                patientSessions.remove(patientId);
+
+                log.info("GPS WebSocket 연결 종료 완료: patientId={}", patientId);
+
             } else {
                 log.warn("알 수 없는 메시지 타입: type={}", wsMessage.getType());
             }
@@ -143,21 +153,6 @@ public class GPSWebSocketHandler extends TextWebSocketHandler {
         } catch (IOException e) {
             log.error("연결 확인 메시지 전송 실패", e);
         }
-    }
-
-    /**
-     * URL 쿼리에서 userType 추출
-     */
-    private String extractUserType(WebSocketSession session) {
-        String query = session.getUri().getQuery();
-        if (query != null) {
-            for (String param : query.split("&")) {
-                if (param.startsWith("userType=")) {
-                    return param.substring("userType=".length());
-                }
-            }
-        }
-        return null;
     }
 
     /**
