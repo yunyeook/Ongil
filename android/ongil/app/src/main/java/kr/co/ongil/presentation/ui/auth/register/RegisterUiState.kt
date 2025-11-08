@@ -43,6 +43,7 @@ data class RegisterUiState(
     // 제출 상태값
     val canSubmit: Boolean = false,
     val isSubmitting: Boolean = false,
+    val successMessage: String? = null,
     val errorMessage: String? = null,
     val registerSuccess: Boolean = false,
 

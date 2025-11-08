@@ -92,7 +92,7 @@ class AuthRepositoryImpl @Inject constructor(
         password: String,
         userType: String,
         profileImagePath: String?
-    ): Result<Unit> {
+    ): Result<String> {
         return try {
             // client-side normalization
             val digitsPhone = phoneNumber.filter { it.isDigit() }
@@ -124,7 +124,7 @@ class AuthRepositoryImpl @Inject constructor(
             )
 
             android.util.Log.d("AuthRepositoryImpl", "registerUser response: message=${response.message}")
-            Result.success(Unit)
+            Result.success(response.message)
         } catch (e: Exception) {
             android.util.Log.e("AuthRepositoryImpl", "registerUser error", e)
             val apiException = ErrorHandler.handleException(e)

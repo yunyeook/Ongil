@@ -275,12 +275,15 @@ class RegisterViewModel @Inject constructor(
             val result = performRegisterUser()
 
             result.fold(
-                onSuccess = {
+                onSuccess = { message ->
+                    // 성공 메시지에 줄바꿈 추가
+                    val formattedMessage = message.replace("성공적으로 완료", "성공적으로\n완료")
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
                             showSuccessModal = true,
                             showErrorModal = false,
+                            successMessage = formattedMessage,
                             errorMessage = null,
                             registerSuccess = true
                         )
@@ -301,7 +304,7 @@ class RegisterViewModel @Inject constructor(
         }
     }
 
-    private suspend fun performRegisterUser(): Result<Unit> {
+    private suspend fun performRegisterUser(): Result<String> {
         val s = _uiState.value
         return try {
             registerUseCase(
@@ -329,7 +332,11 @@ class RegisterViewModel @Inject constructor(
         val birthOk = s.birth?.let { it.length == 8 && it.all(Char::isDigit) } ?: true
         val phoneOk = s.phoneNumber.isNotBlank() && s.phoneNumber.length in 10..11 && s.phoneNumber.all(Char::isDigit)
         val tokenOk = s.verificationToken.isNotBlank()
-        val pwdOk = s.password.length in 8..16
+
+        // 비밀번호 검증: 영문, 숫자, 특수문자 포함 8-16자
+        val passwordRegex = "^(?=.*[a-zA-Z])(?=.*\\d)(?=.*[!@#\$%^&*(),.?\":{}|<>]).{8,16}$".toRegex()
+        val pwdOk = s.password.matches(passwordRegex)
+
         val pwdConfirmOk = s.passwordConfirm == s.password && s.passwordConfirm.isNotBlank()
         val userTypeOk = s.userType != null
 

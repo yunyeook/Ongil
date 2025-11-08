@@ -14,7 +14,7 @@ class RegisterUseCase @Inject constructor(
         password: String,            // 8–16자
         userType: String,            // PATIENT | GUARDIAN
         profileImagePath: String?    // 파일 경로 or null
-    ): Result<Unit> {
+    ): Result<String> {
         validate(
             name = name,
             birth = birth,
