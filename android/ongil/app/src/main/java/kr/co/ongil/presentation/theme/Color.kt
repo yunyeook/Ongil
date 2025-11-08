@@ -1,0 +1,15 @@
+package kr.co.ongil.presentation.theme
+
+import androidx.compose.ui.graphics.Color
+
+val Purple80 = Color(0xFFD0BCFF)
+val PurpleGrey80 = Color(0xFFCCC2DC)
+val Pink80 = Color(0xFFEFB8C8)
+
+val Purple40 = Color(0xFF6650a4)
+val PurpleGrey40 = Color(0xFF625b71)
+val Pink40 = Color(0xFF7D5260)
+
+// Bottom Navigation Colors
+val OngilIconSelected = Color(0xFF8CA898)      // 선택된 아이콘 색상 (온길 그린)
+val OngilIconUnselected = Color(0xFF9E9E9E)    // 선택되지 않은 아이콘 색상 (회색)

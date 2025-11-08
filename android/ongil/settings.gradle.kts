@@ -16,9 +16,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("${rootDir}/local-maven-repo") }
     }
 }
 
 rootProject.name = "ongil"
 include(":app")
 include(":wear")
+include(":common")

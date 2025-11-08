@@ -117,10 +117,11 @@ public class FavoriteService {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
 
-        // 새로 기본목적지로 설정한다면
-        if(request.isDefault()){
-            setDefaultFavorite(patientId,favoriteId,callerId);
-        }else{
+        // isDefault가 true일 때 기본목적지로 지정
+        if (Boolean.TRUE.equals(request.isDefault())) {
+            setDefaultFavorite(patientId, favoriteId, callerId);
+            // isDefault가 false일 때 에러 발생
+        }else if (Boolean.FALSE.equals(request.isDefault())) {
             throw new BusinessException(ErrorCode.FAVORITE_DEFAULT_NOT_CANCELED);
         }
 
@@ -134,8 +135,6 @@ public class FavoriteService {
             request.longitude(),
             request.isDefault()
         );
-
-
 
         log.info("즐겨찾기 수정 완료 - favoriteId: {}", favoriteId);
         return FavoriteResponse.from(favorite);
@@ -218,10 +217,10 @@ public class FavoriteService {
 
         // ID로 매핑 (빠른 조회를 위해)
         var favoriteMap = favorites.stream()
-                .collect(Collectors.toMap(
-                        f -> f.getId(),
-                        f -> f
-                ));
+            .collect(Collectors.toMap(
+                f -> f.getId(),
+                f -> f
+            ));
 
         // 정렬 순서 업데이트 (orderedFavoriteIds 순서대로 1, 2, 3, ...)
         for (int i = 0; i < orderedFavoriteIds.size(); i++) {
@@ -241,9 +240,9 @@ public class FavoriteService {
 
         // 정렬된 결과 반환
         return orderedFavoriteIds.stream()
-                .map(favoriteMap::get)
-                .map(FavoriteResponse::from)
-                .collect(Collectors.toList());
+            .map(favoriteMap::get)
+            .map(FavoriteResponse::from)
+            .collect(Collectors.toList());
     }
 
     /**
@@ -257,16 +256,16 @@ public class FavoriteService {
 
         // 삭제된 순서보다 큰 순서를 가진 즐겨찾기들을 -1씩 이동
         favorites.stream()
-                .filter(f -> {
-                    Integer order = f.getDisplayOrder();
-                    return order != null && order > deletedOrder;
-                })
-                .forEach(f -> {
-                    Integer currentOrder = f.getDisplayOrder();
-                    f.setDisplayOrder(currentOrder - 1);
-                    log.debug("정렬 순서 재정렬 - favoriteId: {}, {} -> {}",
-                            f.getId(), currentOrder, currentOrder - 1);
-                });
+            .filter(f -> {
+                Integer order = f.getDisplayOrder();
+                return order != null && order > deletedOrder;
+            })
+            .forEach(f -> {
+                Integer currentOrder = f.getDisplayOrder();
+                f.setDisplayOrder(currentOrder - 1);
+                log.debug("정렬 순서 재정렬 - favoriteId: {}, {} -> {}",
+                    f.getId(), currentOrder, currentOrder - 1);
+            });
 
         log.info("삭제 후 재정렬 완료");
     }

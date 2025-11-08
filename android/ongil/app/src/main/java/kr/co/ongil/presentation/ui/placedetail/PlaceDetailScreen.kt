@@ -1,0 +1,204 @@
+package kr.co.ongil.presentation.ui.placedetail
+
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kr.co.ongil.presentation.ui.common.GreenButton
+import kr.co.ongil.presentation.ui.common.InputBox
+
+
+
+@Composable
+fun PlaceDetailScreen(
+    viewModel: PlaceDetailViewModel,
+    onBackClick: () -> Unit
+) {
+    val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+
+    PlaceDetailScreen(
+        favoriteId = uiState.favoriteId,
+        placeName = uiState.placeName,
+        address = uiState.address,
+        isDefault = uiState.isDefault,
+        onBackClick = onBackClick,
+        onSetDefaultClick = { viewModel.setAsDefault() },
+        onSaveClick = { name, addr -> viewModel.updatePlaceInfo(name, addr) },
+        onDeleteClick = { viewModel.deletePlace { onBackClick() } },
+        isLoading = uiState.isLoading,
+        error = uiState.error,
+        successMessage = uiState.successMessage
+    )
+}
+
+@Composable
+fun PlaceDetailScreen(
+    favoriteId: Long,
+    placeName: String,
+    address: String,
+    isDefault: Boolean,
+    onBackClick: () -> Unit,
+    onSetDefaultClick: () -> Unit,
+    onSaveClick: (String, String) -> Unit,
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    error: String? = null,
+    successMessage: String? = null
+) {
+    var editedPlaceName by remember { mutableStateOf(placeName) }
+    var editedAddress by remember { mutableStateOf(address) }
+
+    val hasChanges = remember(placeName, address, editedPlaceName, editedAddress) {
+        editedPlaceName.trim() != placeName || editedAddress.trim() != address
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(error, successMessage) {
+        error?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
+        successMessage?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            Surface(
+                modifier = modifier.fillMaxSize(),
+                color = Color(0xFFF9FAFB) // 배경 연한 그레이 톤 (즐겨찾기 화면과 동일)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                ) {
+
+            InputBox(
+                label = "장소명",
+                placeholder = "",
+                value = editedPlaceName,
+                onValueChange = {
+                    editedPlaceName = it
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            InputBox(
+                label = "주소",
+                placeholder = "",
+                value = editedAddress,
+                onValueChange = {
+//                    근데 주소도 수정할 수 있어요?
+                    editedAddress = it
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // ===== 버튼 영역 =====
+            GreenButton(
+                text = "기본 목적지로 설정",
+                onClick = {
+                    if (!isDefault) onSetDefaultClick()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                containerColor = if (isDefault) Color(0xFF87A293) else Color(0xFFD1D5DB)
+            )
+
+            GreenButton(
+                text = "저장하기",
+                onClick = {
+                    val name = editedPlaceName.trim()
+                    val addr = editedAddress.trim()
+                    if (name.isNotEmpty() && hasChanges) {
+                        onSaveClick(name, addr)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                containerColor = if (hasChanges) Color(0xFF87A293) else Color(0xFFD1D5DB)
+            )
+
+            GreenButton(
+                text = "삭제하기",
+                onClick = onDeleteClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // ===== 하단 탭바 영역 (Bottom Navigation) =====
+
+            Spacer(modifier = Modifier.height(80.dp))
+                }
+            }
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+    }
+}
+
+
+@Preview(showBackground = true, backgroundColor = 0xFFE5E7EB)
+@Composable
+private fun PlaceDetailScreenPreview() {
+    PlaceDetailScreen(
+        favoriteId = 1L,
+        placeName = "뭐라고할까요",
+        address = "주소가어디게",
+        isDefault = false,
+        onBackClick = {},
+        onSetDefaultClick = {},
+        onSaveClick = { _, _ -> },
+        onDeleteClick = {}
+    )
+}

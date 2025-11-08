@@ -36,6 +36,7 @@ public class CallService {
     private final CallLogRepository callLogRepository;
     private final UserRepository userRepository;
     private final kr.co.ongil.domain.call.controller.CallSignalController callSignalController;
+    private final kr.co.ongil.domain.fcm.service.FcmService fcmService;
 
     /**
      * VoIP 통화 요청 생성
@@ -86,7 +87,17 @@ public class CallService {
         Call savedCall = callRepository.save(call);
         log.info("VoIP 통화 세션 생성 완료: callId={}, sessionId={}", savedCall.getId(), sessionId);
 
-        // 8. 수신자에게 INCOMING 시그널 전송 (WebSocket + TODO: FCM)
+        // 8. FCM 푸시 알림 전송 (앱 깨우기)
+        fcmService.sendCallNotification(
+            receiver.getId(),
+            caller.getId(),
+            caller.getName(),
+            savedCall.getId(),
+            sessionId,
+            request.callType().name()
+        );
+
+        // 9. 수신자에게 INCOMING 시그널 전송 (WebSocket - 연결되어 있으면 즉시 전달)
         callSignalController.sendIncomingCall(
             savedCall.getId(),
             caller.getId(),

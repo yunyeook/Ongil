@@ -1,0 +1,261 @@
+package kr.co.ongil.presentation.ui.favorite
+
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import kr.co.ongil.presentation.ui.favorite.PatientList
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.Composable
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import kr.co.ongil.presentation.ui.favorite.FavoriteUiEvent.onGoSearchUserClick
+
+
+@Composable
+fun FavoriteScreen(
+    onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
+    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String) -> Unit,
+    onGoSearchUserClick: () -> Unit
+)
+{
+    val viewModel: FavoriteViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { errorMessage ->
+            scope.launch { snackbarHostState.showSnackbar(errorMessage) }
+        }
+    }
+
+    // 화면이 다시 보일 때마다 데이터 새로고침
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFFFFFFF)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+
+                // 타이틀 / 설명 영역
+                FavoriteTitleSection(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 32.dp)
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // 탭 바 (환자 목록 / 장소 목록)
+                FavoriteTabBar(
+                    selectedTab = uiState.selectedTab,
+                    onTabSelected = { tab ->
+                        viewModel.onEvent(FavoriteUiEvent.OnTabSelected(tab))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 탭 컨텐츠
+                when (uiState.selectedTab) {
+                    FavoriteTab.PATIENTS -> {
+                        PatientList(
+                            patients = uiState.patients,
+                            onCallClick = { id ->
+                                viewModel.onEvent(FavoriteUiEvent.OnCallClick(id))
+                            },
+                            onPatientCardClick = { id, name, phoneNumber ->
+                                viewModel.onEvent(FavoriteUiEvent.OnPatientCardClick(id))
+                                onNavigateToPatientDetail(
+                                    id,
+                                    name,
+                                    phoneNumber
+                                )
+                            },
+                            onGoSearchUserClick = {
+                                onGoSearchUserClick()
+                            }
+                        )
+                    }
+
+                    FavoriteTab.PLACES -> {
+                        PlaceList(
+                            places = uiState.places,
+                            onAddPlaceClick = {
+                                viewModel.onEvent(FavoriteUiEvent.OnAddPlaceClick)
+                            },
+                            onClickPlaceIcon = { placeId ->
+                                // TODO: 지도 화면으로 이동 or 지도 열기 처리 예정
+                            },
+                            onClickPlaceCardWithPatient = { patientId, favoriteId -> onNavigateToPlaceDetail(patientId, favoriteId) },
+                        )
+                    }
+                }
+            }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun FavoriteTitleSection(
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "사용자님의 즐겨찾기",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF111827),
+            lineHeight = 24.sp
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "자주 연락하는 보호 대상자와 관리 장소를 한 곳에서 확인하세요.",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color(0xFF6B7280),
+            lineHeight = 20.sp
+        )
+    }
+}
+
+
+@Composable
+private fun PlaceholderPlacesSection(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+    ) {
+        Text(
+            text = "즐겨찾는 장소",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF4B5563)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "등록된 장소가 없습니다.",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = Color(0xFF9CA3AF),
+            lineHeight = 20.sp
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FavoriteScreenPatientsPreview() {
+    // 더미 환자 데이터
+    val samplePatients = listOf(
+        PatientData(
+            id = 1L,
+            name = "홍길동",
+            phoneNumber = "010-1234-5678"
+        ),
+        PatientData(
+            id = 2L,
+            name = "김영희",
+            phoneNumber = "010-2345-6789"
+        ),
+        PatientData(
+            id = 3L,
+            name = "이철수",
+            phoneNumber = "010-3456-7890"
+        )
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFFFFFFF)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // 타이틀 영역
+            FavoriteTitleSection(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 탭 바 (현재는 환자 탭)
+            FavoriteTabBar(
+                selectedTab = FavoriteTab.PATIENTS,
+                onTabSelected = { },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 환자 목록
+            PatientList(
+                patients = samplePatients,
+                onCallClick = { },
+                onPatientCardClick = { _, _, _ -> },
+                onGoSearchUserClick = { }
+            )
+        }
+    }
+}
