@@ -186,7 +186,8 @@ fun OngilHeader(
 fun OngilTopBarForRoute(
     route: String,
     onBackClick: () -> Unit,
-    onBellClick: () -> Unit = {}
+    onBellClick: () -> Unit = {},
+    userType: String = "" // 사용자 타입 (PATIENT, GUARDIAN 등)
 ) {
     // route에 따라 화면 제목 자동 설정
     val title = when (route) {
@@ -203,7 +204,14 @@ fun OngilTopBarForRoute(
         "patient_list" -> "환자 정보"
         else -> when {
             route.startsWith("call_detail") -> "통화 상세"
-            route.startsWith("patient_detail") -> "환자 상세"
+            route.startsWith("user_detail") -> {
+                // 사용자 타입에 따라 동적으로 제목 변경
+                when (userType.uppercase()) {
+                    "PATIENT" -> "보호자 상세"
+                    "GUARDIAN" -> "환자 상세"
+                    else -> "사용자 상세" // 기본값
+                }
+            }
             route.startsWith("place_detail") -> "장소 상세"
             else -> ""
         }

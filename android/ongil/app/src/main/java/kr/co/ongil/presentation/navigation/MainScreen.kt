@@ -29,6 +29,10 @@ fun MainScreen(
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     val currentUserId by authViewModel.currentUserId.collectAsState()
+    val currentUserInfo by authViewModel.currentUserInfo.collectAsState(initial = null)
+
+    // 사용자 타입 추출
+    val userType = currentUserInfo?.getOrNull()?.userType ?: ""
 
     // 로그인 상태 확인 중
     if (isLoggedIn == null) {
@@ -92,7 +96,8 @@ fun MainScreen(
                                 navController.navigate(Routes.Notifications.route) {
                                     launchSingleTop = true
                                 }
-                            }
+                            },
+                            userType = userType
                         )
                     }
                 }
@@ -106,7 +111,7 @@ fun MainScreen(
                         val navigationRoute =
                             if (route == Routes.Favorite.route) {
                                 // 현재 로그인한 사용자의 ID를 사용 (환자는 자신의 즐겨찾기 조회)
-                                val userId = currentUserId ?: 1 // userId가 아직 로드되지 않은 경우 fallback
+                                val userId = currentUserInfo?.getOrNull()?.id?.toLong() ?: 0L
                                 "${Routes.Favorite.route}/$userId"
                             }
                             else route

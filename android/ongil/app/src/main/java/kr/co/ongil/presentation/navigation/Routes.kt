@@ -48,23 +48,15 @@ sealed class Routes(val route: String) {
         fun createRoute(callLogId: Long): String = "call_detail/$callLogId"
     }
 
-    // 환자 상세
-    // MOVED: PatientDetailRoutes.kt 참조
-    object PatientDetail : Routes("patient_detail/{patientId}/{name}/{phoneNumber}") {
-        fun createRoute(
-            patientId: Long,
-            name: String,
-            phoneNumber: String
-        ): String {
-            val encodedName = Uri.encode(name)
-            val encodedPhone = Uri.encode(phoneNumber)
-            return "patient_detail/$patientId/$encodedName/$encodedPhone"
+    // 사용자 상세
+    // MOVED: UserDetailRoutes.kt 참조
+    object UserDetail : Routes("user_detail/{relationshipId}") {
+        fun createRoute(relationshipId: Long): String {
+            return "user_detail/$relationshipId"
         }
 
         val arguments = listOf(
-            navArgument("patientId") { type = NavType.LongType },
-            navArgument("name") { type = NavType.StringType },
-            navArgument("phoneNumber") { type = NavType.StringType }
+            navArgument("relationshipId") { type = NavType.LongType }
         )
     }
 

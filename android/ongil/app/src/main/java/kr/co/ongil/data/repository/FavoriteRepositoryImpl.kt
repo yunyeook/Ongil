@@ -9,6 +9,7 @@ import kr.co.ongil.domain.model.FavoritePlace
 import kr.co.ongil.domain.model.FavoritePlaces
 import kr.co.ongil.domain.model.placedetail.PlaceDetailUpdate
 import kr.co.ongil.domain.repository.FavoriteRepository
+import kr.co.ongil.presentation.ui.favorite.toPatientData
 
 private fun httpError(tag: String, endpoint: String, code: Int, message: String?): RuntimeException {
     val reason = message?.take(300) ?: "no message"
@@ -62,5 +63,23 @@ class FavoriteRepositoryImpl @Inject constructor(
         val response = api.deleteFavoritePlace(patientId, favoriteId)
         if (!response.isSuccessful) throw httpError("FavoriteRepo", "DELETE /favorites/{id}", response.code(), response.message())
         Unit
+    }
+
+    // 사용자(환자/보호자) 관계 관련
+    override suspend fun getMyRelationships(): Result<List<kr.co.ongil.presentation.ui.favorite.PatientData>> = runCatching {
+        val response = api.getMyRelationships()
+        if (!response.isSuccessful) throw httpError("FavoriteRepo", "GET /relationships/me", response.code(), response.message())
+        val body = response.body() ?: throw RuntimeException("Empty body")
+        Log.d("FavoriteRepo", "GET 사용자목록 - 응답 데이터: ${body.data.map { "relationshipId=${it.relationshipId}, name=${it.relationshipName}, counterpartUserId=${it.counterpartUserId}" }}")
+        body.data.map { it.toPatientData() }
+    }
+
+    override suspend fun getRelationshipDetail(relationshipId: Long): Result<kr.co.ongil.presentation.ui.favorite.PatientData> = runCatching {
+        val response = api.getRelationshipDetail(relationshipId)
+        if (!response.isSuccessful) throw httpError("FavoriteRepo", "GET /relationships/{id}", response.code(), response.message())
+        val body = response.body() ?: throw RuntimeException("Empty body")
+        val data = body.data ?: throw NoSuchElementException("No data")
+        Log.d("FavoriteRepo", "GET 사용자상세 - relationshipId=${data.relationshipId}, name=${data.relationshipName}")
+        data.toPatientData()
     }
 }
