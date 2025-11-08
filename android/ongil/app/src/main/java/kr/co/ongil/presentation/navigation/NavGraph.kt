@@ -63,8 +63,7 @@ fun AppNavGraph(
 
         // 사용자 검색 - 친구추가 화면
         composable(Routes.SearchUser.route) {
-            val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel =
-                androidx.lifecycle.viewmodel.compose.viewModel()
+            val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel = hiltViewModel()
             kr.co.ongil.presentation.ui.searchuser.SearchUserScreen(
                 navController = navController,
                 viewModel = vm

@@ -22,6 +22,7 @@ data class SearchUserUiState(
     val relationshipName: String = "",
     val relationshipType: String = "",
     val relationshipTypeOptions: List<String> = emptyList(),
+    val isCodeRequested: Boolean = false,
     val verificationCodeInput: String = "",
     val verificationToken: String = "",
     val verificationCountdownSec: Int = 0,

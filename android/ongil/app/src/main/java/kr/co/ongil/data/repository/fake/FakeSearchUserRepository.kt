@@ -68,20 +68,17 @@ class FakeSearchUserRepository : SearchUserRepository {
     }
 
     override suspend fun registerContact(
-        targetUserId: String,
+        verificationToken: String,
         relationshipName: String,
-        relationshipType: String,
-        memo: String,
-        verificationToken: String
+        relationshipType: String
     ): Boolean {
         // 실제라면 /relationships/me 호출
         delay(500)
 
         // 조건 예시
-        val isKnownTarget = dummyUsers.any { it.id == targetUserId }
         val tokenOk = (verificationToken == issuedToken)
         val relationOk = relationshipType in listOf("자녀", "부모", "배우자", "기타")
 
-        return isKnownTarget && tokenOk && relationOk
+        return tokenOk && relationOk
     }
 }

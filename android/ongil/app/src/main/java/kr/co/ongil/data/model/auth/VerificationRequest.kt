@@ -24,7 +24,7 @@ data class SendVerificationRequest(
  * {
  *   "phoneNumber": "01012345678",
  *   "verificationCode": "839201",
- *   "grants": "PASSWORD_RESET"  // 선택: PASSWORD_RESET, RELATIONSHIP_BIND, PHONE_UPDATE
+ *   "grants": "PASSWORD_RESET"  // 선택: PASSWORD_RESET, RELATIONSHIP, PHONE_UPDATE
  * }
  */
 @Serializable
