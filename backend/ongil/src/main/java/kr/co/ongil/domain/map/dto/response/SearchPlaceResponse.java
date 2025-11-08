@@ -58,7 +58,7 @@ public record SearchPlaceResponse(
         String address = extractAddress(poi);
 
         // 좌표
-        CoordinateResponse coordinate = CoordinateResponse.ofWithFallback(
+        CoordinateInfo coordinate = CoordinateInfo.ofWithFallback(
             poi.frontLat(), poi.noorLat(),
             poi.frontLon(), poi.noorLon()
         );

@@ -271,6 +271,6 @@ public class FavoriteService {
     }
 
     private void validateAccess(Integer patientId, Integer callerId) {
-        patientAccessValidator.validateAccess(patientId, callerId, ErrorCode.FAVORITE_ACCESS_DENIED);
+        patientAccessValidator.validateAccess(patientId, callerId, ErrorCode.ACCESS_DENIED);
     }
 }
