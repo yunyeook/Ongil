@@ -8,14 +8,15 @@ import lombok.NoArgsConstructor;
 /*
  * - type
  *   - "GPS_UPDATE" : 환자가 자신의 위치를 서버로 전송
+ *   - "GPS_DISCONNECT" : 환자가 GPS 추적 종료를 서버에 알림
  *   - "CONNECTION_ACK" : 서버가 연결 성공을 알림
  *
  * - coordinate
  *   - GPS 좌표 정보 (latitude, longitude)
- *   - type이 "CONNECTION_ACK"일 경우 null
+ *   - type이 "CONNECTION_ACK" 또는 "GPS_DISCONNECT"일 경우 null
  *
  *  통신 방향
- * - 환자 → 서버 : type="GPS_UPDATE"
+ * - 환자 → 서버 : type="GPS_UPDATE", "GPS_DISCONNECT"
  * - 서버 → 환자 : type="CONNECTION_ACK"
  *
  */
