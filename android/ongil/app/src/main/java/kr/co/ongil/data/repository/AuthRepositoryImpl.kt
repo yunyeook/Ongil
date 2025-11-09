@@ -23,7 +23,7 @@ import java.io.File
  */
 class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
-    private val tokenManager: UserDataStoreManager
+    private val userDataStoreManager: UserDataStoreManager
 ) : AuthRepository {
 
     override suspend fun login(phoneNumber: String, password: String): Result<LoginResponse> {
@@ -48,8 +48,8 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout(): Result<String> {
         // 1) 현재 토큰 상태 확인
-        val accessToken = tokenManager.getAccessToken().firstOrNull()
-        val refreshToken = tokenManager.getRefreshToken().firstOrNull()
+        val accessToken = userDataStoreManager.getAccessToken().firstOrNull()
+        val refreshToken = userDataStoreManager.getRefreshToken().firstOrNull()
 
         return try {
             if (!accessToken.isNullOrEmpty()) {
@@ -69,7 +69,7 @@ class AuthRepositoryImpl @Inject constructor(
             }
 
             // 4) 정상/스킵 모두 여기로: 로컬 세션 정리
-            tokenManager.clearTokens()
+            userDataStoreManager.clearTokens()
             Result.success("로그아웃되었습니다.")
         } catch (e: Exception) {
             // 5) 서버 4xx/5xx, 네트워크 오류 → 소프트 처리
@@ -77,7 +77,7 @@ class AuthRepositoryImpl @Inject constructor(
             android.util.Log.w("AuthRepositoryImpl", "server logout failed (soft-ignored)", apiException)
 
             // 그래도 로컬 세션은 반드시 종료
-            tokenManager.clearTokens()
+            userDataStoreManager.clearTokens()
             // UX 일관성을 위해 성공으로 취급(원하면 failure 반환으로 바꿔도 됨)
             Result.success("로그아웃되었습니다. (서버와 동기화 실패)")
         }
