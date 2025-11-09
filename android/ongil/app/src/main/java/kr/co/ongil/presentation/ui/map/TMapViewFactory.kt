@@ -34,7 +34,7 @@ object TMapViewFactory {
 
             // 기본 설정
             setZoomLevel(zoomLevel)
-            setCenterPoint(longitude, latitude)
+            setCenterPoint(latitude, longitude)  // TMap은 (위도, 경도) 순서
 
             Log.d("TMapManager", "TMapView configured - Center: ($latitude, $longitude), Zoom: $zoomLevel")
         }
