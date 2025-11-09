@@ -31,11 +31,13 @@ class LoginUseCase @Inject constructor(
 
         // Repository를 통해 로그인 처리
         return authRepository.login(phoneNumber, password).onSuccess { response ->
-            // 로그인 성공 시 토큰 저장
+            // 로그인 성공 시 토큰 및 사용자 ID 저장
             tokenManager.saveTokens(
                 accessToken = response.data.accessToken,
                 refreshToken = response.data.refreshToken
             )
+            // 사용자 ID 저장 (AuthStateViewModel에서 로그인 상태 확인용)
+            tokenManager.saveLoginUserId(response.data.user.id.toString())
         }
     }
 }

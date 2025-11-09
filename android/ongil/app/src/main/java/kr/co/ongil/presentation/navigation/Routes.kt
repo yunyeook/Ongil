@@ -72,4 +72,7 @@ sealed class Routes(val route: String) {
             navArgument("favoriteId") { type = NavType.LongType }
         )
     }
+
+    // VoIP 통화 테스트 화면
+    object VoipCallTest : Routes("voip_call_test")
 }

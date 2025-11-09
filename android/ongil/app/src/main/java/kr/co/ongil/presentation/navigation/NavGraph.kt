@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kr.co.ongil.presentation.ui.auth.register.registerGraph
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.map.MapScreen
+import kr.co.ongil.presentation.ui.call.VoipCallTestScreen
 
 @Composable
 fun AppNavGraph(
@@ -131,6 +132,7 @@ fun AppNavGraph(
                 uiState = uiState,
                 onEditInfo = { navController.navigate(Routes.EditInfo.route) },
                 onRecentCalls = { navController.navigate(Routes.CallHistory.route) },
+                onVoipCallTest = { navController.navigate(Routes.VoipCallTest.route) },
                 onLogout = { viewModel.logout() }
             )
         }
@@ -180,7 +182,10 @@ fun AppNavGraph(
             CallDetailScreen(callLogId = callLogId)
         }
 
-
+        // VoIP 통화 테스트 화면
+        composable(Routes.VoipCallTest.route) {
+            VoipCallTestScreen()
+        }
 
 
     }
