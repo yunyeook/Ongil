@@ -1,7 +1,10 @@
 package kr.co.ongil.presentation.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,23 +47,25 @@ import kr.co.ongil.presentation.ui.map.MapScreen
 fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
+    paddingValues: PaddingValues = PaddingValues(),
     startDestination: String = Routes.Login.route
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier = modifier.background(Color.White)
     ) {
         // 홈
         composable(Routes.Home.route) {
             HomeScreen(
+//                modifier = Modifier.padding(paddingValues),
                 onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) },
                 onGoSignupClick = { navController.navigate(Routes.Register.route) }
             )
         }
         // 위치 - 지도 화면
         composable(Routes.Location.route) {
-            MapScreen()
+            MapScreen(paddingValues = paddingValues)
         }
 
 
@@ -69,6 +74,7 @@ fun AppNavGraph(
             val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel =
                 androidx.lifecycle.viewmodel.compose.viewModel()
             kr.co.ongil.presentation.ui.searchuser.SearchUserScreen(
+                modifier = Modifier.padding(paddingValues),
                 navController = navController,
                 viewModel = vm
             )

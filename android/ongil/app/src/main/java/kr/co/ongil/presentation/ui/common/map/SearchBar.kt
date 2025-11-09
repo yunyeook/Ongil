@@ -21,58 +21,74 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 @Composable
 fun SearchBar(
+    value: String,
+    onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onSearchClick: () -> Unit = {}
+    placeholder: String = "장소를 검색해주세요"
 ) {
     val borderColor = Color(0xFFD9D9D9)
     val placeholderColor = Color(0xFF9CA3AF)
 
-    Box(
+    androidx.compose.material3.TextField(
+        value = value,
+        onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .height(46.dp)
+            .height(56.dp)
             .border(
                 width = 1.dp,
                 color = borderColor,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
             ),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(start = 16.dp, end = 16.dp)
-                .fillMaxWidth()
-        ) {
+        placeholder = {
             Text(
-                text = "장소를 검색해주세요",
+                text = placeholder,
                 color = placeholderColor,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
+                fontWeight = FontWeight.Medium
             )
-            Spacer(modifier = Modifier.width(8.dp))
+        },
+        trailingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = null,
+                contentDescription = "검색",
                 tint = Color(0xFF101828),
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable(onClick = onSearchClick)
+                modifier = Modifier.size(20.dp)
             )
-        }
-    }
+        },
+        colors = androidx.compose.material3.TextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            focusedTextColor = Color(0xFF101828),
+            unfocusedTextColor = Color(0xFF101828)
+        ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
+        )
+    )
 }
 
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)
 @Composable
 private fun SearchBarPreview() {
+    var value by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
     androidx.compose.foundation.layout.Column(
         modifier = Modifier
             .padding(16.dp)
     ) {
-        SearchBar()
+        SearchBar(
+            value = value,
+            onValueChange = { value = it }
+        )
     }
 }
