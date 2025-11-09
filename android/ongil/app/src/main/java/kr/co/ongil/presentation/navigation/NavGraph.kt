@@ -38,6 +38,7 @@ import kr.co.ongil.presentation.ui.auth.loginGraph
 import kotlinx.coroutines.flow.collectLatest
 import kr.co.ongil.presentation.ui.auth.register.registerGraph
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
+import kr.co.ongil.presentation.ui.map.MapScreen
 
 @Composable
 fun AppNavGraph(
@@ -57,8 +58,10 @@ fun AppNavGraph(
                 onGoSignupClick = { navController.navigate(Routes.Register.route) }
             )
         }
-        // 위치 - 아마도 지도
-        composable(Routes.Location.route) { PlaceholderScreen("위치") }
+        // 위치 - 지도 화면
+        composable(Routes.Location.route) {
+            MapScreen()
+        }
 
 
         // 사용자 검색 - 친구추가 화면
