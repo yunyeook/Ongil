@@ -35,7 +35,7 @@ import kr.co.ongil.presentation.ui.notification.NotificationScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoSideEffect
 import kr.co.ongil.presentation.ui.home.HomeScreen
 import kr.co.ongil.presentation.ui.favorite.favoriteGraph
-//import kr.co.ongil.presentation.ui.patientdetail.patientGraph
+import kr.co.ongil.presentation.ui.userdetail.userDetailGraph
 import kr.co.ongil.presentation.ui.placedetail.placeDetailGraph
 import kr.co.ongil.presentation.ui.auth.loginGraph
 import kotlinx.coroutines.flow.collectLatest
@@ -71,8 +71,7 @@ fun AppNavGraph(
 
         // 사용자 검색 - 친구추가 화면
         composable(Routes.SearchUser.route) {
-            val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel =
-                androidx.lifecycle.viewmodel.compose.viewModel()
+            val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel = hiltViewModel()
             kr.co.ongil.presentation.ui.searchuser.SearchUserScreen(
                 modifier = Modifier.padding(paddingValues),
                 navController = navController,
@@ -85,8 +84,8 @@ fun AppNavGraph(
 
         // 즐겨찾기
         favoriteGraph(navController)
-        // 환자
-//        patientGraph(navController)
+        // 사용자(환자/보호자) 상세
+        userDetailGraph(navController)
         // 장소
         placeDetailGraph(navController)
 

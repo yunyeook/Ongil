@@ -1,4 +1,4 @@
-package kr.co.ongil.presentation.ui.patientdetail
+package kr.co.ongil.presentation.ui.userdetail
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,35 +23,34 @@ import kr.co.ongil.presentation.ui.common.InputBox
 
 
 @Composable
-fun PatientDetailScreen(
-    viewModel: PatientDetailViewModel,
+fun UserDetailScreen(
+    viewModel: UserDetailViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    var name by remember(uiState.relationshipId) { mutableStateOf(uiState.name) }
+    var phoneNumber by remember(uiState.relationshipId) { mutableStateOf(uiState.phoneNumber) }
+    var relationshipType by remember(uiState.relationshipId) { mutableStateOf(uiState.relationshipType) }
 
-    var name by remember(uiState.patientId) { mutableStateOf(uiState.name) }
-    var phoneNumber by remember(uiState.patientId) { mutableStateOf(uiState.phoneNumber) }
-    var gender by remember(uiState.patientId) { mutableStateOf(uiState.gender) }
-
-    PatientDetailContent(
+    UserDetailContent(
         name = name,
         phoneNumber = phoneNumber,
-        gender = gender,
+        relationshipType = relationshipType,
         onNameChange = { name = it },
         onPhoneChange = { phoneNumber = it },
-        onGenderChange = { gender = it },
+        onRelationshipTypeChange = { relationshipType = it },
         onSaveClick = {
-            viewModel.updatePatientInfo(
+            viewModel.updateUserInfo(
                 newName = name,
                 newPhoneNumber = phoneNumber,
-                newGender = gender
+                newRelationshipType = relationshipType
             )
             onNavigateBack()
         },
         onDeleteClick = {
-            viewModel.deletePatient {
+            viewModel.deleteUser {
                 onNavigateBack()
             }
         },
@@ -61,13 +60,13 @@ fun PatientDetailScreen(
 
 
 @Composable
-fun PatientDetailContent(
+fun UserDetailContent(
     name: String,
     phoneNumber: String,
-    gender: String,
+    relationshipType: String,
     onNameChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
-    onGenderChange: (String) -> Unit,
+    onRelationshipTypeChange: (String) -> Unit,
     onSaveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -84,7 +83,7 @@ fun PatientDetailContent(
             horizontalAlignment = Alignment.Start
         ) {
 
-            Spacer(modifier = Modifier.height(150.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 이름
             InputBox(
@@ -111,11 +110,11 @@ fun PatientDetailContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 성별
+            // 관계
             InputBox(
-                label = "성별",
+                label = "관계",
                 placeholder = "",
-                value = gender,
+                value = relationshipType,
                 onValueChange = {},
                 enabled = false,
                 modifier = Modifier
@@ -148,14 +147,14 @@ fun PatientDetailContent(
 
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
 @Composable
-fun PatientDetailScreenPreview() {
-    PatientDetailContent(
+fun UserDetailScreenPreview() {
+    UserDetailContent(
         name = "김철수",
         phoneNumber = "010-1234-5678",
-        gender = "남성",
+        relationshipType = "자녀",
         onNameChange = {},
         onPhoneChange = {},
-        onGenderChange = {},
+        onRelationshipTypeChange = {},
         onSaveClick = {},
         onDeleteClick = {}
     )

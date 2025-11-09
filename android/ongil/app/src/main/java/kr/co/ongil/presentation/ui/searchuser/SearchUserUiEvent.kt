@@ -11,6 +11,7 @@ sealed interface SearchUserUiEvent {
     // 등록 단계
     data class OnRelationshipNameChange(val value: String) : SearchUserUiEvent
     data class OnRelationshipTypeSelect(val value: String) : SearchUserUiEvent
+    object OnClickRequestVerification : SearchUserUiEvent
     data class OnVerificationCodeChange(val value: String) : SearchUserUiEvent
     object OnClickVerifyCode : SearchUserUiEvent
     data class OnMemoChange(val value: String) : SearchUserUiEvent

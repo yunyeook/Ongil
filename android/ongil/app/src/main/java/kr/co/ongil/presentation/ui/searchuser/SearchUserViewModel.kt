@@ -1,7 +1,9 @@
 package kr.co.ongil.presentation.ui.searchuser
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -12,11 +14,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.repository.SearchUserRepository
-import kr.co.ongil.data.repository.fake.FakeSearchUserRepository
+import javax.inject.Inject
 
-
-class SearchUserViewModel(
-    private val repository: SearchUserRepository = FakeSearchUserRepository()
+@HiltViewModel
+class SearchUserViewModel @Inject constructor(
+    private val repository: SearchUserRepository
 ) : ViewModel() {
 
     private fun normalizePhoneNumber(raw: String): String {
@@ -45,6 +47,7 @@ class SearchUserViewModel(
 
             is SearchUserUiEvent.OnRelationshipNameChange -> handleRelationshipNameChange(event.value)
             is SearchUserUiEvent.OnRelationshipTypeSelect -> handleRelationshipTypeSelect(event.value)
+            SearchUserUiEvent.OnClickRequestVerification -> handleClickRequestVerification()
             is SearchUserUiEvent.OnVerificationCodeChange -> handleVerificationCodeChange(event.value)
             SearchUserUiEvent.OnClickVerifyCode -> handleClickVerifyCode()
             is SearchUserUiEvent.OnMemoChange -> handleMemoChange(event.value)
@@ -172,8 +175,6 @@ class SearchUserViewModel(
         // 검색 성공 화면에서 "친구 추가하기" 눌렀을 때
         val found = _uiState.value.foundUser ?: return
 
-        val targetPhone = found.phoneNumber
-
         // 기존 타이머 취소
         cancelVerificationTimer()
 
@@ -182,13 +183,31 @@ class SearchUserViewModel(
                 mode = SearchUserMode.REGISTER,
                 relationshipName = found.displayName,
                 relationshipTypeOptions = defaultRelationOptions(),
-                verificationCountdownSec = DEFAULT_VERIFY_COUNTDOWN_SEC,
+                isCodeRequested = false,
+                verificationCountdownSec = 0,
                 isVerificationValid = false,
                 verificationCodeInput = "",
                 verificationToken = "",
                 submitErrorMessage = null
             )
         }
+    }
+
+    private fun handleRelationshipNameChange(value: String) {
+        _uiState.update { it.copy(relationshipName = value.trim()) }
+    }
+
+    private fun handleRelationshipTypeSelect(value: String) {
+        _uiState.update { it.copy(relationshipType = value) }
+    }
+
+    private fun handleClickRequestVerification() {
+        // 인증번호 전송 버튼 눌렀을 때
+        val found = _uiState.value.foundUser ?: return
+        val targetPhone = found.phoneNumber
+
+        // 기존 타이머 취소
+        cancelVerificationTimer()
 
         viewModelScope.launch {
             // 인증번호 전송 요청
@@ -205,6 +224,16 @@ class SearchUserViewModel(
                     SearchUserUiSideEffect.ShowToast("인증번호 전송에 실패했습니다.")
                 )
             } else {
+                // 인증번호 전송 성공
+                _uiState.update {
+                    it.copy(
+                        isCodeRequested = true,
+                        verificationCountdownSec = DEFAULT_VERIFY_COUNTDOWN_SEC,
+                        isVerificationValid = false,
+                        verificationCodeInput = "",
+                        verificationToken = ""
+                    )
+                }
                 _sideEffect.send(
                     SearchUserUiSideEffect.ShowToast("인증번호를 전송했습니다.")
                 )
@@ -212,14 +241,6 @@ class SearchUserViewModel(
                 startVerificationTimer()
             }
         }
-    }
-
-    private fun handleRelationshipNameChange(value: String) {
-        _uiState.update { it.copy(relationshipName = value) }
-    }
-
-    private fun handleRelationshipTypeSelect(value: String) {
-        _uiState.update { it.copy(relationshipType = value) }
     }
 
     private fun handleVerificationCodeChange(value: String) {
@@ -249,14 +270,21 @@ class SearchUserViewModel(
 
         viewModelScope.launch {
             val (verified, token) = try {
+                Log.d("SearchUserVM", "인증번호 검증 시작 - phoneNumber=$phone, code=$code, grants=RELATIONSHIP")
                 repository.verifyCode(
                     phoneNumber = normalizePhoneNumber(phone),
                     verificationCode = code,
-                    grants = "RELATIONSHIP_BIND"
+                    grants = "RELATIONSHIP"
                 )
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                Log.e("SearchUserVM", "인증번호 검증 예외 발생", e)
+                _sideEffect.send(
+                    SearchUserUiSideEffect.ShowToast("네트워크 오류가 발생했습니다. 다시 시도해주세요.")
+                )
                 false to null
             }
+
+            Log.d("SearchUserVM", "인증번호 검증 결과 - verified=$verified, token=$token")
 
             if (verified && !token.isNullOrBlank()) {
                 // 인증 성공 시 타이머 중단
@@ -303,20 +331,17 @@ class SearchUserViewModel(
         if (state.isSubmitting) return
         if (!state.canSubmitRegister) return
 
-        val targetUser = state.foundUser ?: return
-
         _uiState.update { it.copy(isSubmitting = true, submitErrorMessage = null) }
 
         viewModelScope.launch {
             val success = try {
                 repository.registerContact(
-                    targetUserId = targetUser.id,
+                    verificationToken = state.verificationToken,
                     relationshipName = state.relationshipName,
-                    relationshipType = state.relationshipType,
-                    memo = state.memo,
-                    verificationToken = state.verificationToken
+                    relationshipType = state.relationshipType
                 )
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                Log.e("SearchUserVM", "등록 실패", e)
                 false
             }
 

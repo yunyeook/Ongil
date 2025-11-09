@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.model.SearchPlace
 import kr.co.ongil.domain.usecase.map.SearchPlaceUseCase
+import kr.co.ongil.common.location.LocationStreamBus
 import javax.inject.Inject
 
 /**
@@ -21,6 +22,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class MapViewModel @Inject constructor(
+    val locationBus: LocationStreamBus,
     private val searchPlaceUseCase: SearchPlaceUseCase
 ) : ViewModel() {
 

@@ -41,7 +41,7 @@ import androidx.compose.runtime.collectAsState
 fun FavoriteScreen(
     navController: NavController,
     onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
-    onNavigateToPatientDetail: (patientId: Long, name: String, phoneNumber: String) -> Unit,
+    onNavigateToPatientDetail: (relationshipId: Long) -> Unit,
     onGoSearchUserClick: () -> Unit
 )
 {
@@ -60,10 +60,34 @@ fun FavoriteScreen(
 
     LaunchedEffect(updated.value) {
         if (updated.value) {
+            val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+            android.util.Log.d("FavoriteScreen", "favorite_updated 감지됨")
+
+            // 수정된 장소 데이터가 있으면 즉시 로컬 상태 업데이트
+            val updatedFavoriteId = savedStateHandle?.get<Long>("updated_favorite_id")
+            val updatedPlaceAlias = savedStateHandle?.get<String>("updated_place_alias")
+            val updatedIsDefault = savedStateHandle?.get<Boolean>("updated_is_default")
+
+            android.util.Log.d("FavoriteScreen", "savedState - favoriteId=$updatedFavoriteId, placeAlias=$updatedPlaceAlias, isDefault=$updatedIsDefault")
+
+            if (updatedFavoriteId != null && updatedPlaceAlias != null && updatedIsDefault != null) {
+                // 로컬 상태를 즉시 업데이트
+                android.util.Log.d("FavoriteScreen", "로컬 업데이트 실행: favoriteId=$updatedFavoriteId, placeAlias=$updatedPlaceAlias")
+                viewModel.updatePlaceLocally(updatedFavoriteId, updatedPlaceAlias, updatedIsDefault)
+
+                // savedStateHandle 정리
+                savedStateHandle.remove<Long>("updated_favorite_id")
+                savedStateHandle.remove<String>("updated_place_alias")
+                savedStateHandle.remove<Boolean>("updated_is_default")
+            } else {
+                android.util.Log.d("FavoriteScreen", "로컬 업데이트 건너뜀 - 데이터 없음")
+            }
+
+            // 백엔드에서도 최신 데이터 가져오기 (비동기)
+            android.util.Log.d("FavoriteScreen", "백엔드 새로고침 실행")
             viewModel.refresh()
-            navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.set("favorite_updated", false)
+
+            savedStateHandle?.set("favorite_updated", false)
         }
     }
 
@@ -131,13 +155,8 @@ fun FavoriteScreen(
                             onCallClick = { id ->
                                 viewModel.onEvent(FavoriteUiEvent.OnCallClick(id))
                             },
-                            onPatientCardClick = { id, name, phoneNumber ->
-                                viewModel.onEvent(FavoriteUiEvent.OnPatientCardClick(id))
-                                onNavigateToPatientDetail(
-                                    id,
-                                    name,
-                                    phoneNumber
-                                )
+                            onPatientCardClick = { relationshipId ->
+                                onNavigateToPatientDetail(relationshipId)
                             },
                             onGoSearchUserClick = {
                                 onGoSearchUserClick()
@@ -232,18 +251,24 @@ private fun FavoriteScreenPatientsPreview() {
     val samplePatients = listOf(
         PatientData(
             id = 1L,
+            relationshipId = 1L,
             name = "홍길동",
-            phoneNumber = "010-1234-5678"
+            phoneNumber = "010-1234-5678",
+            relationshipType = "자녀"
         ),
         PatientData(
             id = 2L,
+            relationshipId = 2L,
             name = "김영희",
-            phoneNumber = "010-2345-6789"
+            phoneNumber = "010-2345-6789",
+            relationshipType = "부모"
         ),
         PatientData(
             id = 3L,
+            relationshipId = 3L,
             name = "이철수",
-            phoneNumber = "010-3456-7890"
+            phoneNumber = "010-3456-7890",
+            relationshipType = "친구"
         )
     )
 
@@ -278,7 +303,7 @@ private fun FavoriteScreenPatientsPreview() {
             PatientList(
                 patients = samplePatients,
                 onCallClick = { },
-                onPatientCardClick = { _, _, _ -> },
+                onPatientCardClick = { _ -> },
                 onGoSearchUserClick = { }
             )
         }

@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kr.co.ongil.presentation.ui.common.AlertModal
+import kr.co.ongil.presentation.ui.common.AlertType
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.InputBox
 import java.util.*
@@ -233,86 +235,131 @@ fun RegisterScreen(
 
                 // 비밀번호
                 LabeledField(label = "비밀번호") {
-                    OutlinedTextField(
-                        value = uiState.password,
-                        onValueChange = onPasswordChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                text = "영문, 숫자 조합 8자 이상",
-                                color = Color(0xFF9CA1A9),
-                                fontSize = 16.sp
-                            )
-                        },
-                        visualTransformation = if (uiState.isPasswordVisible)
-                            VisualTransformation.None
-                        else
-                            PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = onTogglePasswordVisible) {
-                                Icon(
-                                    imageVector = if (uiState.isPasswordVisible)
-                                        Icons.Filled.VisibilityOff
-                                    else
-                                        Icons.Filled.Visibility,
-                                    contentDescription = "toggle password visibility",
-                                    tint = Color(0xFF707680)
+                    Column {
+                        OutlinedTextField(
+                            value = uiState.password,
+                            onValueChange = { value ->
+                                // 공백 제거
+                                val filtered = value.replace(" ", "")
+                                onPasswordChange(filtered)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text(
+                                    text = "영문, 숫자, 특수문자 포함 8-16자",
+                                    color = Color(0xFF9CA1A9),
+                                    fontSize = 16.sp
                                 )
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.clearFocus() }
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color(0xFFDDE0E4),
-                            focusedBorderColor = Color(0xFF788F7E),
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    )
+                            },
+                            visualTransformation = if (uiState.isPasswordVisible)
+                                VisualTransformation.None
+                            else
+                                PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = onTogglePasswordVisible) {
+                                    Icon(
+                                        imageVector = if (uiState.isPasswordVisible)
+                                            Icons.Filled.VisibilityOff
+                                        else
+                                            Icons.Filled.Visibility,
+                                        contentDescription = "toggle password visibility",
+                                        tint = Color(0xFF707680)
+                                    )
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { focusManager.clearFocus() }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color(0xFFDDE0E4),
+                                focusedBorderColor = Color(0xFF788F7E),
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        // 비밀번호 규칙 안내
+                        Text(
+                            text = "영문, 숫자, 특수문자 포함 8-16자",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF9CA1A9),
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 비밀번호 확인
                 LabeledField(label = "비밀번호 확인") {
-                    OutlinedTextField(
-                        value = uiState.passwordConfirm,
-                        onValueChange = onPasswordConfirmChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                text = "비밀번호를 다시 입력해주세요",
-                                color = Color(0xFF9CA1A9),
-                                fontSize = 16.sp
-                            )
-                        },
-                        visualTransformation = if (uiState.isConfirmPasswordVisible)
-                            VisualTransformation.None
-                        else
-                            PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = onTogglePasswordConfirmVisible) {
-                                Icon(
-                                    imageVector = if (uiState.isConfirmPasswordVisible)
-                                        Icons.Filled.VisibilityOff
-                                    else
-                                        Icons.Filled.Visibility,
-                                    contentDescription = "toggle password visibility",
-                                    tint = Color(0xFF707680)
+                    Column {
+                        OutlinedTextField(
+                            value = uiState.passwordConfirm,
+                            onValueChange = { value ->
+                                // 공백 제거
+                                val filtered = value.replace(" ", "")
+                                onPasswordConfirmChange(filtered)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text(
+                                    text = "비밀번호를 다시 입력해주세요",
+                                    color = Color(0xFF9CA1A9),
+                                    fontSize = 16.sp
                                 )
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = { focusManager.clearFocus() }
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = Color(0xFFDDE0E4),
-                            focusedBorderColor = Color(0xFF788F7E),
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    )
+                            },
+                            visualTransformation = if (uiState.isConfirmPasswordVisible)
+                                VisualTransformation.None
+                            else
+                                PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = onTogglePasswordConfirmVisible) {
+                                    Icon(
+                                        imageVector = if (uiState.isConfirmPasswordVisible)
+                                            Icons.Filled.VisibilityOff
+                                        else
+                                            Icons.Filled.Visibility,
+                                        contentDescription = "toggle password visibility",
+                                        tint = Color(0xFF707680)
+                                    )
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { focusManager.clearFocus() }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color(0xFFDDE0E4),
+                                focusedBorderColor = Color(0xFF788F7E),
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+
+                        // 비밀번호 일치/불일치 메시지
+                        if (uiState.passwordConfirm.isNotEmpty() && uiState.password.isNotEmpty()) {
+                            Text(
+                                text = if (uiState.password == uiState.passwordConfirm)
+                                    "비밀번호가 일치합니다."
+                                else
+                                    "비밀번호가 일치하지 않습니다.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (uiState.password == uiState.passwordConfirm)
+                                    Color(0xFF2E7D32)  // 초록색
+                                else
+                                    Color(0xFFD32F2F),  // 빨간색
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -365,9 +412,10 @@ fun RegisterScreen(
             AlertModal(
                 onDismiss = onDismissSuccessModal,
                 icon = null,
-                message = "회원가입이 성공적으로 완료되었습니다.",
+                message = uiState.successMessage ?: "회원가입이 성공적으로 완료되었습니다.",
                 buttonText = "확인",
-                onButtonClick = onDismissSuccessModal
+                onButtonClick = onDismissSuccessModal,
+                type = AlertType.SUCCESS
             )
         }
 
@@ -376,9 +424,10 @@ fun RegisterScreen(
             AlertModal(
                 onDismiss = onDismissErrorModal,
                 icon = null,
-                message = "회원가입에 실패했습니다.\n다시한번 시도해주세요.",
+                message = uiState.errorMessage ?: "회원가입에 실패했습니다.\n다시한번 시도해주세요.",
                 buttonText = "확인",
-                onButtonClick = onDismissErrorModal
+                onButtonClick = onDismissErrorModal,
+                type = AlertType.ERROR
             )
         }
     }
@@ -608,5 +657,239 @@ private fun PreviewRegisterScreen() {
         onSubmitRegister = {},
         onDismissSuccessModal = {},
         onDismissErrorModal = {},
+    )
+}
+
+@Preview(showBackground = true, name = "Register - 초기 상태")
+@Composable
+private fun PreviewRegisterScreen_Initial() {
+    RegisterScreen(
+        uiState = RegisterUiState(),
+        onBackClick = {},
+        onProfileImageClick = {},
+        onNameChange = {},
+        onBirthClick = {},
+        onSetBirth = {},
+        onDismissDatePicker = {},
+        onPhoneChange = {},
+        onRequestVerificationCode = {},
+        onVerificationTokenChange = {},
+        onVerifyTokenClick = {},
+        onPasswordChange = {},
+        onTogglePasswordVisible = {},
+        onPasswordConfirmChange = {},
+        onTogglePasswordConfirmVisible = {},
+        onSelectGuardian = {},
+        onSelectPatient = {},
+        onSubmitRegister = {},
+        onDismissSuccessModal = {},
+        onDismissErrorModal = {},
+    )
+}
+
+@Preview(showBackground = true, name = "Register - 인증 진행중")
+@Composable
+private fun PreviewRegisterScreen_CodeRequested() {
+    RegisterScreen(
+        uiState = RegisterUiState(
+            name = "홍길동",
+            birth = "19990101",
+            phoneNumber = "010-1234-5678",
+            isCodeRequested = true,
+            showTimerText = true,
+            remainingTimeText = "02:45",
+            verificationStatusMessage = "인증번호가 전송되었습니다.",
+            userType = UserType.GUARDIAN
+        ),
+        onBackClick = {},
+        onProfileImageClick = {},
+        onNameChange = {},
+        onBirthClick = {},
+        onSetBirth = {},
+        onDismissDatePicker = {},
+        onPhoneChange = {},
+        onRequestVerificationCode = {},
+        onVerificationTokenChange = {},
+        onVerifyTokenClick = {},
+        onPasswordChange = {},
+        onTogglePasswordVisible = {},
+        onPasswordConfirmChange = {},
+        onTogglePasswordConfirmVisible = {},
+        onSelectGuardian = {},
+        onSelectPatient = {},
+        onSubmitRegister = {},
+        onDismissSuccessModal = {},
+        onDismissErrorModal = {},
+    )
+}
+
+@Preview(showBackground = true, name = "Register - 인증 완료 & 제출 가능")
+@Composable
+private fun PreviewRegisterScreen_CodeVerified() {
+    RegisterScreen(
+        uiState = RegisterUiState(
+            name = "홍길동",
+            birth = "19990101",
+            phoneNumber = "010-1234-5678",
+            isCodeRequested = true,
+            isCodeVerified = true,
+            showTimerText = false,
+            remainingTimeText = "00:00",
+            verificationStatusMessage = "인증이 완료되었습니다.",
+            userType = UserType.GUARDIAN,
+            canSubmit = true
+        ),
+        onBackClick = {},
+        onProfileImageClick = {},
+        onNameChange = {},
+        onBirthClick = {},
+        onSetBirth = {},
+        onDismissDatePicker = {},
+        onPhoneChange = {},
+        onRequestVerificationCode = {},
+        onVerificationTokenChange = {},
+        onVerifyTokenClick = {},
+        onPasswordChange = {},
+        onTogglePasswordVisible = {},
+        onPasswordConfirmChange = {},
+        onTogglePasswordConfirmVisible = {},
+        onSelectGuardian = {},
+        onSelectPatient = {},
+        onSubmitRegister = {},
+        onDismissSuccessModal = {},
+        onDismissErrorModal = {},
+    )
+}
+
+@Preview(showBackground = true, name = "Register - 성공 모달")
+@Composable
+private fun PreviewRegisterScreen_SuccessModal() {
+    RegisterScreen(
+        uiState = RegisterUiState(
+            showSuccessModal = true,
+            canSubmit = false
+        ),
+        onBackClick = {},
+        onProfileImageClick = {},
+        onNameChange = {},
+        onBirthClick = {},
+        onSetBirth = {},
+        onDismissDatePicker = {},
+        onPhoneChange = {},
+        onRequestVerificationCode = {},
+        onVerificationTokenChange = {},
+        onVerifyTokenClick = {},
+        onPasswordChange = {},
+        onTogglePasswordVisible = {},
+        onPasswordConfirmChange = {},
+        onTogglePasswordConfirmVisible = {},
+        onSelectGuardian = {},
+        onSelectPatient = {},
+        onSubmitRegister = {},
+        onDismissSuccessModal = {},
+        onDismissErrorModal = {},
+    )
+}
+
+@Preview(showBackground = true, name = "Register - 실패 모달")
+@Composable
+private fun PreviewRegisterScreen_ErrorModal() {
+    RegisterScreen(
+        uiState = RegisterUiState(
+            showErrorModal = true
+        ),
+        onBackClick = {},
+        onProfileImageClick = {},
+        onNameChange = {},
+        onBirthClick = {},
+        onSetBirth = {},
+        onDismissDatePicker = {},
+        onPhoneChange = {},
+        onRequestVerificationCode = {},
+        onVerificationTokenChange = {},
+        onVerifyTokenClick = {},
+        onPasswordChange = {},
+        onTogglePasswordVisible = {},
+        onPasswordConfirmChange = {},
+        onTogglePasswordConfirmVisible = {},
+        onSelectGuardian = {},
+        onSelectPatient = {},
+        onSubmitRegister = {},
+        onDismissSuccessModal = {},
+        onDismissErrorModal = {},
+    )
+}
+
+@Preview(showBackground = true, name = "Register - 다크 모드", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PreviewRegisterScreen_Dark() {
+    RegisterScreen(
+        uiState = RegisterUiState(
+            isCodeRequested = true,
+            showTimerText = true,
+            remainingTimeText = "02:45",
+            userType = UserType.PATIENT
+        ),
+        onBackClick = {},
+        onProfileImageClick = {},
+        onNameChange = {},
+        onBirthClick = {},
+        onSetBirth = {},
+        onDismissDatePicker = {},
+        onPhoneChange = {},
+        onRequestVerificationCode = {},
+        onVerificationTokenChange = {},
+        onVerifyTokenClick = {},
+        onPasswordChange = {},
+        onTogglePasswordVisible = {},
+        onPasswordConfirmChange = {},
+        onTogglePasswordConfirmVisible = {},
+        onSelectGuardian = {},
+        onSelectPatient = {},
+        onSubmitRegister = {},
+        onDismissSuccessModal = {},
+        onDismissErrorModal = {},
+    )
+}
+
+@Preview(showBackground = true, name = "ProfileSection")
+@Composable
+private fun Preview_ProfileSection() {
+    ProfileSection(
+        profileImageUrl = null,
+        onProfileImageClick = {}
+    )
+}
+
+@Preview(showBackground = true, name = "LabeledField + InputBox")
+@Composable
+private fun Preview_LabeledField() {
+    LabeledField(label = "이름") {
+        InputBox(
+            value = "",
+            onValueChange = {},
+            label = "",
+            placeholder = "실명을 입력해주세요"
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "UserType 버튼들")
+@Composable
+private fun Preview_UserTypeButtons() {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        UserTypeButton(text = "보호자", isSelected = true, onClick = {})
+        Spacer(modifier = Modifier.width(12.dp))
+        UserTypeButton(text = "환자", isSelected = false, onClick = {})
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, name = "BirthDatePickerDialog")
+@Composable
+private fun Preview_BirthDatePickerDialog() {
+    BirthDatePickerDialog(
+        onDateSelected = {},
+        onDismiss = {}
     )
 }

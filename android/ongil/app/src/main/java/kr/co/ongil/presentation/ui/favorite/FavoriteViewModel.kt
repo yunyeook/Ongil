@@ -36,7 +36,24 @@ class FavoriteViewModel @Inject constructor(
 
     init {
         loadUserInfo()
-        loadData(initialPatientId)
+        loadRelationships() // 사용자(환자/보호자) 목록 불러오기
+
+        // initialPatientId가 0L이면 로그인한 사용자의 ID를 사용
+        if (initialPatientId == 0L) {
+            viewModelScope.launch {
+                userRepository.getMyInfo()
+                    .collect { result ->
+                        result.onSuccess { userDto ->
+                            val userId = userDto.id.toLong()
+                            if (lastLoadedPatientId == null) {
+                                loadData(userId)
+                            }
+                        }
+                    }
+            }
+        } else {
+            loadData(initialPatientId)
+        }
     }
 
     private fun loadUserInfo() {
@@ -59,8 +76,35 @@ class FavoriteViewModel @Inject constructor(
         }
     }
 
-    fun loadData(patientId: Long) {
-        if (_uiState.value.isLoading) return
+    private fun loadRelationships() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = favoriteRepository.getMyRelationships()
+            result.fold(
+                onSuccess = { relationships ->
+                    _uiState.update {
+                        it.copy(
+                            patients = relationships,
+                            isLoading = false
+                        )
+                    }
+                    Log.d("FavoriteViewModel", "사용자 목록 로드 성공: ${relationships.size}명")
+                },
+                onFailure = { error ->
+                    Log.e("FavoriteViewModel", "사용자 목록 로드 실패", error)
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error.message ?: "사용자 목록 조회 실패"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    fun loadData(patientId: Long, force: Boolean = false) {
+        if (!force && _uiState.value.isLoading) return
         lastLoadedPatientId = patientId
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null, currentPatientId = patientId) }
@@ -97,7 +141,48 @@ class FavoriteViewModel @Inject constructor(
     }
 
     fun refresh() {
-        lastLoadedPatientId?.let { loadData(it) }
+        loadRelationships() // 사용자 목록 새로고침
+
+        // 장소 목록 새로고침
+        val patientIdToLoad = lastLoadedPatientId ?: _uiState.value.currentPatientId
+        if (patientIdToLoad != 0L) {
+            loadData(patientIdToLoad, force = true)
+        } else {
+            // currentPatientId도 0L이면 사용자 ID를 다시 가져와서 로드
+            viewModelScope.launch {
+                userRepository.getMyInfo()
+                    .collect { result ->
+                        result.onSuccess { userDto ->
+                            val userId = userDto.id.toLong()
+                            loadData(userId, force = true)
+                        }
+                    }
+            }
+        }
+    }
+
+    fun updatePlaceLocally(favoriteId: Long, placeAlias: String, isDefault: Boolean) {
+        Log.d("FavoriteViewModel", "updatePlaceLocally 호출 - favoriteId=$favoriteId, placeAlias=$placeAlias, isDefault=$isDefault")
+        _uiState.update { state ->
+            val updatedPlaces = state.places.map { place ->
+                if (place.favoriteId == favoriteId) {
+                    Log.d("FavoriteViewModel", "장소 발견 - 기존 placeAlias=${place.placeAlias} -> 새로운 placeAlias=$placeAlias")
+                    place.copy(
+                        placeAlias = placeAlias,
+                        isDefault = isDefault
+                    )
+                } else {
+                    // isDefault가 true로 설정된 경우 다른 장소들의 isDefault를 false로 변경
+                    if (isDefault) {
+                        place.copy(isDefault = false)
+                    } else {
+                        place
+                    }
+                }
+            }
+            Log.d("FavoriteViewModel", "로컬 업데이트 완료 - 총 ${updatedPlaces.size}개 장소")
+            state.copy(places = updatedPlaces)
+        }
     }
 
     fun onEvent(event: FavoriteUiEvent) {

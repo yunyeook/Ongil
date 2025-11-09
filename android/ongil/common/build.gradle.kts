@@ -67,4 +67,7 @@ dependencies {
     // TMAP SDK (api로 노출하여 의존하는 모듈에서도 사용 가능하게)
     api("com.skt.tmap:tmap-sdk:3.0")
     api("com.skt.tmap:vsm-tmap-sdk:1.7.45")
+
+    // 백그라운드에서도 추적 가능하게(Fused Location - 명준)
+    api("com.google.android.gms:play-services-location:21.3.0")
 }

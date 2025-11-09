@@ -1,9 +1,11 @@
 package kr.co.ongil.presentation.ui.myinfo
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -82,6 +84,8 @@ private fun ChangePasswordContent(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -148,10 +152,10 @@ private fun ChangePasswordContent(
             Button(
                 onClick = { onEvent(ChangePasswordEvent.ChangePassword) },
                 enabled = !uiState.isLoading &&
-                          uiState.currentPassword.isNotBlank() &&
-                          uiState.newPassword.isNotBlank() &&
-                          uiState.confirmPassword.isNotBlank() &&
-                          uiState.newPassword == uiState.confirmPassword,
+                        uiState.currentPassword.isNotBlank() &&
+                        uiState.newPassword.isNotBlank() &&
+                        uiState.confirmPassword.isNotBlank() &&
+                        uiState.newPassword == uiState.confirmPassword,
                 colors = ButtonDefaults.buttonColors(containerColor = CallAccent),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp)
