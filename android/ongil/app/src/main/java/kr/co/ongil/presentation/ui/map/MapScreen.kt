@@ -1,14 +1,22 @@
 package kr.co.ongil.presentation.ui.map
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +45,11 @@ fun MapScreen(
     // 내 위치 버튼 클릭 트리거
     var myLocationTrigger by remember { mutableStateOf(0) }
 
+    // 북쪽 고정 버튼 클릭 트리거
+    var northUpTrigger by remember { mutableStateOf(0) }
+
     val context = LocalContext.current
+    val activity = context as? Activity
     val inPreview = LocalInspectionMode.current
 
     // 위치 권한 상태
@@ -96,8 +108,10 @@ fun MapScreen(
             modifier = Modifier.fillMaxSize(),
             locationBus = if (inPreview) null else viewModel.locationBus,
             enableTracking = !inPreview,
-            myLocationTrigger = myLocationTrigger
+            myLocationTrigger = myLocationTrigger,
+            northUpTrigger = northUpTrigger
         )
+
 
         // 플로팅 버튼들 (화면 오른쪽 하단)
         Column(
@@ -114,11 +128,14 @@ fun MapScreen(
                 onClick = {
                     isSosEnabled = !isSosEnabled
                     // TODO: 도움요청 토글 상태 변경 시 로직
-                    if (isSosEnabled) {
-                        // 도움요청 활성화
-                    } else {
-                        // 도움요청 비활성화
-                    }
+                }
+            )
+
+            // 북쪽 고정 버튼
+            CircleFloatingButton(
+                icon = Icons.Default.Explore,
+                onClick = {
+                    northUpTrigger++
                 }
             )
 
@@ -126,7 +143,7 @@ fun MapScreen(
             CircleFloatingButton(
                 icon = Icons.Default.MyLocation,
                 onClick = {
-                    myLocationTrigger++  // 값을 증가시켜 TMapComposable에서 감지
+                    myLocationTrigger++
                 }
             )
         }
@@ -138,3 +155,5 @@ fun MapScreen(
 fun MapScreenPreview() {
     MapScreen()
 }
+
+
