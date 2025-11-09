@@ -77,7 +77,6 @@ private fun ChangePasswordContent(
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.White
     ) { paddingValues ->
@@ -153,10 +152,10 @@ private fun ChangePasswordContent(
             Button(
                 onClick = { onEvent(ChangePasswordEvent.ChangePassword) },
                 enabled = !uiState.isLoading &&
-                          uiState.currentPassword.isNotBlank() &&
-                          uiState.newPassword.isNotBlank() &&
-                          uiState.confirmPassword.isNotBlank() &&
-                          uiState.newPassword == uiState.confirmPassword,
+                        uiState.currentPassword.isNotBlank() &&
+                        uiState.newPassword.isNotBlank() &&
+                        uiState.confirmPassword.isNotBlank() &&
+                        uiState.newPassword == uiState.confirmPassword,
                 colors = ButtonDefaults.buttonColors(containerColor = CallAccent),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp)
