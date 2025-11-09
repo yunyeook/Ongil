@@ -21,8 +21,6 @@ fun PlayGroundGK() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         TMapComposable(
-            latitude = 37.5665,  // 서울 시청
-            longitude = 126.9780,
             zoomLevel = 15
         )
 
