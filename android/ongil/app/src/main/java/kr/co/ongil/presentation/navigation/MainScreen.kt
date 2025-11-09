@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
@@ -75,7 +73,7 @@ fun MainScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = Color.White,
+        containerColor = Color.Transparent,
         topBar = {
             Box(modifier = Modifier.statusBarsPadding()) {
                 if (showTopBar) {
@@ -125,9 +123,20 @@ fun MainScreen(
             }
         }
     ) { paddingValues ->
+
+//        AppNavGraph(
+//            navController = navController,
+//            modifier = Modifier.padding(paddingValues).imePadding(),
+//            startDestination = if (isLoggedIn == true) Routes.Home.route else Routes.Login.route
+//        )
         AppNavGraph(
             navController = navController,
-            modifier = Modifier.padding(paddingValues).imePadding(),
+            // ✅ AppNavGraph가 화면 전체를 채우도록 하고, 패딩은 내부로 전달합니다.
+            //    Modifier에서 padding을 제거하고 fillMaxSize()를 적용합니다.
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding(),
+            paddingValues = paddingValues, // ✅ paddingValues를 파라미터로 전달
             startDestination = if (isLoggedIn == true) Routes.Home.route else Routes.Login.route
         )
     }
