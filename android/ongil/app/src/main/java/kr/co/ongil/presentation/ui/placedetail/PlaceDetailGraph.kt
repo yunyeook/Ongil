@@ -16,9 +16,16 @@ fun NavGraphBuilder.placeDetailGraph(navController: NavHostController) {
             viewModel = viewModel,
             onBackClick = { navController.popBackStack() },
             onSavedSuccess = {
+                val currentState = viewModel.uiState.value
+                android.util.Log.d("PlaceDetailGraph", "저장 성공 - favoriteId=${currentState.favoriteId}, placeName=${currentState.placeName}, isDefault=${currentState.isDefault}")
                 navController.previousBackStackEntry
-                    ?.savedStateHandle
-                    ?.set("favorite_updated", true)
+                    ?.savedStateHandle?.apply {
+                        set("favorite_updated", true)
+                        set("updated_favorite_id", currentState.favoriteId)
+                        set("updated_place_alias", currentState.placeName)
+                        set("updated_is_default", currentState.isDefault)
+                        android.util.Log.d("PlaceDetailGraph", "savedState 설정 완료")
+                    }
                 navController.popBackStack()
             },
             onDeletedSuccess = {

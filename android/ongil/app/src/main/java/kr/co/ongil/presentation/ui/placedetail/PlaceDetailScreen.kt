@@ -51,6 +51,7 @@ fun PlaceDetailScreen(
         placeName = uiState.placeName,
         address = uiState.address,
         isDefault = uiState.isDefault,
+        initialIsDefault = uiState.initialIsDefault,
         onBackClick = onBackClick,
         onSetDefaultClick = { viewModel.setAsDefault() },
         onSaveClick = { name, addr, isDefault ->
@@ -75,9 +76,10 @@ fun PlaceDetailScreen(
     placeName: String,
     address: String,
     isDefault: Boolean,
+    initialIsDefault: Boolean?,
     onBackClick: () -> Unit,
     onSetDefaultClick: () -> Unit,
-    onSaveClick: (String, String, Boolean) -> Unit,
+    onSaveClick: (String, String, Boolean?) -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -87,23 +89,16 @@ fun PlaceDetailScreen(
     var editedPlaceName by remember { mutableStateOf(placeName) }
     var editedAddress by remember { mutableStateOf(address) }
 
-    // 초기 isDefault 값을 저장 (API 로드 완료 후)
-    val initialIsDefault = remember { mutableStateOf<Boolean?>(null) }
-
     // API에서 데이터를 새로 받으면 편집 필드도 업데이트
-    LaunchedEffect(placeName, address, isDefault) {
+    LaunchedEffect(placeName, address) {
         editedPlaceName = placeName
         editedAddress = address
-        // 처음 로드 시에만 초기값 저장
-        if (initialIsDefault.value == null && !isLoading) {
-            initialIsDefault.value = isDefault
-        }
     }
 
-    val hasChanges = remember(placeName, address, isDefault, editedPlaceName, editedAddress, initialIsDefault.value) {
+    val hasChanges = remember(placeName, address, isDefault, editedPlaceName, editedAddress, initialIsDefault) {
         val nameChanged = editedPlaceName.trim() != placeName
         val addressChanged = editedAddress.trim() != address
-        val defaultChanged = initialIsDefault.value?.let { it != isDefault } ?: false
+        val defaultChanged = initialIsDefault?.let { it != isDefault } ?: false
         nameChanged || addressChanged || defaultChanged
     }
 
@@ -174,7 +169,12 @@ fun PlaceDetailScreen(
                     val name = editedPlaceName.trim()
                     val addr = editedAddress.trim()
                     if (name.isNotEmpty() && hasChanges) {
-                        onSaveClick(name, addr, isDefault)
+                        // isDefault가 변경되었는지 확인
+                        val isDefaultChanged = initialIsDefault?.let { it != isDefault } ?: false
+                        // 변경되었고 true로 변경된 경우에만 true 전달, 아니면 null
+                        val isDefaultToSend = if (isDefaultChanged && isDefault) true else null
+                        android.util.Log.d("PlaceDetailScreen", "저장 버튼 클릭 - name=$name, addr=$addr, isDefault=$isDefault, initialIsDefault=$initialIsDefault, isDefaultChanged=$isDefaultChanged, isDefaultToSend=$isDefaultToSend")
+                        onSaveClick(name, addr, isDefaultToSend)
                     }
                 },
                 modifier = Modifier
@@ -220,9 +220,10 @@ private fun PlaceDetailScreenPreview() {
         placeName = "뭐라고할까요",
         address = "주소가어디게",
         isDefault = false,
+        initialIsDefault = false,
         onBackClick = {},
         onSetDefaultClick = {},
-        onSaveClick = { _, _, _ -> },
+        onSaveClick = { _: String, _: String, _: Boolean? -> },
         onDeleteClick = {}
     )
 }

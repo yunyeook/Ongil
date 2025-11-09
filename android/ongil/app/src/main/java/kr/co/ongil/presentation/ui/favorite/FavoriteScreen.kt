@@ -60,10 +60,34 @@ fun FavoriteScreen(
 
     LaunchedEffect(updated.value) {
         if (updated.value) {
+            val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+            android.util.Log.d("FavoriteScreen", "favorite_updated 감지됨")
+
+            // 수정된 장소 데이터가 있으면 즉시 로컬 상태 업데이트
+            val updatedFavoriteId = savedStateHandle?.get<Long>("updated_favorite_id")
+            val updatedPlaceAlias = savedStateHandle?.get<String>("updated_place_alias")
+            val updatedIsDefault = savedStateHandle?.get<Boolean>("updated_is_default")
+
+            android.util.Log.d("FavoriteScreen", "savedState - favoriteId=$updatedFavoriteId, placeAlias=$updatedPlaceAlias, isDefault=$updatedIsDefault")
+
+            if (updatedFavoriteId != null && updatedPlaceAlias != null && updatedIsDefault != null) {
+                // 로컬 상태를 즉시 업데이트
+                android.util.Log.d("FavoriteScreen", "로컬 업데이트 실행: favoriteId=$updatedFavoriteId, placeAlias=$updatedPlaceAlias")
+                viewModel.updatePlaceLocally(updatedFavoriteId, updatedPlaceAlias, updatedIsDefault)
+
+                // savedStateHandle 정리
+                savedStateHandle.remove<Long>("updated_favorite_id")
+                savedStateHandle.remove<String>("updated_place_alias")
+                savedStateHandle.remove<Boolean>("updated_is_default")
+            } else {
+                android.util.Log.d("FavoriteScreen", "로컬 업데이트 건너뜀 - 데이터 없음")
+            }
+
+            // 백엔드에서도 최신 데이터 가져오기 (비동기)
+            android.util.Log.d("FavoriteScreen", "백엔드 새로고침 실행")
             viewModel.refresh()
-            navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.set("favorite_updated", false)
+
+            savedStateHandle?.set("favorite_updated", false)
         }
     }
 
