@@ -148,4 +148,13 @@ class MapViewModel @Inject constructor(
     fun closeFinalSearchResults() {
         _finalSearchResults.value = null
     }
+
+    /**
+     * 전화 걸기 버튼 클릭
+     * TODO: 전화 기능 구현 필요
+     */
+    fun onClickCall() {
+        Log.d("MapViewModel", "전화 걸기 버튼 클릭됨 (기능 미구현)")
+        // TODO: 전화 걸기 기능 구현
+    }
 }

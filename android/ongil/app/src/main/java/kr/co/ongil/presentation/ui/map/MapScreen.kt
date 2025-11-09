@@ -10,13 +10,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -180,6 +184,15 @@ fun MapScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.End
             ) {
+
+                // 전화 걸기 버튼
+                CircleFloatingButton(
+                    icon = Icons.Default.Phone,
+                    onClick = { viewModel.onClickCall() },
+                    containerColor = Color(0xFF5C7165),
+                    contentColor = Color.White
+                )
+
                 // 도움요청 토글 버튼
                 CircleFloatingButton(
                     icon = Icons.Default.Warning,
