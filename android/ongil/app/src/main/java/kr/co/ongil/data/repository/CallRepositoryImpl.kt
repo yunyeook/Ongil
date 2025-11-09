@@ -150,4 +150,23 @@ class CallRepositoryImpl @Inject constructor(
     } catch (e: Exception) {
         Result.failure(ErrorHandler.handleException(e))
     }
+
+    override suspend fun getTurnCredentials(): Result<TurnCredentialsDto> = try {
+        val response = callApi.getTurnCredentials()
+
+        if (response.isSuccessful) {
+            val body = response.body()
+            val data = body?.data
+            if (data != null) {
+                Result.success(data)
+            } else {
+                Result.failure(IllegalStateException("Empty TURN credentials response"))
+            }
+        } else {
+            val ex = ErrorHandler.handleException(retrofit2.HttpException(response))
+            Result.failure(ex)
+        }
+    } catch (e: Exception) {
+        Result.failure(ErrorHandler.handleException(e))
+    }
 }

@@ -62,7 +62,9 @@ interface CallApi {
         @Body body: CallStartLocationRequest
     ): Response<ApiResponse<Unit>>
 
-
+    //인증
+    @GET("/api/v1/calls/rtc/turn-credentials")
+    suspend fun getTurnCredentials(): Response<ApiResponse<TurnCredentialsDto>>
 
 
 }

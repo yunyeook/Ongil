@@ -56,4 +56,6 @@ interface CallRepository {
         callId: Long,
         request: CallStartLocationRequest
     ): Result<Unit>
+
+    suspend fun getTurnCredentials(): Result<TurnCredentialsDto>
 }

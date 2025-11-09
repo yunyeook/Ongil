@@ -118,4 +118,7 @@ dependencies {
     // viewModelScope 지원
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.4.0")
     // lifecycleScope 및 flow 지원
+
+    // WebRTC
+    implementation("com.github.webrtc-sdk:android:104.5112.09")
 }
