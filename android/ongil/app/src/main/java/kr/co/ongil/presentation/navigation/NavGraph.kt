@@ -83,14 +83,11 @@ fun AppNavGraph(
         registerGraph(navController)
 
         // 즐겨찾기
-        favoriteGraph(navController)
+        favoriteGraph(navController, paddingValues)
         // 사용자(환자/보호자) 상세
-        userDetailGraph(navController)
+        userDetailGraph(navController, paddingValues)
         // 장소
-        placeDetailGraph(navController)
-
-        // 회원가입
-        registerGraph(navController)
+        placeDetailGraph(navController, paddingValues)
 
 
         // 알림
@@ -137,7 +134,8 @@ fun AppNavGraph(
                 uiState = uiState,
                 onEditInfo = { navController.navigate(Routes.EditInfo.route) },
                 onRecentCalls = { navController.navigate(Routes.CallHistory.route) },
-                onLogout = { viewModel.logout() }
+                onLogout = { viewModel.logout() },
+                modifier = Modifier.padding(paddingValues)
             )
         }
 
