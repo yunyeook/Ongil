@@ -7,6 +7,16 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- 백그라운드 위치(길찾기 지속용, Android 10+) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- 포그라운드 서비스 권한 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Android 13+ 알림 권한(포그라운드 서비스 알림 표시) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".OngilApplication"
         android:allowBackup="true"
@@ -27,6 +37,21 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+<!--        &lt;!&ndash; 길찾기용 위치 포그라운드 서비스 &ndash;&gt;-->
+<!--        <service-->
+<!--            android:name="kr.co.ongil.presentation.service.NavigationLocationService"-->
+<!--            android:exported="false"-->
+<!--            android:enabled="true"-->
+<!--            android:foregroundServiceType="location" />-->
+
+
+        <!--  내 위치 확인용 코드  -->
+        <service
+            android:name="kr.co.ongil.service.location.LocationTrackingService"
+            android:exported="false"
+            android:enabled="true"
+            android:foregroundServiceType="location" />
 
         <activity
             android:windowSoftInputMode="adjustResize"
