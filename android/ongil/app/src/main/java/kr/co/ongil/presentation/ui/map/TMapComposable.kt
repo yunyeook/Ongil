@@ -38,7 +38,6 @@ fun TMapComposable(
     var mapView by remember { mutableStateOf<TMapView?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 백그라운드 스레드에서 TMap 초기화 (common 모듈의 TMapManager 사용)
     LaunchedEffect(Unit) {
         val tmapView = TMapViewFactory.createTMapView(
             context = context,
