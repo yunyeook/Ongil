@@ -50,6 +50,9 @@ interface UserDataStoreManager {
     suspend fun saveLoginUserId(loginUserId: String)
     suspend fun clearLoginUserId()
 
+    fun getUserType(): Flow<String?>
+    suspend fun saveUserType(userType: String)
+
     fun getSelectedPatientId(): Flow<String?>
     suspend fun saveSelectedPatientId(selectedPatientId: String)
 }

@@ -10,7 +10,8 @@ data class PatientData(
     val relationshipId: Long,
     val name: String,
     val phoneNumber: String,
-    val relationshipType: String
+    val relationshipType: String,
+    val profileImage: String? = null
 )
 
 
@@ -20,6 +21,7 @@ fun RelationshipDto.toPatientData(): PatientData {
         relationshipId = relationshipId,
         name = relationshipName,
         phoneNumber = counterpartUser.phoneNumber,
-        relationshipType = relationshipType
+        relationshipType = relationshipType,
+        profileImage = counterpartUser.profileImage
     )
 }

@@ -20,6 +20,7 @@ import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
+import kr.co.ongil.presentation.ui.common.selection.PatientInfoUi
 
 @Composable
 fun MainScreen(
@@ -28,6 +29,8 @@ fun MainScreen(
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     val currentUserId by authViewModel.currentUserId.collectAsState()
     val currentUserInfo by authViewModel.currentUserInfo.collectAsState(initial = null)
+    val patientList by authViewModel.patientList.collectAsState()
+    val selectedPatientId by authViewModel.selectedPatientId.collectAsState()
 
     // 사용자 타입 추출
     val userType = currentUserInfo?.getOrNull()?.userType ?: ""
@@ -77,16 +80,41 @@ fun MainScreen(
         topBar = {
             Box(modifier = Modifier.statusBarsPadding()) {
                 if (showTopBar) {
-                    if (baseRoute == Routes.Home.route) {
+                    // BottomNav 탭 화면에서는 OngilBrandHeaderCard 사용
+                    if (baseRoute in bottomBarRoutes) {
+                        // PatientData를 PatientInfoUi로 변환
+                        val patients = patientList.map { patient ->
+                            PatientInfoUi(
+                                id = patient.id.toString(),
+                                name = patient.name,
+                                profileImageUrl = patient.profileImage
+                            )
+                        }
+
+                        // 선택된 환자의 프로필 이미지 찾기
+                        val selectedPatient = patientList.find { it.id.toString() == selectedPatientId }
+                        val displayProfileImage = if (userType == "GUARDIAN" && selectedPatient != null) {
+                            selectedPatient.profileImage
+                        } else {
+                            currentUserInfo?.getOrNull()?.profileImage
+                        }
+
                         OngilBrandHeaderCard(
                             onBellClick = {
                                 navController.navigate(Routes.Notifications.route) {
                                     launchSingleTop = true
                                 }
                             },
-                            profileImageUrl = null // TODO: 프로필 이미지 URL 연동
+                            profileImageUrl = displayProfileImage,
+                            userType = userType,
+                            patients = patients,
+                            selectedPatientId = selectedPatientId,
+                            onSelectPatient = { patient ->
+                                authViewModel.selectPatient(patient.id)
+                            }
                         )
                     } else {
+                        // 다른 화면에서는 OngilTopBarForRoute 사용
                         OngilTopBarForRoute(
                             route = baseRoute,
                             onBackClick = { navController.popBackStack() },
@@ -108,9 +136,18 @@ fun MainScreen(
                     onClick = { route ->
                         val navigationRoute =
                             if (route == Routes.Favorite.route) {
-                                // 현재 로그인한 사용자의 ID를 사용 (환자는 자신의 즐겨찾기 조회)
-                                val userId = currentUserInfo?.getOrNull()?.id?.toLong() ?: 0L
-                                "${Routes.Favorite.route}/$userId"
+                                // 사용자 타입에 따라 patientId 결정
+                                val patientId = if (userType == "GUARDIAN") {
+                                    // 보호자: 선택된 환자 ID 사용 (없으면 첫 번째 환자)
+                                    selectedPatientId?.toLongOrNull()
+                                        ?: patientList.firstOrNull()?.id
+                                        ?: currentUserInfo?.getOrNull()?.id?.toLong()
+                                        ?: 0L
+                                } else {
+                                    // 환자: 자신의 ID 사용
+                                    currentUserInfo?.getOrNull()?.id?.toLong() ?: 0L
+                                }
+                                "${Routes.Favorite.route}/$patientId"
                             }
                             else route
                         navController.navigate(navigationRoute) {

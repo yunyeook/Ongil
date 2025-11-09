@@ -36,6 +36,9 @@ class LoginUseCase @Inject constructor(
                 accessToken = response.data.accessToken,
                 refreshToken = response.data.refreshToken
             )
+            // 사용자 ID와 타입 저장
+            tokenManager.saveLoginUserId(response.data.user.id.toString())
+            tokenManager.saveUserType(response.data.user.userType)
         }
     }
 }
