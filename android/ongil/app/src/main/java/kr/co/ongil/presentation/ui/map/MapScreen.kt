@@ -2,6 +2,7 @@ package kr.co.ongil.presentation.ui.map
 
 import androidx.compose.foundation.background
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.*
@@ -20,8 +22,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import kr.co.ongil.presentation.ui.common.map.CircleFloatingButton
 import kr.co.ongil.presentation.ui.common.map.SearchBar
 import kr.co.ongil.presentation.ui.common.map.SearchListItem
@@ -52,7 +54,11 @@ fun MapScreen(
         // 내 위치 버튼 클릭 트리거
         var myLocationTrigger by remember { mutableStateOf(0) }
 
+        // 북쪽 고정 버튼 클릭 트리거
+        var northUpTrigger by remember { mutableStateOf(0) }
+
         val context = LocalContext.current
+        val activity = context as? Activity
         val inPreview = LocalInspectionMode.current
 
         // 위치 권한 상태
@@ -186,6 +192,14 @@ fun MapScreen(
                         } else {
                             // 도움요청 비활성화
                         }
+                    }
+                )
+
+                // 북쪽 고정 버튼
+                CircleFloatingButton(
+                    icon = Icons.Default.Explore,
+                    onClick = {
+                        northUpTrigger++
                     }
                 )
 
