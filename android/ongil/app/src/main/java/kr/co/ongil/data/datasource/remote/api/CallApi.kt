@@ -66,5 +66,4 @@ interface CallApi {
     @GET("/api/v1/calls/rtc/turn-credentials")
     suspend fun getTurnCredentials(): Response<ApiResponse<TurnCredentialsDto>>
 
-
 }

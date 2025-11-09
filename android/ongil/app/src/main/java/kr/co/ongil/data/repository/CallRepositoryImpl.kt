@@ -160,11 +160,12 @@ class CallRepositoryImpl @Inject constructor(
             if (data != null) {
                 Result.success(data)
             } else {
-                Result.failure(IllegalStateException("Empty TURN credentials response"))
+                Result.failure(IllegalStateException("empty body"))
             }
         } else {
-            val ex = ErrorHandler.handleException(retrofit2.HttpException(response))
-            Result.failure(ex)
+            Result.failure(
+                ErrorHandler.handleException(retrofit2.HttpException(response))
+            )
         }
     } catch (e: Exception) {
         Result.failure(ErrorHandler.handleException(e))

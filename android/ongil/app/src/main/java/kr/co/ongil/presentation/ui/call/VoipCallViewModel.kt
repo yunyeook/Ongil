@@ -24,7 +24,6 @@ import kr.co.ongil.data.model.call.TurnCredentialsDto
 import kr.co.ongil.data.model.call.VoipCallDto
 import kr.co.ongil.domain.repository.CallRepository
 import org.webrtc.PeerConnection
-import org.webrtc.SessionDescription
 import java.time.Instant
 
 @HiltViewModel
@@ -153,13 +152,22 @@ class VoipCallViewModel @Inject constructor(
 
     /** ❌ 통화 종료 */
     fun endCall() {
-        val callId = currentCall?.id ?: return
+        val call = currentCall ?: return
+
+        // 이미 종료된 상태면 중복 요청 방지
+        if (call.status == "ENDED") {
+            _uiState.update { it.copy(message = "이미 종료된 통화입니다.") }
+            return
+        }
+
         viewModelScope.launch {
-            callRepository.updateVoipCallStatus(callId, "ENDED")
-                .onSuccess {
+            callRepository.updateVoipCallStatus(call.id, "ENDED")
+                .onSuccess { updated ->
+                    currentCall = updated
                     webRtcCallClient.endCall()
                     _uiState.update {
                         it.copy(
+                            call = updated,
                             message = "통화 종료됨"
                         )
                     }
@@ -175,62 +183,60 @@ class VoipCallViewModel @Inject constructor(
     }
 
     // ========================
-    // WebRTC 연동 (Offer/Answer 자리만 정의)
+    // WebRTC 연동 (Offer/Answer - 시그널링 TODO)
     // ========================
 
     /** 발신자: TURN 조회 + WebRTC 초기화 + Offer 생성 */
-    private suspend fun setupWebRtcAsCaller() {
+    private fun setupWebRtcAsCaller() {
         val call = currentCall ?: return
 
-        callRepository.getTurnCredentials()
-            .onSuccess { turn ->
-                val iceServers = turn.toIceServers()
-                webRtcCallClient.init(iceServers)
+        viewModelScope.launch {
+            callRepository.getTurnCredentials()
+                .onSuccess { turn ->
+                    val iceServers = turn.toIceServers()
+                    webRtcCallClient.init(iceServers)
 
-                // Offer 생성 → (여기서 백엔드/시그널링 서버로 전송해야 함)
-                webRtcCallClient.createOffer { sdp ->
-                    Log.d("VoipCallViewModel", "Offer SDP created: ${sdp.type}")
-                    // TODO: signalingClient.sendOffer(call.sessionId, sdp.description)
+                    webRtcCallClient.createOffer { sdp ->
+                        Log.d("VoipCallViewModel", "Offer SDP created: ${sdp.type}")
+                        // TODO: signalingClient.sendOffer(call.sessionId, sdp.description)
+                    }
                 }
-            }
-            .onFailure { e ->
-                _uiState.update {
-                    it.copy(error = "TURN 정보 조회 실패: ${e.message}")
+                .onFailure { e ->
+                    // 지금 단계에서는 UI 에러로 올리지 않고 로그만 남김
+                    Log.e("VoipCallViewModel", "TURN 조회 실패(발신): ${e.message}", e)
                 }
-            }
+        }
     }
 
     /** 수신자: TURN 조회 + WebRTC 초기화 + Answer 생성 */
-    private suspend fun setupWebRtcAsCallee() {
+    private fun setupWebRtcAsCallee() {
         val call = currentCall ?: return
 
-        callRepository.getTurnCredentials()
-            .onSuccess { turn ->
-                val iceServers = turn.toIceServers()
-                webRtcCallClient.init(iceServers)
+        viewModelScope.launch {
+            callRepository.getTurnCredentials()
+                .onSuccess { turn ->
+                    val iceServers = turn.toIceServers()
+                    webRtcCallClient.init(iceServers)
 
-                // ⚠ 실제 구현 시:
-                // 1) 발신자의 OFFER SDP를 시그널링으로 받아서
-                // 2) webRtcCallClient.setRemoteDescription(SessionDescription.Type.OFFER, offerSdp)
-                // 3) 그 다음 createAnswer 호출해야 함
-
-                webRtcCallClient.createAnswer { sdp ->
-                    Log.d("VoipCallViewModel", "Answer SDP created: ${sdp.type}")
-                    // TODO: signalingClient.sendAnswer(call.sessionId, sdp.description)
+                    // TODO:
+                    // 1) signaling으로 받은 remote OFFER를 setRemoteDescription
+                    // 2) 그 다음 createAnswer 호출
+                    webRtcCallClient.createAnswer { sdp ->
+                        Log.d("VoipCallViewModel", "Answer SDP created: ${sdp.type}")
+                        // TODO: signalingClient.sendAnswer(call.sessionId, sdp.description)
+                    }
                 }
-            }
-            .onFailure { e ->
-                _uiState.update {
-                    it.copy(error = "TURN 정보 조회 실패: ${e.message}")
+                .onFailure { e ->
+                    Log.e("VoipCallViewModel", "TURN 조회 실패(수신): ${e.message}", e)
                 }
-            }
+        }
     }
 
     // ========================
     // 위치 관련
     // ========================
 
-    /** 현재 위치 테스트용 (원하면 호출) */
+    /** 현재 위치 테스트용 */
     fun fetchCurrentLocation() {
         viewModelScope.launch {
             if (!hasLocationPermission()) {
