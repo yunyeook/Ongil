@@ -19,6 +19,7 @@ import javax.inject.Inject
 class FavoriteViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
     private val userRepository: UserRepository,
+    private val userDataStoreManager: kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -53,6 +54,20 @@ class FavoriteViewModel @Inject constructor(
             }
         } else {
             loadData(initialPatientId)
+        }
+
+        // 선택된 환자 ID 변경 감지 (보호자 전용)
+        viewModelScope.launch {
+            userDataStoreManager.getSelectedPatientId().collect { selectedId ->
+                val currentUserType = _uiState.value.userType
+                if (currentUserType == "GUARDIAN" && selectedId != null) {
+                    val newPatientId = selectedId.toLongOrNull()
+                    if (newPatientId != null && newPatientId != lastLoadedPatientId) {
+                        Log.d("FavoriteViewModel", "선택된 환자 변경 감지: $newPatientId")
+                        loadData(newPatientId)
+                    }
+                }
+            }
         }
     }
 

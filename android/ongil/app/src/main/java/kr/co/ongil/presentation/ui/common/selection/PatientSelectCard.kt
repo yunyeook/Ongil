@@ -22,8 +22,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PatientCard(
     name: String,
-    position: String,               // ex) "집", "이동중"
-    profileImageUrl: String? = null, // 이미지 로딩은 안 하고 null이면 이니셜 보여줌 여기서는 성 정도만 보여주는거 어떤지
+    profileImageUrl: String? = null,
     isSelected: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -31,7 +30,6 @@ fun PatientCard(
     val borderColor = Color(0xFF5C7165)
     val bgColor = if (isSelected) Color(0xFF5C7165) else Color.Transparent
     val nameColor = if (isSelected) Color.White else Color(0xFF1F2937)
-    val positionColor = if (isSelected) Color.White else Color(0xFF5C7165)
 
     Card(
         modifier = modifier
@@ -82,10 +80,8 @@ fun PatientCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = name,
@@ -93,13 +89,6 @@ fun PatientCard(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 24.sp
-                )
-                Text(
-                    text = position,
-                    color = positionColor,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Normal,
-                    lineHeight = 20.sp
                 )
             }
         }
@@ -111,7 +100,6 @@ fun PatientCard(
 private fun PatientCardPreview_Unselected_NoImage() {
     PatientCard(
         name = "황경례",
-        position = "집",
         profileImageUrl = null,
         isSelected = false,
         onClick = {}
@@ -123,7 +111,6 @@ private fun PatientCardPreview_Unselected_NoImage() {
 private fun PatientCardPreview_Selected_NoImage() {
     PatientCard(
         name = "황경례",
-        position = "이동중",
         profileImageUrl = null,
         isSelected = true,
         onClick = {}

@@ -8,5 +8,6 @@ object DataStoreKeys {
     val FCM_TOKEN_KEY = stringPreferencesKey("fcm_token")
 
     val LOGIN_USER_ID_KEY = stringPreferencesKey("login_user_id")
+    val USER_TYPE_KEY = stringPreferencesKey("user_type")
     val SELECTED_PATIENT_ID_KEY = stringPreferencesKey("selected_patient_id")
 }
