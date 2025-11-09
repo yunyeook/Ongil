@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.ui.common.map
 
+import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
@@ -17,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.padding
@@ -29,7 +33,8 @@ fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "장소를 검색해주세요"
+    placeholder: String = "장소를 검색해주세요",
+    onSearch: () -> Unit = {}
 ) {
     val borderColor = Color(0xFFD9D9D9)
     val placeholderColor = Color(0xFF9CA3AF)
@@ -58,7 +63,12 @@ fun SearchBar(
                 imageVector = Icons.Default.Search,
                 contentDescription = "검색",
                 tint = Color(0xFF101828),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable {
+                        Log.d("SearchBar", "검색 아이콘 클릭됨")
+                        onSearch()
+                    }
             )
         },
         colors = androidx.compose.material3.TextFieldDefaults.colors(
@@ -74,6 +84,15 @@ fun SearchBar(
         textStyle = androidx.compose.ui.text.TextStyle(
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium
+        ),
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Search
+        ),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                Log.d("SearchBar", "검색 버튼 클릭됨")
+                onSearch()
+            }
         )
     )
 }

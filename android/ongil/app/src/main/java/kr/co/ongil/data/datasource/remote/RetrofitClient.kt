@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
+import kr.co.ongil.BuildConfig
 
 /**
  * Retrofit 클라이언트 싱글톤
@@ -17,8 +18,7 @@ import java.util.concurrent.TimeUnit
  */
 object RetrofitClient {
 
-    // TODO: 실제 서버 URL로 변경
-    private const val BASE_URL = "https://your-api-server.com/"
+    private const val BASE_URL = BuildConfig.BASE_URL
 
     // Kotlinx Serialization Json 설정
     private val json = Json {

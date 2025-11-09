@@ -42,6 +42,7 @@ fun MapScreen(
     // ViewModel 상태
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val finalSearchResults by viewModel.finalSearchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
 
     // 도움요청 토글 상태
@@ -122,19 +123,20 @@ fun MapScreen(
                 )
             }
 
-            // 검색바 + 검색 결과 (화면 상단)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
-            ) {
-                // 검색 입력 필드
-                SearchBar(
-                    value = searchQuery,
-                    onValueChange = { viewModel.onSearchQueryChange(it) }
-                )
+        // 검색바 + 검색 결과 (화면 상단)
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            // 검색 입력 필드
+            SearchBar(
+                value = searchQuery,
+                onValueChange = { viewModel.onSearchQueryChange(it) },
+                onSearch = { viewModel.onFinalSearch() }
+            )
 
                 // 검색 결과 리스트
                 if (searchResults.isNotEmpty()) {
@@ -195,6 +197,18 @@ fun MapScreen(
                     }
                 )
             }
+        }
+
+        // 최종 검색 결과 BottomSheet
+        finalSearchResults?.let { results ->
+            SearchResultBottomSheet(
+                searchResults = results,
+                onDismiss = { viewModel.closeFinalSearchResults() },
+                onPlaceClick = { place ->
+                    // TODO: 지도에 마커 표시 및 이동
+                    viewModel.closeFinalSearchResults()
+                }
+            )
         }
     }
 }
