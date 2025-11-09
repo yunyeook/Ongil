@@ -142,7 +142,47 @@ class FavoriteViewModel @Inject constructor(
 
     fun refresh() {
         loadRelationships() // 사용자 목록 새로고침
-        lastLoadedPatientId?.let { loadData(it, force = true) } // 장소 목록 새로고침
+
+        // 장소 목록 새로고침
+        val patientIdToLoad = lastLoadedPatientId ?: _uiState.value.currentPatientId
+        if (patientIdToLoad != 0L) {
+            loadData(patientIdToLoad, force = true)
+        } else {
+            // currentPatientId도 0L이면 사용자 ID를 다시 가져와서 로드
+            viewModelScope.launch {
+                userRepository.getMyInfo()
+                    .collect { result ->
+                        result.onSuccess { userDto ->
+                            val userId = userDto.id.toLong()
+                            loadData(userId, force = true)
+                        }
+                    }
+            }
+        }
+    }
+
+    fun updatePlaceLocally(favoriteId: Long, placeAlias: String, isDefault: Boolean) {
+        Log.d("FavoriteViewModel", "updatePlaceLocally 호출 - favoriteId=$favoriteId, placeAlias=$placeAlias, isDefault=$isDefault")
+        _uiState.update { state ->
+            val updatedPlaces = state.places.map { place ->
+                if (place.favoriteId == favoriteId) {
+                    Log.d("FavoriteViewModel", "장소 발견 - 기존 placeAlias=${place.placeAlias} -> 새로운 placeAlias=$placeAlias")
+                    place.copy(
+                        placeAlias = placeAlias,
+                        isDefault = isDefault
+                    )
+                } else {
+                    // isDefault가 true로 설정된 경우 다른 장소들의 isDefault를 false로 변경
+                    if (isDefault) {
+                        place.copy(isDefault = false)
+                    } else {
+                        place
+                    }
+                }
+            }
+            Log.d("FavoriteViewModel", "로컬 업데이트 완료 - 총 ${updatedPlaces.size}개 장소")
+            state.copy(places = updatedPlaces)
+        }
     }
 
     fun onEvent(event: FavoriteUiEvent) {

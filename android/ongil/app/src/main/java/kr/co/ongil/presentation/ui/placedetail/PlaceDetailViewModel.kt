@@ -50,13 +50,14 @@ class PlaceDetailViewModel @Inject constructor(
             )
             result.fold(
                 onSuccess = { detail ->
-                    Log.d("PlaceDetailVM", "API 성공: placeName=${detail.placeName}, placeAlias=${detail.placeAlias}")
+                    Log.d("PlaceDetailVM", "API 성공: placeName=${detail.placeName}, placeAlias=${detail.placeAlias}, isDefault=${detail.isDefault}")
                     _uiState.update {
                         it.copy(
                             // placeAlias가 있으면 placeAlias를, 없으면 placeName을 표시
                             placeName = if (detail.placeAlias.isNullOrBlank()) detail.placeName else detail.placeAlias,
                             address = detail.address,
                             isDefault = detail.isDefault,
+                            initialIsDefault = detail.isDefault, // API에서 받은 초기값 저장
                             favoriteId = detail.favoriteId,
                             patientId = detail.patientId,
                             isLoading = false
@@ -112,7 +113,7 @@ class PlaceDetailViewModel @Inject constructor(
     }
 
     // 저장하기 (장소명은 placeAlias로 저장)
-    fun updatePlaceInfo(newName: String, newAddress: String, newIsDefault: Boolean, onSuccess: () -> Unit = {}) {
+    fun updatePlaceInfo(newName: String, newAddress: String, newIsDefault: Boolean?, onSuccess: () -> Unit = {}) {
         if (_uiState.value.isLoading) return
         val prev = _uiState.value
         Log.d("PlaceDetailVM", "저장: patientId=${prev.patientId}, favoriteId=${prev.favoriteId}, placeAlias=$newName, isDefault=$newIsDefault")
@@ -125,7 +126,7 @@ class PlaceDetailViewModel @Inject constructor(
                 update = PlaceDetailUpdate(
                     placeAlias = newName, // 사용자가 입력한 이름은 placeAlias로 저장
                     address = newAddress,
-                    isDefault = if (newIsDefault) true else null // true일 때만 보내고, false일 때는 null
+                    isDefault = newIsDefault // 변경되었을 때만 true, 아니면 null
                 )
             )
             result.fold(
