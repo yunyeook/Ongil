@@ -22,6 +22,7 @@ fun VoipCallTestScreen(
     val state by viewModel.uiState.collectAsState()
 
     var receiverId by remember { mutableStateOf("2") }
+    var callIdInput by remember { mutableStateOf("") }
     var selectedUserType by remember { mutableStateOf("CAREGIVER") }
     var selectedCallType by remember { mutableStateOf("NORMAL") }
 
@@ -63,13 +64,22 @@ fun VoipCallTestScreen(
             ) {
                 Text("테스트 설정", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-                // Receiver ID 입력
+                // Receiver ID 입력 (발신용)
                 OutlinedTextField(
                     value = receiverId,
                     onValueChange = { receiverId = it },
-                    label = { Text("수신자 ID") },
+                    label = { Text("수신자 ID (발신용)") },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("예: 2") }
+                )
+
+                // Call ID 입력 (수신용)
+                OutlinedTextField(
+                    value = callIdInput,
+                    onValueChange = { callIdInput = it },
+                    label = { Text("통화 ID (수신용)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("예: 123") }
                 )
 
                 // User Type 선택
@@ -132,11 +142,13 @@ fun VoipCallTestScreen(
         // 수신자 입장에서 callId로 조회 테스트
         Button(
             onClick = {
-                state.call?.id?.let { callId ->
-                    viewModel.loadIncomingCall(callId)
+                // callIdInput 우선, 없으면 state.call?.id 사용
+                val id = callIdInput.toLongOrNull() ?: state.call?.id
+                if (id != null) {
+                    viewModel.loadIncomingCall(id)
                 }
             },
-            enabled = state.call != null,
+            enabled = callIdInput.isNotBlank() || state.call != null,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("2. 통화 조회 (loadIncomingCall)")
@@ -302,13 +314,18 @@ fun VoipCallTestScreen(
                 )
                 Text(
                     """
+                    [발신자 (통화 거는 쪽)]
                     1. 수신자 ID에 실제 존재하는 사용자 ID 입력
                     2. 역할과 통화 타입 선택
-                    3. "1. 통화 생성" 버튼 클릭
-                    4. 상태가 "CREATED"로 변경되는지 확인
-                    5. "3. 통화 수락" 클릭하면 "CONNECTED"로 변경
-                    6. 환자 역할 선택 시 자동으로 위치 전송됨
-                    7. "4. 통화 종료"로 테스트 완료
+                    3. "1. 통화 생성" 클릭
+                    4. 화면에 표시된 통화 ID 확인
+
+                    [수신자 (통화 받는 쪽)]
+                    1. 통화 ID 입력란에 발신자 화면의 통화 ID 입력
+                    2. "2. 통화 조회" 클릭
+                    3. "3. 통화 수락" 클릭하면 "CONNECTED"로 변경
+                    4. 환자 역할 선택 시 자동으로 위치 전송됨
+                    5. "4. 통화 종료"로 테스트 완료
                     """.trimIndent(),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF856404)

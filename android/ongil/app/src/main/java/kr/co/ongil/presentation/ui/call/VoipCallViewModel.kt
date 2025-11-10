@@ -58,12 +58,16 @@ class VoipCallViewModel @Inject constructor(
         userType: String,
         callType: String = "NORMAL"
     ) {
+        Log.d("VoipCallViewModel", "===== 1. 통화 생성 시작 =====")
+        Log.d("VoipCallViewModel", "수신자 ID: $receiverId, 역할: $userType, 통화타입: $callType")
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, message = null, error = null) }
 
             callRepository.createVoipCall(receiverId, callType)
                 .onSuccess { call ->
                     currentCall = call
+                    Log.d("VoipCallViewModel", "✓ 통화 생성 성공 - callId: ${call.id}, status: ${call.status}")
 
                     _uiState.update {
                         it.copy(
@@ -75,13 +79,16 @@ class VoipCallViewModel @Inject constructor(
 
                     // 환자가 발신자면 통화 시작 시 위치 1회 전송
                     if (userType == "PATIENT") {
+                        Log.d("VoipCallViewModel", "환자 역할 → 위치 전송 시작")
                         sendStartLocationOnce(call.id)
                     }
 
                     // WebRTC: 발신자 초기화 (시그널링은 TODO)
+                    Log.d("VoipCallViewModel", "WebRTC 발신자 설정 시작")
                     setupWebRtcAsCaller()
                 }
                 .onFailure { e ->
+                    Log.e("VoipCallViewModel", "✗ 통화 생성 실패: ${e.message}", e)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -94,20 +101,28 @@ class VoipCallViewModel @Inject constructor(
 
     /** 📲 수신: callId 기반 통화 정보 조회 */
     fun loadIncomingCall(callId: Long) {
+        Log.d("VoipCallViewModel", "===== 2. 통화 정보 조회 시작 =====")
+        Log.d("VoipCallViewModel", "조회할 callId: $callId")
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, message = null, error = null) }
 
             callRepository.getVoipCall(callId)
                 .onSuccess { call ->
                     currentCall = call
+                    Log.d("VoipCallViewModel", "✓ 통화 조회 성공 - callId: ${call.id}, status: ${call.status}")
+                    Log.d("VoipCallViewModel", "  발신자: ${call.callerId}, 수신자: ${call.receiverId}")
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            call = call
+                            call = call,
+                            message = "통화 조회 성공"
                         )
                     }
                 }
                 .onFailure { e ->
+                    Log.e("VoipCallViewModel", "✗ 통화 조회 실패: ${e.message}", e)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -120,11 +135,20 @@ class VoipCallViewModel @Inject constructor(
 
     /** ✅ 수신자가 통화 수락 */
     fun acceptCall(userType: String) {
-        val callId = currentCall?.id ?: return
+        val callId = currentCall?.id ?: run {
+            Log.w("VoipCallViewModel", "통화 수락 실패: currentCall이 null")
+            return
+        }
+
+        Log.d("VoipCallViewModel", "===== 3. 통화 수락 시작 =====")
+        Log.d("VoipCallViewModel", "callId: $callId, 역할: $userType")
+
         viewModelScope.launch {
             callRepository.updateVoipCallStatus(callId, "CONNECTED")
                 .onSuccess { updated ->
                     currentCall = updated
+                    Log.d("VoipCallViewModel", "✓ 통화 수락 성공 - status: ${updated.status}")
+
                     _uiState.update {
                         it.copy(
                             call = updated,
@@ -134,13 +158,16 @@ class VoipCallViewModel @Inject constructor(
 
                     // 환자가 수신자면 위치 1회 전송
                     if (userType == "PATIENT") {
+                        Log.d("VoipCallViewModel", "환자 역할 → 위치 전송 시작")
                         sendStartLocationOnce(callId)
                     }
 
                     // WebRTC: 수신자 초기화 (시그널링은 TODO)
+                    Log.d("VoipCallViewModel", "WebRTC 수신자 설정 시작")
                     setupWebRtcAsCallee()
                 }
                 .onFailure { e ->
+                    Log.e("VoipCallViewModel", "✗ 통화 수락 실패: ${e.message}", e)
                     _uiState.update {
                         it.copy(
                             error = e.message ?: "통화 수락 실패"
@@ -152,10 +179,17 @@ class VoipCallViewModel @Inject constructor(
 
     /** ❌ 통화 종료 */
     fun endCall() {
-        val call = currentCall ?: return
+        val call = currentCall ?: run {
+            Log.w("VoipCallViewModel", "통화 종료 실패: currentCall이 null")
+            return
+        }
+
+        Log.d("VoipCallViewModel", "===== 4. 통화 종료 시작 =====")
+        Log.d("VoipCallViewModel", "callId: ${call.id}, 현재 status: ${call.status}")
 
         // 이미 종료된 상태면 중복 요청 방지
         if (call.status == "ENDED") {
+            Log.w("VoipCallViewModel", "이미 종료된 통화입니다.")
             _uiState.update { it.copy(message = "이미 종료된 통화입니다.") }
             return
         }
@@ -164,7 +198,11 @@ class VoipCallViewModel @Inject constructor(
             callRepository.updateVoipCallStatus(call.id, "ENDED")
                 .onSuccess { updated ->
                     currentCall = updated
+                    Log.d("VoipCallViewModel", "✓ 통화 종료 성공 - status: ${updated.status}")
+
+                    Log.d("VoipCallViewModel", "WebRTC 연결 종료")
                     webRtcCallClient.endCall()
+
                     _uiState.update {
                         it.copy(
                             call = updated,
@@ -173,6 +211,7 @@ class VoipCallViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
+                    Log.e("VoipCallViewModel", "✗ 통화 종료 실패: ${e.message}", e)
                     _uiState.update {
                         it.copy(
                             error = e.message ?: "통화 종료 실패"
@@ -238,14 +277,18 @@ class VoipCallViewModel @Inject constructor(
 
     /** 현재 위치 테스트용 */
     fun fetchCurrentLocation() {
+        Log.d("VoipCallViewModel", "===== 위치 가져오기 시작 =====")
+
         viewModelScope.launch {
             if (!hasLocationPermission()) {
+                Log.w("VoipCallViewModel", "✗ 위치 권한 없음")
                 _uiState.update {
                     it.copy(error = "⚠️ 위치 권한이 필요합니다. 앱 설정에서 위치 권한을 허용해주세요.")
                 }
-                Log.w("VoipCallViewModel", "위치 권한 없음")
                 return@launch
             }
+
+            Log.d("VoipCallViewModel", "위치 권한 확인 완료 - FusedLocationProvider 호출")
 
             try {
                 val fusedClient = LocationServices.getFusedLocationProviderClient(application)
@@ -260,6 +303,10 @@ class VoipCallViewModel @Inject constructor(
                         speedMps = lastLocation.speed,
                         timeMillis = lastLocation.time
                     )
+                    Log.d("VoipCallViewModel", "✓ 위치 가져오기 성공")
+                    Log.d("VoipCallViewModel", "  위도: ${point.latitude}, 경도: ${point.longitude}")
+                    Log.d("VoipCallViewModel", "  정확도: ${point.accuracyMeters}m")
+
                     _uiState.update {
                         it.copy(
                             currentLocation = "위도: ${point.latitude}, 경도: ${point.longitude}, 정확도: ${point.accuracyMeters}m",
@@ -267,15 +314,18 @@ class VoipCallViewModel @Inject constructor(
                         )
                     }
                 } else {
+                    Log.w("VoipCallViewModel", "✗ lastLocation이 null - GPS 활성화 필요")
                     _uiState.update {
                         it.copy(error = "위치 정보가 없습니다. GPS를 켜고 잠시 기다려주세요.")
                     }
                 }
             } catch (e: SecurityException) {
+                Log.e("VoipCallViewModel", "✗ 위치 권한 거부: ${e.message}", e)
                 _uiState.update {
                     it.copy(error = "⚠️ 위치 권한이 거부되었습니다: ${e.message}")
                 }
             } catch (e: Exception) {
+                Log.e("VoipCallViewModel", "✗ 위치 가져오기 실패: ${e.message}", e)
                 _uiState.update {
                     it.copy(error = "위치 가져오기 실패: ${e.message}")
                 }
@@ -300,20 +350,27 @@ class VoipCallViewModel @Inject constructor(
 
     /** 통화 시작/수락 시 위치 1회 전송 */
     private fun sendStartLocationOnce(callId: Long) {
+        Log.d("VoipCallViewModel", "  → 위치 1회 전송 시작 (callId: $callId)")
+
         viewModelScope.launch {
             if (!hasLocationPermission()) {
+                Log.w("VoipCallViewModel", "  ✗ 위치 권한 없음 - 전송 실패")
                 _uiState.update {
                     it.copy(error = "⚠️ 위치 권한이 필요합니다. 앱 설정에서 위치 권한을 허용해주세요.")
                 }
-                Log.w("VoipCallViewModel", "위치 권한 없음 - 전송 실패")
                 return@launch
             }
 
+            Log.d("VoipCallViewModel", "  1) LocationStreamBus 확인")
             // 1) LocationStreamBus 최신 값 사용
             var point = locationStreamBus.lastValue
+            if (point != null) {
+                Log.d("VoipCallViewModel", "  ✓ LocationStreamBus에서 위치 획득: ${point.latitude}, ${point.longitude}")
+            }
 
             // 2) 없으면 FusedLocation에서 fallback
             if (point == null) {
+                Log.d("VoipCallViewModel", "  2) FusedLocationProvider fallback")
                 try {
                     val fusedClient = LocationServices.getFusedLocationProviderClient(application)
                     val lastLocation = fusedClient.lastLocation.await()
@@ -326,13 +383,17 @@ class VoipCallViewModel @Inject constructor(
                             speedMps = lastLocation.speed,
                             timeMillis = lastLocation.time
                         )
+                        Log.d("VoipCallViewModel", "  ✓ FusedLocation에서 위치 획득: ${point.latitude}, ${point.longitude}")
+                    } else {
+                        Log.w("VoipCallViewModel", "  ✗ FusedLocation lastLocation이 null")
                     }
                 } catch (e: Exception) {
-                    Log.e("VoipCallViewModel", "FusedLocation fallback 실패", e)
+                    Log.e("VoipCallViewModel", "  ✗ FusedLocation fallback 실패", e)
                 }
             }
 
             if (point == null) {
+                Log.e("VoipCallViewModel", "  ✗ 위치 정보를 가져올 수 없음")
                 _uiState.update {
                     it.copy(error = "⚠️ 위치 정보를 가져올 수 없습니다. 위치 권한과 GPS를 확인하세요.")
                 }
@@ -347,10 +408,11 @@ class VoipCallViewModel @Inject constructor(
                 timestamp = Instant.ofEpochMilli(point.timeMillis).toString()
             )
 
-            Log.d("VoipCallViewModel", "위치 전송: ${point.latitude}, ${point.longitude}")
+            Log.d("VoipCallViewModel", "  3) 서버로 위치 전송 중: ${point.latitude}, ${point.longitude}")
 
             callRepository.sendVoipCallStartLocation(callId, request)
                 .onSuccess {
+                    Log.d("VoipCallViewModel", "  ✓ 위치 전송 성공!")
                     _uiState.update {
                         it.copy(
                             message = "✓ 위치 전송 완료 (${point.latitude}, ${point.longitude})"
@@ -358,6 +420,7 @@ class VoipCallViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
+                    Log.e("VoipCallViewModel", "  ✗ 위치 전송 실패: ${e.message}", e)
                     _uiState.update {
                         it.copy(
                             error = "✗ 위치 전송 실패: ${e.message}"

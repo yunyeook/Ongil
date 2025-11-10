@@ -21,8 +21,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             OngilTheme {
-                VoipCallDebugScreen()
- //                MainScreen()
+//                VoipCallDebugScreen()
+                 MainScreen()
 //                PlayGroundMJ()
                 // PlayGroundSH()
                 // PlayGroundGK()

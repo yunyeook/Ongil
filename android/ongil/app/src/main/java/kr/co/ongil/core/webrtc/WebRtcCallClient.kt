@@ -70,8 +70,10 @@ class WebRtcCallClient @Inject constructor(
         audioSource = factory?.createAudioSource(audioConstraints)
         audioTrack = factory?.createAudioTrack(AUDIO_TRACK_ID, audioSource)
 
-        // 4) PeerConnection 생성
-        val rtcConfig = PeerConnection.RTCConfiguration(iceServers)
+        // 4) PeerConnection 생성 (Unified Plan SDP 사용)
+        val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
+            sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+        }
         peer = factory?.createPeerConnection(
             rtcConfig,
             object : PeerConnection.Observer {
@@ -109,10 +111,11 @@ class WebRtcCallClient @Inject constructor(
             }
         )
 
-        // 5) 로컬 오디오 트랙을 스트림에 붙이고 PeerConnection에 추가
-        val localStream = factory?.createLocalMediaStream(LOCAL_STREAM_ID)
-        audioTrack?.let { localStream?.addTrack(it) }
-        peer?.addStream(localStream)
+        // 5) Unified Plan에서는 addTrack() 사용 (addStream 대신)
+        audioTrack?.let { track ->
+            peer?.addTrack(track, listOf(LOCAL_STREAM_ID))
+            Log.d(TAG, "Audio track added to PeerConnection")
+        }
 
         Log.d(TAG, "WebRTC initialized with ${iceServers.size} ICE servers")
     }
