@@ -36,7 +36,8 @@ fun LoginRoute(
     // ✅ Scaffold 추가 (SnackbarHost가 포함됨)
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = host) }
-    ) { _ ->
+    ) { paddingValues ->
+        // paddingValues는 Scaffold의 inset을 처리하기 위해 사용
         LoginScreen(
             state = state,
             onPhoneChange = viewModel::onPhoneChange,

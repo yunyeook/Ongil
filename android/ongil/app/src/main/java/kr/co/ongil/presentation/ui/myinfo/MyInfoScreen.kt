@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.PhoneInTalk
 import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ fun MyInfoScreen(
     uiState: MyInfoUiState,
     onEditInfo: () -> Unit,
     onRecentCalls: () -> Unit,
+    onVoipCallTest: () -> Unit = {},
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -106,6 +108,12 @@ fun MyInfoScreen(
                 title = "최근 통화목록",
                 leading = { Icon(Icons.Outlined.Phone, contentDescription = null, tint = Color(0xFF2F3A3A)) },
                 onClick = onRecentCalls
+            )
+            MenuItem(
+                title = "VoIP 통화 테스트",
+                leading = { Icon(Icons.Outlined.PhoneInTalk, contentDescription = null, tint = Color(0xFF8CA898)) },
+                onClick = onVoipCallTest,
+                titleColor = Color(0xFF8CA898)
             )
             MenuItem(
                 title = "로그아웃",

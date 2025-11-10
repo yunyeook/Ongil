@@ -1,6 +1,7 @@
 package kr.co.ongil.data.repository
 
 import android.util.Log
+import kr.co.ongil.data.model.call.*
 import kr.co.ongil.data.datasource.remote.api.CallApi
 import kr.co.ongil.data.model.call.CallDetailDto
 import kr.co.ongil.data.model.call.CallLogDto
@@ -71,5 +72,102 @@ class CallRepositoryImpl @Inject constructor(
             val apiException = ErrorHandler.handleException(e)
             Result.failure(apiException)
         }
+    }
+
+    override suspend fun createVoipCall(
+        receiverId: Long,
+        callType: String
+    ): Result<VoipCallDto> = try {
+        val response = callApi.createVoipCall(
+            CallCreateRequest(receiverId = receiverId, callType = callType)
+        )
+
+        if (response.isSuccessful) {
+            val body = response.body()
+            val data = body?.data
+            if (data != null) Result.success(data)
+            else Result.failure(IllegalStateException("empty body"))
+        } else {
+            val ex = ErrorHandler.handleException(retrofit2.HttpException(response))
+            Result.failure(ex)
+        }
+    } catch (e: Exception) {
+        Result.failure(ErrorHandler.handleException(e))
+    }
+
+    override suspend fun updateVoipCallStatus(
+        callId: Long,
+        status: String
+    ): Result<VoipCallDto> = try {
+        val response = callApi.updateVoipCallStatus(
+            callId,
+            CallStatusUpdateRequest(status)
+        )
+
+        if (response.isSuccessful) {
+            val body = response.body()
+            val data = body?.data
+            if (data != null) Result.success(data)
+            else Result.failure(IllegalStateException("empty body"))
+        } else {
+            val ex = ErrorHandler.handleException(retrofit2.HttpException(response))
+            Result.failure(ex)
+        }
+    } catch (e: Exception) {
+        Result.failure(ErrorHandler.handleException(e))
+    }
+
+    override suspend fun getVoipCall(
+        callId: Long
+    ): Result<VoipCallDto> = try {
+        val response = callApi.getVoipCall(callId)
+
+        if (response.isSuccessful) {
+            val body = response.body()
+            val data = body?.data
+            if (data != null) Result.success(data)
+            else Result.failure(IllegalStateException("empty body"))
+        } else {
+            val ex = ErrorHandler.handleException(retrofit2.HttpException(response))
+            Result.failure(ex)
+        }
+    } catch (e: Exception) {
+        Result.failure(ErrorHandler.handleException(e))
+    }
+
+    override suspend fun sendVoipCallStartLocation(
+        callId: Long,
+        request: CallStartLocationRequest
+    ): Result<Unit> = try {
+        val response = callApi.sendVoipCallStartLocation(callId, request)
+
+        if (response.isSuccessful) {
+            Result.success(Unit)
+        } else {
+            val ex = ErrorHandler.handleException(retrofit2.HttpException(response))
+            Result.failure(ex)
+        }
+    } catch (e: Exception) {
+        Result.failure(ErrorHandler.handleException(e))
+    }
+
+    override suspend fun getTurnCredentials(): Result<TurnCredentialsDto> = try {
+        val response = callApi.getTurnCredentials()
+
+        if (response.isSuccessful) {
+            val body = response.body()
+            val data = body?.data
+            if (data != null) {
+                Result.success(data)
+            } else {
+                Result.failure(IllegalStateException("empty body"))
+            }
+        } else {
+            Result.failure(
+                ErrorHandler.handleException(retrofit2.HttpException(response))
+            )
+        }
+    } catch (e: Exception) {
+        Result.failure(ErrorHandler.handleException(e))
     }
 }
