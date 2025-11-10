@@ -22,8 +22,13 @@ spring:
       max-lifetime: 1800000
 
   # RabbitMQ
+#  rabbitmq:
+#    host: ${RABBITMQ_HOST:localhost}
+#    port: ${RABBITMQ_PORT:5672}
+#    username: ${RABBITMQ_USERNAME:guest}
+#    password: ${RABBITMQ_PASSWORD:guest}
   rabbitmq:
-    host: rabbitmq             
+    host: rabbitmq
     port: 5672
     username: admin
     password: password

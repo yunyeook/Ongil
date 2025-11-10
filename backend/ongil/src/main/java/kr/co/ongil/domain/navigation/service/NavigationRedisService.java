@@ -28,7 +28,7 @@ public class NavigationRedisService {
     /**
      * 길안내 세션 저장
      */
-    public void saveNavigationSession(Long patientId, String navigationId, RouteResponse route) {
+    public void saveNavigationSession(Integer patientId, String navigationId, RouteResponse route) {
         String key = NAV_KEY_PREFIX + patientId;
 
         try {
@@ -50,7 +50,7 @@ public class NavigationRedisService {
     /**
      * 길안내 세션 전체 조회
      */
-    public Map<Object, Object> getNavigationSession(Long patientId) {
+    public Map<Object, Object> getNavigationSession(Integer patientId) {
         String key = NAV_KEY_PREFIX + patientId;
         Map<Object, Object> session = redisTemplate.opsForHash().entries(key);
 
@@ -64,7 +64,7 @@ public class NavigationRedisService {
     /**
      * 경로 조회
      */
-    public RouteResponse getRoute(Long patientId) {
+    public RouteResponse getRoute(Integer patientId) {
         String key = NAV_KEY_PREFIX + patientId;
         Object routeObject = redisTemplate.opsForHash().get(key, "route");
 
@@ -73,7 +73,7 @@ public class NavigationRedisService {
         }
 
         try {
-            // 👈 convertValue 사용으로 변경
+            //  convertValue 사용으로 변경
             return objectMapper.convertValue(routeObject, RouteResponse.class);
         } catch (Exception e) {
             log.error("경로 역직렬화 실패", e);
@@ -81,18 +81,11 @@ public class NavigationRedisService {
         }
     }
 
-    /**
-     * 길안내 중인지 여부
-     */
-    public boolean hasActiveSession(Long patientId) {
-        String key = NAV_KEY_PREFIX + patientId;
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
-    }
 
     /**
      * navigationId 조회
      */
-    public String getNavigationId(Long patientId) {
+    public String getNavigationId(Integer patientId) {
         String key = NAV_KEY_PREFIX + patientId;
         Object navigationId = redisTemplate.opsForHash().get(key, "navigation_id");
         return navigationId != null ? navigationId.toString() : null;
@@ -101,7 +94,7 @@ public class NavigationRedisService {
     /**
      * 길안내 종료
      */
-    public void endSession(Long patientId) {
+    public void endSession(Integer patientId) {
         String key = NAV_KEY_PREFIX + patientId;
         redisTemplate.delete(key);
         log.info("Redis 길안내 세션 종료: patientId={}", patientId);

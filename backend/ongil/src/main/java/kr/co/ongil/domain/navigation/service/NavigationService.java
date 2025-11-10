@@ -16,6 +16,7 @@ import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
+import kr.co.ongil.global.util.PatientAccessValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,8 @@ public class NavigationService {
     private final NotificationService notificationService;
     private final RelationshipRepository relationshipRepository;
     private final UserRepository userRepository;
+    private final PatientAccessValidator patientAccessValidator;
+
 
 
     /**
@@ -40,13 +43,16 @@ public class NavigationService {
      */
     public NavigationSessionResponse startNavigation(StartNavigationRequest request,Integer senderId) {
 
+        // 1. 접근 권한 확인
+        patientAccessValidator.validateAccess(request.patientId(),senderId);
+
+        // 2. 기존 Redis 세션 삭제
+        navigaionRedisService.endSession(request.patientId());
+
         log.info("길안내 시작: patientId={}, initiatedBy={}",
             request.patientId(), request.initiatedBy());
 
-        if (navigaionRedisService.hasActiveSession(request.patientId())) {
-            throw new BusinessException(ErrorCode.NAVIGATION_ALREADY_ACTIVE);
-        }
-        // 1. 경로 조회 (TMAP API 호출)
+        // 3. 경로 조회 (TMAP API 호출)
         RouteResponse route = mapService.getPedestrianRoute(
             request.startLocation().latitude(),
             request.startLocation().longitude(),
@@ -56,11 +62,11 @@ public class NavigationService {
             request.endLocation().name()
         );
 
-        // 2. 시간 계산
+        // 4. 시간 계산
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expectedArrival = now.plusSeconds(route.totalTime());
 
-        // 3. DB 로그 생성 (ID 생성)
+        // 5. DB 로그 생성 (ID 생성)
         NavigationLog navigationLog = novigationLogService.createLog(
             request.patientId(),
             route,
@@ -68,13 +74,13 @@ public class NavigationService {
             request.initiatedBy()
         );
 
-        // 4. navigationId 생성
+        // 6. navigationId 생성
         String navigationId = navigationLog.getId().toString();
 
-        // 5. Redis에 세션 저장 (patientId를 키로 사용)
+        // 7. Redis에 세션 저장 (patientId를 키로 사용)
         navigaionRedisService.saveNavigationSession(request.patientId(), navigationId, route);
 
-        // 6. 보호자에게 알림 전송
+        // 8. 보호자에게 알림 전송
         sendNavigationStartNotification(userRepository.findById(senderId).get());
 
 

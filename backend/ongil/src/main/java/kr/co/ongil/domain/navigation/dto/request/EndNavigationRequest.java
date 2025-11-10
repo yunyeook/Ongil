@@ -7,11 +7,11 @@ public record EndNavigationRequest (
 
     @NotNull
     @Schema(description = "환자 ID", example = "1")
-    Long patientId,
+    Integer patientId,
 
     @NotNull
     @Schema(description = "네비게이션 ID", example = "1")
-    Long navigationId,
+    Integer navigationId,
 
     @Schema(description = "정상 종료 여부", example = "true")
     Boolean isSuccessful

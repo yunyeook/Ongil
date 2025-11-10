@@ -20,7 +20,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public class NavigationLog extends BaseEntity {
 
     @Column(nullable = false)
-    private Long patientId;
+    private Integer patientId;
 
     // 출발지
     @Column(nullable = false, length = 100)
@@ -61,7 +61,7 @@ public class NavigationLog extends BaseEntity {
 
     // 길안내 로그 생성
     public static NavigationLog of(
-        Long patientId,
+        Integer patientId,
         RouteResponse route,
         LocalDateTime startedAt,
         String initiatedBy
