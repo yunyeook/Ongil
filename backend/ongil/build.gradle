@@ -52,6 +52,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis' // Lettuce + auto-config
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.session:spring-session-data-redis'
+    implementation 'org.redisson:redisson-spring-boot-starter:3.23.4'
 
     // --- S3 ---
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.4.0'
@@ -64,6 +65,9 @@ dependencies {
 
     // --- FCM ---
     implementation 'com.google.firebase:firebase-admin:9.2.0'
+
+    // --- RabbitMQ ---
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
 
     // --- 기타 ---
     compileOnly 'org.projectlombok:lombok'

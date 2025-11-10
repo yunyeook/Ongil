@@ -129,7 +129,76 @@ public class NotificationService {
         return NotificationResponse.from(notification);
     }
 
+    /**
+     * 통화 알림 히스토리 저장 (DB만, FCM 없음)
+     * 나중에 사용자가 "누가 전화했는지", "부재중 전화" 등을 조회할 수 있도록 기록
+     */
+    @Transactional
+    public NotificationResponse saveCallNotificationHistory(NotificationRequest request, Integer callId) {
+        User sender = userRepository.findById(request.senderId()).orElse(null);
+        User receiver = userRepository.findById(request.receiverId()).orElse(null);
 
+        if (sender == null || receiver == null) {
+            log.warn("통화 알림 히스토리 저장 실패 - 사용자 없음: senderId={}, receiverId={}",
+                request.senderId(), request.receiverId());
+            return null;
+        }
+
+        Notification notification = Notification.of(request, sender, receiver);
+        notificationRepository.save(notification);
+
+        // FCM은 보내지 않음 (히스토리 저장만)
+        log.info("통화 알림 히스토리 저장 완료 - type: {}, callId: {}, senderId: {}, receiverId: {}",
+            request.type(), callId, sender.getId(), receiver.getId());
+
+        return NotificationResponse.from(notification);
+    }
+
+    // 1) 전화가 왔어요 (수신자에게) - 히스토리만 저장
+    @Transactional
+    public void notifyCallIncoming(Integer callerId, Integer calleeId, Integer callId, String callerName) {
+        NotificationRequest req = NotificationRequest.of(
+            "전화가 왔어요",
+            callerName + " 님의 전화",
+            NotificationType.CALL_INCOMING,
+            callerId,   // sender
+            calleeId    // receiver
+        );
+        saveCallNotificationHistory(req, callId);
+        log.info("[NOTI] CALL_INCOMING 히스토리 저장: callerId={}, calleeId={}, callId={}", callerId, calleeId, callId);
+    }
+
+    // 2) 부재중 통화 (연결 없이 종료 → 수신자에게) - DB + FCM 둘 다
+    @Transactional
+    public void notifyCallMissed(Integer callerId, Integer calleeId, Integer callId, String callerName) {
+        NotificationRequest req = NotificationRequest.of(
+            "부재중 통화",
+            callerName + " 님의 전화를 받지 못했어요",
+            NotificationType.CALL_MISSED,
+            callerId,   // sender(이벤트 유발자 의미)
+            calleeId    // receiver(못 받은 사람)
+        );
+        // 부재중은 FCM 푸시도 전송
+        createNotifications(req, callId);
+        log.info("[NOTI] CALL_MISSED 알림 전송: callerId={}, calleeId={}, callId={}", callerId, calleeId, callId);
+    }
+
+    // 3) 통화 거절 (수신자가 거절 → 발신자에게) - 히스토리만 저장
+    @Transactional
+    public void notifyCallRejected(Integer callerId, Integer calleeId, Integer callId, String calleeName) {
+        NotificationRequest req = NotificationRequest.of(
+            "통화 거절",
+            calleeName + " 님이 통화를 거절했습니다",
+            NotificationType.CALL_REJECTED,
+            calleeId,   // sender(거절한 쪽)
+            callerId    // receiver(발신자)
+        );
+//        // 거절 알림 발송
+//        createNotifications(req, callId);
+        // 거절은 히스토리만 저장
+        saveCallNotificationHistory(req, callId);
+        log.info("[NOTI] CALL_REJECTED 히스토리 저장: callerId={}, calleeId={}, callId={}", callerId, calleeId, callId);
+    }
 
     private void validatePagingParameters(int page, int size) {
         if (page < 1) {
