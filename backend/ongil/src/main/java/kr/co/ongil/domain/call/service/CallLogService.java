@@ -38,19 +38,40 @@ public class CallLogService {
      */
     @Transactional
     public CallLogResponse createCallLog(Integer callerId, CreateCallLogRequest request) {
-        log.info("기본 전화 통화 로그 생성: callerId={}, receiverId={}", callerId, request.receiverId());
+        log.info("기본 전화 통화 로그 생성: callerId={}, receiverId={}, receiverPhoneNumber={}",
+            callerId, request.receiverId(), request.receiverPhoneNumber());
 
-        // 1. 발신자/수신자 조회
+        // 1. 발신자 조회
         User caller = userRepository.findById(callerId)
             .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        User receiver = userRepository.findById(request.receiverId())
-            .orElseThrow(() -> new BusinessException(ErrorCode.RECEIVER_NOT_FOUND));
+        // 2. 수신자 조회 (receiverId 또는 receiverPhoneNumber 중 하나 필수)
+        User receiver = null;
+        String receiverPhoneNumber = null;
 
-        // 2. 통화 로그 생성
+        if (request.receiverId() != null) {
+            // 앱 내 사용자와 통화
+            receiver = userRepository.findById(request.receiverId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.RECEIVER_NOT_FOUND));
+        } else if (request.receiverPhoneNumber() != null && !request.receiverPhoneNumber().isBlank()) {
+            // 시스템 다이얼러로 통화 (전화번호로 조회 시도)
+            receiverPhoneNumber = request.receiverPhoneNumber();
+            receiver = userRepository.findByPhoneNumber(receiverPhoneNumber).orElse(null);
+
+            if (receiver != null) {
+                log.info("전화번호로 앱 사용자 찾음: phoneNumber={}, userId={}", receiverPhoneNumber, receiver.getId());
+            } else {
+                log.info("전화번호가 앱에 미가입: phoneNumber={}", receiverPhoneNumber);
+            }
+        } else {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        // 3. 통화 로그 생성
         CallLog callLog = CallLog.builder()
             .caller(caller)
             .receiver(receiver)
+            .receiverPhoneNumber(receiverPhoneNumber)
             .callType(request.callType())
             .source(request.source())
             .patientState(request.patientState())

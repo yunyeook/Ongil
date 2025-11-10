@@ -42,7 +42,21 @@ public class CallLogController {
      * 기본 전화 통화 로그 생성 (클라이언트 콜백)
      */
     @PostMapping
-    @Operation(summary = "통화 로그 생성", description = "기본 전화 통화 종료 후 클라이언트가 통화 로그를 등록합니다.")
+    @Operation(
+        summary = "통화 로그 생성",
+        description = """
+            기본 전화 통화 종료 후 클라이언트가 통화 로그를 등록합니다.
+
+            **수신자 지정 방법:**
+            - 앱 내 사용자와 통화: `receiverId` 사용
+            - 시스템 다이얼러로 외부 번호 통화: `receiverPhoneNumber` 사용
+            - `receiverId`와 `receiverPhoneNumber` 중 **하나는 필수**입니다.
+
+            **전화번호 자동 매칭:**
+            - `receiverPhoneNumber`로 전화번호를 보내면, 해당 번호가 앱에 가입되어 있는지 자동으로 확인합니다.
+            - 가입된 사용자면 자동으로 연결되고, 미가입자면 전화번호만 저장됩니다.
+            """
+    )
     public ApiResponse<CallLogResponse> createCallLog(
         @Valid @RequestBody CreateCallLogRequest request
     ) {
