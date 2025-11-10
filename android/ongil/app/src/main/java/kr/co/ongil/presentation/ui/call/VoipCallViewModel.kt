@@ -491,15 +491,17 @@ class VoipCallViewModel @Inject constructor(
 
                     // ICE candidate 리스너 설정
                     val myUserId = currentUserId
-                    if (myUserId != null) {
+                    val callerId = call.callerId
+
+                    if (myUserId != null && callerId != null) {
                         setupIceCandidateListener(
                             call.id,
                             call.sessionId,
                             myUserId,
-                            call.callerId  // 수신자 입장에서 상대방은 발신자
+                            callerId  // 수신자 입장에서 상대방은 발신자
                         )
                     } else {
-                        Log.w(TAG, "[CALLEE] currentUserId is null, ICE candidate 전송 불가")
+                        Log.w(TAG, "[CALLEE] currentUserId=$myUserId, callerId=$callerId - ICE candidate 전송 불가")
                     }
                 }
                 .onFailure { e ->
