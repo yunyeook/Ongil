@@ -174,7 +174,8 @@ fun MainScreen(
                 .fillMaxSize()
                 .imePadding(),
             paddingValues = paddingValues, // ✅ paddingValues를 파라미터로 전달
-            startDestination = if (isLoggedIn == true) Routes.Home.route else Routes.Login.route
+            startDestination = if (isLoggedIn == true) Routes.Home.route else Routes.Login.route,
+            authViewModel = authViewModel // ✅ AuthStateViewModel 전달
         )
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -157,6 +158,14 @@ fun OngilBrandHeaderCard(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(CircleShape)
+                                )
+                            } else {
+                                // 프로필 이미지가 없을 때 기본 아이콘 표시
+                                Icon(
+                                    imageVector = Icons.Outlined.Person,
+                                    contentDescription = "프로필",
+                                    tint = OngilAccent,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
