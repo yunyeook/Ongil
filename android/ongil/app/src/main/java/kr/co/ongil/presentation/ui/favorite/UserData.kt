@@ -11,7 +11,8 @@ data class PatientData(
     val name: String,
     val phoneNumber: String,
     val relationshipType: String,
-    val profileImage: String? = null
+    val profileImage: String? = null,
+    val isDefault: Boolean = false
 )
 
 
@@ -22,6 +23,7 @@ fun RelationshipDto.toPatientData(): PatientData {
         name = relationshipName,
         phoneNumber = counterpartUser.phoneNumber,
         relationshipType = relationshipType,
-        profileImage = counterpartUser.profileImage
+        profileImage = counterpartUser.profileImage,
+        isDefault = isDefault
     )
 }

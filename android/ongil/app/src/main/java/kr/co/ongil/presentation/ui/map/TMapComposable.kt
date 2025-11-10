@@ -24,6 +24,7 @@ import com.skt.tmap.TMapView
 import com.skt.tmap.overlay.TMapMarkerItem
 import kr.co.ongil.common.location.LocationPoint
 import kr.co.ongil.common.location.LocationStreamBus
+import kr.co.ongil.data.model.location.Coordinate
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +48,10 @@ fun TMapComposable(
     enableTracking: Boolean = false,
     onMapReady: ((TMapView) -> Unit)? = null,
     myLocationTrigger: Int = 0,
-    northUpTrigger: Int = 0  // 북쪽 고정 트리거
+    northUpTrigger: Int = 0,  // 북쪽 고정 트리거
+    userType: String = "",
+    selectedPatientId: String? = null,
+    patientLocations: Map<Long, Coordinate> = emptyMap()  // 환자 위치 (보호자용)
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -58,13 +62,17 @@ fun TMapComposable(
     var isFollowMode by remember { mutableStateOf(true) }
     var currentPulseFrame by remember { mutableStateOf(0) }
 
-    // 펄스 애니메이션 프레임 생성
+    // 환자 마커 (보호자는 선택된 환자 1명만)
+    var patientMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
+
+    // 펄스 애니메이션 프레임 생성 (녹색)
     val pulseFrames = remember {
-        createPulseFrames(context)
+        createPulseFrames(context, color = "#5C7165")
     }
 
-    // 펄스 애니메이션 루프
+    // 펄스 애니메이션 루프 (환자용 - 자신의 위치)
     LaunchedEffect(locationMarker) {
+        if (userType != "PATIENT") return@LaunchedEffect  // 환자만 자신의 위치 표시
         val marker = locationMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
@@ -77,6 +85,25 @@ fun TMapComposable(
                 tmap.updateTMapMarkerItem(marker)
             } catch (e: Exception) {
                 Log.e("TMapComposable", "펄스 애니메이션 업데이트 실패", e)
+            }
+        }
+    }
+
+    // 펄스 애니메이션 루프 (보호자용 - 선택된 환자의 위치)
+    LaunchedEffect(patientMarker) {
+        if (userType != "GUARDIAN") return@LaunchedEffect  // 보호자만 환자 위치 표시
+        val marker = patientMarker ?: return@LaunchedEffect
+        val tmap = mapView ?: return@LaunchedEffect
+
+        while (true) {
+            delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
+            currentPulseFrame = (currentPulseFrame + 1) % pulseFrames.size
+
+            try {
+                marker.icon = pulseFrames[currentPulseFrame]
+                tmap.updateTMapMarkerItem(marker)
+            } catch (e: Exception) {
+                Log.e("TMapComposable", "환자 마커 애니메이션 업데이트 실패", e)
             }
         }
     }
@@ -121,18 +148,40 @@ fun TMapComposable(
         }
     }
 
-    // 내 위치 버튼 클릭 시 현재 위치로 이동
+    // 내 위치 버튼 클릭 시 위치로 이동
     LaunchedEffect(myLocationTrigger) {
         if (myLocationTrigger > 0) {
             val tmap = mapView
-            val p = lastPoint
-            if (tmap != null && p != null) {
-                try {
-                    isFollowMode = true
-                    tmap.setCenterPoint(p.latitude, p.longitude)
-                    Log.d("TMapComposable", "🎯 팔로우 모드 활성화")
-                } catch (e: Exception) {
-                    Log.e("TMapComposable", "❌ 위치 이동 실패", e)
+
+            if (userType == "GUARDIAN") {
+                // 보호자: 선택된 환자의 위치로 이동
+                val selectedId = selectedPatientId?.toLongOrNull()
+                val selectedPatientLocation = if (selectedId != null) {
+                    patientLocations[selectedId]
+                } else {
+                    null
+                }
+
+                if (tmap != null && selectedPatientLocation != null) {
+                    try {
+                        isFollowMode = true
+                        tmap.setCenterPoint(selectedPatientLocation.latitude, selectedPatientLocation.longitude)
+                        Log.d("TMapComposable", "🎯 선택된 환자 위치로 이동")
+                    } catch (e: Exception) {
+                        Log.e("TMapComposable", "❌ 환자 위치 이동 실패", e)
+                    }
+                }
+            } else {
+                // 환자: 자신의 위치로 이동
+                val p = lastPoint
+                if (tmap != null && p != null) {
+                    try {
+                        isFollowMode = true
+                        tmap.setCenterPoint(p.latitude, p.longitude)
+                        Log.d("TMapComposable", "🎯 내 위치로 이동")
+                    } catch (e: Exception) {
+                        Log.e("TMapComposable", "❌ 위치 이동 실패", e)
+                    }
                 }
             }
         }
@@ -154,13 +203,91 @@ fun TMapComposable(
         }
     }
 
-    // 위치 업데이트 수신
-    LaunchedEffect(mapView, isMapInitialized, enableTracking) {
+    // 환자 위치 업데이트 (보호자용 - 선택된 환자만)
+    LaunchedEffect(mapView, isMapInitialized, patientLocations, selectedPatientId, userType) {
+        Log.d("TMapComposable", "환자 위치 업데이트 LaunchedEffect 실행: isMapInitialized=$isMapInitialized, userType=$userType, selectedPatientId=$selectedPatientId, patientLocations=${patientLocations.keys}")
+
+        if (!isMapInitialized) {
+            Log.d("TMapComposable", "지도 초기화 안됨")
+            return@LaunchedEffect
+        }
+        if (userType != "GUARDIAN") {
+            Log.d("TMapComposable", "보호자 아님: $userType")
+            return@LaunchedEffect
+        }
+        val tmap = mapView ?: run {
+            Log.d("TMapComposable", "mapView가 null")
+            return@LaunchedEffect
+        }
+        val selectedId = selectedPatientId?.toLongOrNull()
+        Log.d("TMapComposable", "선택된 환자 ID: $selectedId")
+
+        try {
+            // 선택된 환자의 위치만 가져오기
+            val selectedPatientLocation = if (selectedId != null) {
+                patientLocations[selectedId]
+            } else {
+                null
+            }
+
+            Log.d("TMapComposable", "선택된 환자 위치: $selectedPatientLocation")
+
+            if (selectedPatientLocation != null) {
+                // 선택된 환자의 마커가 없으면 생성
+                if (patientMarker == null) {
+                    val markerBitmap = pulseFrames[currentPulseFrame]
+                    val marker = TMapMarkerItem().apply {
+                        id = "selected_patient_marker"
+                        tMapPoint = TMapPoint(selectedPatientLocation.latitude, selectedPatientLocation.longitude)
+                        icon = markerBitmap
+                    }
+
+                    try {
+                        tmap.addTMapMarkerItem(marker)
+                        patientMarker = marker
+                        // 첫 환자 위치로 지도 이동
+                        tmap.setCenterPoint(selectedPatientLocation.latitude, selectedPatientLocation.longitude)
+                        tmap.setZoomLevel(17)
+                        Log.d("TMapComposable", "✅ 선택된 환자 마커 생성: patientId=$selectedId, lat=${selectedPatientLocation.latitude}, lon=${selectedPatientLocation.longitude}")
+                    } catch (e: Exception) {
+                        Log.e("TMapComposable", "선택된 환자 마커 추가 실패", e)
+                    }
+                } else {
+                    // 기존 마커 위치 업데이트
+                    try {
+                        patientMarker?.tMapPoint = TMapPoint(selectedPatientLocation.latitude, selectedPatientLocation.longitude)
+                        patientMarker?.let { tmap.updateTMapMarkerItem(it) }
+                        Log.d("TMapComposable", "📍 선택된 환자 마커 업데이트: patientId=$selectedId, lat=${selectedPatientLocation.latitude}, lon=${selectedPatientLocation.longitude}")
+                    } catch (e: Exception) {
+                        Log.e("TMapComposable", "선택된 환자 마커 업데이트 실패", e)
+                    }
+                }
+            } else {
+                Log.d("TMapComposable", "선택된 환자 위치 정보 없음")
+                // 선택된 환자가 없거나 위치 정보가 없으면 마커 제거
+                patientMarker?.let { marker ->
+                    try {
+                        tmap.removeTMapMarkerItem(marker.id)
+                        patientMarker = null
+                        Log.d("TMapComposable", "🗑️ 선택된 환자 마커 삭제")
+                    } catch (e: Exception) {
+                        Log.e("TMapComposable", "선택된 환자 마커 삭제 실패", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("TMapComposable", "❌ 선택된 환자 위치 업데이트 실패", e)
+        }
+    }
+
+    // 위치 업데이트 수신 (환자만 자신의 위치 표시)
+    LaunchedEffect(mapView, isMapInitialized, enableTracking, userType) {
         if (!isMapInitialized || !enableTracking) return@LaunchedEffect
+        if (userType != "PATIENT") return@LaunchedEffect  // 환자만 자신의 위치 표시
         val tmap = mapView ?: return@LaunchedEffect
         val bus = locationBus ?: return@LaunchedEffect
 
-        Log.d("TMapComposable", "📡 위치 업데이트 수신 시작")
+        Log.d("TMapComposable", "📡 위치 업데이트 수신 시작 (환자)")
         bus.updates.collectLatest { point ->
             try {
                 // 정확도 필터링
@@ -259,7 +386,8 @@ fun TMapComposable(
  */
 private fun createPulseFrames(
     context: android.content.Context,
-    frameCount: Int = 8
+    frameCount: Int = 8,
+    color: String = "#5C7165"
 ): List<Bitmap> {
     val frames = mutableListOf<Bitmap>()
     val markerSizeDp = 24
@@ -285,7 +413,7 @@ private fun createPulseFrames(
         }
         val pulseAlpha = (180 * (1f - fadeProgress)).toInt()
         val pulsePaint = Paint().apply {
-            color = Color.parseColor("#5C7165")
+            this.color = Color.parseColor(color)
             alpha = pulseAlpha
             style = Paint.Style.STROKE
             strokeWidth = 10f
@@ -295,7 +423,7 @@ private fun createPulseFrames(
 
         // 메인 마커 (그림자 포함)
         val shadowPaint = Paint().apply {
-            color = Color.WHITE
+            this.color = Color.WHITE
             style = Paint.Style.FILL
             isAntiAlias = true
             setShadowLayer(6f, 0f, 0f, Color.argb(150, 0, 0, 0))
@@ -304,7 +432,7 @@ private fun createPulseFrames(
 
         // 마커 내부
         val fillPaint = Paint().apply {
-            color = Color.parseColor("#5c7165")
+            this.color = Color.parseColor(color)
             style = Paint.Style.FILL
             isAntiAlias = true
         }

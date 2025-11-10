@@ -28,6 +28,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import kr.co.ongil.data.model.location.Coordinate
+import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
 import kr.co.ongil.presentation.ui.common.map.CircleFloatingButton
 import kr.co.ongil.presentation.ui.common.map.SearchBar
 import kr.co.ongil.presentation.ui.common.map.SearchListItem
@@ -43,13 +45,27 @@ import kr.co.ongil.service.location.LocationTrackingService
 fun MapScreen(
     modifier: Modifier = Modifier,
     paddingValues: PaddingValues,
-    viewModel: MapViewModel = hiltViewModel()
+    viewModel: MapViewModel = hiltViewModel(),
+    authViewModel: AuthStateViewModel
 ) {
     // ViewModel 상태
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val finalSearchResults by viewModel.finalSearchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
+
+    // 사용자 정보
+    val currentUserInfo by authViewModel.currentUserInfo.collectAsState(initial = null)
+    val userType = currentUserInfo?.getOrNull()?.userType ?: ""
+    val selectedPatientId by authViewModel.selectedPatientId.collectAsState()
+
+    // 환자 위치 정보 (보호자용)
+    val patientLocations by authViewModel.patientLocations.collectAsState()
+
+    // 환자 위치 변경 모니터링
+    LaunchedEffect(patientLocations) {
+        android.util.Log.d("MapScreen", "patientLocations 변경: ${patientLocations.keys}, userType: $userType, selectedPatientId: $selectedPatientId")
+    }
 
     // 도움요청 토글 상태
     var isSosEnabled by remember { mutableStateOf(false) }
@@ -95,19 +111,19 @@ fun MapScreen(
             }
         }
 
-        // 위치 추적 서비스 시작 (권한이 있을 때만)
-        LaunchedEffect(hasLocationPermission) {
-            if (!inPreview && hasLocationPermission) {
+        // 위치 추적 서비스 시작 (환자만, 권한이 있을 때)
+        LaunchedEffect(hasLocationPermission, userType) {
+            if (!inPreview && hasLocationPermission && userType == "PATIENT") {
                 val intent = Intent(context, LocationTrackingService::class.java)
                     .setAction(LocationTrackingService.ACTION_START)
                 ContextCompat.startForegroundService(context, intent)
             }
         }
 
-        // 화면 종료 시 위치 추적 서비스 중지
-        DisposableEffect(Unit) {
+        // 화면 종료 시 위치 추적 서비스 중지 (환자만)
+        DisposableEffect(userType) {
             onDispose {
-                if (!inPreview) {
+                if (!inPreview && userType == "PATIENT") {
                     val stop = Intent(context, LocationTrackingService::class.java)
                         .setAction(LocationTrackingService.ACTION_STOP)
                     context.startService(stop)
@@ -129,7 +145,10 @@ fun MapScreen(
                     modifier = Modifier.fillMaxSize(),
                     locationBus = if (inPreview) null else viewModel.locationBus,
                     enableTracking = !inPreview,
-                    myLocationTrigger = myLocationTrigger
+                    myLocationTrigger = myLocationTrigger,
+                    userType = userType,
+                    selectedPatientId = selectedPatientId,
+                    patientLocations = patientLocations
                 )
             }
 
@@ -240,8 +259,9 @@ fun MapScreen(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun MapScreenPreview() {
-    MapScreen(paddingValues = PaddingValues())
-}
+// Preview는 AuthStateViewModel이 필요하여 주석 처리
+//@Preview(showBackground = true)
+//@Composable
+//fun MapScreenPreview() {
+//    MapScreen(paddingValues = PaddingValues())
+//}
