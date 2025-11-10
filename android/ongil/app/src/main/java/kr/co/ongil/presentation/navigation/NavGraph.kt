@@ -170,6 +170,20 @@ fun AppNavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCallDetail = { callId ->
                     navController.navigate(Routes.CallDetail.createRoute(callId))
+                },
+                onNavigateToVoipCall = { targetName, targetPhone, receiverId ->
+                    // 재통화: isCaller = true, callId는 새로 생성됨
+                    val userType = "CAREGIVER"  // TODO: 실제 사용자 role로 변경
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = targetName,
+                            targetPhone = targetPhone,
+                            isCaller = true,
+                            userType = userType,
+                            callId = null,
+                            receiverId = receiverId
+                        )
+                    )
                 }
             )
         }
