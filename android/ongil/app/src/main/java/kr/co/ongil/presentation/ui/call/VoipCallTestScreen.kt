@@ -17,7 +17,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun VoipCallTestScreen(
-    viewModel: VoipCallViewModel = hiltViewModel()
+    viewModel: VoipCallViewModel = hiltViewModel(),
+    onNavigateToIncomingCall: (callId: Long, callerName: String, callerPhone: String, userType: String) -> Unit = { _, _, _, _ -> }
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -122,7 +123,26 @@ fun VoipCallTestScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        Text("테스트 순서", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        // UI 테스트 버튼
+        Button(
+            onClick = {
+                // 테스트용: 수신 화면으로 이동
+                onNavigateToIncomingCall(
+                    state.call?.id ?: 999L,
+                    "김할머니",
+                    "010-1234-5678",
+                    selectedUserType
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8CA898))
+        ) {
+            Text("📱 수신 화면 테스트 (UI)")
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("API 테스트 순서", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
         // 발신 테스트 버튼
         Button(

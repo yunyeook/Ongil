@@ -184,9 +184,71 @@ fun AppNavGraph(
 
         // VoIP 통화 테스트 화면
         composable(Routes.VoipCallTest.route) {
-            VoipCallTestScreen()
+            VoipCallTestScreen(
+                onNavigateToIncomingCall = { callId, callerName, callerPhone, userType ->
+                    navController.navigate(
+                        Routes.VoipIncomingCall.createRoute(callId, callerName, callerPhone, userType)
+                    )
+                }
+            )
         }
 
+        // VoIP 수신 화면
+        composable(Routes.VoipIncomingCall.route) { backStackEntry ->
+            val callId = backStackEntry.arguments?.getString("callId")?.toLongOrNull() ?: 0L
+            val callerName = backStackEntry.arguments?.getString("callerName") ?: ""
+            val callerPhone = backStackEntry.arguments?.getString("callerPhone") ?: ""
+            val userType = backStackEntry.arguments?.getString("userType") ?: "PATIENT"
+
+            kr.co.ongil.presentation.ui.call.VoipIncomingCallScreen(
+                callerName = callerName,
+                callerPhone = callerPhone,
+                callId = callId,
+                userType = userType,
+                onAccepted = {
+                    // 수락 시 통화 중 화면으로 이동
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = callerName,
+                            targetPhone = callerPhone,
+                            isCaller = false,
+                            userType = userType,
+                            callId = callId,
+                            receiverId = null
+                        )
+                    ) {
+                        popUpTo(Routes.VoipIncomingCall.route) { inclusive = true }
+                    }
+                },
+                onDeclined = {
+                    // 거절 시 이전 화면으로
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // VoIP 통화 중 화면
+        composable(Routes.VoipCall.route) { backStackEntry ->
+            val targetName = backStackEntry.arguments?.getString("targetName") ?: ""
+            val targetPhone = backStackEntry.arguments?.getString("targetPhone") ?: ""
+            val isCaller = backStackEntry.arguments?.getString("isCaller")?.toBoolean() ?: false
+            val userType = backStackEntry.arguments?.getString("userType") ?: "PATIENT"
+            val callId = backStackEntry.arguments?.getString("callId")?.toLongOrNull()
+            val receiverId = backStackEntry.arguments?.getString("receiverId")?.toLongOrNull()
+
+            kr.co.ongil.presentation.ui.call.VoipCallScreen(
+                targetName = targetName,
+                targetPhone = targetPhone,
+                isCaller = isCaller,
+                userType = userType,
+                callId = callId?.takeIf { it > 0 },
+                receiverId = receiverId?.takeIf { it > 0 },
+                onCallEnded = {
+                    // 통화 종료 시 이전 화면으로
+                    navController.popBackStack()
+                }
+            )
+        }
 
     }
 }
