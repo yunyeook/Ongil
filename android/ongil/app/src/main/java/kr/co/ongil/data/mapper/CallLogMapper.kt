@@ -10,11 +10,11 @@ import java.time.format.DateTimeFormatter
  * CallLogDto를 RecentCallUi로 변환
  */
 fun CallLogDto.toRecentCallUi(currentUserId: Long): RecentCallUi {
-    // 발신자/수신자 이름 (서버에서 직접 제공)
+    // 발신자/수신자 이름만 표시 (전화번호 제거)
     val nameOrNumber = if (caller.id == currentUserId) {
-        "${receiver.name} (${receiver.phoneNumber})"
+        receiver.name
     } else {
-        "${caller.name} (${caller.phoneNumber})"
+        caller.name
     }
 
     // CallType 매핑
