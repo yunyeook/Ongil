@@ -24,15 +24,6 @@ public class SafezoneService {
     private final UserRepository userRepository;
     private final PatientAccessValidator patientAccessValidator;
 
-    // 상수 정의
-    private static final double FIRST_MIN = 50.0;
-    private static final double FIRST_MAX = 150.0;
-    private static final double SECOND_MIN_BASE = 200.0;
-    private static final double SECOND_MAX = 500.0;
-    private static final double THIRD_MIN_BASE = 550.0;
-    private static final double THIRD_MAX = 1000.0;
-    private static final double BOUNDARY_GAP = 50.0;
-
     /**
      * 안전범위 생성 또는 전체 교체 (Upsert)
      */
@@ -47,26 +38,23 @@ public class SafezoneService {
         // 2. 권한 검증 (본인 또는 보호자)
         validateAccess(patientId, callerId);
 
-        // 3. 유효성 검증
-        validateBoundaries(request.firstBoundary(), request.secondBoundary(), request.thirdBoundary());
-
-        // 4. 기존 안전범위 조회 또는 신규 생성
+        // 3. 기존 안전범위 조회 또는 신규 생성
         SafeZone safeZone = safeZoneRepository.findByPatientId(patientId)
             .orElseGet(() -> SafeZone.builder()
                 .patient(patient)
                 .build());
 
-        // 5. 값 업데이트
+        // 4. 값 업데이트
         safeZone.updateBoundaries(
             request.firstBoundary(),
-            request.secondBoundary() != null ? request.secondBoundary() : 500.0,
-            request.thirdBoundary() != null ? request.thirdBoundary() : 1000.0
+            request.secondBoundary(),
+            request.thirdBoundary()
         );
 
         safeZone.updateTimes(
             request.firstTime(),
-            request.secondTime() != null ? request.secondTime() : 30,
-            request.thirdTime() != null ? request.thirdTime() : 15
+            request.secondTime(),
+            request.thirdTime()
         );
 
         // 6. 저장
@@ -120,15 +108,7 @@ public class SafezoneService {
         SafeZone safeZone = safeZoneRepository.findByPatientId(patientId)
             .orElseThrow(() -> new BusinessException(ErrorCode.SAFEZONE_SETTING_NOT_FOUND));
 
-        // 3. 수정할 값 결정
-        Double newFirst = request.firstBoundary() != null ? request.firstBoundary() : safeZone.getFirstBoundary();
-        Double newSecond = request.secondBoundary() != null ? request.secondBoundary() : safeZone.getSecondBoundary();
-        Double newThird = request.thirdBoundary() != null ? request.thirdBoundary() : safeZone.getThirdBoundary();
-
-        // 4. 유효성 검증
-        validateBoundaries(newFirst, newSecond, newThird);
-
-        // 5. 업데이트
+        // 3. 업데이트
         safeZone.updateBoundaries(
             request.firstBoundary(),
             request.secondBoundary(),
@@ -171,28 +151,6 @@ public class SafezoneService {
             });
 
         return SafeZoneResponse.from(safeZone);
-    }
-
-    /**
-     * 안전범위 경계값 유효성 검증 (동적 검증)
-     */
-    private void validateBoundaries(Double first, Double second, Double third) {
-        // 1단계 검증
-        if (first < FIRST_MIN || first > FIRST_MAX) {
-            throw new BusinessException(ErrorCode.SAFEZONE_BOUNDARY_OUT_OF_RANGE);
-        }
-
-        // 2단계 검증 (동적 최소값: 1단계 + 50)
-        double secondMin = Math.max(SECOND_MIN_BASE, first + BOUNDARY_GAP);
-        if (second < secondMin || second > SECOND_MAX) {
-            throw new BusinessException(ErrorCode.SAFEZONE_BOUNDARY_OUT_OF_RANGE);
-        }
-
-        // 3단계 검증 (동적 최소값: 2단계 + 50)
-        double thirdMin = Math.max(THIRD_MIN_BASE, second + BOUNDARY_GAP);
-        if (third < thirdMin || third > THIRD_MAX) {
-            throw new BusinessException(ErrorCode.SAFEZONE_BOUNDARY_OUT_OF_RANGE);
-        }
     }
 
     /**
