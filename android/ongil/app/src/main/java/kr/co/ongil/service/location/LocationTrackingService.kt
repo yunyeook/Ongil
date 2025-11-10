@@ -20,9 +20,18 @@ import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.common.location.LocationPoint
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+import kr.co.ongil.data.datasource.remote.api.MapApi
+import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.presentation.MainActivity
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Fused Location 기반 포그라운드 서비스
@@ -41,11 +50,17 @@ class LocationTrackingService : Service() {
     }
 
     @Inject lateinit var locationBus: LocationStreamBus
+    @Inject lateinit var mapApi: MapApi
+    @Inject lateinit var userDataStoreManager: UserDataStoreManager
+
     private lateinit var fusedClient: FusedLocationProviderClient
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var locationJob: Job? = null
     private var isTrackingActive = false
+
+    // 마지막으로 백엔드에 전송한 위치
+    private var lastSentLocation: LocationPoint? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -169,8 +184,13 @@ class LocationTrackingService : Service() {
                         speedMps = loc.speed,
                         timeMillis = loc.time
                     )
+
+                    // LocationBus에 위치 전송 (기존 로직 유지)
                     locationBus.emit(point)
                     Log.d(TAG, "LocationBus에 위치 전송 완료")
+
+                    // 백엔드로 위치 전송 (환자일 때만, 5m 이상 이동 시)
+                    sendLocationToBackend(point)
                 }
             } ?: run {
                 Log.w(TAG, "LocationResult에 lastLocation이 null입니다")
@@ -208,5 +228,72 @@ class LocationTrackingService : Service() {
             setShowBadge(false)
         }
         nm.createNotificationChannel(channel)
+    }
+
+    /**
+     * 백엔드로 위치 전송 (환자일 때만, 1m 이상 이동 시)
+     */
+    private suspend fun sendLocationToBackend(currentLocation: LocationPoint) {
+        try {
+            // 1. 사용자 타입 확인 (환자만 전송)
+            val userType = userDataStoreManager.getUserType().first()
+            if (userType != "PATIENT") {
+                return
+            }
+
+            // 2. 1m 이상 이동했는지 확인
+            val lastLocation = lastSentLocation
+            if (lastLocation != null) {
+                val distance = calculateDistance(
+                    lastLocation.latitude, lastLocation.longitude,
+                    currentLocation.latitude, currentLocation.longitude
+                )
+                if (distance < 1.0) {
+                    Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 전송 건너뜀")
+                    return
+                }
+                Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 백엔드로 전송")
+            } else {
+                Log.d(TAG, "첫 위치 - 백엔드로 전송")
+            }
+
+            // 3. 환자 ID 가져오기
+            val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            if (patientId == null) {
+                Log.w(TAG, "patientId를 가져올 수 없습니다")
+                return
+            }
+
+            // 4. 백엔드로 전송
+            val request = UpdateLocationRequest(
+                latitude = currentLocation.latitude,
+                longitude = currentLocation.longitude
+            )
+
+            val response = mapApi.updatePatientLocation(patientId, request)
+            Log.d(TAG, "위치 전송 성공: ${response.message}")
+
+            // 5. 마지막 전송 위치 업데이트
+            lastSentLocation = currentLocation
+
+        } catch (e: Exception) {
+            Log.e(TAG, "백엔드 위치 전송 실패", e)
+        }
+    }
+
+    /**
+     * 두 지점 간 거리 계산 (Haversine formula, 미터 단위)
+     */
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val earthRadius = 6371000.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+
+        val a = sin(dLat / 2).pow(2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(dLon / 2).pow(2)
+
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return earthRadius * c
     }
 }
