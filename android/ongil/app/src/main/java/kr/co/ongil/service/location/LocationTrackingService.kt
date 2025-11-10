@@ -57,6 +57,7 @@ class LocationTrackingService : Service() {
     @Inject lateinit var locationBus: LocationStreamBus
     @Inject lateinit var mapApi: MapApi
     @Inject lateinit var userDataStoreManager: UserDataStoreManager
+    @Inject lateinit var gpsWebSocketManager: kr.co.ongil.data.websocket.GpsWebSocketManager
 
     private lateinit var fusedClient: FusedLocationProviderClient
 
@@ -260,9 +261,16 @@ class LocationTrackingService : Service() {
 
     /**
      * 백엔드로 위치 전송 (환자일 때만, 1m 이상 이동 시)
+     * 길찾기 중(WebSocket 연결 중)에는 WebSocket으로 전송하므로 API 호출 안 함
      */
     private suspend fun sendLocationToBackend(currentLocation: LocationPoint) {
         try {
+            // 0. 길찾기 중이면 WebSocket으로 전송하므로 API 호출 스킵
+            if (gpsWebSocketManager.isConnected()) {
+                Log.d(TAG, "WebSocket 연결 중 - API 전송 건너뜀")
+                return
+            }
+
             // 1. 사용자 타입 확인 (환자만 전송)
             val userType = userDataStoreManager.getUserType().first()
             if (userType != "PATIENT") {

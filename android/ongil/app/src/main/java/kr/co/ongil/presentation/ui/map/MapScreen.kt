@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MyLocation
@@ -53,7 +54,16 @@ fun MapScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val finalSearchResults by viewModel.finalSearchResults.collectAsState()
+    val selectedPlaceDetail by viewModel.selectedPlaceDetail.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
+    val navigationRoute by viewModel.navigationRoute.collectAsState()
+    val isNavigating = navigationRoute != null
+    val showArrivalDialog by viewModel.showArrivalDialog.collectAsState()
+
+    // 경로 변경 감지 로그
+    LaunchedEffect(navigationRoute) {
+        android.util.Log.d("MapScreen", "navigationRoute 변경됨: ${navigationRoute != null}, 포인트 수: ${navigationRoute?.path?.size}")
+    }
 
     // 사용자 정보
     val currentUserInfo by authViewModel.currentUserInfo.collectAsState(initial = null)
@@ -150,6 +160,7 @@ fun MapScreen(
                     locationBus = if (inPreview) null else viewModel.locationBus,
                     enableTracking = !inPreview,
                     myLocationTrigger = myLocationTrigger,
+                    route = navigationRoute,
                     northUpTrigger = northUpTrigger,
                     userType = userType,
                     selectedPatientId = selectedPatientId,
@@ -182,16 +193,16 @@ fun MapScreen(
                             .heightIn(max = 400.dp)
                             .background(
                                 Color.White,
-                                androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                                RoundedCornerShape(8.dp)
                             )
                     ) {
                         items(searchResults) { place ->
                             SearchListItem(
                                 placeName = place.name,
                                 address = place.address,
-                                etaText = "", // TODO: 거리 계산
+                                etaText = place.distance?.let { "${it}m" } ?: "",
                                 onClick = {
-                                    // TODO: 지도에 마커 표시 및 이동
+                                    viewModel.onPlaceClick(place.id)
                                     viewModel.clearSearch()
                                 }
                             )
@@ -266,10 +277,117 @@ fun MapScreen(
                 searchResults = results,
                 onDismiss = { viewModel.closeFinalSearchResults() },
                 onPlaceClick = { place ->
-                    // TODO: 지도에 마커 표시 및 이동
+                    viewModel.onPlaceClick(place.id)
                     viewModel.closeFinalSearchResults()
                 }
             )
+        }
+
+        // 장소 상세 정보 Floating Panel
+        if (selectedPlaceDetail != null || isNavigating) {
+            MapFloatingPanel(
+                placeDetail = selectedPlaceDetail,
+                route = navigationRoute,
+                isNavigating = isNavigating,
+                onDismiss = { viewModel.closePlaceDetail() },
+                onSetDestinationClick = {
+                    selectedPlaceDetail?.let { detail ->
+                        android.util.Log.d("MapScreen", "목적지 설정 클릭: ${detail.name}")
+                        viewModel.startNavigation(
+                            endLatitude = detail.latitude,
+                            endLongitude = detail.longitude,
+                            endName = detail.name
+                        )
+                        viewModel.closePlaceDetail()
+                    }
+                },
+                onCallClick = {
+                    selectedPlaceDetail?.phoneNumber?.let { phoneNumber ->
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = android.net.Uri.parse("tel:$phoneNumber")
+                        }
+                        context.startActivity(intent)
+
+                        // 통화 로그 기록
+                        viewModel.logCall(phoneNumber)
+                    }
+                },
+                onFavoriteClick = {
+                    // TODO: 즐겨찾기 추가
+                },
+                onStopNavigationClick = {
+                    android.util.Log.d("MapScreen", "길안내 중지")
+                    viewModel.stopNavigation()
+                }
+            )
+        }
+
+        // 목적지 도착 확인 모달
+        if (showArrivalDialog) {
+            ArrivalConfirmationDialog(
+                onConfirm = {
+                    viewModel.confirmArrival()
+                },
+                onDismiss = {
+                    viewModel.dismissArrivalDialog()
+                }
+            )
+        }
+    }
+}
+
+/**
+ * 목적지 도착 확인 다이얼로그
+ */
+@Composable
+private fun ArrivalConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+            ) {
+                androidx.compose.material3.Text(
+                    text = "목적지 도착했습니다.\n길안내를 종료하시겠습니까?",
+                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = Color.Black
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        androidx.compose.material3.Text("취소")
+                    }
+                    androidx.compose.material3.Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF8A9A8A),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        androidx.compose.material3.Text("확인")
+                    }
+                }
+            }
         }
     }
 }
