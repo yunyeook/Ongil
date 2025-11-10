@@ -21,8 +21,11 @@ public record CallLogResponse(
     @Schema(description = "발신자 정보")
     CallResponse.UserInfo caller,
 
-    @Schema(description = "수신자 정보")
+    @Schema(description = "수신자 정보 (앱 내 사용자인 경우)")
     CallResponse.UserInfo receiver,
+
+    @Schema(description = "수신자 전화번호 (외부 번호인 경우)", example = "01012345678")
+    String receiverPhoneNumber,
 
     @Schema(description = "통화 유형", example = "NORMAL")
     CallType callType,
@@ -65,7 +68,8 @@ public record CallLogResponse(
         return new CallLogResponse(
             callLog.getId(),
             CallResponse.UserInfo.from(callLog.getCaller()),
-            CallResponse.UserInfo.from(callLog.getReceiver()),
+            callLog.getReceiver() != null ? CallResponse.UserInfo.from(callLog.getReceiver()) : null,
+            callLog.getReceiverPhoneNumber(),
             callLog.getCallType(),
             callLog.getSource(),
             callLog.getPatientState(),
