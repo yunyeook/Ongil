@@ -11,6 +11,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.PUT
+import retrofit2.http.Query
 
 /**
  * 통화 관련 API
@@ -21,10 +22,14 @@ interface CallApi {
 
     /**
      * 나의 통화 기록 목록 조회
-     * GET /api/v1/calls/log
+     * GET /api/v1/calls/log?page=0&size=20
      */
-    @GET("/api/v1/calls/log")
-    suspend fun getCallLogs(): Response<CallLogResponse>
+    @GET("/api/v1/calls/logs")
+    suspend fun getCallLogs(
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 20,
+        @Query("sort") sort: String = "createdAt,desc"
+    ): Response<CallLogResponse>
 
     /**
      * 특정 통화 기록 상세 조회
