@@ -95,19 +95,25 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val sessionId = data["sessionId"]
         val callerName = data["callerName"] ?: "알 수 없음"
         val callerPhone = data["callerPhone"] ?: ""
-        val callType = data["callType"] ?: "NORMAL"
+        val userType = data["userType"] ?: "PATIENT"   // 👈 추가 (GUARDIAN이면 그 값 들어오게)
 
         Log.d("FCM", "callId: $callId, sessionId: $sessionId, caller: $callerName")
 
-        // MainActivity를 열고 VoipIncomingCallScreen으로 이동
-        val intent = android.content.Intent(this, kr.co.ongil.presentation.MainActivity::class.java).apply {
-            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val intent = android.content.Intent(
+            this,
+            kr.co.ongil.presentation.MainActivity::class.java
+        ).apply {
+            addFlags(
+                android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP // 👈 이거 추가
+            )
             putExtra("type", "INCOMING_CALL")
             putExtra("callId", callId)
             putExtra("sessionId", sessionId)
             putExtra("callerName", callerName)
             putExtra("callerPhone", callerPhone)
-            putExtra("callType", callType)
+            putExtra("userType", userType) // 👈 이걸로 NavGraph 쪽 VoipIncomingCall로 전달
         }
 
         startActivity(intent)
