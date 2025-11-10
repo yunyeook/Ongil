@@ -1,5 +1,4 @@
 package kr.co.ongil.presentation.ui.call
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,7 +9,10 @@ import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,15 +38,16 @@ fun VoipIncomingCallScreen(
     callerPhone: String,
     callId: Long,
     userType: String, // "PATIENT" or "GUARDIAN"
+    sessionId: String? = null,  // FCM에서 전달된 sessionId
     onAccepted: () -> Unit,     // 수락 후 통화중 화면으로 전환용 콜백
     onDeclined: () -> Unit,     // 거절/종료 후 나가기 콜백
     viewModel: VoipCallViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // 진입 시 해당 call 정보 로드
-    LaunchedEffect(callId) {
-        viewModel.loadIncomingCall(callId)
+    // FCM 수신 통화 초기화 (WebSocket 연결 + 통화 정보 로드)
+    LaunchedEffect(callId, sessionId) {
+        viewModel.initIncomingCall(callId, sessionId)
     }
 
     Surface(

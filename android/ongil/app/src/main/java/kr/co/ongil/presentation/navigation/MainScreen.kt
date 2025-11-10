@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kr.co.ongil.presentation.IncomingCallData
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
@@ -25,6 +27,8 @@ import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
 
 @Composable
 fun MainScreen(
+    incomingCallData: IncomingCallData? = null,
+    onIncomingCallHandled: () -> Unit = {},
     authViewModel: AuthStateViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
@@ -49,6 +53,25 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Routes.Home.route
     val baseRoute = currentRoute.substringBefore("/").substringBefore("?")
+
+    // FCM 수신 통화 처리: incomingCallData가 있으면 VoipIncomingCallScreen으로 이동
+    LaunchedEffect(incomingCallData) {
+        incomingCallData?.let { data ->
+            val route = Routes.VoipIncomingCall.createRoute(
+                callId = data.callId,
+                callerName = data.callerName,
+                callerPhone = data.callerPhone,
+                userType = data.userType,
+                sessionId = data.sessionId
+            )
+            navController.navigate(route) {
+                launchSingleTop = true
+            }
+            // navigate가 완료된 후에 clear 처리
+            kotlinx.coroutines.delay(100)
+            onIncomingCallHandled()
+        }
+    }
 
     // ✅ 인증 관련 라우트(앱 크롬 숨김 대상)
     val authRoutes = setOf(

@@ -77,9 +77,18 @@ sealed class Routes(val route: String) {
     object VoipCallTest : Routes("voip_call_test")
 
     // VoIP 수신 화면
-    object VoipIncomingCall : Routes("voip_incoming_call/{callId}/{callerName}/{callerPhone}/{userType}") {
-        fun createRoute(callId: Long, callerName: String, callerPhone: String, userType: String): String {
-            return "voip_incoming_call/$callId/$callerName/$callerPhone/$userType"
+    object VoipIncomingCall : Routes("voip_incoming_call/{callId}/{callerName}/{callerPhone}/{userType}?sessionId={sessionId}") {
+        fun createRoute(
+            callId: Long,
+            callerName: String,
+            callerPhone: String,
+            userType: String,
+            sessionId: String? = null
+        ): String {
+            val encodedName = Uri.encode(callerName)
+            val encodedPhone = Uri.encode(callerPhone)
+            val base = "voip_incoming_call/$callId/$encodedName/$encodedPhone/$userType"
+            return if (sessionId != null) "$base?sessionId=$sessionId" else base
         }
     }
 

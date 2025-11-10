@@ -208,17 +208,32 @@ fun AppNavGraph(
         }
 
         // VoIP 수신 화면
-        composable(Routes.VoipIncomingCall.route) { backStackEntry ->
+        composable(
+            route = Routes.VoipIncomingCall.route,
+            arguments = listOf(
+                navArgument("callId") { type = NavType.StringType },
+                navArgument("callerName") { type = NavType.StringType },
+                navArgument("callerPhone") { type = NavType.StringType },
+                navArgument("userType") { type = NavType.StringType },
+                navArgument("sessionId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
             val callId = backStackEntry.arguments?.getString("callId")?.toLongOrNull() ?: 0L
             val callerName = backStackEntry.arguments?.getString("callerName") ?: ""
             val callerPhone = backStackEntry.arguments?.getString("callerPhone") ?: ""
             val userType = backStackEntry.arguments?.getString("userType") ?: "PATIENT"
+            val sessionId = backStackEntry.arguments?.getString("sessionId")
 
             kr.co.ongil.presentation.ui.call.VoipIncomingCallScreen(
                 callerName = callerName,
                 callerPhone = callerPhone,
                 callId = callId,
                 userType = userType,
+                sessionId = sessionId,
                 onAccepted = {
                     // 수락 시 통화 중 화면으로 이동
                     navController.navigate(

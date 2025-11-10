@@ -8,7 +8,8 @@ enum class MessageType {
     NAVIGATION_END,
     ABNORMAL_DETECTED,
     CALL_REQUEST,
-    SOS
+    SOS,
+    INCOMING_CALL
 }
 
 data class FcmMessage(
