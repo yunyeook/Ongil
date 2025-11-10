@@ -23,7 +23,6 @@ public enum NotificationType {
     ABNORMAL_DETECTED("이상행동 감지"),
 
     // Call 관련 알림
-//    CALL_REQUEST("통화 요청"),
     CALL_INCOMING("전화가 왔어요"),
     CALL_MISSED("부재중 통화"),
     CALL_REJECTED("통화 거절"), // 거절은 발신자에게만 전송

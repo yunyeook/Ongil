@@ -10,7 +10,7 @@ public record StartNavigationRequest (
 
     @NotNull
     @Schema(description = "환자 ID", example = "123")
-    Long patientId,
+    Integer patientId,
 
     @NotNull
     @Schema(description = "출발지 정보")
