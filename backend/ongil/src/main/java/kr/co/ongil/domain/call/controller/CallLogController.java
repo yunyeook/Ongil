@@ -12,6 +12,7 @@ import kr.co.ongil.global.common.response.ResponseMessage;
 import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -70,8 +71,12 @@ public class CallLogController {
      * 내 통화 로그 목록 조회 (페이징)
      */
     @GetMapping
-    @Operation(summary = "통화 로그 목록 조회", description = "사용자의 통화 로그 목록을 페이징하여 조회합니다.")
+    @Operation(
+        summary = "통화 로그 목록 조회",
+        description = "사용자의 통화 로그 목록을 페이징하여 조회합니다. 기본값: 페이지 크기 20, 최신순 정렬"
+    )
     public ApiResponse<List<CallLogResponse>> getCallLogs(
+        @ParameterObject
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         Integer userId = SecurityUtil.getCurrentUserId();
