@@ -36,6 +36,12 @@ public enum ResponseMessage {
     SAFEZONE_RESET("안전범위가 기본값으로 복원되었습니다."),
     SAFEZONE_FOUND("환자의 안전 범위와 시간이 성공적으로 조회되었습니다."),
 
+    // Abnormal
+    ABNORMAL_LIST_FOUND("이상탐지 기록이 조회되었습니다."),
+    ABNORMAL_DETAIL_FOUND("이상탐지 상세 정보가 조회되었습니다."),
+    ABNORMAL_CREATED("이상탐지 이벤트가 등록되었습니다."),
+
+
     // Relationship
     RELATIONSHIP_CREATED("관계가 성공적으로 생성되었습니다."),
     RELATIONSHIP_LIST_FOUND("관계 목록 조회가 성공적으로 완료되었습니다."),

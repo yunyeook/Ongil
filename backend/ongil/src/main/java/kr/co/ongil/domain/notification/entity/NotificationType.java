@@ -12,6 +12,8 @@ public enum NotificationType {
 
     // 안전범위 관련 알림
     SAFEZONE_EXIT("안전범위 이탈"),
+    WANDER("배회 감지"),
+    DEVIATE_FROM_THE_PATH("길찾기 중 경로 이탈"),
 
     // 길찾기 관련 알림
     NAVIGATION_START("길안내 시작"),
