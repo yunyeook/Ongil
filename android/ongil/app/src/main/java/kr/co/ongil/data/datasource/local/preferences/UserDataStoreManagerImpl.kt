@@ -87,6 +87,18 @@ class UserDataStoreManagerImpl @Inject constructor(
         }
     }
 
+    override fun getUserType(): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreKeys.USER_TYPE_KEY]
+        }
+    }
+
+    override suspend fun saveUserType(userType: String) {
+        dataStore.edit { preferences ->
+            preferences[DataStoreKeys.USER_TYPE_KEY] = userType
+        }
+    }
+
     override fun getSelectedPatientId(): Flow<String?> {
         return dataStore.data.map { preferences ->
             preferences[DataStoreKeys.SELECTED_PATIENT_ID_KEY]

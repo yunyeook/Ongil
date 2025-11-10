@@ -16,6 +16,7 @@ import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.datasource.remote.api.CallApi
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
+import kr.co.ongil.data.datasource.remote.api.MapApi
 import kr.co.ongil.data.datasource.remote.api.NotificationApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.datasource.remote.interceptor.AuthInterceptor
@@ -154,4 +155,9 @@ object NetworkModule {
     @Singleton
     fun provideNotificationApi(retrofit: Retrofit): NotificationApi =
         retrofit.create(NotificationApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideMapApi(retrofit: Retrofit): MapApi =
+        retrofit.create(MapApi::class.java)
 }

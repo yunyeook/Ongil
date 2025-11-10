@@ -53,6 +53,7 @@ import androidx.compose.foundation.border
 
 @Composable
 fun SearchUserScreen(
+    modifier: Modifier = Modifier,
     navController: NavController,
     viewModel: SearchUserViewModel
 ) {

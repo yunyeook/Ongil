@@ -1,11 +1,15 @@
 package kr.co.ongil.presentation.ui.auth
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import kr.co.ongil.presentation.navigation.Routes
 
-fun NavGraphBuilder.loginGraph(navController: NavHostController) {
+fun NavGraphBuilder.loginGraph(
+    navController: NavHostController
+) {
     composable(Routes.Login.route) {
         LoginRoute(
             onLoginSuccess = {

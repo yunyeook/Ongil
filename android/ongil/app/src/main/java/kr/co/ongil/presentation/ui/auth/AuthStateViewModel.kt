@@ -3,6 +3,7 @@ package kr.co.ongil.presentation.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -11,9 +12,12 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flow
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.model.user.UserDto
 import kr.co.ongil.domain.repository.UserRepository
+import kr.co.ongil.domain.repository.FavoriteRepository
+import kr.co.ongil.presentation.ui.favorite.PatientData
 import javax.inject.Inject
 
 /**
@@ -22,7 +26,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthStateViewModel @Inject constructor(
     private val userDataStoreManager: UserDataStoreManager,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val favoriteRepository: FavoriteRepository
 ) : ViewModel() {
 
 //    private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
@@ -63,6 +68,30 @@ class AuthStateViewModel @Inject constructor(
             flowOf(null)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val patientList: StateFlow<List<PatientData>> = currentUserId.flatMapLatest { userId ->
+        if (userId != null) {
+            flow {
+                val result = favoriteRepository.getMyRelationships()
+                emit(result.getOrNull() ?: emptyList())
+            }
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val selectedPatientId: StateFlow<String?> = userDataStoreManager.getSelectedPatientId()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /**
+     * 환자 선택 시 DataStore에 저장
+     */
+    fun selectPatient(patientId: String) {
+        viewModelScope.launch {
+            userDataStoreManager.saveSelectedPatientId(patientId)
+        }
+    }
 
 //    /**
 //     * 현재 로그인한 사용자 정보 로드
