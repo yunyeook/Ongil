@@ -228,16 +228,33 @@ class VoipCallViewModel @Inject constructor(
 
         Log.d(TAG, "=== [CALLEE] acceptCall: callId=$callId, userType=$userType")
 
-        // 환자인 경우 위치 전송
-        if (userType == "PATIENT") {
-            sendStartLocationOnce(callId)
-        }
+        viewModelScope.launch {
+            callRepository.updateVoipCallStatus(callId, "CONNECTED")
+                .onSuccess { updated ->
+                    currentCall = updated
+                    Log.d(TAG, "acceptCall: status=${updated.status}")
 
-        // WebRTC 초기화 (Offer 대기 준비)
-        setupWebRtcAsCallee()
+                    _uiState.update {
+                        it.copy(
+                            call = updated,
+                            message = "통화 연결됨"
+                        )
+                    }
 
-        _uiState.update {
-            it.copy(message = "통화 수락됨. 연결 대기 중...")
+                    if (userType == "PATIENT") {
+                        sendStartLocationOnce(callId)
+                    }
+
+                    setupWebRtcAsCallee()
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "acceptCall failed: ${e.message}", e)
+                    _uiState.update {
+                        it.copy(
+                            error = e.message ?: "통화 수락 실패"
+                        )
+                    }
+                }
         }
     }
 
@@ -409,24 +426,6 @@ class VoipCallViewModel @Inject constructor(
                 sdp = answerSdp.description
             )
             Log.d(TAG, "Answer sent to caller $senderId")
-
-            // 3. 수신자 측: Answer 전송 후 서버에 CONNECTED 상태 업데이트
-            viewModelScope.launch {
-                callRepository.updateVoipCallStatus(callId, "CONNECTED")
-                    .onSuccess { updated ->
-                        currentCall = updated
-                        Log.d(TAG, "✓ [CALLEE] Call status updated to CONNECTED after sending Answer")
-                        _uiState.update {
-                            it.copy(
-                                call = updated,
-                                message = "통화 연결됨"
-                            )
-                        }
-                    }
-                    .onFailure { e ->
-                        Log.e(TAG, "Failed to update call status: ${e.message}", e)
-                    }
-            }
         }
     }
 
@@ -438,22 +437,20 @@ class VoipCallViewModel @Inject constructor(
             type = org.webrtc.SessionDescription.Type.ANSWER,
             sdp = sdp
         )
-        Log.d(TAG, "✓ [CALLER] Remote Answer SDP set")
+        Log.d(TAG, "Remote Answer SDP set")
 
-        // 2. 발신자 측: 수신자가 이미 서버 상태를 CONNECTED로 업데이트했으므로
-        // 발신자는 서버 업데이트 없이 로컬 상태만 확인
+        // 2. 발신자 측: Answer를 받았으므로 통화 상태를 CONNECTED로 업데이트
+        val call = currentCall
+        if (call == null) {
+            Log.w(TAG, "currentCall is null, cannot update status to CONNECTED")
+            return
+        }
+
         viewModelScope.launch {
-            val call = currentCall
-            if (call == null) {
-                Log.w(TAG, "currentCall is null")
-                return@launch
-            }
-
-            // 최신 통화 정보 조회 (수신자가 이미 CONNECTED로 업데이트했을 것)
-            callRepository.getVoipCall(call.id)
+            callRepository.updateVoipCallStatus(call.id, "CONNECTED")
                 .onSuccess { updated ->
                     currentCall = updated
-                    Log.d(TAG, "✓ [CALLER] Call status is ${updated.status}")
+                    Log.d(TAG, "✓ [CALLER] Call status updated to CONNECTED")
                     _uiState.update {
                         it.copy(
                             call = updated,
@@ -462,7 +459,7 @@ class VoipCallViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    Log.e(TAG, "Failed to fetch call status: ${e.message}", e)
+                    Log.e(TAG, "Failed to update call status: ${e.message}", e)
                 }
         }
     }
