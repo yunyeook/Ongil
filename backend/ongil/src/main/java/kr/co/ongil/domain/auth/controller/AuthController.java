@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -30,8 +31,10 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
-    public ApiResponse<String> register(@Valid @ModelAttribute RegisterRequest request) {
-
+    public ApiResponse<String> register(@Valid @ModelAttribute RegisterRequest request,
+                                        @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
+        log.info("프로필 이미지: {}", profileImage);
+        request.setProfileImage(profileImage);
         authService.register(request);
         return ApiResponse.success(ResponseMessage.SIGNUP_SUCCESS);
     }

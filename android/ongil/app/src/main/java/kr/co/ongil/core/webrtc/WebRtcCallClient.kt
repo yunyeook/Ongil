@@ -41,8 +41,15 @@ class WebRtcCallClient @Inject constructor(
     // 로컬에서 생성된 ICE Candidate를 바깥(시그널링)으로 전달하는 콜백
     private var onLocalIceCandidate: ((IceCandidate) -> Unit)? = null
 
+    // PeerConnection 상태 변경 콜백
+    private var onPeerConnectionStateChange: ((PeerConnection.PeerConnectionState) -> Unit)? = null
+
     fun setOnLocalIceCandidateListener(listener: (IceCandidate) -> Unit) {
         onLocalIceCandidate = listener
+    }
+
+    fun setOnPeerConnectionStateChangeListener(listener: (PeerConnection.PeerConnectionState) -> Unit) {
+        onPeerConnectionStateChange = listener
     }
 
     /**
@@ -84,6 +91,7 @@ class WebRtcCallClient @Inject constructor(
 
                 override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
                     Log.d(TAG, "Peer connection state: $newState")
+                    onPeerConnectionStateChange?.invoke(newState)
                 }
 
                 override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {

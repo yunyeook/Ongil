@@ -21,6 +21,18 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
+  # RabbitMQ
+  rabbitmq:
+    host: rabbitmq             
+    port: 5672
+    username: admin
+    password: password
+    # 선택적 설정
+    virtual-host: /
+    connection-timeout: 10000
+    publisher-confirm-type: correlated
+    publisher-returns: true
+
   # JPA/Hibernate
   jpa:
     open-in-view: false
@@ -96,8 +108,6 @@ logging:
   level:
     root: INFO
     org.hibernate.SQL: WARN
-    io.lettuce.core: DEBUG
-    org.springframework.data.redis: DEBUG
 
 jwt:
   secret: ${JWT_SECRET}

@@ -1,27 +1,33 @@
 package kr.co.ongil.global.websocket;
 
+import kr.co.ongil.global.websocket.gps.GPSWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.*;
 
 /**
- * WebSocket + STOMP 설정
- * VoIP 통화 시그널링용
+ * WebSocket 설정
+ * - VoIP 통화 시그널링용 (STOMP)
+ * - GPS 추적용 (순수 WebSocket)
  */
 @Configuration
+@EnableWebSocket
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSocketConfigurer {
 
     private final AuthChannelInterceptor authChannelInterceptor;
+    private final GPSWebSocketHandler gpsWebSocketHandler;
+    private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+
+
+    // ========== STOMP WebSocket (VoIP용) ==========
 
     /**
-     * STOMP 엔드포인트 등록
-     * 클라이언트는 /api/ws로 연결 (WebMvcConfig의 /api/v1 prefix와 별개)
+     * STOMP 엔드포인트 등록 (VoIP용)
+     * 클라이언트는 /api/ws로 연결
      */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
@@ -31,7 +37,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     /**
-     * 메시지 브로커 설정
+     * 메시지 브로커 설정 (VoIP용)
      */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -47,10 +53,23 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     /**
-     * 인바운드 채널 설정 (인증 인터셉터 추가)
+     * 인바운드 채널 설정 (VoIP용 인증 인터셉터)
      */
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(authChannelInterceptor);
+    }
+
+    // ========== 순수 WebSocket (GPS용) ==========
+
+    /**
+     * 순수 WebSocket 핸들러 등록 (GPS 추적용)
+     * 환자가 길찾기 중일 때 실시간 GPS 전송
+     */
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(gpsWebSocketHandler, "/ws/gps")
+            .addInterceptors(webSocketAuthInterceptor)
+            .setAllowedOrigins("*");  // CORS 설정 (운영에서는 구체적으로 지정)
     }
 }

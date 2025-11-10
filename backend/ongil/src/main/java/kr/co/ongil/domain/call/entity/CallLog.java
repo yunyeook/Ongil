@@ -34,11 +34,17 @@ public class CallLog extends BaseEntity {
     private User caller;
 
     /**
-     * 수신자
+     * 수신자 (앱 내 사용자인 경우)
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "receiver_id", nullable = false)
+    @JoinColumn(name = "receiver_id")
     private User receiver;
+
+    /**
+     * 수신자 전화번호 (시스템 다이얼러로 외부 번호 통화 시)
+     */
+    @Column(name = "receiver_phone_number", length = 20)
+    private String receiverPhoneNumber;
 
     /**
      * 통화 유형 (일반, 긴급)
