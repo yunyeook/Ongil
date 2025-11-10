@@ -23,15 +23,15 @@ public class SafeZone extends BaseEntity {
 
     @Column(name = "first_boundary", nullable = false)
     @Builder.Default
-    private Double firstBoundary = 150.0;
+    private Double firstBoundary = 100.0;
 
     @Column(name = "second_boundary", nullable = false)
     @Builder.Default
-    private Double secondBoundary = 500.0;
+    private Double secondBoundary = 350.0;
 
     @Column(name = "third_boundary", nullable = false)
     @Builder.Default
-    private Double thirdBoundary = 1000.0;
+    private Double thirdBoundary = 700.0;
 
     @Column(name = "first_time", nullable = false)
     @Builder.Default
@@ -71,9 +71,9 @@ public class SafeZone extends BaseEntity {
     }
 
     public void resetToDefault() {
-        this.firstBoundary = 150.0;
-        this.secondBoundary = 500.0;
-        this.thirdBoundary = 1000.0;
+        this.firstBoundary = 100.0;
+        this.secondBoundary = 350.0;
+        this.thirdBoundary = 700.0;
         this.firstTime = 60;
         this.secondTime = 30;
         this.thirdTime = 15;
