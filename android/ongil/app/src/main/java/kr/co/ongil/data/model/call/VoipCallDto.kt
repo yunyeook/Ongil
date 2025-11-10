@@ -10,8 +10,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class VoipCallDto(
     val id: Long,                      // callId
-    val callerId: Long? = null,        // nullable로 변경
-    val receiverId: Long? = null,      // nullable로 변경
+    val caller: UserInfo? = null,      // 발신자 정보 객체
+    val receiver: UserInfo? = null,    // 수신자 정보 객체
     val callType: String? = null,      // NORMAL / EMERGENCY
     val status: String? = null,        // CREATED / RINGING / CONNECTED / ENDED / ...
     val sessionId: String? = null,     // WebRTC 세션 ID
@@ -19,4 +19,14 @@ data class VoipCallDto(
     val connectedAt: String? = null,
     val endedAt: String? = null,
     val duration: Long? = null
+) {
+    val callerId: Long? get() = caller?.id
+    val receiverId: Long? get() = receiver?.id
+}
+
+@Serializable
+data class UserInfo(
+    val id: Long,
+    val name: String? = null,
+    val phoneNumber: String? = null
 )
