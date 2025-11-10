@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
@@ -69,6 +70,9 @@ fun MapScreen(
 
     // 도움요청 토글 상태
     var isSosEnabled by remember { mutableStateOf(false) }
+
+    // 안전범위 표시 토글 상태
+    var showSafetyZones by remember { mutableStateOf(false) }
 
     Box(modifier) {
         // 내 위치 버튼 클릭 트리거
@@ -146,9 +150,11 @@ fun MapScreen(
                     locationBus = if (inPreview) null else viewModel.locationBus,
                     enableTracking = !inPreview,
                     myLocationTrigger = myLocationTrigger,
+                    northUpTrigger = northUpTrigger,
                     userType = userType,
                     selectedPatientId = selectedPatientId,
-                    patientLocations = patientLocations
+                    patientLocations = patientLocations,
+                    showSafetyZones = showSafetyZones
                 )
             }
 
@@ -203,6 +209,15 @@ fun MapScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.End
             ) {
+
+                // 안전범위 표시 토글 버튼
+                CircleFloatingButton(
+                    icon = Icons.Default.RadioButtonChecked,
+                    isToggled = showSafetyZones,
+                    onClick = {
+                        showSafetyZones = !showSafetyZones
+                    }
+                )
 
                 // 전화 걸기 버튼
                 CircleFloatingButton(
