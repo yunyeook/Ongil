@@ -110,4 +110,38 @@ class UserDataStoreManagerImpl @Inject constructor(
             preferences[DataStoreKeys.SELECTED_PATIENT_ID_KEY] = selectedPatientId
         }
     }
+
+    override suspend fun saveAbnormalDetection(isDetected: Boolean, stage: String, detectedTime: String) {
+        dataStore.edit { preferences ->
+            preferences[DataStoreKeys.IS_ABNORMAL_DETECTED_KEY] = isDetected
+            preferences[DataStoreKeys.ABNORMAL_STAGE_KEY] = stage
+            preferences[DataStoreKeys.ABNORMAL_DETECTED_TIME_KEY] = detectedTime
+        }
+    }
+
+    override fun getIsAbnormalDetected(): Flow<Boolean?> {
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreKeys.IS_ABNORMAL_DETECTED_KEY]
+        }
+    }
+
+    override fun getAbnormalStage(): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreKeys.ABNORMAL_STAGE_KEY]
+        }
+    }
+
+    override fun getAbnormalDetectedTime(): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreKeys.ABNORMAL_DETECTED_TIME_KEY]
+        }
+    }
+
+    override suspend fun clearAbnormalDetection() {
+        dataStore.edit { preferences ->
+            preferences.remove(DataStoreKeys.IS_ABNORMAL_DETECTED_KEY)
+            preferences.remove(DataStoreKeys.ABNORMAL_STAGE_KEY)
+            preferences.remove(DataStoreKeys.ABNORMAL_DETECTED_TIME_KEY)
+        }
+    }
 }

@@ -19,11 +19,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.graphics.toArgb
 import com.skt.tmap.TMapPoint
 import com.skt.tmap.TMapView
+import com.skt.tmap.overlay.TMapCircle
 import com.skt.tmap.overlay.TMapMarkerItem
+import com.skt.tmap.overlay.TMapPolyLine
 import kr.co.ongil.common.location.LocationPoint
 import kr.co.ongil.common.location.LocationStreamBus
+import kr.co.ongil.common.location.SafetyZoneMonitor
 import kr.co.ongil.data.model.location.Coordinate
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.delay
@@ -34,6 +38,8 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kr.co.ongil.presentation.ui.map.SafetyZoneConfig.CircleColors
+
 
 /**
  * TMap을 표시하는 Composable 컴포넌트
@@ -51,7 +57,8 @@ fun TMapComposable(
     northUpTrigger: Int = 0,  // 북쪽 고정 트리거
     userType: String = "",
     selectedPatientId: String? = null,
-    patientLocations: Map<Long, Coordinate> = emptyMap()  // 환자 위치 (보호자용)
+    patientLocations: Map<Long, Coordinate> = emptyMap(),  // 환자 위치 (보호자용)
+    showSafetyZones: Boolean = false  // 안전 범위 표시 여부
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -64,6 +71,12 @@ fun TMapComposable(
 
     // 환자 마커 (보호자는 선택된 환자 1명만)
     var patientMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
+
+    // 안전 범위 동심원
+    var safetyCircles by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // 홈 위치 마커 (안전 범위 기준점)
+    var homeMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
 
     // 펄스 애니메이션 프레임 생성 (녹색)
     val pulseFrames = remember {
@@ -193,13 +206,110 @@ fun TMapComposable(
             mapView?.let { tmap ->
                 try {
                     withContext(Dispatchers.Main) {
+                        val currentCenter = tmap.centerPoint
+                        if (currentCenter != null) {
+                            tmap.setCenterPoint(currentCenter.latitude, currentCenter.longitude, true)
+                        }
                         tmap.setCompassMode(false)
                     }
-                    Log.d("TMapComposable", "🧭 북쪽 고정")
+                    Log.d("TMapComposable", "🧭 북쪽 고정 완료")
                 } catch (e: Exception) {
                     Log.e("TMapComposable", "❌ 북쪽 고정 실패", e)
                 }
             }
+        }
+    }
+
+    // 안전 범위 동심원 표시/숨김 (PolyLine 사용)
+    LaunchedEffect(mapView, isMapInitialized, showSafetyZones) {
+        if (!isMapInitialized) return@LaunchedEffect
+        val tmap = mapView ?: return@LaunchedEffect
+
+        try {
+            withContext(Dispatchers.Main) {
+                if (showSafetyZones) {
+                    // 기존 폴리라인 제거
+                    safetyCircles.forEach { id ->
+                        try {
+                            tmap.removeTMapPolyLine(id)
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "폴리라인 제거 실패: $id", e)
+                        }
+                    }
+
+                    // 홈 위치로 지도 이동 (동심원이 보이도록)
+                    tmap.setCenterPoint(
+                        SafetyZoneConfig.HomeLocation.LATITUDE,
+                        SafetyZoneConfig.HomeLocation.LONGITUDE
+                    )
+                    tmap.setZoomLevel(14)
+                    Log.d("TMapComposable", "🏠 홈 위치로 이동: ${SafetyZoneConfig.HomeLocation.LATITUDE}, ${SafetyZoneConfig.HomeLocation.LONGITUDE}")
+
+                    val circles = mutableListOf<String>()
+
+                    // 3단계 - 빨간색
+                    val points3 = createCirclePoints(
+                        SafetyZoneConfig.HomeLocation.LATITUDE,
+                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        SafetyZoneMonitor.STAGE_3_RADIUS
+                    )
+                    val poly3 = TMapPolyLine("safety_zone_stage3", points3)
+                    poly3.setLineColor(CircleColors.stage3StrokeColor.toArgb())
+                    poly3.setLineWidth(0.5f)
+                    poly3.setOutLineColor(0xFFD40806.toInt())  // 빨간색 외곽선
+                    tmap.addTMapPolyLine(poly3)
+                    circles.add("safety_zone_stage3")
+                    Log.d("TMapComposable", "✅ 3단계 동심원 추가 (${SafetyZoneMonitor.STAGE_3_RADIUS}m, ${points3.size}개 점)")
+
+                    // 2단계 - 주황색
+                    val points2 = createCirclePoints(
+                        SafetyZoneConfig.HomeLocation.LATITUDE,
+                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        SafetyZoneMonitor.STAGE_2_RADIUS
+                    )
+                    val poly2 = TMapPolyLine("safety_zone_stage2", points2)
+                    poly2.setLineColor(CircleColors.stage2StrokeColor.toArgb())
+                    poly2.setLineWidth(0.5f)
+                    poly2.setOutLineColor(0xFF007BFF.toInt())  // 파란색 외곽선
+                    tmap.addTMapPolyLine(poly2)
+                    circles.add("safety_zone_stage2")
+                    Log.d("TMapComposable", "✅ 2단계 동심원 추가 (${SafetyZoneMonitor.STAGE_2_RADIUS}m, ${points2.size}개 점)")
+
+                    // 1단계 - 초록색
+                    val points1 = createCirclePoints(
+                        SafetyZoneConfig.HomeLocation.LATITUDE,
+                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        SafetyZoneMonitor.STAGE_1_RADIUS
+                    )
+                    val poly1 = TMapPolyLine("safety_zone_stage1", points1)
+                    poly1.setLineColor(CircleColors.stage1StrokeColor.toArgb())
+                    poly1.setLineWidth(0.5f)
+                    poly1.setOutLineColor(0xFF10C00A.toInt())  // 초록색 외곽선
+                    tmap.addTMapPolyLine(poly1)
+                    circles.add("safety_zone_stage1")
+                    Log.d("TMapComposable", "✅ 1단계 동심원 추가 (${SafetyZoneMonitor.STAGE_1_RADIUS}m, ${points1.size}개 점)")
+
+
+
+                    safetyCircles = circles
+                    Log.d("TMapComposable", "✅ 안전 범위 동심원 표시 완료 (총 ${circles.size}개)")
+                } else {
+                    // 폴리라인 숨김
+                    safetyCircles.forEach { id ->
+                        try {
+                            tmap.removeTMapPolyLine(id)
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "폴리라인 제거 실패: $id", e)
+                        }
+                    }
+                    safetyCircles = emptyList()
+
+
+                    Log.d("TMapComposable", "🗑️ 안전 범위 동심원 숨김 완료")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("TMapComposable", "❌ 안전 범위 동심원 처리 실패", e)
         }
     }
 
@@ -458,4 +568,28 @@ private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Do
 
     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return earthRadius * c
+}
+
+/**
+ * 원형 폴리라인 생성 (반경을 미터 단위로)
+ */
+private fun createCirclePoints(centerLat: Double, centerLon: Double, radiusMeters: Int, points: Int = 72): ArrayList<TMapPoint> {
+    val circlePoints = ArrayList<TMapPoint>()
+    val earthRadius = 6371000.0 // 지구 반경 (미터)
+
+    for (i in 0..points) {
+        val angle = Math.toRadians((i * 360.0 / points))
+
+        // 위도 변화량
+        val deltaLat = radiusMeters / earthRadius * cos(angle)
+        // 경도 변화량 (위도에 따라 조정)
+        val deltaLon = radiusMeters / earthRadius * sin(angle) / cos(Math.toRadians(centerLat))
+
+        val lat = centerLat + Math.toDegrees(deltaLat)
+        val lon = centerLon + Math.toDegrees(deltaLon)
+
+        circlePoints.add(TMapPoint(lat, lon))
+    }
+
+    return circlePoints
 }

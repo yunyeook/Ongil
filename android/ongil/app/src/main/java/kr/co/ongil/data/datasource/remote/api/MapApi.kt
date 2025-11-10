@@ -1,5 +1,7 @@
 package kr.co.ongil.data.datasource.remote.api
 
+import kr.co.ongil.data.model.map.ReportAbnormalRequest
+import kr.co.ongil.data.model.map.ReportAbnormalResponse
 import kr.co.ongil.data.model.map.SearchPlaceApiResponse
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.data.model.map.UpdateLocationResponse
@@ -37,4 +39,14 @@ interface MapApi {
         @Path("patientId") patientId: Long,
         @Body request: UpdateLocationRequest
     ): UpdateLocationResponse
+
+    /**
+     * 이상 탐지 이벤트 등록
+     * POST /api/v1/patients/{patientId}/abnormals
+     */
+    @POST("/api/v1/patients/{patientId}/abnormals")
+    suspend fun reportAbnormal(
+        @Path("patientId") patientId: Long,
+        @Body request: ReportAbnormalRequest
+    ): ReportAbnormalResponse
 }

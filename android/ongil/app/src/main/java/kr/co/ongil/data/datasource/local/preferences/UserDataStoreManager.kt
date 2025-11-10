@@ -55,4 +55,29 @@ interface UserDataStoreManager {
 
     fun getSelectedPatientId(): Flow<String?>
     suspend fun saveSelectedPatientId(selectedPatientId: String)
+
+    /**
+     * 이상 상황 감지 여부 저장
+     */
+    suspend fun saveAbnormalDetection(isDetected: Boolean, stage: String, detectedTime: String)
+
+    /**
+     * 이상 상황 감지 여부 불러오기
+     */
+    fun getIsAbnormalDetected(): Flow<Boolean?>
+
+    /**
+     * 이상 상황 단계 불러오기
+     */
+    fun getAbnormalStage(): Flow<String?>
+
+    /**
+     * 이상 상황 감지 시간 불러오기
+     */
+    fun getAbnormalDetectedTime(): Flow<String?>
+
+    /**
+     * 이상 상황 정보 초기화
+     */
+    suspend fun clearAbnormalDetection()
 }

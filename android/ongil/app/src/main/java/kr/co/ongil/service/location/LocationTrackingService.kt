@@ -23,10 +23,15 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.common.location.LocationPoint
+import kr.co.ongil.common.location.SafetyZoneMonitor
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.MapApi
+import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.presentation.MainActivity
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow
@@ -61,6 +66,19 @@ class LocationTrackingService : Service() {
 
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
+
+    // 안전 범위 모니터 (홈 위치는 나중에 사용자 설정으로 변경 가능)
+    private val safetyZoneMonitor = SafetyZoneMonitor(
+        homeLatitude = 37.50175822768635,
+        homeLongitude = 127.03958229478599,
+        onAbnormalDetected = { stage, durationMinutes ->
+            // 이상 판정 콜백
+            Log.w(TAG, "⚠️ 이상 상황 감지: ${stage}단계, ${durationMinutes}분 경과")
+            serviceScope.launch {
+                handleAbnormalDetection(stage, durationMinutes)
+            }
+        }
+    )
 
     override fun onCreate() {
         super.onCreate()
@@ -189,6 +207,16 @@ class LocationTrackingService : Service() {
                     locationBus.emit(point)
                     Log.d(TAG, "LocationBus에 위치 전송 완료")
 
+                    // 안전 범위 모니터링 (환자일 때만)
+                    val userType = userDataStoreManager.getUserType().first()
+                    if (userType == "PATIENT") {
+                        safetyZoneMonitor.updateLocation(
+                            point.latitude,
+                            point.longitude,
+                            point.timeMillis
+                        )
+                    }
+
                     // 백엔드로 위치 전송 (환자일 때만, 5m 이상 이동 시)
                     sendLocationToBackend(point)
                 }
@@ -295,5 +323,85 @@ class LocationTrackingService : Service() {
 
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return earthRadius * c
+    }
+
+    /**
+     * 이상 상황 감지 시 처리
+     * - 백엔드 API로 알림 전송
+     * - DataStore에 상태 저장
+     */
+    private suspend fun handleAbnormalDetection(stage: Int, durationMinutes: Long) {
+        try {
+            val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            if (patientId == null) {
+                Log.w(TAG, "patientId를 가져올 수 없습니다")
+                return
+            }
+
+            // 현재 위치 가져오기
+            val currentLocation = locationBus.lastValue
+            if (currentLocation == null) {
+                Log.w(TAG, "현재 위치를 가져올 수 없습니다")
+                return
+            }
+
+            // 홈 위치 (SafetyZoneMonitor와 동일한 값 사용)
+            val homeLatitude = 37.50175822768635
+            val homeLongitude = 127.03958229478599
+
+            // 거리 계산
+            val distance = calculateDistance(
+                homeLatitude, homeLongitude,
+                currentLocation.latitude, currentLocation.longitude
+            )
+
+            // 단계별 정보 (SafetyZoneMonitor의 상수 사용)
+            val (safeZoneLevel, boundaryRadius, thresholdMinutes) = when (stage) {
+                1 -> Triple("FIRST", SafetyZoneMonitor.STAGE_1_RADIUS.toDouble(), SafetyZoneMonitor.STAGE_1_THRESHOLD_MINUTES)
+                2 -> Triple("SECOND", SafetyZoneMonitor.STAGE_2_RADIUS.toDouble(), SafetyZoneMonitor.STAGE_2_THRESHOLD_MINUTES)
+                3 -> Triple("THIRD", SafetyZoneMonitor.STAGE_3_RADIUS.toDouble(), SafetyZoneMonitor.STAGE_3_THRESHOLD_MINUTES)
+                else -> {
+                    Log.e(TAG, "알 수 없는 단계: $stage")
+                    return
+                }
+            }
+
+            // API Request 생성
+            val request = ReportAbnormalRequest(
+                abnormalType = "WANDER", // 배회 감지
+                latitude = currentLocation.latitude,
+                longitude = currentLocation.longitude,
+                safeZoneLevel = safeZoneLevel,
+                centerLatitude = homeLatitude,
+                centerLongitude = homeLongitude,
+                distanceFromCenter = distance,
+                boundaryRadius = boundaryRadius,
+                elapsedTime = (durationMinutes * 60).toInt(), // 분 → 초
+                thresholdTime = (thresholdMinutes * 60).toInt() // 분 → 초
+            )
+
+            Log.w(TAG, """
+                ⚠️ 이상 상황 감지 - 백엔드로 전송
+                - 환자 ID: $patientId
+                - 단계: $safeZoneLevel ($boundaryRadius m)
+                - 연속 체류 시간: ${durationMinutes}분
+                - 현재 위치: ${currentLocation.latitude}, ${currentLocation.longitude}
+                - 중심으로부터 거리: ${String.format("%.1f", distance)}m
+            """.trimIndent())
+
+            // 백엔드 API 호출
+            val response = mapApi.reportAbnormal(patientId, request)
+            Log.i(TAG, "✅ 이상 상황 알림 전송 성공: ${response.message}")
+
+            // DataStore에 상태 저장
+            userDataStoreManager.saveAbnormalDetection(
+                isDetected = true,
+                stage = stage.toString(),
+                detectedTime = Instant.now().toString()
+            )
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 이상 상황 처리 실패", e)
+        }
     }
 }
