@@ -4,6 +4,7 @@ import kr.co.ongil.data.model.call.*
 import kr.co.ongil.data.model.call.ApiResponse
 import kr.co.ongil.data.model.call.CallCreateRequest
 import kr.co.ongil.data.model.call.CallDetailResponse
+import kr.co.ongil.data.model.call.CallLogRequest
 import kr.co.ongil.data.model.call.CallLogResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -66,4 +67,13 @@ interface CallApi {
     @GET("/api/v1/calls/rtc/turn-credentials")
     suspend fun getTurnCredentials(): Response<ApiResponse<TurnCredentialsDto>>
 
+
+    /**
+     * 통화 로그 기록
+     * POST /api/v1/calls/log
+     */
+    @POST("/api/v1/calls/log")
+    suspend fun createCallLog(
+        @Body request: CallLogRequest
+    ): Response<Unit>
 }

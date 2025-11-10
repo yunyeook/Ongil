@@ -8,6 +8,7 @@ import kr.co.ongil.domain.model.SearchPlace
  */
 fun SearchPlaceDto.toDomain(): SearchPlace =
     SearchPlace(
+        id = id,
         name = name,
         address = address,
         latitude = latitude,

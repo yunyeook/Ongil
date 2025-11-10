@@ -27,6 +27,7 @@ import com.skt.tmap.overlay.TMapMarkerItem
 import com.skt.tmap.overlay.TMapPolyLine
 import kr.co.ongil.common.location.LocationPoint
 import kr.co.ongil.common.location.LocationStreamBus
+import kr.co.ongil.domain.model.Route
 import kr.co.ongil.common.location.SafetyZoneMonitor
 import kr.co.ongil.data.model.location.Coordinate
 import kotlinx.coroutines.flow.collectLatest
@@ -45,6 +46,7 @@ import kr.co.ongil.presentation.ui.map.SafetyZoneConfig.CircleColors
  * TMap을 표시하는 Composable 컴포넌트
  * - 현재 위치 기반으로 지도 초기화
  * - 위치 추적 및 마커 표시 (펄스 애니메이션 포함)
+ * - 길안내 경로 표시
  */
 @Composable
 fun TMapComposable(
@@ -55,6 +57,8 @@ fun TMapComposable(
     onMapReady: ((TMapView) -> Unit)? = null,
     myLocationTrigger: Int = 0,
     northUpTrigger: Int = 0,  // 북쪽 고정 트리거
+    route: Route? = null  // 길안내 경로
+    ,
     userType: String = "",
     selectedPatientId: String? = null,
     patientLocations: Map<Long, Coordinate> = emptyMap(),  // 환자 위치 (보호자용)
@@ -68,6 +72,7 @@ fun TMapComposable(
     var locationMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
     var isFollowMode by remember { mutableStateOf(true) }
     var currentPulseFrame by remember { mutableStateOf(0) }
+    var routePolyLine by remember { mutableStateOf<TMapPolyLine?>(null) }
 
     // 환자 마커 (보호자는 선택된 환자 1명만)
     var patientMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
@@ -462,6 +467,102 @@ fun TMapComposable(
         }
     }
 
+    // 길안내 경로 그리기
+    LaunchedEffect(mapView, isMapInitialized, route) {
+        Log.d("TMapComposable", "경로 그리기 LaunchedEffect 트리거 - route: ${route != null}")
+        if (!isMapInitialized) {
+            Log.d("TMapComposable", "지도가 초기화되지 않음")
+            return@LaunchedEffect
+        }
+        val tmap = mapView ?: return@LaunchedEffect
+
+        withContext(Dispatchers.Main) {
+            try {
+                // 기존 경로 제거
+                routePolyLine?.let { oldPolyLine ->
+                    try {
+                        tmap.removeTMapPolyLine(oldPolyLine.id)
+                    } catch (e: Exception) {
+                        Log.w("TMapComposable", "기존 경로 제거 실패", e)
+                    }
+                }
+
+                if (route != null) {
+                    Log.d("TMapComposable", "🛣️ 경로 그리기 시작: ${route.path.size}개 포인트")
+
+                    // 경로 좌표를 TMapPoint 리스트로 변환
+                    val pointList = ArrayList<TMapPoint>()
+                    route.path.forEach { pathPoint ->
+                        pointList.add(TMapPoint(pathPoint.latitude, pathPoint.longitude))
+                    }
+
+                    // TMapPolyLine 생성 (ID와 pointList를 생성자에 전달)
+                    val polyLine = TMapPolyLine("route_line", pointList)
+                    polyLine.lineWidth = 10f
+                    polyLine.lineColor = Color.parseColor("#5C7165")
+                    polyLine.outLineWidth = 2f
+                    polyLine.outLineColor = Color.WHITE
+
+                    Log.d("TMapComposable", "PolyLine ID: ${polyLine.id}")
+                    Log.d("TMapComposable", "PolyLine 좌표 개수: ${pointList.size}")
+                    Log.d("TMapComposable", "첫 좌표: (${pointList.first().latitude}, ${pointList.first().longitude})")
+                    Log.d("TMapComposable", "마지막 좌표: (${pointList.last().latitude}, ${pointList.last().longitude})")
+
+                    // 지도에 추가
+                    try {
+                        tmap.addTMapPolyLine(polyLine)
+                        Log.d("TMapComposable", "✅ PolyLine 추가 성공")
+                    } catch (e: Exception) {
+                        Log.e("TMapComposable", "❌ PolyLine 추가 실패", e)
+                    }
+                    routePolyLine = polyLine
+
+                    // 출발지 마커 추가 (경로의 첫 좌표)
+                    if (route.path.isNotEmpty()) {
+                        val startPoint = route.path.first()
+                        val startMarker = TMapMarkerItem().apply {
+                            id = "start_marker"
+                            tMapPoint = TMapPoint(startPoint.latitude, startPoint.longitude)
+                            icon = createMarkerBitmap(context, "출발", Color.parseColor("#4CAF50"))
+                        }
+                        try {
+                            tmap.addTMapMarkerItem(startMarker)
+                            Log.d("TMapComposable", "✅ 출발지 마커 추가 성공")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "❌ 출발지 마커 추가 실패", e)
+                        }
+                    }
+
+                    // 도착지 마커 추가 (경로의 마지막 좌표)
+                    if (route.path.isNotEmpty()) {
+                        val endPoint = route.path.last()
+                        val endMarker = TMapMarkerItem().apply {
+                            id = "end_marker"
+                            tMapPoint = TMapPoint(endPoint.latitude, endPoint.longitude)
+                            icon = createMarkerBitmap(context, "도착", Color.parseColor("#F44336"))
+                        }
+                        try {
+                            tmap.addTMapMarkerItem(endMarker)
+                            Log.d("TMapComposable", "✅ 도착지 마커 추가 성공")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "❌ 도착지 마커 추가 실패", e)
+                        }
+                    }
+
+                    Log.d("TMapComposable", "✅ 경로 그리기 완료")
+                } else {
+                    // 경로가 null이면 마커도 제거
+                    routePolyLine = null
+                    tmap.removeTMapMarkerItem("start_marker")
+                    tmap.removeTMapMarkerItem("end_marker")
+                    Log.d("TMapComposable", "🗑️ 경로 제거")
+                }
+            } catch (e: Exception) {
+                Log.e("TMapComposable", "❌ 경로 그리기 실패", e)
+            }
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         if (isLoading) {
             CircularProgressIndicator(
@@ -592,4 +693,50 @@ private fun createCirclePoints(centerLat: Double, centerLon: Double, radiusMeter
     }
 
     return circlePoints
+}
+
+/**
+ * 출발/도착 마커 비트맵 생성
+ */
+private fun createMarkerBitmap(
+    context: android.content.Context,
+    text: String,
+    backgroundColor: Int
+): Bitmap {
+    val sizeDp = 40
+    val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = sizePx / 2f
+    val centerY = sizePx / 2f
+
+    // 배경 원
+    val bgPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, centerY, sizePx / 2f - 4f, bgPaint)
+
+    // 흰색 테두리
+    val borderPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, centerY, sizePx / 2f - 4f, borderPaint)
+
+    // 텍스트
+    val textPaint = Paint().apply {
+        color = Color.WHITE
+        textSize = 14 * context.resources.displayMetrics.density
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+        isFakeBoldText = true
+    }
+    val textY = centerY - (textPaint.descent() + textPaint.ascent()) / 2
+    canvas.drawText(text, centerX, textY, textPaint)
+
+    return bitmap
 }

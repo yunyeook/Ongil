@@ -75,6 +75,7 @@ class TMapRepositoryImpl @Inject constructor() : TMapRepository {
             for (i in 0 until poiArray.length()) {
                 val poi = poiArray.getJSONObject(i)
 
+                val poiId = poi.optString("id", "")
                 val name = poi.optString("name", "")
                 val address = poi.optString("upperAddrName", "") + " " +
                              poi.optString("middleAddrName", "") + " " +
@@ -85,6 +86,7 @@ class TMapRepositoryImpl @Inject constructor() : TMapRepository {
                 if (name.isNotBlank()) {
                     places.add(
                         SearchPlace(
+                            id = poiId,
                             name = name,
                             address = address.trim(),
                             latitude = lat,

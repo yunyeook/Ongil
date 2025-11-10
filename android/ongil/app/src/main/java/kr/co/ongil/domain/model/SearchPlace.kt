@@ -4,6 +4,7 @@ package kr.co.ongil.domain.model
  * 장소 검색 결과 도메인 모델
  */
 data class SearchPlace(
+    val id: String,             // 장소 ID (POI ID)
     val name: String,           // 장소명
     val address: String,        // 주소
     val latitude: Double,       // 위도
