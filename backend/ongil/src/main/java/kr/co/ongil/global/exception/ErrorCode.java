@@ -82,6 +82,8 @@ public enum ErrorCode {
     ROUTE_GUIDE_FAILED(HttpStatus.BAD_GATEWAY, "길찾기 안내 중 오류가 발생했습니다."),
     ABNORMAL_EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 이상탐지 이벤트를 찾을 수 없습니다."),
     LOCATION_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "위치 서비스가 일시적으로 사용 불가능합니다."),
+    ABNORMAL_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 이상탐지 로그를 찾을 수 없습니다."),
+
 
     // CALL / VOICE / SOS
     CALL_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 세션을 찾을 수 없습니다."),
