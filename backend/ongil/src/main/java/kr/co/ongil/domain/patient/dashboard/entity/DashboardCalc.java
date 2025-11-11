@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.global.common.entity.BaseEntity;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "dashboard_calc")
@@ -16,17 +18,19 @@ public class DashboardCalc extends BaseEntity {
     @JoinColumn(name = "patient_id", nullable = false, unique = true)
     private User patient;
 
-    private Integer routeLost;
+    private Long routeLost;
 
-    private Integer safezoneEmer;
+    private Long safezoneEmer;
 
-    private Integer emerCall;
+    private Long emerCall;
 
-    private Integer sosSign;
+    private Long sosSign;
 
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)  // ⭐ 이게 핵심!
+    @Column(name = "safezone_exit", columnDefinition = "jsonb")
     private String safezoneExit;
 
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)  // ⭐ 이게 핵심!
+    @Column(name = "favorite", columnDefinition = "jsonb")
     private String favorite;
 }

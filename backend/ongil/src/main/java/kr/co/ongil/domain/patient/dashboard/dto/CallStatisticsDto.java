@@ -10,6 +10,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CallStatisticsDto {
-    private Integer patientId;
-    private Integer callCount;
+    private Long patientId;
+    private Long callCount;
 }

@@ -56,7 +56,7 @@ public interface CallLogRepository extends JpaRepository<CallLog, Integer> {
             "WHERE cl.createdAt >= :startDate " +
             "AND cl.callType = :callType " +
             "GROUP BY cl.caller")
-    List<CallStatisticsDto> findCallStatisticsByUser(@Param("startDate") LocalDate startDate,
+    List<CallStatisticsDto> findCallStatisticsByUser(@Param("startDate") LocalDateTime startDate,
     @Param("callType") CallType callType);
 
     /**

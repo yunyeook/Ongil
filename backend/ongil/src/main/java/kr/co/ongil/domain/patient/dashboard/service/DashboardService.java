@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -29,14 +30,14 @@ public class DashboardService {
     private final UserRepository userRepository;
     
     public DashboardResponseDto getDashboardResponseDto(Integer patientId) {
-        Optional<DashboardCalc> dashboardCalc = dashboardRepository.findById(patientId);
+        Optional<DashboardCalc> dashboardCalc = dashboardRepository.findByPatientId(patientId);
         if(dashboardCalc.isPresent()) return DashboardResponseDto.from(dashboardCalc.get());
         else return null;
     }
 
     @Transactional
     public void saveDashboards() {
-        LocalDate startDate = LocalDate.now().minusWeeks(1);
+        LocalDateTime startDate = LocalDate.now().minusDays(7).atStartOfDay();
 
         List<AbnormalStatisticsDto> abnormalStats =
                 abnormalRepository.getStatistics(startDate);
@@ -44,20 +45,20 @@ public class DashboardService {
                 callLogRepository.findCallStatisticsByUser(startDate, CallType.EMERGENCY);
 
         // Map 두 개 생성
-        Map<Integer, AbnormalStatisticsDto> abnormalMap = abnormalStats.stream()
+        Map<Long, AbnormalStatisticsDto> abnormalMap = abnormalStats.stream()
                 .collect(Collectors.toMap(
                         AbnormalStatisticsDto::getPatientId,
                         Function.identity()
                 ));
 
-        Map<Integer, CallStatisticsDto> callMap = callStats.stream()
+        Map<Long, CallStatisticsDto> callMap = callStats.stream()
                 .collect(Collectors.toMap(
                         CallStatisticsDto::getPatientId,
                         Function.identity()
                 ));
 
         // 모든 patient ID
-        Set<Integer> allPatientIds = new HashSet<>();
+        Set<Long> allPatientIds = new HashSet<>();
         allPatientIds.addAll(abnormalMap.keySet());
         allPatientIds.addAll(callMap.keySet());
 
@@ -68,11 +69,11 @@ public class DashboardService {
                     CallStatisticsDto call = callMap.get(patientId);
 
                     return DashboardCalc.builder()
-                            .patient(userRepository.getReferenceById(patientId))  // 프록시만 생성
+                            .patient(userRepository.getReferenceById(Math.toIntExact(patientId)))  // 프록시만 생성
                             .routeLost(abnormal != null ? abnormal.getPathCount() : 0)
                             .safezoneEmer(abnormal != null ? abnormal.getWanderCount() : 0)
                             .emerCall(call != null ? call.getCallCount() : 0)
-                            .sosSign(0)
+                            .sosSign(0L)
                             .safezoneExit(abnormal != null ? abnormal.getSafezoneExitByLevel() : null)
                             .build();
                 })

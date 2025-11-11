@@ -13,13 +13,13 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class DashboardResponseDto {
-    private Integer routeLost;
+    private Long routeLost;
 
-    private Integer safezoneEmer;
+    private Long safezoneEmer;
 
-    private Integer emerCall;
+    private Long emerCall;
 
-    private Integer sosSign;
+    private Long sosSign;
 
     private String safezoneExit;
 

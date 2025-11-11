@@ -5,13 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class AbnormalStatisticsDto {
-    private Integer patientId;
-    private String safezoneExitByLevel;  // JSON을 Map으로
-    private Integer wanderCount;
-    private Integer pathCount;
+public interface AbnormalStatisticsDto {
+    Long getPatientId();
+    String getSafezoneExitByLevel();  // JSONB를 String으로
+    Long getWanderCount();
+    Long getPathCount();
 }
