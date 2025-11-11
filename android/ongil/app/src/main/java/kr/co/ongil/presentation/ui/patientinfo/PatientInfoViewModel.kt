@@ -35,34 +35,55 @@ class PatientInfoViewModel @Inject constructor(
     }
 
     init {
-        loadPatientDashboard()
+        observePatientIdChanges()
     }
 
-    // 환자 대시보드 로드
-    fun loadPatientDashboard() {
+    // 환자 ID 변경 감지
+    private fun observePatientIdChanges() {
+        viewModelScope.launch {
+            try {
+                val userType = userDataStoreManager.getUserType().firstOrNull()
+                Log.d(TAG, "observePatientIdChanges() - userType: $userType")
+
+                // 환자 타입에 따라 적절한 ID Flow 구독
+                if (userType == "PATIENT") {
+                    // 환자는 자신의 ID만 사용 (변경 없음)
+                    userDataStoreManager.getLoginUserId().collectLatest { patientIdStr ->
+                        Log.d(TAG, "observePatientIdChanges() - PATIENT ID: $patientIdStr")
+                        if (!patientIdStr.isNullOrEmpty()) {
+                            loadPatientInfo(patientIdStr)
+                        }
+                    }
+                } else {
+                    // 보호자는 선택된 환자 ID를 감시 (변경 감지)
+                    userDataStoreManager.getSelectedPatientId().collectLatest { patientIdStr ->
+                        Log.d(TAG, "observePatientIdChanges() - GUARDIAN selected patient ID: $patientIdStr")
+                        if (!patientIdStr.isNullOrEmpty()) {
+                            loadPatientInfo(patientIdStr)
+                        } else {
+                            _uiState.value = PatientInfoUiState(
+                                isLoading = false,
+                                error = "선택된 환자가 없습니다."
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "observePatientIdChanges() - 예외 발생", e)
+                _uiState.value = PatientInfoUiState(
+                    isLoading = false,
+                    error = "사용자 정보를 불러오는데 실패했습니다."
+                )
+            }
+        }
+    }
+
+    // 환자 정보 로드
+    private fun loadPatientInfo(patientIdStr: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                val userType = userDataStoreManager.getUserType().firstOrNull()
-                Log.d(TAG, "loadPatientDashboard() - userType: $userType")
-
-                // 환자 ID 가져오기 (환자면 LOGIN_USER_ID, 보호자면 SELECTED_PATIENT_ID)
-                val patientIdStr = if (userType == "PATIENT") {
-                    userDataStoreManager.getLoginUserId().firstOrNull()
-                } else {
-                    userDataStoreManager.getSelectedPatientId().firstOrNull()
-                }
-                Log.d(TAG, "loadPatientDashboard() - patientId: $patientIdStr")
-
-                if (patientIdStr.isNullOrEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = if (userType == "PATIENT") "로그인 정보가 없습니다." else "선택된 환자가 없습니다."
-                    )
-                    return@launch
-                }
-
                 val patientId = patientIdStr.toIntOrNull()
                 if (patientId == null) {
                     _uiState.value = _uiState.value.copy(
@@ -72,9 +93,11 @@ class PatientInfoViewModel @Inject constructor(
                     return@launch
                 }
 
+                Log.d(TAG, "loadPatientInfo() - 환자 정보 로드 시작 (patientId: $patientId)")
+
                 getPatientInfoUseCase(patientId).collectLatest { result ->
                     result.onSuccess { patientInfoDto ->
-                        Log.d(TAG, "loadPatientDashboard() - 환자 정보 조회 성공: $patientInfoDto")
+                        Log.d(TAG, "loadPatientInfo() - 환자 정보 조회 성공: $patientInfoDto")
 
                         try {
                             // favorite JSON 파싱
@@ -126,15 +149,15 @@ class PatientInfoViewModel @Inject constructor(
                             )
                         }
                     }.onFailure { exception ->
-                        Log.e(TAG, "loadPatientDashboard() - 대시보드 조회 실패", exception)
+                        Log.e(TAG, "loadPatientInfo() - 환자 정보 조회 실패", exception)
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = exception.message ?: "대시보드 정보를 불러오는데 실패했습니다."
+                            error = exception.message ?: "환자 정보를 불러오는데 실패했습니다."
                         )
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "loadPatientDashboard() - 예외 발생", e)
+                Log.e(TAG, "loadPatientInfo() - 예외 발생", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "알 수 없는 오류가 발생했습니다."

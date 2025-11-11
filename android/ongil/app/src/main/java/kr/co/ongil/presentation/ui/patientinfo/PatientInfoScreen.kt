@@ -22,14 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kr.co.ongil.presentation.ui.common.patientinfo.InfoCard
 
-/**
- * 환자 정보: 상단 탭 2개 (활동 기록 / 건강 정보)
- * 즐겨찾기에서 사용한 것과 동일한 스타일의 세그먼트 탭을 Compose로 구현합니다.
- * 이 파일은 화면 프리뷰용 더미 데이터만 포함합니다. 실제 데이터 연결은 ViewModel에서 진행하세요.
- */
+
 
 private object OnGilColors {
-    // 프로젝트에서 사용해온 톤을 그대로 맞춥니다.
     val Primary = Color(0xFF8CA898)
     val Bg = Color(0xFFF7F8F9)
     val CardStroke = Color(0xFFE8ECEF)
@@ -176,7 +171,12 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                 item {
                     val stats = if (activityLog.favoriteLocations.isNotEmpty()) {
                         activityLog.favoriteLocations.take(3).map { location ->
-                            location.placeName to "${location.placeCount}회"
+                            val displayName = if (location.placeName.length > 6) {
+                                location.placeName.take(6) + "..."
+                            } else {
+                                location.placeName
+                            }
+                            displayName to "${location.placeCount}회"
                         }
                     } else {
                         listOf(
@@ -346,9 +346,9 @@ private fun PatientInfoScreen_Preview(selected: Int) {
         isLoading = false,
         activityLog = ActivityLog(
             favoriteLocations = listOf(
-                FavoriteLocation(1, "서울아산병원", 13),
-                FavoriteLocation(2, "서울역", 8),
-                FavoriteLocation(3, "롯데월드몰", 5)
+                FavoriteLocation(1, "답십리공원", 13),
+                FavoriteLocation(2, "엔제리너스대점", 8),
+                FavoriteLocation(3, "경희대학교병원", 5)
             ),
             safezoneExit = mapOf("FIRST" to 1, "SECOND" to 1, "THIRD" to 0),
             routeLost = 1,
