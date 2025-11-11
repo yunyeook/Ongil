@@ -102,8 +102,17 @@ public class CallSignalController {
     public void sendIncomingCall(Integer callId, Integer fromUserId, Integer toUserId) {
         SignalMessage message = SignalMessage.incoming(callId, fromUserId, toUserId);
 
+//        messagingTemplate.convertAndSendToUser(
+//            toUserId.toString(),
+//            "/queue/calls",  // 통합 destination 사용
+//            message
+//        );
+
+        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         messagingTemplate.convertAndSendToUser(
-            toUserId.toString(),
+            targetPrincipalName,
             "/queue/calls",  // 통합 destination 사용
             message
         );
@@ -120,9 +129,18 @@ public class CallSignalController {
     public void sendHangup(Integer callId, Integer fromUserId, Integer toUserId) {
         SignalMessage message = SignalMessage.hangup(callId, fromUserId, toUserId);
 
+//        messagingTemplate.convertAndSendToUser(
+//            toUserId.toString(),
+//            "/queue/calls",  // 통합 destination 사용
+//            message
+//        );
+
+        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         messagingTemplate.convertAndSendToUser(
-            toUserId.toString(),
-            "/queue/calls",  // 통합 destination 사용
+            targetPrincipalName,
+            "/queue/calls",
             message
         );
 
