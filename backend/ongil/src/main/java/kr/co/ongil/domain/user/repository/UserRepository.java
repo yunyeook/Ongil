@@ -13,4 +13,9 @@ public interface UserRepository extends JpaRepository<User,Integer> {
     Optional<User> findByPhoneNumber(String phoneNumber);
 
     boolean existsByPhoneNumber(String phoneNumber);
+
+    @org.springframework.data.jpa.repository.Query(
+        "select u.phoneNumber from User u where u.id = :id"
+    )
+    Optional<String> findPhoneNumberById(@org.springframework.data.repository.query.Param("id") Integer id);
 }

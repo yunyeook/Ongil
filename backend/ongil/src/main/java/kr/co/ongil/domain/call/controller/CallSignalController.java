@@ -3,6 +3,7 @@ package kr.co.ongil.domain.call.controller;
 import kr.co.ongil.domain.call.dto.signal.SignalMessage;
 import kr.co.ongil.domain.call.entity.Call;
 import kr.co.ongil.domain.call.repository.CallRepository;
+import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import kr.co.ongil.global.security.userdetails.CustomUserDetails;
@@ -28,6 +29,7 @@ public class CallSignalController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final CallRepository callRepository;
+    private final UserRepository userRepository;
 
     /**
      * 시그널링 메시지 중계
@@ -67,12 +69,9 @@ public class CallSignalController {
         }
 
         // 5) convertAndSendToUser 라우팅 키는 'Principal.getName()'과 동일해야 하므로 "전화번호" 사용
-        //    (현재 AuthChannelInterceptor가 UsernamePasswordAuthenticationToken을 사용하고,
-        //     Principal name == UserDetails.getUsername() == phoneNumber)
-        String targetPrincipalName =
-            call.getCaller().getId().equals(toUserId)
-                ? call.getCaller().getPhoneNumber()
-                : call.getReceiver().getPhoneNumber();
+        //    LAZY 엔티티를 건드리지 않고 전화번호만 안전하게 조회
+        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 6) 메시지 전송
         messagingTemplate.convertAndSendToUser(
