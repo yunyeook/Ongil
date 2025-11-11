@@ -145,6 +145,8 @@ public class DashboardService {
         Set<Long> allPatientIds = new HashSet<>();
         allPatientIds.addAll(abnormalMap.keySet());
         allPatientIds.addAll(callMap.keySet());
+        allPatientIds.addAll(sosMap.keySet());
+        allPatientIds.addAll(favMap.keySet());
 
         // 합쳐서 저장
         List<DashboardCalc> dashboards = allPatientIds.stream()
