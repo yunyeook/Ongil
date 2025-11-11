@@ -1,8 +1,11 @@
 package kr.co.ongil.domain.patient.abnormal.repository;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import kr.co.ongil.domain.patient.abnormal.entity.Abnormal;
 import kr.co.ongil.domain.patient.abnormal.entity.AbnormalType;
+import kr.co.ongil.domain.patient.dashboard.dto.AbnormalStatisticsDto;
 import kr.co.ongil.domain.patient.safezone.entity.SafeZoneLevel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +32,27 @@ public interface AbnormalRepository extends JpaRepository<Abnormal, Integer> {
         @Param("to") LocalDateTime to,
         Pageable pageable
     );
+
+    @Query(value = """
+        SELECT
+            patient_id,
+            jsonb_object_agg(safe_zone_level, cnt)
+                FILTER (WHERE abnormal_type = 'SAFEZONE_EXIT') as safezone_exit_by_level,
+            SUM(CASE WHEN abnormal_type = 'WANDER' THEN 1 ELSE 0 END) as wander_count,
+            SUM(CASE WHEN abnormal_type = 'DEVIATE_FROM_THE_PATH' THEN 1 ELSE 0 END) as path_count
+        FROM (
+            SELECT
+                patient_id,
+                abnormal_type,
+                safe_zone_level,
+                COUNT(*) as cnt
+            FROM abnormal
+            WHERE created_at >= :startDate
+            GROUP BY patient_id, abnormal_type, safe_zone_level
+        ) grouped
+        GROUP BY patient_id
+        """, nativeQuery = true)
+    List<AbnormalStatisticsDto> getStatistics(@Param("startDate") LocalDate startDate);
 
     //  환자 ID와 이상탐지 ID로 조회
     @Query("SELECT a FROM Abnormal a WHERE a.id = :abnormalId AND a.patient.id = :patientId")

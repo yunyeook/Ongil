@@ -114,7 +114,9 @@ public enum ResponseMessage {
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
     INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."),
-    REQUEST_SUCCESS("요청이 성공적으로 처리되었습니다.");
-
+    REQUEST_SUCCESS("요청이 성공적으로 처리되었습니다."),
+    // Dashboard
+    DASHBOARD_SUCCESS("대쉬보드가 성공적으로 조회되었습니다."),
+    DASHBOARD_FAIL("대쉬보드 정보가 없습니다");
     private final String message;
 }
