@@ -105,4 +105,8 @@ sealed class Routes(val route: String) {
             return "voip_call/$targetName/$targetPhone/$isCaller/$userType/${callId ?: 0}/${receiverId ?: 0}"
         }
     }
+
+    // 안전구역 설정 (deprecated - SafeZoneRoutes 사용)
+    @Deprecated("Use SafeZoneRoutes instead")
+    object SafeZoneSetting : Routes("safe_zone_setting")
 }

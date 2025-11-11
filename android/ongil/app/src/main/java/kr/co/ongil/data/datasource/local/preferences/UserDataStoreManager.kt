@@ -80,4 +80,28 @@ interface UserDataStoreManager {
      * 이상 상황 정보 초기화
      */
     suspend fun clearAbnormalDetection()
+
+    /**
+     * 안전구역 설정 저장
+     */
+    suspend fun saveSafeZoneSettings(
+        level1Distance: Int,
+        level1Dwell: Int,
+        level2Distance: Int,
+        level2Dwell: Int,
+        level3Distance: Int,
+        level3Dwell: Int,
+        pushEnabled: Boolean,
+        autoCallEnabled: Boolean
+    )
+
+    /**
+     * 안전구역 설정 불러오기
+     */
+    suspend fun getSafeZoneSettings(): kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings
+
+    /**
+     * 안전구역 설정 변경 구독
+     */
+    fun observeSafeZoneSettings(): Flow<kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings>
 }

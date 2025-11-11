@@ -30,8 +30,6 @@ import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.presentation.MainActivity
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow
@@ -68,23 +66,55 @@ class LocationTrackingService : Service() {
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
 
-    // 안전 범위 모니터 (홈 위치는 나중에 사용자 설정으로 변경 가능)
-    private val safetyZoneMonitor = SafetyZoneMonitor(
-        homeLatitude = 37.50175822768635,
-        homeLongitude = 127.03958229478599,
-        onAbnormalDetected = { stage, durationMinutes ->
-            // 이상 판정 콜백
-            Log.w(TAG, "⚠️ 이상 상황 감지: ${stage}단계, ${durationMinutes}분 경과")
-            serviceScope.launch {
-                handleAbnormalDetection(stage, durationMinutes)
-            }
-        }
-    )
+    // 안전 범위 모니터 (DataStore에서 설정을 로드하여 초기화)
+    private var safetyZoneMonitor: SafetyZoneMonitor? = null
+
+    // 현재 적용된 안전구역 설정 (handleAbnormalDetection에서 사용)
+    private var currentSafeZoneSettings: kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings? = null
 
     override fun onCreate() {
         super.onCreate()
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
         ensureNotificationChannel()
+
+        // 안전구역 설정 변경 구독
+        serviceScope.launch {
+            userDataStoreManager.observeSafeZoneSettings().collect { settings ->
+                Log.d(TAG, "안전구역 설정 변경 감지")
+                updateSafetyZoneMonitor(settings)
+            }
+        }
+    }
+
+    /**
+     * SafetyZoneMonitor 업데이트 (설정 변경 시 호출)
+     */
+    private fun updateSafetyZoneMonitor(settings: kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings) {
+        try {
+            currentSafeZoneSettings = settings
+
+            // SafetyZoneMonitor 재생성 (홈 위치는 하드코딩, 추후 사용자 설정 추가 가능)
+            safetyZoneMonitor = SafetyZoneMonitor(
+                homeLatitude = 37.50175822768635,
+                homeLongitude = 127.03958229478599,
+                level1Distance = settings.level1Distance,
+                level1Dwell = settings.level1Dwell,
+                level2Distance = settings.level2Distance,
+                level2Dwell = settings.level2Dwell,
+                level3Distance = settings.level3Distance,
+                level3Dwell = settings.level3Dwell,
+                onAbnormalDetected = { stage, durationMinutes ->
+                    // 이상 판정 콜백
+                    Log.w(TAG, "⚠️ 이상 상황 감지: ${stage}단계, ${durationMinutes}분 경과")
+                    serviceScope.launch {
+                        handleAbnormalDetection(stage, durationMinutes)
+                    }
+                }
+            )
+            Log.d(TAG, "SafetyZoneMonitor 업데이트 완료: L1=${settings.level1Distance}m/${settings.level1Dwell}분, L2=${settings.level2Distance}m/${settings.level2Dwell}분, L3=${settings.level3Distance}m/${settings.level3Dwell}분")
+        } catch (e: Exception) {
+            Log.e(TAG, "SafetyZoneMonitor 업데이트 실패", e)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -211,7 +241,7 @@ class LocationTrackingService : Service() {
                     // 안전 범위 모니터링 (환자일 때만)
                     val userType = userDataStoreManager.getUserType().first()
                     if (userType == "PATIENT") {
-                        safetyZoneMonitor.updateLocation(
+                        safetyZoneMonitor?.updateLocation(
                             point.latitude,
                             point.longitude,
                             point.timeMillis
@@ -363,11 +393,12 @@ class LocationTrackingService : Service() {
                 currentLocation.latitude, currentLocation.longitude
             )
 
-            // 단계별 정보 (SafetyZoneMonitor의 상수 사용)
+            // 단계별 정보 (currentSafeZoneSettings 사용, 없으면 기본값 사용)
+            val settings = currentSafeZoneSettings
             val (safeZoneLevel, boundaryRadius, thresholdMinutes) = when (stage) {
-                1 -> Triple("FIRST", SafetyZoneMonitor.STAGE_1_RADIUS.toDouble(), SafetyZoneMonitor.STAGE_1_THRESHOLD_MINUTES)
-                2 -> Triple("SECOND", SafetyZoneMonitor.STAGE_2_RADIUS.toDouble(), SafetyZoneMonitor.STAGE_2_THRESHOLD_MINUTES)
-                3 -> Triple("THIRD", SafetyZoneMonitor.STAGE_3_RADIUS.toDouble(), SafetyZoneMonitor.STAGE_3_THRESHOLD_MINUTES)
+                1 -> Triple("FIRST", (settings?.level1Distance ?: SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS).toDouble(), settings?.level1Dwell ?: SafetyZoneMonitor.DEFAULT_STAGE_1_THRESHOLD_MINUTES)
+                2 -> Triple("SECOND", (settings?.level2Distance ?: SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS).toDouble(), settings?.level2Dwell ?: SafetyZoneMonitor.DEFAULT_STAGE_2_THRESHOLD_MINUTES)
+                3 -> Triple("THIRD", (settings?.level3Distance ?: SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS).toDouble(), settings?.level3Dwell ?: SafetyZoneMonitor.DEFAULT_STAGE_3_THRESHOLD_MINUTES)
                 else -> {
                     Log.e(TAG, "알 수 없는 단계: $stage")
                     return
