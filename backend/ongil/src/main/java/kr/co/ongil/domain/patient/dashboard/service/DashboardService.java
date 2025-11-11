@@ -3,19 +3,21 @@ package kr.co.ongil.domain.patient.dashboard.service;
 import jakarta.transaction.Transactional;
 import kr.co.ongil.domain.call.entity.CallType;
 import kr.co.ongil.domain.call.repository.CallLogRepository;
+import kr.co.ongil.domain.patient.abnormal.entity.AbnormalType;
 import kr.co.ongil.domain.patient.abnormal.repository.AbnormalRepository;
-import kr.co.ongil.domain.patient.dashboard.dto.AbnormalStatisticsDto;
-import kr.co.ongil.domain.patient.dashboard.dto.CallStatisticsDto;
-import kr.co.ongil.domain.patient.dashboard.dto.DashboardResponseDto;
-import kr.co.ongil.domain.patient.dashboard.dto.FavoriteStatisticsDto;
+import kr.co.ongil.domain.patient.dashboard.dto.*;
 import kr.co.ongil.domain.patient.dashboard.entity.DashboardCalc;
+import kr.co.ongil.domain.patient.dashboard.entity.DashboardEnum;
 import kr.co.ongil.domain.patient.dashboard.repository.DashboardRepository;
 import kr.co.ongil.domain.patient.favorite.repository.FavoriteRepository;
 import kr.co.ongil.domain.user.repository.UserRepository;
+import kr.co.ongil.global.exception.BusinessException;
+import kr.co.ongil.global.exception.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -33,9 +35,68 @@ public class DashboardService {
     private final FavoriteRepository favoriteRepository;
     
     public DashboardResponseDto getDashboardResponseDto(Integer patientId) {
-        Optional<DashboardCalc> dashboardCalc = dashboardRepository.findByPatientId(patientId);
-        if(dashboardCalc.isPresent()) return DashboardResponseDto.from(dashboardCalc.get());
-        else return null;
+        List<DashboardCalc> dashboardCalcs=dashboardRepository.findTop2ByPatientIdOrderByCreatedAtDesc(patientId);
+        if(dashboardCalcs.isEmpty()) throw new BusinessException(ErrorCode.DASHBOARD_NOT_FOUND);
+        if(dashboardCalcs.size()==1) {
+            return DashboardResponseDto.builder()
+                    .favorite(dashboardCalcs.get(0).getFavorite())
+                    .safezoneExit(dashboardCalcs.get(0).getSafezoneExit())
+                    .routeLost(dashboardCalcs.get(0).getRouteLost())
+                    .safezoneEmer(dashboardCalcs.get(0).getSafezoneEmer())
+                    .sosSign(dashboardCalcs.get(0).getSosSign())
+                    .emerCall(dashboardCalcs.get(0).getEmerCall())
+                    .build();
+        }
+        else {
+            return DashboardResponseDto.builder()
+                    .favorite(dashboardCalcs.get(0).getFavorite())
+                    .safezoneExit(dashboardCalcs.get(0).getSafezoneExit())
+                    .routeLost(dashboardCalcs.get(0).getRouteLost())
+                    .routeLostDiff(dashboardCalcs.get(0).getRouteLost()-dashboardCalcs.get(1).getRouteLost())
+                    .routeTransition(dashboardCalcs.get(0).getRouteLost()-dashboardCalcs.get(1).getRouteLost() >0
+                            ? DashboardEnum.INCREASE :
+                            (dashboardCalcs.get(0).getRouteLost()-dashboardCalcs.get(1).getRouteLost() <0 ?
+                                    DashboardEnum.DECREASE :
+                                    DashboardEnum.SAME))
+                    .safezoneEmer(dashboardCalcs.get(0).getSafezoneEmer())
+                    .safezoneEmerDiff(dashboardCalcs.get(0).getSafezoneEmer()-dashboardCalcs.get(1).getSafezoneEmer())
+                    .safezoneTransition(dashboardCalcs.get(0).getSafezoneEmer()-dashboardCalcs.get(1).getSafezoneEmer() >0
+                            ? DashboardEnum.INCREASE :
+                            (dashboardCalcs.get(0).getSafezoneEmer()-dashboardCalcs.get(1).getSafezoneEmer() <0 ?
+                                    DashboardEnum.DECREASE :
+                                    DashboardEnum.SAME)
+                    )
+                    .sosSign(dashboardCalcs.get(0).getSosSign())
+                    .sosSignDiff(dashboardCalcs.get(0).getSosSign()-dashboardCalcs.get(1).getSosSign())
+                    .sosSignTransition(
+                            dashboardCalcs.get(0).getSosSign()-dashboardCalcs.get(1).getSosSign() >0
+                                    ? DashboardEnum.INCREASE :
+                                    (dashboardCalcs.get(0).getSosSign()-dashboardCalcs.get(1).getSosSign() <0 ?
+                                            DashboardEnum.DECREASE :
+                                            DashboardEnum.SAME)
+                    )
+                    .emerCall(dashboardCalcs.get(0).getEmerCall())
+                    .emerCallDiff(dashboardCalcs.get(0).getEmerCall()-dashboardCalcs.get(1).getEmerCall())
+                    .emerCallTransition(
+                            dashboardCalcs.get(0).getEmerCall()-dashboardCalcs.get(1).getEmerCall() >0
+                                    ? DashboardEnum.INCREASE :
+                                    (dashboardCalcs.get(0).getEmerCall()-dashboardCalcs.get(1).getEmerCall() <0 ?
+                                            DashboardEnum.DECREASE :
+                                            DashboardEnum.SAME)
+                    )
+                    .build();
+        }
+    }
+
+    public MainboardResponseDto getMainboardResponseDto(Integer patientId) {
+        Long safezoneExit=abnormalRepository.countThisWeek(patientId,LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay(), AbnormalType.SAFEZONE_EXIT);
+        Long routeLost=abnormalRepository.countThisWeek(patientId,LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay(), AbnormalType.DEVIATE_FROM_THE_PATH);
+        String favoriteName=favoriteRepository.countThisWeek(patientId,LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay());
+        return MainboardResponseDto.builder()
+                .favoriteName(favoriteName)
+                .routeLost(routeLost)
+                .safezoneExit(safezoneExit)
+                .build();
     }
 
     @Transactional
