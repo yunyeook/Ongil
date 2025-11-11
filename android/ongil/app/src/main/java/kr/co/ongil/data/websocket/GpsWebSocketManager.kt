@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kr.co.ongil.common.location.LocationStreamBus
+import kr.co.ongil.data.model.websocket.CoordinateInfo
 import kr.co.ongil.data.model.websocket.GpsMessage
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -114,13 +115,14 @@ class GpsWebSocketManager @Inject constructor(
         }
 
         try {
-            val timestamp = java.time.ZonedDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            val coordinate = CoordinateInfo(
+                latitude = latitude,
+                longitude = longitude
+            )
 
             val message = GpsMessage(
-                latitude = latitude,
-                longitude = longitude,
-                timestamp = timestamp
+                type = "GPS_UPDATE",
+                coordinate = coordinate
             )
 
             val jsonString = json.encodeToString(message)
@@ -142,6 +144,9 @@ class GpsWebSocketManager @Inject constructor(
     fun disconnect() {
         Log.d(TAG, "Disconnecting WebSocket")
 
+        // GPS_DISCONNECT 메시지 전송
+        sendDisconnectMessage()
+
         locationJob?.cancel()
         locationJob = null
 
@@ -152,6 +157,30 @@ class GpsWebSocketManager @Inject constructor(
         webSocket = null
 
         isConnected = false
+    }
+
+    /**
+     * GPS_DISCONNECT 메시지 전송
+     */
+    private fun sendDisconnectMessage() {
+        if (webSocket == null) {
+            return
+        }
+
+        try {
+            // GPS_DISCONNECT는 coordinate를 null로 전송
+            val message = GpsMessage(
+                type = "GPS_DISCONNECT",
+                coordinate = null
+            )
+
+            val jsonString = json.encodeToString(message)
+            webSocket?.send(jsonString)
+
+            Log.d(TAG, "Sent GPS_DISCONNECT")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending disconnect message: ${e.message}", e)
+        }
     }
 
     /**
