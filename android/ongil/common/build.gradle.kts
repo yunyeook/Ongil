@@ -70,4 +70,7 @@ dependencies {
 
     // 백그라운드에서도 추적 가능하게(Fused Location - 명준)
     api("com.google.android.gms:play-services-location:21.3.0")
+
+    // Dependency Injection (javax.inject annotations)
+    implementation("javax.inject:javax.inject:1")
 }

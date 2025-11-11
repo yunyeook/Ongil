@@ -20,14 +20,18 @@ import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.common.location.LocationPoint
 import kr.co.ongil.common.location.SafetyZoneMonitor
+import kr.co.ongil.common.location.NavigationRouteManager
+import kr.co.ongil.common.location.RouteDeviationMonitor
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.MapApi
 import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
+import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.presentation.MainActivity
 import java.time.Instant
 import kotlin.math.atan2
@@ -54,8 +58,9 @@ class LocationTrackingService : Service() {
 
     @Inject lateinit var locationBus: LocationStreamBus
     @Inject lateinit var mapApi: MapApi
+    @Inject lateinit var navigationRouteManager: NavigationRouteManager
     @Inject lateinit var userDataStoreManager: UserDataStoreManager
-    @Inject lateinit var gpsWebSocketManager: kr.co.ongil.data.websocket.GpsWebSocketManager
+    @Inject lateinit var gpsWebSocketManager: GpsWebSocketManager
 
     private lateinit var fusedClient: FusedLocationProviderClient
 
@@ -69,6 +74,10 @@ class LocationTrackingService : Service() {
     // 안전 범위 모니터 (DataStore에서 설정을 로드하여 초기화)
     private var safetyZoneMonitor: SafetyZoneMonitor? = null
 
+    // 경로 이탈 모니터 (길찾기 중에만 활성화)
+    private var routeDeviationMonitor: RouteDeviationMonitor? = null
+
+
     // 현재 적용된 안전구역 설정 (handleAbnormalDetection에서 사용)
     private var currentSafeZoneSettings: kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings? = null
 
@@ -76,6 +85,30 @@ class LocationTrackingService : Service() {
         super.onCreate()
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
         ensureNotificationChannel()
+
+        // 경로 변경 구독 (길찾기 시작/종료 감지)
+        serviceScope.launch {
+            navigationRouteManager.currentRoute.collect() { route ->
+                if (route != null) {
+                    // 길찾기 시작 - 경로 이탈 모니터 생성
+                    Log.d(TAG, "길찾기 시작 감지 - 경로 이탈 모니터 활성화")
+                    routeDeviationMonitor = RouteDeviationMonitor(
+                        routePath = route.path,
+                        deviationThresholdMeters = 50.0,
+                        onRouteDeviation = { distance ->
+                            Log.w(TAG, "⚠️ 경로 이탈 감지: ${String.format("%.1f", distance)}m 벗어남")
+                            serviceScope.launch {
+                                handleRouteDeviation(distance)
+                            }
+                        }
+                    )
+                } else {
+                    // 길찾기 종료 - 경로 이탈 모니터 해제
+                    Log.d(TAG, "길찾기 종료 감지 - 경로 이탈 모니터 비활성화")
+                    routeDeviationMonitor = null
+                }
+            }
+        }
 
         // 안전구역 설정 변경 구독
         serviceScope.launch {
@@ -250,6 +283,14 @@ class LocationTrackingService : Service() {
 
                     // 백엔드로 위치 전송 (환자일 때만, 5m 이상 이동 시)
                     sendLocationToBackend(point)
+
+                    // 경로 이탈 모니터링 (길찾기 중일 때만)
+                    if (gpsWebSocketManager.isConnected()) {
+                        routeDeviationMonitor?.updateLocation(
+                            point.latitude,
+                            point.longitude
+                        )
+                    }
                 }
             } ?: run {
                 Log.w(TAG, "LocationResult에 lastLocation이 null입니다")
@@ -441,6 +482,47 @@ class LocationTrackingService : Service() {
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ 이상 상황 처리 실패", e)
+        }
+    }
+
+    /**
+     * 경로 이탈 이상상황 처리
+     */
+    private suspend fun handleRouteDeviation(distanceFromRoute: Double) {
+        try {
+            val userType = userDataStoreManager.getUserType().first()
+            if (userType != "PATIENT") return
+
+            val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            if (patientId == null) {
+                Log.w(TAG, "patientId를 가져올 수 없습니다")
+                return
+            }
+
+            val currentLocation = locationBus.lastValue
+            if (currentLocation == null) {
+                Log.w(TAG, "현재 위치를 가져올 수 없습니다")
+                return
+            }
+
+            // 백엔드로 이상상황 알림
+            val request = ReportAbnormalRequest(
+                abnormalType = "DEVIATE_FROM_THE_PATH", // 경로 이탈
+                latitude = currentLocation.latitude,
+                longitude = currentLocation.longitude,
+                safeZoneLevel = "FIRST",    // 임시 테스트용 TODO: 백엔드 수정되면 삭제
+                centerLatitude = 0.0,       // 임시 테스트용 TODO: 백엔드 수정되면 삭제
+                centerLongitude = 0.0,      // 임시 테스트용 TODO: 백엔드 수정되면 삭제
+                distanceFromCenter = distanceFromRoute,
+                boundaryRadius = 50.0,
+                elapsedTime = 0,            // 임시 테스트용 TODO: 백엔드 수정되면 삭제
+                thresholdTime = 0           // 임시 테스트용 TODO: 백엔드 수정되면 삭제
+            )
+
+            mapApi.reportAbnormal(patientId, request)
+            Log.d(TAG, "경로 이탈 알림 전송 성공: ${String.format("%.1f", distanceFromRoute)}m")
+        } catch (e: Exception) {
+            Log.e(TAG, "경로 이탈 알림 전송 실패", e)
         }
     }
 }
