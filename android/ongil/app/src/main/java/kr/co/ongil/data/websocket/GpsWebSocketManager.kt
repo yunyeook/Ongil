@@ -16,7 +16,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,6 +24,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class GpsWebSocketManager @Inject constructor(
+    private val client: OkHttpClient,
     private val locationBus: LocationStreamBus
 ) {
     private val TAG = "GpsWebSocketManager"
@@ -32,10 +32,6 @@ class GpsWebSocketManager @Inject constructor(
     private var webSocket: WebSocket? = null
     private var scope: CoroutineScope? = null
     private var locationJob: Job? = null
-
-    private val client = OkHttpClient.Builder()
-        .pingInterval(30, TimeUnit.SECONDS)
-        .build()
 
     private val json = Json {
         ignoreUnknownKeys = true
