@@ -40,7 +40,7 @@ import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.map.MapScreen
 import kr.co.ongil.presentation.ui.call.VoipCallTestScreen
 import kr.co.ongil.presentation.ui.safezonesetting.safeZoneGraph
-
+import kr.co.ongil.presentation.ui.home.homeGraph
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
@@ -55,14 +55,8 @@ fun AppNavGraph(
         modifier = modifier.background(Color.White)
     ) {
         // 홈
-        composable(Routes.Home.route) {
-            HomeScreen(
-//                modifier = Modifier.padding(paddingValues),
-                onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) },
-                onGoSignupClick = { navController.navigate(Routes.Register.route) },
-                onGoSafeZoneSettingClick = { navController.navigate(kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettingRoutes.SETTING) }
-            )
-        }
+        homeGraph(navController)
+
         // 위치 - 지도 화면
         composable(Routes.Location.route) {
             MapScreen(
