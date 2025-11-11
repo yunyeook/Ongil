@@ -10,6 +10,7 @@ import kr.co.ongil.data.repository.FavoriteRepositoryImpl
 import kr.co.ongil.data.repository.FindPasswordAuthRepositoryImpl
 import kr.co.ongil.data.repository.LocationSseRepositoryImpl
 import kr.co.ongil.data.repository.NotificationRepositoryImpl
+import kr.co.ongil.data.repository.PatientInfoRepositoryImpl
 import kr.co.ongil.data.repository.SafeZoneRepositoryImpl
 import kr.co.ongil.data.repository.SearchUserRepositoryImpl
 import kr.co.ongil.data.repository.UserRepositoryImpl
@@ -19,6 +20,7 @@ import kr.co.ongil.domain.repository.FavoriteRepository
 import kr.co.ongil.domain.repository.FindPasswordAuthRepository
 import kr.co.ongil.domain.repository.LocationSseRepository
 import kr.co.ongil.domain.repository.NotificationRepository
+import kr.co.ongil.domain.repository.PatientInfoRepository
 import kr.co.ongil.domain.repository.SafeZoneRepository
 import kr.co.ongil.domain.repository.SearchUserRepository
 import kr.co.ongil.domain.repository.UserRepository
@@ -71,4 +73,9 @@ abstract class RepositoryModule {
     abstract fun bindSafeZoneRepository(
         impl: SafeZoneRepositoryImpl
     ): SafeZoneRepository
+
+    @Binds
+    abstract fun bindPatientInfoRepository(
+        impl: PatientInfoRepositoryImpl
+    ): PatientInfoRepository
 }
