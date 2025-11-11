@@ -52,7 +52,9 @@ public interface CallLogRepository extends JpaRepository<CallLog, Integer> {
            "ORDER BY cl.startedAt DESC")
     List<CallLog> findCallLogsBetweenUsers(@Param("user1") User user1, @Param("user2") User user2);
 
-    @Query("SELECT cl.caller AS patientId, COUNT(*) AS callCount FROM CallLog cl " +
+    @Query("SELECT new kr.co.ongil.domain.patient.dashboard.dto.CallStatisticsDto(" +
+            "CAST(cl.caller.id AS Long), COUNT(cl)) " +
+            "FROM CallLog cl " +
             "WHERE cl.createdAt >= :startDate " +
             "AND cl.callType = :callType " +
             "GROUP BY cl.caller")
