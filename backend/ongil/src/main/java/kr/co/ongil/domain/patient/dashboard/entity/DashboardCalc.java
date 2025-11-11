@@ -26,11 +26,11 @@ public class DashboardCalc extends BaseEntity {
 
     private Long sosSign;
 
-    @JdbcTypeCode(SqlTypes.JSON)  // ⭐ 이게 핵심!
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "safezone_exit", columnDefinition = "jsonb")
     private String safezoneExit;
 
-    @JdbcTypeCode(SqlTypes.JSON)  // ⭐ 이게 핵심!
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "favorite", columnDefinition = "jsonb")
     private String favorite;
 }

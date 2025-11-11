@@ -1,6 +1,7 @@
 package kr.co.ongil.domain.patient.favorite.repository;
 
 import jakarta.persistence.LockModeType;
+import kr.co.ongil.domain.patient.dashboard.dto.FavoriteStatisticsDto;
 import kr.co.ongil.domain.patient.favorite.entity.Favorite;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,6 +55,29 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Integer> {
     @Query("UPDATE Favorite f SET f.isDefault = false WHERE f.patient.id = :patientId")
     void clearAllDefaultsByPatientId(@Param("patientId") Integer patientId);
 
+    @Query(value = """
+    SELECT 
+        f.patient_id as patientId,
+        jsonb_agg(
+            jsonb_build_object(
+                'rank', f.rank,
+                'placeName', f.place_name,
+                'placeCount', f.count
+            ) ORDER BY f.rank
+        ) as favorites
+    FROM (
+        SELECT 
+            patient_id,
+            place_name,
+            count,
+            ROW_NUMBER() OVER (PARTITION BY patient_id ORDER BY count DESC) as rank
+        FROM favorite
+        WHERE created_at >= :startDate
+    ) f
+    WHERE f.rank <= 3
+    GROUP BY f.patient_id
+    """, nativeQuery = true)
+    List<FavoriteStatisticsDto> getFavoriteStatistics(@Param("startDate") LocalDateTime startDate);
 
     /**
      * 환자의 즐겨찾기 중 DisplayOrder가 가장 높은 즐겨찾기 조회
