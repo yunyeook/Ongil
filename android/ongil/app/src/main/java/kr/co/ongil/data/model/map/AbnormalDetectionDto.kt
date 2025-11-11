@@ -11,13 +11,13 @@ data class ReportAbnormalRequest(
     val abnormalType: String, // "WANDER" (배회)
     val latitude: Double, // 발생 위도
     val longitude: Double, // 발생 경도
-    val safeZoneLevel: String, // "FIRST", "SECOND", "THIRD"
-    val centerLatitude: Double, // 안전범위 중심 위도
-    val centerLongitude: Double, // 안전범위 중심 경도
+    val safeZoneLevel: String? = null, // "FIRST", "SECOND", "THIRD"
+    val centerLatitude: Double? = null, // 안전범위 중심 위도
+    val centerLongitude: Double? = null, // 안전범위 중심 경도
     val distanceFromCenter: Double, // 중심으로부터의 거리 (미터)
     val boundaryRadius: Double, // 해당 단계의 경계 반경 (미터)
-    val elapsedTime: Int, // 배회 경과 시간 (초)
-    val thresholdTime: Int // 배회 기준 시간 (초)
+    val elapsedTime: Int? = null, // 배회 경과 시간 (초)
+    val thresholdTime: Int? = null // 배회 기준 시간 (초)
 )
 
 /**
@@ -33,12 +33,12 @@ data class ReportAbnormalResponse(
 data class AbnormalData(
     val abnormalId: Long,
     val abnormalType: String,
-    val safeZoneLevel: String,
+    val safeZoneLevel: String?,
     val createdAt: String, // ISO 8601 형식
     val latitude: Double,
     val longitude: Double,
-    val centerLatitude: Double,
-    val centerLongitude: Double,
+    val centerLatitude: Double?,
+    val centerLongitude: Double?,
     val distanceFromCenter: Double,
     val boundaryRadius: Double,
     // WANDER 타입 전용 필드

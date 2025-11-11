@@ -25,6 +25,8 @@ import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings
 import javax.inject.Inject
 import kr.co.ongil.BuildConfig
+import kr.co.ongil.common.location.NavigationRouteManager
+import kr.co.ongil.data.websocket.GpsWebSocketManager
 
 /**
  * 지도 화면 ViewModel
@@ -36,7 +38,8 @@ class MapViewModel @Inject constructor(
     private val mapRepository: MapRepository,
     private val userDataStoreManager: UserDataStoreManager,
     private val findRouteUseCase: FindRouteUseCase,
-    private val gpsWebSocketManager: kr.co.ongil.data.websocket.GpsWebSocketManager
+    private val navigationRouteManager: NavigationRouteManager,
+    private val gpsWebSocketManager: GpsWebSocketManager
 ) : ViewModel() {
 
     companion object {
@@ -345,6 +348,17 @@ class MapViewModel @Inject constructor(
                 // GPS WebSocket 연결 시작
                 Log.d("MapViewModel", "GPS WebSocket 연결 시작")
                 gpsWebSocketManager.connect(BASE_URL)
+
+                // 경로 정보를 NavigationRouteManager에 저장
+                val routePath = result.route.path.map { latLng ->
+                    NavigationRouteManager.LatLng(
+                        latitude = latLng.latitude,
+                        longitude = latLng.longitude
+                    )
+                }
+                navigationRouteManager.setRoute(result.navigationId, routePath)
+                Log.d("MapViewModel", "경로 정보 저장 완료: ${routePath.size}개 포인트")
+
             }.onFailure { e ->
                 Log.e("MapViewModel", "경로 탐색 실패: ${e.message}", e)
             }
@@ -451,6 +465,10 @@ class MapViewModel @Inject constructor(
         // GPS WebSocket 연결 해제 (성공/실패 관계없이 항상 해제)
         Log.d("MapViewModel", "GPS WebSocket 연결 해제")
         gpsWebSocketManager.disconnect()
+
+        // 경로 정보 초기화
+        navigationRouteManager.clearRoute()
+        Log.d("MapViewModel", "경로 정보 초기화 완료")
 
         // 상태 초기화
         _navigationRoute.value = null
