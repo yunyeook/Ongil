@@ -6,7 +6,7 @@ import retrofit2.http.Path
 
 interface PatientInfoApi {
     // 환자 정보 조회
-    @GET("/api/v1/aggregation/patientinfo/{patientId}")
+    @GET("/api/v1/aggregation/dashboard/{patientId}")
     suspend fun getPatientInfo(
         @Path("patientId") patientId: Int
     ): PatientInfoResponse
