@@ -11,10 +11,7 @@ import kr.co.ongil.global.common.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @Validated
@@ -33,5 +30,11 @@ public class DashboardController {
         DashboardResponseDto response=dashboardService.getDashboardResponseDto(patientId);
         if(response!=null){return ApiResponse.success(ResponseMessage.DASHBOARD_SUCCESS,response);}
         else return ApiResponse.success(ResponseMessage.DASHBOARD_FAIL,null);
+    }
+
+    @PostMapping
+    @Operation(summary = "대쉬보드 조회", description = "환자의 요약정보를 가져옵니다.")
+    public void saveDashboard() {
+        dashboardService.saveDashboards();
     }
 }
