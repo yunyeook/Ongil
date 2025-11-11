@@ -13,15 +13,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,6 +39,7 @@ import kr.co.ongil.presentation.ui.auth.register.registerGraph
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.map.MapScreen
 import kr.co.ongil.presentation.ui.call.VoipCallTestScreen
+import kr.co.ongil.presentation.ui.safezonesetting.safeZoneGraph
 
 @Composable
 fun AppNavGraph(
@@ -62,7 +59,8 @@ fun AppNavGraph(
             HomeScreen(
 //                modifier = Modifier.padding(paddingValues),
                 onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) },
-                onGoSignupClick = { navController.navigate(Routes.Register.route) }
+                onGoSignupClick = { navController.navigate(Routes.Register.route) },
+                onGoSafeZoneSettingClick = { navController.navigate(kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettingRoutes.SETTING) }
             )
         }
         // 위치 - 지도 화면
@@ -263,6 +261,10 @@ fun AppNavGraph(
             )
         }
 
+        // 안전구역 설정 (새로운 구조)
+        authViewModel?.let { viewModel ->
+            safeZoneGraph(navController, paddingValues, viewModel)
+        }
         // VoIP 통화 중 화면
         composable(Routes.VoipCall.route) { backStackEntry ->
             val targetName = backStackEntry.arguments?.getString("targetName") ?: ""

@@ -56,6 +56,7 @@ fun MapScreen(
     val finalSearchResults by viewModel.finalSearchResults.collectAsState()
     val selectedPlaceDetail by viewModel.selectedPlaceDetail.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
+    val safeZoneSettings by viewModel.safeZoneSettings.collectAsState()
     val navigationRoute by viewModel.navigationRoute.collectAsState()
     val isNavigating = navigationRoute != null
     val showArrivalDialog by viewModel.showArrivalDialog.collectAsState()
@@ -165,7 +166,10 @@ fun MapScreen(
                     userType = userType,
                     selectedPatientId = selectedPatientId,
                     patientLocations = patientLocations,
-                    showSafetyZones = showSafetyZones
+                    showSafetyZones = showSafetyZones,
+                    level1Distance = safeZoneSettings.level1Distance,
+                    level2Distance = safeZoneSettings.level2Distance,
+                    level3Distance = safeZoneSettings.level3Distance
                 )
             }
 

@@ -25,6 +25,7 @@ import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
+import kr.co.ongil.presentation.ui.common.selection.PatientInfoUi
 
 @Composable
 fun MainScreen(
@@ -103,14 +104,17 @@ fun MainScreen(
     val showBottomBar = baseRoute in bottomBarRoutes && baseRoute !in authRoutes
     val showTopBar = baseRoute !in authRoutes && baseRoute != Routes.Notifications.route
 
+    // SafeZoneSetting 라우트에서 OngilBrandHeaderCard 사용
+    val safeZoneSettingRoutes = listOf("safezone_setting")
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = Color.Transparent,
         topBar = {
             Box(modifier = Modifier.statusBarsPadding()) {
                 if (showTopBar) {
-                    // BottomNav 탭 화면에서는 OngilBrandHeaderCard 사용
-                    if (baseRoute in bottomBarRoutes) {
+                    // BottomNav 탭 화면 또는 SafeZoneSetting 화면에서는 OngilBrandHeaderCard 사용
+                    if (baseRoute in bottomBarRoutes || baseRoute in safeZoneSettingRoutes) {
                         // PatientData를 PatientInfoUi로 변환
                         val patients = patientList.map { patient ->
                             PatientInfoUi(
@@ -134,7 +138,13 @@ fun MainScreen(
                                     launchSingleTop = true
                                 }
                             },
-                            profileImageUrl = null // TODO: 프로필 이미지 연동
+                            profileImageUrl = displayProfileImage,
+                            patients = patients,
+                            onSelectPatient = { patient ->
+                                authViewModel.selectPatient(patient.id)
+                            },
+                            userType = userType,
+                            selectedPatientId = selectedPatientId
                         )
                     } else {
                         // 다른 화면에서는 OngilTopBarForRoute 사용
@@ -186,7 +196,8 @@ fun MainScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .imePadding(),
-            startDestination = startDestination
+            startDestination = startDestination,
+            authViewModel = authViewModel
         )
     }
 }

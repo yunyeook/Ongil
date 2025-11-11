@@ -6,31 +6,28 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/**
- * 안전 범위 모니터링 클래스
- * - 현재 위치와 홈 위치 간 거리 계산
- * - 3단계 안전 범위 판정
- * - 연속 체류 시간 추적
- * - 이상 판정 콜백
- *
- * Android와 Wear 모두에서 사용 가능한 순수 Kotlin 구현
- */
+
 class SafetyZoneMonitor(
     private val homeLatitude: Double,
     private val homeLongitude: Double,
+    private val level1Distance: Int = DEFAULT_STAGE_1_RADIUS,
+    private val level1Dwell: Int = DEFAULT_STAGE_1_THRESHOLD_MINUTES,
+    private val level2Distance: Int = DEFAULT_STAGE_2_RADIUS,
+    private val level2Dwell: Int = DEFAULT_STAGE_2_THRESHOLD_MINUTES,
+    private val level3Distance: Int = DEFAULT_STAGE_3_RADIUS,
+    private val level3Dwell: Int = DEFAULT_STAGE_3_THRESHOLD_MINUTES,
     private val onAbnormalDetected: (stage: Int, durationMinutes: Long) -> Unit
 ) {
     companion object {
-        // 안전 범위 반경 (미터)
-        const val STAGE_1_RADIUS = 100
-        const val STAGE_2_RADIUS = 350
-        const val STAGE_3_RADIUS = 700
+        // 기본 안전 범위 반경 (미터)
+        const val DEFAULT_STAGE_1_RADIUS = 100
+        const val DEFAULT_STAGE_2_RADIUS = 350
+        const val DEFAULT_STAGE_3_RADIUS = 700
 
-        // 이상 판정 기준 시간 (분)
-        // TODO: 테스트 완료 후 원래 값으로 변경 (60L, 30L, 15L)
-        const val STAGE_1_THRESHOLD_MINUTES = 60L  // 원래: 60L
-        const val STAGE_2_THRESHOLD_MINUTES = 30L  // 원래: 30L
-        const val STAGE_3_THRESHOLD_MINUTES = 15L  // 원래: 15L
+        // 기본 이상 판정 기준 시간 (분)
+        const val DEFAULT_STAGE_1_THRESHOLD_MINUTES = 60
+        const val DEFAULT_STAGE_2_THRESHOLD_MINUTES = 30
+        const val DEFAULT_STAGE_3_THRESHOLD_MINUTES = 15
 
         /**
          * 두 지점 간 거리 계산 (Haversine formula, 미터 단위)
@@ -59,12 +56,7 @@ class SafetyZoneMonitor(
     private var stage2Alerted = false
     private var stage3Alerted = false
 
-    /**
-     * 위치 업데이트 처리
-     * @param latitude 현재 위도
-     * @param longitude 현재 경도
-     * @param currentTimeMillis 현재 시간 (밀리초)
-     */
+    // 위치 업데이트 처리
     fun updateLocation(latitude: Double, longitude: Double, currentTimeMillis: Long) {
         // 홈 위치와의 거리 계산
         val distance = calculateDistance(homeLatitude, homeLongitude, latitude, longitude)
@@ -75,11 +67,9 @@ class SafetyZoneMonitor(
         checkStage3(distance, currentTimeMillis)
     }
 
-    /**
-     * 1단계 (100m) 체크
-     */
+    // 1 단계
     private fun checkStage1(distance: Double, currentTimeMillis: Long) {
-        if (distance > STAGE_1_RADIUS) {
+        if (distance > level1Distance) {
             // 범위 밖
             if (stage1OutsideStartTime == null) {
                 // 처음 범위 밖으로 나감
@@ -90,7 +80,7 @@ class SafetyZoneMonitor(
                 val durationMillis = currentTimeMillis - stage1OutsideStartTime!!
                 val durationMinutes = durationMillis / 1000 / 60
 
-                if (durationMinutes >= STAGE_1_THRESHOLD_MINUTES && !stage1Alerted) {
+                if (durationMinutes >= level1Dwell && !stage1Alerted) {
                     // 이상 판정
                     stage1Alerted = true
                     onAbnormalDetected(1, durationMinutes)
@@ -103,11 +93,9 @@ class SafetyZoneMonitor(
         }
     }
 
-    /**
-     * 2단계 (350m) 체크
-     */
+   // 2 단계
     private fun checkStage2(distance: Double, currentTimeMillis: Long) {
-        if (distance > STAGE_2_RADIUS) {
+        if (distance > level2Distance) {
             // 범위 밖
             if (stage2OutsideStartTime == null) {
                 // 처음 범위 밖으로 나감
@@ -118,7 +106,7 @@ class SafetyZoneMonitor(
                 val durationMillis = currentTimeMillis - stage2OutsideStartTime!!
                 val durationMinutes = durationMillis / 1000 / 60
 
-                if (durationMinutes >= STAGE_2_THRESHOLD_MINUTES && !stage2Alerted) {
+                if (durationMinutes >= level2Dwell && !stage2Alerted) {
                     // 이상 판정
                     stage2Alerted = true
                     onAbnormalDetected(2, durationMinutes)
@@ -131,11 +119,9 @@ class SafetyZoneMonitor(
         }
     }
 
-    /**
-     * 3단계 (700m) 체크
-     */
+    // 3 단계
     private fun checkStage3(distance: Double, currentTimeMillis: Long) {
-        if (distance > STAGE_3_RADIUS) {
+        if (distance > level3Distance) {
             // 범위 밖
             if (stage3OutsideStartTime == null) {
                 // 처음 범위 밖으로 나감
@@ -146,7 +132,7 @@ class SafetyZoneMonitor(
                 val durationMillis = currentTimeMillis - stage3OutsideStartTime!!
                 val durationMinutes = durationMillis / 1000 / 60
 
-                if (durationMinutes >= STAGE_3_THRESHOLD_MINUTES && !stage3Alerted) {
+                if (durationMinutes >= level3Dwell && !stage3Alerted) {
                     // 이상 판정
                     stage3Alerted = true
                     onAbnormalDetected(3, durationMinutes)
@@ -159,9 +145,7 @@ class SafetyZoneMonitor(
         }
     }
 
-    /**
-     * 현재 상태 조회
-     */
+    // 현재 상태 조회
     fun getCurrentStatus(): SafetyZoneStatus {
         val now = System.currentTimeMillis()
         return SafetyZoneStatus(
@@ -171,9 +155,8 @@ class SafetyZoneMonitor(
         )
     }
 
-    /**
-     * 모니터링 리셋
-     */
+    // 모니터링 리셋
+    // TODO: 이거는 확인하고 필요없으면 삭제
     fun reset() {
         stage1OutsideStartTime = null
         stage2OutsideStartTime = null
@@ -184,9 +167,7 @@ class SafetyZoneMonitor(
     }
 }
 
-/**
- * 안전 범위 상태
- */
+// 현재 안전범위 상태
 data class SafetyZoneStatus(
     val stage1OutsideDurationMinutes: Long?,
     val stage2OutsideDurationMinutes: Long?,

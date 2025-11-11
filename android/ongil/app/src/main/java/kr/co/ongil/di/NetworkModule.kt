@@ -18,6 +18,7 @@ import kr.co.ongil.data.datasource.remote.api.CallApi
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
 import kr.co.ongil.data.datasource.remote.api.MapApi
 import kr.co.ongil.data.datasource.remote.api.NotificationApi
+import kr.co.ongil.data.datasource.remote.api.SafeZoneApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.datasource.remote.interceptor.AuthInterceptor
 import kr.co.ongil.BuildConfig
@@ -163,4 +164,9 @@ object NetworkModule {
     @Singleton
     fun provideMapApi(retrofit: Retrofit): MapApi =
         retrofit.create(MapApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideSafeZoneApi(retrofit: Retrofit): SafeZoneApi =
+        retrofit.create(SafeZoneApi::class.java)
 }

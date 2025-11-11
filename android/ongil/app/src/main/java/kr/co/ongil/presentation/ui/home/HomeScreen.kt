@@ -20,7 +20,8 @@ import kr.co.ongil.presentation.ui.common.GreenButton
 @Composable
 fun HomeScreen(
     onGoSearchUserClick: () -> Unit = {},
-    onGoSignupClick: () -> Unit = {}
+    onGoSignupClick: () -> Unit = {},
+    onGoSafeZoneSettingClick: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -54,6 +55,13 @@ fun HomeScreen(
                 onClick = onGoSignupClick
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            GreenButton(
+                text = "안전구역 설정",
+                onClick = onGoSafeZoneSettingClick
+            )
+
             Spacer(modifier = Modifier.weight(1f))
         }
     }
@@ -65,6 +73,7 @@ fun HomeScreen(
 fun HomeScreenPreview() {
     HomeScreen(
         onGoSearchUserClick = {},
-        onGoSignupClick = {}
+        onGoSignupClick = {},
+        onGoSafeZoneSettingClick = {}
     )
 }

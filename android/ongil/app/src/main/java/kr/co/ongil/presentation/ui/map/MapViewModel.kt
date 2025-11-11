@@ -21,6 +21,8 @@ import kr.co.ongil.domain.usecase.map.SearchPlaceUseCase
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.domain.model.Route
 import kr.co.ongil.domain.usecase.map.FindRouteUseCase
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings
 import javax.inject.Inject
 import kr.co.ongil.BuildConfig
 
@@ -31,8 +33,9 @@ import kr.co.ongil.BuildConfig
 class MapViewModel @Inject constructor(
     val locationBus: LocationStreamBus,
     private val searchPlaceUseCase: SearchPlaceUseCase,
-    private val findRouteUseCase: FindRouteUseCase,
     private val mapRepository: MapRepository,
+    private val userDataStoreManager: UserDataStoreManager,
+    private val findRouteUseCase: FindRouteUseCase,
     private val gpsWebSocketManager: kr.co.ongil.data.websocket.GpsWebSocketManager
 ) : ViewModel() {
 
@@ -75,7 +78,17 @@ class MapViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    // 안전구역 설정값
+    private val _safeZoneSettings = MutableStateFlow(SafeZoneSettings())
+    val safeZoneSettings: StateFlow<SafeZoneSettings> = _safeZoneSettings.asStateFlow()
+
     init {
+        // 안전구역 설정값 구독
+        viewModelScope.launch {
+            userDataStoreManager.observeSafeZoneSettings().collect { settings ->
+                _safeZoneSettings.value = settings
+            }
+        }
         // 검색어 변경 시 debounce 적용하여 자동 검색
         @OptIn(FlowPreview::class)
         viewModelScope.launch {

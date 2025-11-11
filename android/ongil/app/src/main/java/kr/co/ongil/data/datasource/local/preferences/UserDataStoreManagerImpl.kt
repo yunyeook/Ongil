@@ -1,11 +1,10 @@
 package kr.co.ongil.data.datasource.local.preferences
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -142,6 +141,58 @@ class UserDataStoreManagerImpl @Inject constructor(
             preferences.remove(DataStoreKeys.IS_ABNORMAL_DETECTED_KEY)
             preferences.remove(DataStoreKeys.ABNORMAL_STAGE_KEY)
             preferences.remove(DataStoreKeys.ABNORMAL_DETECTED_TIME_KEY)
+        }
+    }
+
+    override suspend fun saveSafeZoneSettings(
+        level1Distance: Int,
+        level1Dwell: Int,
+        level2Distance: Int,
+        level2Dwell: Int,
+        level3Distance: Int,
+        level3Dwell: Int,
+        pushEnabled: Boolean,
+        autoCallEnabled: Boolean
+    ) {
+        dataStore.edit { preferences ->
+            preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DISTANCE] = level1Distance
+            preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DWELL] = level1Dwell
+            preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DISTANCE] = level2Distance
+            preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DWELL] = level2Dwell
+            preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DISTANCE] = level3Distance
+            preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DWELL] = level3Dwell
+            preferences[DataStoreKeys.SAFE_ZONE_PUSH_ENABLED] = pushEnabled
+            preferences[DataStoreKeys.SAFE_ZONE_AUTO_CALL_ENABLED] = autoCallEnabled
+        }
+    }
+
+    override suspend fun getSafeZoneSettings(): kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings {
+        return dataStore.data.map { preferences ->
+            kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings(
+                level1Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DISTANCE] ?: 100,
+                level1Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DWELL] ?: 60,
+                level2Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DISTANCE] ?: 350,
+                level2Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DWELL] ?: 30,
+                level3Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DISTANCE] ?: 700,
+                level3Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DWELL] ?: 15,
+                pushEnabled = preferences[DataStoreKeys.SAFE_ZONE_PUSH_ENABLED] ?: true,
+                autoCallEnabled = preferences[DataStoreKeys.SAFE_ZONE_AUTO_CALL_ENABLED] ?: false
+            )
+        }.first() // Flow를 값으로 변환
+    }
+
+    override fun observeSafeZoneSettings(): Flow<kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings> {
+        return dataStore.data.map { preferences ->
+            kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings(
+                level1Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DISTANCE] ?: 100,
+                level1Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DWELL] ?: 60,
+                level2Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DISTANCE] ?: 350,
+                level2Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DWELL] ?: 30,
+                level3Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DISTANCE] ?: 700,
+                level3Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DWELL] ?: 15,
+                pushEnabled = preferences[DataStoreKeys.SAFE_ZONE_PUSH_ENABLED] ?: true,
+                autoCallEnabled = preferences[DataStoreKeys.SAFE_ZONE_AUTO_CALL_ENABLED] ?: false
+            )
         }
     }
 }

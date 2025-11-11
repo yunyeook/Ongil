@@ -62,7 +62,10 @@ fun TMapComposable(
     userType: String = "",
     selectedPatientId: String? = null,
     patientLocations: Map<Long, Coordinate> = emptyMap(),  // 환자 위치 (보호자용)
-    showSafetyZones: Boolean = false  // 안전 범위 표시 여부
+    showSafetyZones: Boolean = false,  // 안전 범위 표시 여부
+    level1Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS,
+    level2Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS,
+    level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -226,7 +229,7 @@ fun TMapComposable(
     }
 
     // 안전 범위 동심원 표시/숨김 (PolyLine 사용)
-    LaunchedEffect(mapView, isMapInitialized, showSafetyZones) {
+    LaunchedEffect(mapView, isMapInitialized, showSafetyZones, level1Distance, level2Distance, level3Distance) {
         if (!isMapInitialized) return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
@@ -256,7 +259,7 @@ fun TMapComposable(
                     val points3 = createCirclePoints(
                         SafetyZoneConfig.HomeLocation.LATITUDE,
                         SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        SafetyZoneMonitor.STAGE_3_RADIUS
+                        level3Distance
                     )
                     val poly3 = TMapPolyLine("safety_zone_stage3", points3)
                     poly3.setLineColor(CircleColors.stage3StrokeColor.toArgb())
@@ -264,13 +267,13 @@ fun TMapComposable(
                     poly3.setOutLineColor(0xFFD40806.toInt())  // 빨간색 외곽선
                     tmap.addTMapPolyLine(poly3)
                     circles.add("safety_zone_stage3")
-                    Log.d("TMapComposable", "✅ 3단계 동심원 추가 (${SafetyZoneMonitor.STAGE_3_RADIUS}m, ${points3.size}개 점)")
+                    Log.d("TMapComposable", "✅ 3단계 동심원 추가 (${level3Distance}m, ${points3.size}개 점)")
 
                     // 2단계 - 주황색
                     val points2 = createCirclePoints(
                         SafetyZoneConfig.HomeLocation.LATITUDE,
                         SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        SafetyZoneMonitor.STAGE_2_RADIUS
+                        level2Distance
                     )
                     val poly2 = TMapPolyLine("safety_zone_stage2", points2)
                     poly2.setLineColor(CircleColors.stage2StrokeColor.toArgb())
@@ -278,13 +281,13 @@ fun TMapComposable(
                     poly2.setOutLineColor(0xFF007BFF.toInt())  // 파란색 외곽선
                     tmap.addTMapPolyLine(poly2)
                     circles.add("safety_zone_stage2")
-                    Log.d("TMapComposable", "✅ 2단계 동심원 추가 (${SafetyZoneMonitor.STAGE_2_RADIUS}m, ${points2.size}개 점)")
+                    Log.d("TMapComposable", "✅ 2단계 동심원 추가 (${level2Distance}m, ${points2.size}개 점)")
 
                     // 1단계 - 초록색
                     val points1 = createCirclePoints(
                         SafetyZoneConfig.HomeLocation.LATITUDE,
                         SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        SafetyZoneMonitor.STAGE_1_RADIUS
+                        level1Distance
                     )
                     val poly1 = TMapPolyLine("safety_zone_stage1", points1)
                     poly1.setLineColor(CircleColors.stage1StrokeColor.toArgb())
@@ -292,7 +295,7 @@ fun TMapComposable(
                     poly1.setOutLineColor(0xFF10C00A.toInt())  // 초록색 외곽선
                     tmap.addTMapPolyLine(poly1)
                     circles.add("safety_zone_stage1")
-                    Log.d("TMapComposable", "✅ 1단계 동심원 추가 (${SafetyZoneMonitor.STAGE_1_RADIUS}m, ${points1.size}개 점)")
+                    Log.d("TMapComposable", "✅ 1단계 동심원 추가 (${level1Distance}m, ${points1.size}개 점)")
 
 
 
