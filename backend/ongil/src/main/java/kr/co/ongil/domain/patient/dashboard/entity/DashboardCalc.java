@@ -15,7 +15,7 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DashboardCalc extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "patient_id", nullable = false, unique = true)
+    @JoinColumn(name = "patient_id", nullable = false)
     private User patient;
 
     private Long routeLost;

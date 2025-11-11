@@ -54,6 +54,14 @@ public interface AbnormalRepository extends JpaRepository<Abnormal, Integer> {
     """, nativeQuery = true)
         List<AbnormalStatisticsDto> getStatistics(@Param("startDate") LocalDateTime startDate);
 
+    @Query("SELECT COUNT(a) FROM Abnormal a " +
+            "WHERE a.patient.id = :patientId " +
+            "AND a.createdAt >= :weekStart " +
+            "AND a.abnormalType=:abnormalType")
+    Long countThisWeek(@Param("patientId") Integer patientId,
+                       @Param("weekStart") LocalDateTime weekStart,
+                       @Param("abnormalType")  AbnormalType abnormalType);
+
     //  환자 ID와 이상탐지 ID로 조회
     @Query("SELECT a FROM Abnormal a WHERE a.id = :abnormalId AND a.patient.id = :patientId")
     Optional<Abnormal> findByIdAndPatientId(

@@ -79,6 +79,17 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Integer> {
     """, nativeQuery = true)
     List<FavoriteStatisticsDto> getFavoriteStatistics(@Param("startDate") LocalDateTime startDate);
 
+    @Query(value = """
+    SELECT f.place_name
+    FROM favorite f
+    WHERE f.patient_id = :patientId
+      AND f.created_at >= :weekStart
+    GROUP BY f.place_name
+    ORDER BY SUM(f.count) DESC
+    LIMIT 1
+    """, nativeQuery = true)
+    String countThisWeek(@Param("patientId") Integer patientId,
+                       @Param("weekStart") LocalDateTime weekStart);
     /**
      * 환자의 즐겨찾기 중 DisplayOrder가 가장 높은 즐겨찾기 조회
      */
