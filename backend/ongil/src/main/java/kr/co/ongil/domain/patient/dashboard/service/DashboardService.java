@@ -10,11 +10,13 @@ import kr.co.ongil.domain.patient.dashboard.entity.DashboardCalc;
 import kr.co.ongil.domain.patient.dashboard.entity.DashboardEnum;
 import kr.co.ongil.domain.patient.dashboard.repository.DashboardRepository;
 import kr.co.ongil.domain.patient.favorite.repository.FavoriteRepository;
+import kr.co.ongil.domain.patient.sos.repository.SosRepository;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
@@ -33,6 +35,7 @@ public class DashboardService {
     private final CallLogRepository callLogRepository;
     private final UserRepository userRepository;
     private final FavoriteRepository favoriteRepository;
+    private final SosRepository sosRepository;
     
     public DashboardResponseDto getDashboardResponseDto(Integer patientId) {
         List<DashboardCalc> dashboardCalcs=dashboardRepository.findTop2ByPatientIdOrderByCreatedAtDesc(patientId);
@@ -99,6 +102,7 @@ public class DashboardService {
                 .build();
     }
 
+    @Scheduled(cron = "0 0 3 * * MON")
     @Transactional
     public void saveDashboards() {
         LocalDateTime startDate = LocalDate.now().minusDays(7).atStartOfDay();
@@ -107,6 +111,8 @@ public class DashboardService {
                 abnormalRepository.getStatistics(startDate);
         List<CallStatisticsDto> callStats =
                 callLogRepository.findCallStatisticsByUser(startDate, CallType.EMERGENCY);
+        List<SosStatisticsDto> sosStats =
+                sosRepository.findSosStatisticsByUser(startDate);
         List<FavoriteStatisticsDto> favoriteStats=
                 favoriteRepository.getFavoriteStatistics(startDate);
 
@@ -129,6 +135,12 @@ public class DashboardService {
                         Function.identity()
                 ));
 
+        Map<Long, SosStatisticsDto> sosMap = sosStats.stream()
+                .collect(Collectors.toMap(
+                        SosStatisticsDto::getPatientId,
+                        Function.identity()
+                ));
+
         // 모든 patient ID
         Set<Long> allPatientIds = new HashSet<>();
         allPatientIds.addAll(abnormalMap.keySet());
@@ -140,12 +152,13 @@ public class DashboardService {
                     AbnormalStatisticsDto abnormal = abnormalMap.get(patientId);
                     CallStatisticsDto call = callMap.get(patientId);
                     FavoriteStatisticsDto favorite = favMap.get(patientId);
+                    SosStatisticsDto sos = sosMap.get(patientId);
                     return DashboardCalc.builder()
                             .patient(userRepository.getReferenceById(Math.toIntExact(patientId)))  // 프록시만 생성
                             .routeLost(abnormal != null ? abnormal.getPathCount() : 0)
                             .safezoneEmer(abnormal != null ? abnormal.getWanderCount() : 0)
                             .emerCall(call != null ? call.getCallCount() : 0)
-                            .sosSign(0L)
+                            .sosSign(sos != null ? sos.getSosCount() : 0)
                             .favorite(favorite != null ? favorite.getFavorites() : null)
                             .safezoneExit(abnormal != null ? abnormal.getSafezoneExitByLevel() : null)
                             .build();
@@ -153,5 +166,7 @@ public class DashboardService {
                 .collect(Collectors.toList());
 
         dashboardRepository.saveAll(dashboards);
+
+        dashboardRepository.deleteByCreatedAtBefore(LocalDate.now().minusWeeks(4).with(DayOfWeek.MONDAY).atStartOfDay());
     }
 }
