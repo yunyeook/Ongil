@@ -123,4 +123,9 @@ dependencies {
 
     // WebRTC
     implementation("com.github.webrtc-sdk:android:104.5112.09")
+
+    // STOMP over WebSocket
+    implementation("com.github.NaikSoftware:StompProtocolAndroid:1.6.6")
+    implementation("io.reactivex.rxjava2:rxjava:2.2.21")
+    implementation("io.reactivex.rxjava2:rxandroid:2.1.1")
 }

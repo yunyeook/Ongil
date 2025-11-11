@@ -11,13 +11,19 @@ import java.time.LocalDateTime;
 
 /**
  * 통화 로그 생성 Request (기본 전화 통화 후 클라이언트 콜백용)
+ *
+ * - 앱 내 사용자와 통화: receiverId 사용
+ * - 시스템 다이얼러로 외부 번호 통화: receiverPhoneNumber 사용
+ * - receiverId와 receiverPhoneNumber 중 하나는 필수
  */
 @Schema(description = "통화 로그 생성 (기본 전화)")
 public record CreateCallLogRequest(
 
-    @Schema(description = "수신자 ID", example = "2")
-    @NotNull(message = "수신자 ID는 필수입니다.")
+    @Schema(description = "수신자 ID (앱 내 사용자인 경우)", example = "2")
     Integer receiverId,
+
+    @Schema(description = "수신자 전화번호 (시스템 다이얼러로 외부 번호 통화 시)", example = "01012345678")
+    String receiverPhoneNumber,
 
     @Schema(description = "통화 유형 (NORMAL, EMERGENCY)", example = "NORMAL")
     @NotNull(message = "통화 유형은 필수입니다.")

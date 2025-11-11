@@ -16,11 +16,12 @@ object FcmPayloadMapper {
                 "ABNORMAL_DETECTED" -> MessageType.ABNORMAL_DETECTED
                 "CALL_REQUEST" -> MessageType.CALL_REQUEST
                 "SOS" -> MessageType.SOS
+                "INCOMING_CALL" -> MessageType.INCOMING_CALL
                 else -> throw IllegalArgumentException("Unknown type: ${dto.type}")
             },
             title = dto.title ?: "",
-            senderId = dto.senderId ?: throw IllegalArgumentException("senderId is null"),
-            receiverId = dto.receiverId ?: throw IllegalArgumentException("receiverId is null"),
+            senderId = dto.senderId ?: "",
+            receiverId = dto.receiverId ?: "",
             content = dto.content ?: ""
         )
     }

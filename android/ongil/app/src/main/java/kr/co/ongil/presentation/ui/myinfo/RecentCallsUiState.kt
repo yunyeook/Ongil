@@ -16,7 +16,9 @@ data class RecentCallUi(
     val id: Long,
     val nameOrNumber: String,
     val type: CallType,
-    val subtitle: String  // 예: "오늘 오후 3:24 · 통화시간 5분 12초"
+    val subtitle: String,  // 예: "오늘 오후 3:24 · 통화시간 5분 12초"
+    val receiverId: Long,  // 상대방 ID (재통화 시 필요)
+    val receiverPhone: String  // 상대방 전화번호 (재통화 시 필요)
 )
 
 /**

@@ -7,7 +7,7 @@ import kr.co.ongil.global.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import kr.co.ongil.domain.map.dto.response.AddressResponse;
-import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
+import kr.co.ongil.domain.map.dto.response.CoordinateInfo;
 import lombok.RequiredArgsConstructor;
 
 @Slf4j
@@ -29,7 +29,7 @@ public class MapService {
     /**
      * 주소로 좌표 조회
      */
-    public CoordinateResponse getCoordinate(String cityDo, String guGun, String dong, String bunji) {
+    public CoordinateInfo getCoordinate(String cityDo, String guGun, String dong, String bunji) {
         log.info("주소 → 좌표 변환 요청: {} {} {} {}", cityDo, guGun, dong, bunji);
         validateAddress(cityDo, guGun, dong);
         return tmapService.getCoordinateFromAddress(cityDo, guGun, dong, bunji);

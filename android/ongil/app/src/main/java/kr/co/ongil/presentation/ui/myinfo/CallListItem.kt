@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,6 +32,7 @@ val CallListAccent = Color(0xFF8CA898)
 fun CallListItem(
     item: RecentCallUi,
     onInfoClick: () -> Unit,
+    onCallClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val containerColor = when (item.type) {
@@ -63,6 +65,7 @@ fun CallListItem(
 
             // 우측 아이콘
             CallActions(
+                onCallClick = onCallClick,
                 onInfoClick = onInfoClick
             )
         }
@@ -141,19 +144,37 @@ private fun CallInfo(
 }
 
 /**
- * 통화 액션 버튼 (상세)
+ * 통화 액션 버튼 (전화, 상세)
  */
 @Composable
 private fun CallActions(
+    onCallClick: () -> Unit,
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Icon(
-        imageVector = Icons.Outlined.Info,
-        contentDescription = "상세",
-        tint = Color(0xFF8F9A9E),
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .size(20.dp)
-            .clickable(onClick = onInfoClick)
-    )
+    ) {
+        // 전화 버튼
+        Icon(
+            imageVector = Icons.Outlined.Phone,
+            contentDescription = "전화",
+            tint = Color(0xFF8CA898),
+            modifier = Modifier
+                .size(22.dp)
+                .clickable(onClick = onCallClick)
+        )
+
+        // 상세 버튼
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = "상세",
+            tint = Color(0xFF8F9A9E),
+            modifier = Modifier
+                .size(20.dp)
+                .clickable(onClick = onInfoClick)
+        )
+    }
 }

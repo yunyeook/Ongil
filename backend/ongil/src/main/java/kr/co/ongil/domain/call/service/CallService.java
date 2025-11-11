@@ -1,5 +1,6 @@
 package kr.co.ongil.domain.call.service;
 
+import kr.co.ongil.domain.call.controller.CallSignalController;
 import kr.co.ongil.domain.call.dto.request.CreateCallRequest;
 import kr.co.ongil.domain.call.dto.request.UpdateCallStatusRequest;
 import kr.co.ongil.domain.call.dto.response.CallResponse;
@@ -9,6 +10,8 @@ import kr.co.ongil.domain.call.entity.CallSource;
 import kr.co.ongil.domain.call.entity.CallStatus;
 import kr.co.ongil.domain.call.repository.CallLogRepository;
 import kr.co.ongil.domain.call.repository.CallRepository;
+import kr.co.ongil.domain.fcm.service.FcmService;
+import kr.co.ongil.domain.notification.service.NotificationService;
 import kr.co.ongil.domain.patient.entity.PatientState;
 import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.repository.UserRepository;
@@ -35,8 +38,9 @@ public class CallService {
     private final CallRepository callRepository;
     private final CallLogRepository callLogRepository;
     private final UserRepository userRepository;
-    private final kr.co.ongil.domain.call.controller.CallSignalController callSignalController;
-    private final kr.co.ongil.domain.fcm.service.FcmService fcmService;
+    private final CallSignalController callSignalController;
+    private final FcmService fcmService;
+    private final NotificationService notificationService;
 
     /**
      * VoIP 통화 요청 생성
@@ -104,6 +108,9 @@ public class CallService {
             receiver.getId()
         );
 
+        // 알림: '전화가 왔어요' (수신자)
+        notificationService.notifyCallIncoming(caller.getId(), receiver.getId(), savedCall.getId(), caller.getName());
+
         // 9. INCOMING 시그널 전송 후 자동으로 RINGING 상태로 전환
         savedCall.ring();
         savedCall = callRepository.save(savedCall);
@@ -135,7 +142,35 @@ public class CallService {
             case RINGING -> call.ring();
             case CONNECTED -> call.connect();
             case ENDED, CANCELED, REJECTED, FAILED, MISSED, DROPPED -> {
+                // 종료 처리
                 call.end(newStatus);
+
+                // 알림 트리거
+                switch (newStatus) {
+                    case REJECTED -> {
+                        // 수신자가 거절 → 발신자에게 '통화 거절'
+                        notificationService.notifyCallRejected(
+                            call.getCaller().getId(),
+                            call.getReceiver().getId(),
+                            call.getId(),
+                            call.getReceiver().getName()
+                        );
+                    }
+                    case ENDED, CANCELED, FAILED, MISSED, DROPPED -> {
+                        // 연결 없이 끝났다면 → 수신자에게 '부재중'
+                        if (call.getConnectedAt() == null) {
+                            notificationService.notifyCallMissed(
+                                call.getCaller().getId(),
+                                call.getReceiver().getId(),
+                                call.getId(),
+                                call.getCaller().getName()
+                            );
+                        }
+                        // 연결 후 정상 종료는 알림 없음
+                    }
+                    default -> { /* no-op */ }
+                }
+
                 // 통화 종료 시 자동으로 CallLog 생성
                 createCallLogFromCall(call);
             }

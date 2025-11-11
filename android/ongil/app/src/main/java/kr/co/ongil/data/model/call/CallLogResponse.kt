@@ -9,11 +9,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CallLogResponse(
     val message: String,
-    val data: CallLogData?=null
-)
-
-@Serializable
-data class CallLogData(
-    val totalCount: Int,
-    val callLogs: List<CallLogDto>
+    val data: List<CallLogDto> = emptyList()  // 서버는 data를 직접 배열로 반환
 )

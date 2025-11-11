@@ -20,7 +20,7 @@ public record RouteResponse(
     Integer totalTime,
 
     @Schema(description = "경로 좌표 목록")
-    List<CoordinateResponse> path,
+    List<CoordinateInfo> path,
 
     @Schema(description = "턴바이턴 안내 목록")
     List<RouteGuide> guides
@@ -64,7 +64,7 @@ public record RouteResponse(
         Double endLat, Double endLon,
         String startName, String endName
     ) {
-        List<CoordinateResponse> pathCoordinates = new ArrayList<>();
+        List<CoordinateInfo> pathCoordinates = new ArrayList<>();
         List<RouteGuide> guides = new ArrayList<>();
         Integer totalDistance = 0;
         Integer totalTime = 0;
@@ -90,7 +90,7 @@ public record RouteResponse(
 
                 for (List<Double> coord : coordinates) {
                     if (coord.size() >= 2) {
-                        pathCoordinates.add(CoordinateResponse.of(
+                        pathCoordinates.add(CoordinateInfo.of(
                             coord.get(1),  // 위도
                             coord.get(0)   // 경도
                         ));

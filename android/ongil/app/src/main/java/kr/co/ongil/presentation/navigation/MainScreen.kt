@@ -4,38 +4,42 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.delay
+import kr.co.ongil.presentation.IncomingCallData
+import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
+import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
-import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
-import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
-import kr.co.ongil.presentation.ui.common.selection.PatientInfoUi
 
 @Composable
 fun MainScreen(
+    incomingCallData: IncomingCallData? = null,
+    onIncomingCallHandled: () -> Unit = {},
     authViewModel: AuthStateViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-    val currentUserId by authViewModel.currentUserId.collectAsState()
     val currentUserInfo by authViewModel.currentUserInfo.collectAsState(initial = null)
     val patientList by authViewModel.patientList.collectAsState()
     val selectedPatientId by authViewModel.selectedPatientId.collectAsState()
 
-    // 사용자 타입 추출
     val userType = currentUserInfo?.getOrNull()?.userType ?: ""
 
-    // 로그인 상태 확인 중
+    // 로그인 상태 확인 중이면 로딩만 보여주고 NavHost 생성 안 함
     if (isLoggedIn == null) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -51,27 +55,52 @@ fun MainScreen(
     val currentRoute = navBackStackEntry?.destination?.route ?: Routes.Home.route
     val baseRoute = currentRoute.substringBefore("/").substringBefore("?")
 
-    // ✅ 인증 관련 라우트(앱 크롬 숨김 대상)
+    // ✅ startDestination을 로그인 결과 기준으로 한 번만 고정
+    val startDestination = remember(isLoggedIn) {
+        if (isLoggedIn == true) Routes.Home.route else Routes.Login.route
+    }
+
+    // ✅ FCM 수신 통화: callId 기준으로 한 번만 VoipIncomingCall로 이동
+    LaunchedEffect(incomingCallData?.callId) {
+        val data = incomingCallData ?: return@LaunchedEffect
+
+        val route = Routes.VoipIncomingCall.createRoute(
+            callId = data.callId,
+            callerName = data.callerName,
+            callerPhone = data.callerPhone,
+            userType = data.userType,
+            sessionId = data.sessionId
+        )
+
+        // 이미 같은 라우트면 중복 네비게이션 방지 (선택적이지만 안전)
+        if (navController.currentDestination?.route != route) {
+            navController.navigate(route) {
+                launchSingleTop = true
+            }
+        }
+
+        // NavHost 초기화 방지용: navigation 이후 플래그만 정리
+        delay(100)
+        onIncomingCallHandled()
+    }
+
+    // 인증 관련 화면들 (Top/Bottom 숨김 대상)
     val authRoutes = setOf(
         Routes.Login.route,
         Routes.Register.route,
         Routes.ChangePassword.route
     )
 
-    // BottomBar를 표시할 화면들 (메인 탭 위주)
+    // BottomBar 표시 대상
     val bottomBarRoutes = listOf(
         Routes.Location.route,
         Routes.Favorite.route,
         Routes.Home.route,
         Routes.PatientList.route,
         Routes.MyInfo.route
-        // 필요하면 여기에만 탭 대상 추가: EditInfo/CallHistory/SearchUser 등은 보통 탭 아님
     )
 
-    // ✅ 인증 화면에서는 BottomBar 숨김
     val showBottomBar = baseRoute in bottomBarRoutes && baseRoute !in authRoutes
-
-    // ✅ 인증 화면/알림 화면에서는 TopBar 숨김(알림은 자체 TopBar)
     val showTopBar = baseRoute !in authRoutes && baseRoute != Routes.Notifications.route
 
     Scaffold(
@@ -105,13 +134,7 @@ fun MainScreen(
                                     launchSingleTop = true
                                 }
                             },
-                            profileImageUrl = displayProfileImage,
-                            userType = userType,
-                            patients = patients,
-                            selectedPatientId = selectedPatientId,
-                            onSelectPatient = { patient ->
-                                authViewModel.selectPatient(patient.id)
-                            }
+                            profileImageUrl = null // TODO: 프로필 이미지 연동
                         )
                     } else {
                         // 다른 화면에서는 OngilTopBarForRoute 사용
@@ -136,20 +159,12 @@ fun MainScreen(
                     onClick = { route ->
                         val navigationRoute =
                             if (route == Routes.Favorite.route) {
-                                // 사용자 타입에 따라 patientId 결정
-                                val patientId = if (userType == "GUARDIAN") {
-                                    // 보호자: 선택된 환자 ID 사용 (없으면 첫 번째 환자)
-                                    selectedPatientId?.toLongOrNull()
-                                        ?: patientList.firstOrNull()?.id
-                                        ?: currentUserInfo?.getOrNull()?.id?.toLong()
-                                        ?: 0L
-                                } else {
-                                    // 환자: 자신의 ID 사용
-                                    currentUserInfo?.getOrNull()?.id?.toLong() ?: 0L
-                                }
-                                "${Routes.Favorite.route}/$patientId"
+                                val userId = currentUserInfo?.getOrNull()?.id?.toLong() ?: 0L
+                                "${Routes.Favorite.route}/$userId"
+                            } else {
+                                route
                             }
-                            else route
+
                         navController.navigate(navigationRoute) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
@@ -168,14 +183,10 @@ fun MainScreen(
 //        )
         AppNavGraph(
             navController = navController,
-            // ✅ AppNavGraph가 화면 전체를 채우도록 하고, 패딩은 내부로 전달합니다.
-            //    Modifier에서 padding을 제거하고 fillMaxSize()를 적용합니다.
             modifier = Modifier
-                .fillMaxSize()
+                .padding(paddingValues)
                 .imePadding(),
-            paddingValues = paddingValues, // ✅ paddingValues를 파라미터로 전달
-            startDestination = if (isLoggedIn == true) Routes.Home.route else Routes.Login.route,
-            authViewModel = authViewModel // ✅ AuthStateViewModel 전달
+            startDestination = startDestination
         )
     }
 }
