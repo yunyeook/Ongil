@@ -5,15 +5,15 @@ import kr.co.ongil.domain.call.entity.Call;
 import kr.co.ongil.domain.call.repository.CallRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
-import kr.co.ongil.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
+
+import java.security.Principal;
 
 /**
  * VoIP 통화 시그널링 컨트롤러 (WebSocket)
@@ -38,9 +38,10 @@ public class CallSignalController {
     public void relaySignal(
         @DestinationVariable Integer callId,
         @Payload SignalMessage message,
-        @AuthenticationPrincipal CustomUserDetails userDetails
+        Principal principal
     ) {
-        Integer fromUserId = userDetails.getUserId();
+        // Principal의 name은 AuthChannelInterceptor에서 설정한 userId (문자열)
+        Integer fromUserId = Integer.parseInt(principal.getName());
         log.info("시그널링 메시지 수신: type={}, callId={}, from={}, to={}",
             message.type(), callId, fromUserId, message.toUserId());
 
