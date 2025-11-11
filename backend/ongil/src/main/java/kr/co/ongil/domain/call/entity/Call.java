@@ -99,10 +99,14 @@ public class Call extends BaseEntity {
 
     /**
      * 통화 연결
+     * 이미 CONNECTED 상태인 경우 connectedAt을 재설정하지 않음
      */
     public void connect() {
-        this.status = CallStatus.CONNECTED;
-        this.connectedAt = LocalDateTime.now();
+        if (this.status != CallStatus.CONNECTED) {
+            this.status = CallStatus.CONNECTED;
+            this.connectedAt = LocalDateTime.now();
+        }
+        // 이미 CONNECTED 상태면 connectedAt 유지
     }
 
     /**
