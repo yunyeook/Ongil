@@ -71,6 +71,13 @@ fun AppNavGraph(
             )
         }
 
+        // 환자 정보
+        composable(Routes.PatientList.route) {
+            kr.co.ongil.presentation.ui.patientinfo.PatientInfoScreen(
+                modifier = Modifier.padding(paddingValues)
+            )
+        }
+
 
         // 사용자 검색 - 친구추가 화면
         composable(Routes.SearchUser.route) {
