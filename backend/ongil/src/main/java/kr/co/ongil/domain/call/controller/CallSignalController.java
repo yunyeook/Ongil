@@ -5,12 +5,14 @@ import kr.co.ongil.domain.call.entity.Call;
 import kr.co.ongil.domain.call.repository.CallRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
+import kr.co.ongil.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
@@ -40,16 +42,14 @@ public class CallSignalController {
         @Payload SignalMessage message,
         Principal principal
     ) {
-        // Principal의 name은 AuthChannelInterceptor에서 설정한 userId (문자열)
-        Integer fromUserId = Integer.parseInt(principal.getName());
-        log.info("시그널링 메시지 수신: type={}, callId={}, from={}, to={}",
-            message.type(), callId, fromUserId, message.toUserId());
+        // 1) 발신자 ID는 CustomUserDetails에서 정확히 꺼낸다 (전화번호 아님)
+        Integer fromUserId = extractUserId(principal);
 
-        // 1. 통화 세션 존재 여부 확인
+        // 2) 통화 세션 확인
         Call call = callRepository.findById(callId)
             .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
 
-        // 2. 권한 검증 (발신자 또는 수신자인지 확인)
+        // 3) 권한 확인 (발신자/수신자만 허용)
         boolean isAuthorized = call.getCaller().getId().equals(fromUserId)
             || call.getReceiver().getId().equals(fromUserId);
 
@@ -58,27 +58,42 @@ public class CallSignalController {
             throw new BusinessException(ErrorCode.CALL_PERMISSION_DENIED);
         }
 
-        // 3. 대상 사용자 ID 계산 (toUserId가 null이면 자동 계산)
+        // 4) 수신 대상 사용자 ID 계산 (명시 없으면 상대편으로)
         Integer toUserId = message.toUserId();
         if (toUserId == null) {
-            // fromUserId가 caller면 receiver에게, receiver면 caller에게 전송
             toUserId = call.getCaller().getId().equals(fromUserId)
                 ? call.getReceiver().getId()
                 : call.getCaller().getId();
-            log.info("toUserId가 null이어서 자동 계산: from={}, to={}", fromUserId, toUserId);
         }
 
-        // 4. 대상 사용자에게 메시지 전달
-        String destination = "/queue/calls";  // 통합 destination 사용
+        // 5) convertAndSendToUser 라우팅 키는 'Principal.getName()'과 동일해야 하므로 "전화번호" 사용
+        //    (현재 AuthChannelInterceptor가 UsernamePasswordAuthenticationToken을 사용하고,
+        //     Principal name == UserDetails.getUsername() == phoneNumber)
+        String targetPrincipalName =
+            call.getCaller().getId().equals(toUserId)
+                ? call.getCaller().getPhoneNumber()
+                : call.getReceiver().getPhoneNumber();
 
+        // 6) 메시지 전송
         messagingTemplate.convertAndSendToUser(
-            toUserId.toString(),
-            destination,
+            targetPrincipalName,  // phoneNumber
+            "/queue/calls",
             message
         );
 
-        log.info("시그널링 메시지 전달 완료: type={}, from={}, to={}, destination={}",
-            message.type(), fromUserId, toUserId, destination);
+        log.info("시그널 전달: type={}, callId={}, fromUserId={}, toUserId={}, toPrincipalName={}",
+            message.type(), callId, fromUserId, toUserId, targetPrincipalName);
+    }
+
+    private Integer extractUserId(Principal principal) {
+        if (principal instanceof Authentication auth) {
+            Object p = auth.getPrincipal();
+            if (p instanceof CustomUserDetails cud) {
+                return cud.getUserId();
+            }
+        }
+        // 혹시 모를 Fallback (하지만 현재 구조에선 phoneNumber가 들어오므로 거의 안 탑니다)
+        return Integer.parseInt(principal.getName());
     }
 
     /**
