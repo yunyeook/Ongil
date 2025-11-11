@@ -42,7 +42,8 @@ fun FavoriteScreen(
     navController: NavController,
     onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
     onNavigateToPatientDetail: (relationshipId: Long) -> Unit,
-    onGoSearchUserClick: () -> Unit
+    onGoSearchUserClick: () -> Unit,
+    modifier: Modifier = Modifier
 )
 {
     val viewModel: FavoriteViewModel = hiltViewModel()
@@ -111,7 +112,7 @@ fun FavoriteScreen(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         color = Color(0xFFFFFFFF)
     ) {
         Box(

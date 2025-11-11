@@ -1,6 +1,8 @@
 package kr.co.ongil.presentation.ui.auth.register
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -16,7 +18,8 @@ import kr.co.ongil.presentation.navigation.Routes
 fun NavGraphBuilder.registerGraph(
     navController: NavHostController,
     route: String = "register_graph",
-    startDestination: String = RegisterDest.REGISTER
+    startDestination: String = RegisterDest.REGISTER,
+    modifier: Modifier = Modifier
 ) {
     navigation(startDestination = startDestination, route = route) {
         composable(RegisterDest.REGISTER) {

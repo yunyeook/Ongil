@@ -34,6 +34,8 @@ fun MainScreen(
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     val currentUserInfo by authViewModel.currentUserInfo.collectAsState(initial = null)
+    val patientList by authViewModel.patientList.collectAsState()
+    val selectedPatientId by authViewModel.selectedPatientId.collectAsState()
 
     val userType = currentUserInfo?.getOrNull()?.userType ?: ""
 
@@ -103,11 +105,29 @@ fun MainScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = Color.White,
+        containerColor = Color.Transparent,
         topBar = {
             Box(modifier = Modifier.statusBarsPadding()) {
                 if (showTopBar) {
-                    if (baseRoute == Routes.Home.route) {
+                    // BottomNav 탭 화면에서는 OngilBrandHeaderCard 사용
+                    if (baseRoute in bottomBarRoutes) {
+                        // PatientData를 PatientInfoUi로 변환
+                        val patients = patientList.map { patient ->
+                            PatientInfoUi(
+                                id = patient.id.toString(),
+                                name = patient.name,
+                                profileImageUrl = patient.profileImage
+                            )
+                        }
+
+                        // 선택된 환자의 프로필 이미지 찾기
+                        val selectedPatient = patientList.find { it.id.toString() == selectedPatientId }
+                        val displayProfileImage = if (userType == "GUARDIAN" && selectedPatient != null) {
+                            selectedPatient.profileImage
+                        } else {
+                            currentUserInfo?.getOrNull()?.profileImage
+                        }
+
                         OngilBrandHeaderCard(
                             onBellClick = {
                                 navController.navigate(Routes.Notifications.route) {
@@ -117,6 +137,7 @@ fun MainScreen(
                             profileImageUrl = null // TODO: 프로필 이미지 연동
                         )
                     } else {
+                        // 다른 화면에서는 OngilTopBarForRoute 사용
                         OngilTopBarForRoute(
                             route = baseRoute,
                             onBackClick = { navController.popBackStack() },
@@ -154,6 +175,12 @@ fun MainScreen(
             }
         }
     ) { paddingValues ->
+
+//        AppNavGraph(
+//            navController = navController,
+//            modifier = Modifier.padding(paddingValues).imePadding(),
+//            startDestination = if (isLoggedIn == true) Routes.Home.route else Routes.Login.route
+//        )
         AppNavGraph(
             navController = navController,
             modifier = Modifier

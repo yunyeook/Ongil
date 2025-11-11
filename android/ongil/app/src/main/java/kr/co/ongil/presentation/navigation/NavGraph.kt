@@ -1,7 +1,10 @@
 package kr.co.ongil.presentation.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -45,23 +48,29 @@ import kr.co.ongil.presentation.ui.call.VoipCallTestScreen
 fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: String = Routes.Login.route
+    paddingValues: PaddingValues = PaddingValues(),
+    startDestination: String = Routes.Login.route,
+    authViewModel: kr.co.ongil.presentation.ui.auth.AuthStateViewModel? = null
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier = modifier.background(Color.White)
     ) {
         // 홈
         composable(Routes.Home.route) {
             HomeScreen(
+//                modifier = Modifier.padding(paddingValues),
                 onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) },
                 onGoSignupClick = { navController.navigate(Routes.Register.route) }
             )
         }
         // 위치 - 지도 화면
         composable(Routes.Location.route) {
-            MapScreen()
+            MapScreen(
+                paddingValues = paddingValues,
+                authViewModel = authViewModel ?: hiltViewModel()
+            )
         }
 
 
@@ -69,6 +78,7 @@ fun AppNavGraph(
         composable(Routes.SearchUser.route) {
             val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel = hiltViewModel()
             kr.co.ongil.presentation.ui.searchuser.SearchUserScreen(
+                modifier = Modifier.padding(paddingValues),
                 navController = navController,
                 viewModel = vm
             )
@@ -78,14 +88,11 @@ fun AppNavGraph(
         registerGraph(navController)
 
         // 즐겨찾기
-        favoriteGraph(navController)
+        favoriteGraph(navController, paddingValues)
         // 사용자(환자/보호자) 상세
-        userDetailGraph(navController)
+        userDetailGraph(navController, paddingValues)
         // 장소
-        placeDetailGraph(navController)
-
-        // 회원가입
-        registerGraph(navController)
+        placeDetailGraph(navController, paddingValues)
 
 
         // 알림
@@ -132,8 +139,8 @@ fun AppNavGraph(
                 uiState = uiState,
                 onEditInfo = { navController.navigate(Routes.EditInfo.route) },
                 onRecentCalls = { navController.navigate(Routes.CallHistory.route) },
-                onVoipCallTest = { navController.navigate(Routes.VoipCallTest.route) },
-                onLogout = { viewModel.logout() }
+                onLogout = { viewModel.logout() },
+                modifier = Modifier.padding(paddingValues)
             )
         }
 

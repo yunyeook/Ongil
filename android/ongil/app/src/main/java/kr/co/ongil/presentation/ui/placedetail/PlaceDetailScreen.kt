@@ -40,6 +40,7 @@ import kr.co.ongil.presentation.ui.common.InputBox
 @Composable
 fun PlaceDetailScreen(
     viewModel: PlaceDetailViewModel,
+    modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
     onSavedSuccess: () -> Unit,
     onDeletedSuccess: () -> Unit
@@ -64,6 +65,7 @@ fun PlaceDetailScreen(
                 onDeletedSuccess()
             }
         },
+        modifier = modifier,
         isLoading = uiState.isLoading,
         error = uiState.error,
         successMessage = uiState.successMessage
@@ -114,12 +116,12 @@ fun PlaceDetailScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
             Surface(
-                modifier = modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 color = Color(0xFFF9FAFB) // 배경 연한 그레이 톤 (즐겨찾기 화면과 동일)
             ) {
                 Column(

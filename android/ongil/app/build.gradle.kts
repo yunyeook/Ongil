@@ -31,7 +31,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // local.properties의 BASE_URL을 BuildConfig 필드로 추가
-        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty("BASE_URL") ?: "https://staging.on-gil.co.kr/"}\"")
+        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty("BASE_URL") ?: ""}\"")
+        buildConfigField("String", "SSE_URL", "\"${localProperties.getProperty("SSE_URL") ?: ""}\"")
     }
 
     buildTypes {
@@ -70,6 +71,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.compose.material3)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
