@@ -19,7 +19,7 @@ val localProperties = Properties().apply {
 
 android {
     namespace = "kr.co.ongil"
-    compileSdk = 35  // Android 15 기준
+    compileSdk = 36  // Health Connect 요구사항
 
     defaultConfig {
         applicationId = "kr.co.ongil"
@@ -31,7 +31,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // local.properties의 BASE_URL을 BuildConfig 필드로 추가
-        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty("BASE_URL") ?: ""}\"")
+        buildConfigField(
+            "String",
+            "BASE_URL",
+            "\"${localProperties.getProperty("BASE_URL") ?: ""}\""
+        )
         buildConfigField("String", "SSE_URL", "\"${localProperties.getProperty("SSE_URL") ?: ""}\"")
     }
 
@@ -55,6 +59,12 @@ android {
         compose = true
         buildConfig = true
     }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+    }
+
 }
 
 dependencies {
@@ -128,4 +138,11 @@ dependencies {
     implementation("com.github.NaikSoftware:StompProtocolAndroid:1.6.6")
     implementation("io.reactivex.rxjava2:rxjava:2.2.21")
     implementation("io.reactivex.rxjava2:rxandroid:2.1.1")
+
+    // 삼성헬스
+
+    implementation(libs.health.connect)
+    coreLibraryDesugaring(libs.desugarJdk)
+
+
 }

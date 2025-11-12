@@ -1,11 +1,14 @@
 package kr.co.ongil.presentation.ui.patientinfo
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,6 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.health.connect.client.PermissionController
+import kotlinx.coroutines.launch
 import kr.co.ongil.presentation.ui.common.patientinfo.InfoCard
 
 
@@ -74,7 +79,7 @@ fun PatientInfoScreen(
             if (selected == 0) {
                 ActivityLogTab(uiState = uiState)
             } else {
-                HealthInfoTab()
+                HealthInfoTab(uiState = uiState, viewModel = viewModel)
             }
         }
     }
@@ -286,35 +291,227 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
 
 // ———————————————— Tab 2: 건강 정보 ————————————————
 @Composable
-private fun HealthInfoTab() {
-    val cards = listOf(
-        HealthMetric("심박수", "BPM", "2025.10.27", listOf("평균" to "72", "최대" to "95", "최소" to "58")),
-        HealthMetric("혈중산소포화도", "%", "2025.10.27", listOf("평균" to "120/80", "최대" to "130/85", "최소" to "110/75")),
-        HealthMetric("수면", "시간", "2025.10.27", listOf("평균" to "7.5", "최대" to "8.5", "최소" to "6.0")),
-        HealthMetric("걸음수", "걸음", "2025.10.27", listOf("평균" to "8,500", "최대" to "12,000", "최소" to "5,000")),
-    )
+private fun HealthInfoTab(
+    uiState: PatientInfoUiState,
+    viewModel: PatientInfoViewModel
+) {
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Health Connect 권한 요청 launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        viewModel.onPermissionResult()
+    }
+
+    // 디버깅용 로그
+    android.util.Log.d("HealthInfoTab", "healthPermissionGranted: ${uiState.healthPermissionGranted}")
+    android.util.Log.d("HealthInfoTab", "healthData: ${uiState.healthData}")
 
     LazyColumn(
         contentPadding = PaddingValues(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item { SectionTitle("건강 정보") }
-        items(cards) { metric ->
-            InfoCard(
-                modifier = Modifier.fillMaxWidth(),
-                title = "${metric.title} · ${metric.date}",
-                stats = metric.values
-            )
+
+        val healthData = uiState.healthData
+
+        // 권한이 있으면 항상 4개 카드 표시
+        if (uiState.healthPermissionGranted) {
+            // 심박수
+            item {
+                val heartRate = healthData?.heartRate
+                val stats = if (heartRate != null) {
+                    listOf(
+                        "평균" to "${heartRate.average} BPM",
+                        "최대" to "${heartRate.max} BPM",
+                        "최소" to "${heartRate.min} BPM"
+                    )
+                } else {
+                    listOf("" to "Samsung Health에서\n심박수를 측정해주세요")
+                }
+                InfoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = "심박수 (최근 30일)",
+                    stats = stats
+                )
+            }
+
+            // 혈중산소포화도
+            item {
+                val oxygen = healthData?.oxygenSaturation
+                val stats = if (oxygen != null) {
+                    listOf(
+                        "평균" to "${String.format("%.1f", oxygen.average)}%",
+                        "최대" to "${String.format("%.1f", oxygen.max)}%",
+                        "최소" to "${String.format("%.1f", oxygen.min)}%"
+                    )
+                } else {
+                    listOf("" to "Samsung Health에서\n혈중산소포화도를 측정해주세요")
+                }
+                InfoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = "혈중산소포화도 (최근 30일)",
+                    stats = stats
+                )
+            }
+
+            // 수면
+            item {
+                val sleep = healthData?.sleep
+                val stats = if (sleep != null) {
+                    listOf(
+                        "평균" to "${String.format("%.1f", sleep.average)}시간",
+                        "최대" to "${String.format("%.1f", sleep.max)}시간",
+                        "최소" to "${String.format("%.1f", sleep.min)}시간"
+                    )
+                } else {
+                    listOf("" to "Samsung Health에서\n수면 기록을 측정해주세요")
+                }
+                InfoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = "수면 (최근 30일)",
+                    stats = stats
+                )
+            }
+
+            // 걸음수
+            item {
+                val steps = healthData?.steps
+                val stats = if (steps != null) {
+                    listOf(
+                        "평균" to "${String.format("%,d", steps.average)}걸음",
+                        "최대" to "${String.format("%,d", steps.max)}걸음",
+                        "최소" to "${String.format("%,d", steps.min)}걸음"
+                    )
+                } else {
+                    listOf("" to "Samsung Health에서\n걸음수를 측정해주세요")
+                }
+                InfoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = "걸음수 (최근 30일)",
+                    stats = stats
+                )
+            }
+        } else {
+            // 데이터가 없는 경우
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (!uiState.healthPermissionGranted) {
+                        // 권한이 없는 경우
+                        Text(
+                            text = "건강 데이터를 확인하려면\nHealth Connect 권한이 필요합니다.",
+                            color = OnGilColors.Label,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    val permissions = viewModel.getPermissionsToRequest()
+                                    if (permissions.isNotEmpty()) {
+                                        permissionLauncher.launch(permissions)
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = OnGilColors.Primary
+                            )
+                        ) {
+                            Text("권한 요청하기")
+                        }
+                    } else {
+                        // 권한은 있지만 데이터가 없는 경우
+                        Text(
+                            text = "건강 데이터를 불러올 수 없습니다",
+                            color = OnGilColors.Label,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Health Connect와 Samsung Health\n연동 확인이 필요합니다",
+                            color = OnGilColors.Label.copy(alpha = 0.9f),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Health Connect 앱 열기 버튼
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = context.packageManager.getLaunchIntentForPackage(
+                                        "com.google.android.apps.healthdata"
+                                    )
+                                    if (intent != null) {
+                                        context.startActivity(intent)
+                                    } else {
+                                        // Health Connect가 설치되지 않은 경우
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Health Connect 앱이 설치되지 않았습니다",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Health Connect 앱을 열 수 없습니다",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = OnGilColors.Primary
+                            )
+                        ) {
+                            Text("Health Connect 앱 열기")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Text(
+                                text = "확인사항:",
+                                color = OnGilColors.Label,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "1. Health Connect에서 Samsung Health가\n   데이터 소스로 연결되어 있는지",
+                                color = OnGilColors.Label.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "2. Ongil 앱에 데이터 읽기 권한이\n   부여되어 있는지",
+                                color = OnGilColors.Label.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "3. Samsung Health에서 Health Connect로\n   데이터 공유가 활성화되어 있는지",
+                                color = OnGilColors.Label.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
-private data class HealthMetric(
-    val title: String,
-    val unit: String,
-    val date: String,
-    val values: List<Pair<String, String>>
-)
 
 @Composable
 private fun SectionTitle(text: String) {
@@ -347,7 +544,7 @@ private fun PatientInfoScreen_Preview(selected: Int) {
         activityLog = ActivityLog(
             favoriteLocations = listOf(
                 FavoriteLocation(1, "답십리공원", 13),
-                FavoriteLocation(2, "엔제리너스대점", 8),
+                FavoriteLocation(2, "엔제리너스대점건", 8),
                 FavoriteLocation(3, "경희대학교병원", 5)
             ),
             safezoneExit = mapOf("FIRST" to 1, "SECOND" to 1, "THIRD" to 0),
@@ -369,7 +566,17 @@ private fun PatientInfoScreen_Preview(selected: Int) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             SegmentedTwoTabs(left = "활동 기록", right = "건강 정보", selectedIndex = sel, onSelected = { sel = it })
             Spacer(Modifier.height(20.dp))
-            if (sel == 0) ActivityLogTab(uiState = previewUiState) else HealthInfoTab()
+            if (sel == 0) {
+                ActivityLogTab(uiState = previewUiState)
+            } else {
+                // Preview에서는 ViewModel을 제공할 수 없으므로 간단한 텍스트만 표시
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("건강 정보 탭 (Preview에서는 표시되지 않음)", color = OnGilColors.Label)
+                }
+            }
         }
     }
 }

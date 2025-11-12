@@ -13,12 +13,16 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+import kr.co.ongil.domain.repository.HealthConnectRepository
+import kr.co.ongil.domain.usecase.health.GetHealthDataUseCase
 import kr.co.ongil.domain.usecase.patientinfo.GetPatientInfoUseCase
 import javax.inject.Inject
 
 @HiltViewModel
 class PatientInfoViewModel @Inject constructor(
     private val getPatientInfoUseCase: GetPatientInfoUseCase,
+    private val getHealthDataUseCase: GetHealthDataUseCase,
+    private val healthConnectRepository: HealthConnectRepository,
     private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
 
@@ -36,6 +40,7 @@ class PatientInfoViewModel @Inject constructor(
 
     init {
         observePatientIdChanges()
+        checkHealthPermissions()
     }
 
     // 환자 ID 변경 감지
@@ -61,18 +66,20 @@ class PatientInfoViewModel @Inject constructor(
                         if (!patientIdStr.isNullOrEmpty()) {
                             loadPatientInfo(patientIdStr)
                         } else {
-                            _uiState.value = PatientInfoUiState(
+                            _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                error = "선택된 환자가 없습니다."
+                                error = "선택된 환자가 없습니다.",
+                                activityLog = null
                             )
                         }
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "observePatientIdChanges() - 예외 발생", e)
-                _uiState.value = PatientInfoUiState(
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "사용자 정보를 불러오는데 실패했습니다."
+                    error = "사용자 정보를 불러오는데 실패했습니다.",
+                    activityLog = null
                 )
             }
         }
@@ -137,9 +144,10 @@ class PatientInfoViewModel @Inject constructor(
                                 emerCallTransition = patientInfoDto.emerCallTransition
                             )
 
-                            _uiState.value = PatientInfoUiState(
+                            _uiState.value = _uiState.value.copy(
                                 isLoading = false,
-                                activityLog = activityLog
+                                activityLog = activityLog,
+                                error = null
                             )
                         } catch (e: Exception) {
                             Log.e(TAG, "데이터 파싱 중 오류", e)
@@ -162,6 +170,57 @@ class PatientInfoViewModel @Inject constructor(
                     isLoading = false,
                     error = e.message ?: "알 수 없는 오류가 발생했습니다."
                 )
+            }
+        }
+    }
+
+    // Health Connect 권한 체크
+    private fun checkHealthPermissions() {
+        viewModelScope.launch {
+            try {
+                val hasPermission = healthConnectRepository.checkPermissions()
+                Log.d(TAG, "checkHealthPermissions() - 권한 상태: $hasPermission")
+                _uiState.value = _uiState.value.copy(healthPermissionGranted = hasPermission)
+
+                if (hasPermission) {
+                    loadHealthData()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "checkHealthPermissions() - 권한 체크 실패", e)
+                _uiState.value = _uiState.value.copy(healthPermissionGranted = false)
+            }
+        }
+    }
+
+    // 권한 요청할 권한 목록 가져오기
+    suspend fun getPermissionsToRequest(): Set<String> {
+        return healthConnectRepository.getPermissionsToRequest()
+    }
+
+    // 권한 요청 결과 처리
+    fun onPermissionResult() {
+        checkHealthPermissions()
+    }
+
+    // 건강 데이터 로드
+    private fun loadHealthData() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "loadHealthData() - 건강 데이터 로드 시작")
+
+                getHealthDataUseCase().collectLatest { result ->
+                    result.onSuccess { healthData ->
+                        Log.d(TAG, "loadHealthData() - 건강 데이터 조회 성공: $healthData")
+                        _uiState.value = _uiState.value.copy(healthData = healthData)
+                    }.onFailure { exception ->
+                        Log.e(TAG, "loadHealthData() - 건강 데이터 조회 실패", exception)
+                        // 건강 데이터 조회 실패는 치명적이지 않으므로 에러 표시하지 않음
+                        _uiState.value = _uiState.value.copy(healthData = null)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "loadHealthData() - 예외 발생", e)
+                _uiState.value = _uiState.value.copy(healthData = null)
             }
         }
     }
