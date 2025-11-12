@@ -27,17 +27,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 
+// 지도 화면 상단 검색바 컴포넌트
 @Composable
 fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "장소를 검색해주세요",
+    requestFocus: Boolean = false,
     onSearch: () -> Unit = {}
 ) {
     val borderColor = Color(0xFFD9D9D9)
     val placeholderColor = Color(0xFF9CA3AF)
+    val focusRequester = androidx.compose.runtime.remember { FocusRequester() }
+
+    LaunchedEffect(requestFocus) {
+        if (requestFocus) {
+            focusRequester.requestFocus()
+        }
+    }
 
     androidx.compose.material3.TextField(
         value = value,
@@ -45,6 +57,7 @@ fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
+            .focusRequester(focusRequester)
             .border(
                 width = 1.dp,
                 color = borderColor,

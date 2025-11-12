@@ -13,6 +13,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -57,11 +58,24 @@ fun AppNavGraph(
         // 홈
         homeGraph(navController)
 
-        // 위치 - 지도 화면
-        composable(Routes.Location.route) {
+        composable(Routes.Location.route) { backStackEntry ->
+            val previousEntry = navController.previousBackStackEntry
+            val searchPlaceholder = remember {
+                val placeholder = previousEntry?.savedStateHandle?.get<String>("search_placeholder") ?: "장소를 검색해주세요"
+                previousEntry?.savedStateHandle?.remove<String>("search_placeholder")
+                placeholder
+            }
+            val requestSearchFocus = remember {
+                val shouldFocus = previousEntry?.savedStateHandle?.get<Boolean>("request_search_focus") ?: false
+                previousEntry?.savedStateHandle?.remove<Boolean>("request_search_focus")
+                shouldFocus
+            }
+
             MapScreen(
                 paddingValues = paddingValues,
-                authViewModel = authViewModel ?: hiltViewModel()
+                authViewModel = authViewModel ?: hiltViewModel(),
+                searchPlaceholder = searchPlaceholder,
+                requestSearchFocus = requestSearchFocus
             )
         }
 

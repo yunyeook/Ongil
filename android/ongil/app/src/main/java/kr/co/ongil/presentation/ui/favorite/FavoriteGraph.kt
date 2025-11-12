@@ -44,7 +44,12 @@ fun NavGraphBuilder.favoriteGraph(
                         )
                     )
                 },
-                onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) }
+                onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) },
+                onGoSearchPlaceClick = {
+                    navController.currentBackStackEntry?.savedStateHandle?.set("search_placeholder", "즐겨찾기에 등록할 장소를 검색해주세요.")
+                    navController.currentBackStackEntry?.savedStateHandle?.set("request_search_focus", true)
+                    navController.navigate(Routes.Location.route)
+                }
             )
         }
     }
