@@ -52,27 +52,34 @@ class HomeViewModel @Inject constructor(
 
     private fun loadHomeData() {
         viewModelScope.launch {
-            combine(
-                userRepository.getMyInfo(),
-                userDataStoreManager.getSelectedPatientId(),
-                flow {
-                    val result = favoriteRepository.getMyRelationships()
-                    emit(result.getOrNull() ?: emptyList())
+            userDataStoreManager.getUserType().collectLatest { userType ->
+                combine(
+                    userRepository.getMyInfo(),
+                    userDataStoreManager.getSelectedPatientId(),
+                    flow {
+                        val result = favoriteRepository.getMyRelationships()
+                        emit(result.getOrNull() ?: emptyList())
+                    }
+                ) { userInfoResult, selectedId, patients ->
+                    Triple(userInfoResult, selectedId, patients)
+                }.collect { (userInfoResult, selectedId, patients) ->
+                    // 로그인한 사용자 이름
+                    val guardianName = userInfoResult?.getOrNull()?.name ?: ""
+
+                    // 환자 이름: 환자 로그인 시 자기 이름, 보호자 로그인 시 선택된 환자 이름
+                    val patientName = if (userType == "PATIENT") {
+                        guardianName // 환자가 로그인한 경우 자기 이름
+                    } else {
+                        // 선택된 환자의 relationshipName (PatientData.name에 저장됨)
+                        val selectedPatient = patients.find { it.id.toString() == selectedId }
+                        selectedPatient?.name ?: ""
+                    }
+
+                    _uiState.value = _uiState.value.copy(
+                        guardianName = guardianName,
+                        patientName = patientName
+                    )
                 }
-            ) { userInfoResult, selectedId, patients ->
-                Triple(userInfoResult, selectedId, patients)
-            }.collect { (userInfoResult, selectedId, patients) ->
-                // 로그인한 사용자 이름
-                val guardianName = userInfoResult?.getOrNull()?.name ?: ""
-
-                // 선택된 환자의 relationshipName (PatientData.name에 저장됨)
-                val selectedPatient = patients.find { it.id.toString() == selectedId }
-                val patientName = selectedPatient?.name ?: ""
-
-                _uiState.value = _uiState.value.copy(
-                    guardianName = guardianName,
-                    patientName = patientName
-                )
             }
         }
     }
