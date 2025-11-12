@@ -89,27 +89,46 @@ public class CallService {
             .build();
 
         Call savedCall = callRepository.save(call);
-        log.info("VoIP 통화 세션 생성 완료: callId={}, sessionId={}", savedCall.getId(), sessionId);
+        log.info("✅ VoIP 통화 세션 생성 완료: callId={}, sessionId={}, caller={}, receiver={}",
+            savedCall.getId(), sessionId, caller.getId(), receiver.getId());
 
-        // 8. FCM 푸시 알림 전송 (앱 깨우기)
-        fcmService.sendCallNotification(
-            receiver.getId(),
-            caller.getId(),
-            caller.getName(),
-            savedCall.getId(),
-            sessionId,
-            request.callType().name()
-        );
+        // 8. FCM 푸시 알림 전송 (앱 깨우기) - 실패해도 계속 진행
+        try {
+            log.info("📱 FCM 푸시 알림 전송 시도: receiverId={}", receiver.getId());
+            fcmService.sendCallNotification(
+                receiver.getId(),
+                caller.getId(),
+                caller.getName(),
+                savedCall.getId(),
+                sessionId,
+                request.callType().name()
+            );
+            log.info("✅ FCM 푸시 알림 전송 완료");
+        } catch (Exception e) {
+            log.warn("⚠️ FCM 푸시 알림 전송 실패 (계속 진행): {}", e.getMessage());
+            // FCM 실패해도 WebSocket 시그널은 전송
+        }
 
         // 9. 수신자에게 INCOMING 시그널 전송 (WebSocket - 연결되어 있으면 즉시 전달)
+        log.info("🔔 INCOMING 시그널 전송 호출 시작: callId={}, from={}, to={}",
+            savedCall.getId(), caller.getId(), receiver.getId());
+
         callSignalController.sendIncomingCall(
             savedCall.getId(),
             caller.getId(),
             receiver.getId()
         );
 
-        // 알림: '전화가 왔어요' (수신자)
-        notificationService.notifyCallIncoming(caller.getId(), receiver.getId(), savedCall.getId(), caller.getName());
+        log.info("✅ INCOMING 시그널 전송 호출 완료");
+
+        // 알림: '전화가 왔어요' (수신자) - 실패해도 계속 진행
+        try {
+            log.info("🔔 DB 알림 저장 시도: receiverId={}", receiver.getId());
+            notificationService.notifyCallIncoming(caller.getId(), receiver.getId(), savedCall.getId(), caller.getName());
+            log.info("✅ DB 알림 저장 완료");
+        } catch (Exception e) {
+            log.warn("⚠️ DB 알림 저장 실패 (계속 진행): {}", e.getMessage());
+        }
 
         // 9. INCOMING 시그널 전송 후 자동으로 RINGING 상태로 전환
         savedCall.ring();
