@@ -1,6 +1,9 @@
 package kr.co.ongil.presentation.ui.common.alert
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.RadioButtonChecked
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PersonAdd
@@ -15,14 +18,14 @@ import kr.co.ongil.presentation.uistate.NotificationType
 private val Gray900 = Color(0xFF212A30)
 
 // 배경 색상
-private val BubbleSOS = Color(0xFFFFE8DE)
+private val BubbleSOS = Color(0xFFFFD6D6) // 더 붉게
 private val BubbleBlue = Color(0xFFE8F0FF)
 private val BubbleGreen = Color(0xFFE8F1EC)
 private val BubbleBeige = Color(0xFFF8EBD6)
 private val BubbleGray = Color(0xFFEFF3EF)
 
 // 아이콘 색상
-private val IconSOS = Color(0xFFD35B41)
+private val IconSOS = Color(0xFFE53E3E) // 더 붉게
 private val IconBlue = Color(0xFF4C77C6)
 private val IconBeige = Color(0xFF9C7E52)
 private val Accent = Color(0xFF8CA898)
@@ -45,12 +48,12 @@ fun getNotificationStyle(type: NotificationType): NotificationStyle {
         NotificationType.RELATIONSHIP_REGIST -> NotificationStyle(
             bubbleColor = BubbleBlue,
             iconColor = IconBlue,
-            icon = Icons.Outlined.PersonAdd
+            icon = Icons.Outlined.Person // 친구요청 - 프로필 아이콘
         )
         NotificationType.SAFEZONE_EXIT -> NotificationStyle(
             bubbleColor = BubbleGray,
             iconColor = Gray900,
-            icon = Icons.Outlined.Shield
+            icon = Icons.Filled.RadioButtonChecked // 범위 이탈 - 안전범위 아이콘
         )
         NotificationType.NAVIGATION_START -> NotificationStyle(
             bubbleColor = BubbleBeige,
@@ -62,12 +65,12 @@ fun getNotificationStyle(type: NotificationType): NotificationStyle {
         NotificationType.SOS -> NotificationStyle(
             bubbleColor = BubbleSOS,
             iconColor = IconSOS,
-            icon = Icons.Outlined.ErrorOutline
+            icon = Icons.Filled.Warning // 이상탐지 - 느낌표, 더 붉게
         )
         NotificationType.FRIEND_REQUEST -> NotificationStyle(
             bubbleColor = BubbleBlue,
             iconColor = IconBlue,
-            icon = Icons.Outlined.PersonAdd
+            icon = Icons.Outlined.Person // 친구요청 - 프로필 아이콘
         )
         NotificationType.FRIEND_DONE -> NotificationStyle(
             bubbleColor = BubbleBlue,
@@ -77,7 +80,7 @@ fun getNotificationStyle(type: NotificationType): NotificationStyle {
         NotificationType.MISSED_CALL -> NotificationStyle(
             bubbleColor = BubbleGreen,
             iconColor = Accent,
-            icon = Icons.Outlined.PhoneMissed
+            icon = Icons.Filled.Phone // 전화 관련 - 전화 아이콘
         )
         NotificationType.NAV_START -> NotificationStyle(
             bubbleColor = BubbleBeige,
@@ -92,7 +95,7 @@ fun getNotificationStyle(type: NotificationType): NotificationStyle {
         NotificationType.GEOFENCE_OUT -> NotificationStyle(
             bubbleColor = BubbleGray,
             iconColor = Gray900,
-            icon = Icons.Outlined.Shield
+            icon = Icons.Filled.RadioButtonChecked // 범위 이탈 - 안전범위 아이콘
         )
 
         // 알 수 없는 타입

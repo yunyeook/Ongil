@@ -110,7 +110,15 @@ fun AppNavGraph(
 
         // 알림
         composable(Routes.Notifications.route) {
-            NotificationScreen(onNavigateBack = { navController.popBackStack() })
+            NotificationScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToLogin = {
+                    navController.navigate(Routes.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
 
 

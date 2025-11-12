@@ -50,7 +50,9 @@ data class NotificationUiState(
     val notifications: List<NotificationUi> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val hasUnread: Boolean = false
+    val hasUnread: Boolean = false,
+    val deletingIds: Set<Long> = emptySet(), // 삭제 중인 알림 ID
+    val requiresReauth: Boolean = false // 재인증 필요 (401/403 에러 시)
 )
 
 /**
