@@ -6,6 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kr.co.ongil.data.repository.AuthRepositoryImpl
 import kr.co.ongil.data.repository.CallRepositoryImpl
+import kr.co.ongil.data.repository.DashboardRepositoryImpl
 import kr.co.ongil.data.repository.FavoriteRepositoryImpl
 import kr.co.ongil.data.repository.FindPasswordAuthRepositoryImpl
 import kr.co.ongil.data.repository.LocationSseRepositoryImpl
@@ -16,6 +17,7 @@ import kr.co.ongil.data.repository.SearchUserRepositoryImpl
 import kr.co.ongil.data.repository.UserRepositoryImpl
 import kr.co.ongil.domain.repository.AuthRepository
 import kr.co.ongil.domain.repository.CallRepository
+import kr.co.ongil.domain.repository.DashboardRepository
 import kr.co.ongil.domain.repository.FavoriteRepository
 import kr.co.ongil.domain.repository.FindPasswordAuthRepository
 import kr.co.ongil.domain.repository.LocationSseRepository
@@ -78,4 +80,9 @@ abstract class RepositoryModule {
     abstract fun bindPatientInfoRepository(
         impl: PatientInfoRepositoryImpl
     ): PatientInfoRepository
+
+    @Binds
+    abstract fun bindDashboardRepository(
+        impl: DashboardRepositoryImpl
+    ): DashboardRepository
 }
