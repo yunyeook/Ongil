@@ -206,19 +206,34 @@ private fun SummaryCard(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // 상단 내용 (값)
-            Text(
-                text = value,
-                fontSize = contentFontSize, // 상단 내용 폰트 크기 ("집", "0회" 등)
-                color = if (style == CardStyle.Highlight) HomeColors.OnPrimary else HomeColors.TextPrimary,
-                lineHeight = labelSpacing,
-                textAlign = TextAlign.Center
-            )
+            // 상단 내용 (값) - 데이터 없으면 안내 문구 표시
+            if (value.isEmpty() || value.isBlank()) {
+                Text(
+                    text = "아직 조회된\n정보가 없습니다!",
+                    fontSize = 10.sp,
+                    color = if (style == CardStyle.Highlight) HomeColors.OnPrimary else HomeColors.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 14.sp
+                )
+            } else {
+                // 3글자 초과 시 3글자까지만 표시하고 ... 추가
+                val displayValue = if (value.length > 3) {
+                    value.take(3) + "..."
+                } else {
+                    value
+                }
+                Text(
+                    text = displayValue,
+                    fontSize = contentFontSize, // 상단 내용 폰트 크기 ("집", "0회" 등)
+                    color = if (style == CardStyle.Highlight) HomeColors.OnPrimary else HomeColors.TextPrimary,
+                    lineHeight = labelSpacing,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(Modifier.height(if (style == CardStyle.Highlight) 8.dp else 4.dp)) // 값과 라벨 사이 간격
 
-            // 하단 라벨
+            // 하단 라벨 (항상 표시)
             Text(
                 text = title,
                 fontSize = labelFontSize, // 하단 라벨 폰트 크기 ("가장 많이 방문한 목적지", "안전구역 벗어난 횟수" 등)
@@ -241,7 +256,7 @@ private fun PreviewHomeScreen() {
             uiState = HomeUiState(
                 guardianName = "김정희",
                 patientName = "김복자",
-                mostVisitedLabel = "가장 많이 방문한 목적지",
+                mostVisitedLabel = "아직 조회된 정보가 없습니다!",
                 mostVisitedPlace = "집",
                 outOfSafeZoneCount = 8,
                 routeFailCount = 0

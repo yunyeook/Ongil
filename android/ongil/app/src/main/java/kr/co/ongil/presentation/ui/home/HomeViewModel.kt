@@ -52,7 +52,6 @@ class HomeViewModel @Inject constructor(
 
     private fun loadHomeData() {
         viewModelScope.launch {
-            // 사용자 정보, 환자 목록, 선택된 환자 ID를 결합
             combine(
                 userRepository.getMyInfo(),
                 userDataStoreManager.getSelectedPatientId(),
@@ -119,7 +118,7 @@ class HomeViewModel @Inject constructor(
                         Log.d(TAG, "loadDashboardData() - dashboard 조회 성공: $dashboardDto")
 
                         _uiState.value = _uiState.value.copy(
-                            mostVisitedPlace = dashboardDto.favoriteName ?: "데이터 없음",
+                            mostVisitedPlace = dashboardDto.favoriteName ?: "", // 빈 문자열로 전달 (UI에서 처리)
                             outOfSafeZoneCount = dashboardDto.safezoneExit,
                             routeFailCount = dashboardDto.routeLost
                         )
