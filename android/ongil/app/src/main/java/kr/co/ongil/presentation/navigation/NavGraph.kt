@@ -39,7 +39,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kr.co.ongil.presentation.ui.auth.register.registerGraph
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
 import kr.co.ongil.presentation.ui.map.MapScreen
-import kr.co.ongil.presentation.ui.call.VoipCallTestScreen
 import kr.co.ongil.presentation.ui.safezonesetting.safeZoneGraph
 import kr.co.ongil.presentation.ui.home.homeGraph
 @Composable
@@ -186,6 +185,9 @@ fun AppNavGraph(
 
         // 통화 내역
         composable(Routes.CallHistory.route) {
+            val currentUserInfo by (authViewModel?.currentUserInfo ?: kotlinx.coroutines.flow.flowOf(null)).collectAsState(initial = null)
+            val userType = currentUserInfo?.getOrNull()?.userType ?: "PATIENT"  // 기본값
+
             RecentCallsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCallDetail = { callId ->
@@ -193,7 +195,6 @@ fun AppNavGraph(
                 },
                 onNavigateToVoipCall = { targetName, targetPhone, receiverId ->
                     // 재통화: isCaller = true, callId는 새로 생성됨
-                    val userType = "CAREGIVER"  // TODO: 실제 사용자 role로 변경
                     navController.navigate(
                         Routes.VoipCall.createRoute(
                             targetName = targetName,
@@ -214,17 +215,6 @@ fun AppNavGraph(
         ) { entry ->
             val callLogId = entry.arguments?.getLong("callLogId") ?: 0L
             CallDetailScreen(callLogId = callLogId)
-        }
-
-        // VoIP 통화 테스트 화면
-        composable(Routes.VoipCallTest.route) {
-            VoipCallTestScreen(
-                onNavigateToIncomingCall = { callId, callerName, callerPhone, userType ->
-                    navController.navigate(
-                        Routes.VoipIncomingCall.createRoute(callId, callerName, callerPhone, userType)
-                    )
-                }
-            )
         }
 
         // VoIP 수신 화면

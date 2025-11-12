@@ -53,12 +53,16 @@ fun VoipCallScreen(
     // 🕒 간단 타이머 (CONNECTED 이후부터 증가)
     var seconds by remember { mutableIntStateOf(0) }
     LaunchedEffect(uiState.call?.status) {
+        android.util.Log.d("VoipCallScreen", "Timer LaunchedEffect: status=${uiState.call?.status}")
         if (uiState.call?.status == "CONNECTED") {
+            android.util.Log.d("VoipCallScreen", "✅ Timer started")
             while (true) {
                 delay(1000)
                 seconds++
+                android.util.Log.d("VoipCallScreen", "Timer tick: $seconds seconds")
             }
         } else {
+            android.util.Log.d("VoipCallScreen", "Timer reset (status not CONNECTED)")
             seconds = 0
         }
     }
@@ -139,7 +143,7 @@ fun VoipCallScreen(
 
             Spacer(Modifier.height(48.dp))
 
-            // 하단 기능 버튼들 (스피커, 도움요청, 위치확인)
+            // 하단 기능 버튼들 (스피커, 도움요청)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -155,14 +159,6 @@ fun VoipCallScreen(
                     label = "도움 요청",
                     onClick = {
                         // TODO: SOS / 보호자 호출 등 연결
-                    }
-                )
-                CallFeatureButton(
-                    icon = Icons.Default.LocationOn,
-                    label = "위치 확인",
-                    onClick = {
-                        // 위치 한 번 더 확인하고 싶으면:
-                        viewModel.fetchCurrentLocation()
                     }
                 )
             }
@@ -387,11 +383,6 @@ private fun VoipCallScreenPreviewContent(
                     label = "도움 요청",
                     onClick = {}
                 )
-                CallFeatureButton(
-                    icon = Icons.Default.LocationOn,
-                    label = "위치 확인",
-                    onClick = {}
-                )
             }
 
             Spacer(Modifier.height(48.dp))
@@ -422,15 +413,6 @@ private fun VoipCallScreenPreviewContent(
                     color = Color(0xFF9FA9B8),
                     fontSize = 12.sp
                 )
-
-                if (callStatus == "CONNECTED") {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = "✓ 위치 전송 완료",
-                        color = Color(0xFF2ED573),
-                        fontSize = 12.sp
-                    )
-                }
             }
         }
     }

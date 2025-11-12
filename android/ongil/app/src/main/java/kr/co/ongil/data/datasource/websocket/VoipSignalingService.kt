@@ -22,7 +22,7 @@ class VoipSignalingService @Inject constructor(
 
     companion object {
         private const val TAG = "VoipSignalingService"
-        private fun topicCall(callId: Long) = "/topic/calls/$callId"
+        private const val USER_QUEUE_CALLS = "/user/queue/calls"
         private fun destCallSignal(callId: Long) = "/app/calls/$callId/signal"
     }
 
@@ -47,17 +47,16 @@ class VoipSignalingService @Inject constructor(
             return true
         }
 
-        val topic = topicCall(callId)
-        val disposable = webSocketManager.subscribe(topic) { message ->
+        val disposable = webSocketManager.subscribe(USER_QUEUE_CALLS) { message ->
             handleSignalMessage(message)
         }
 
         return if (disposable != null) {
             callSubscriptions[callId] = disposable
-            Log.d(TAG, "✓ Subscribed to $topic")
+            Log.d(TAG, "✓ Subscribed to $USER_QUEUE_CALLS for call $callId")
             true
         } else {
-            Log.e(TAG, "✗ Failed to subscribe to $topic")
+            Log.e(TAG, "✗ Failed to subscribe to $USER_QUEUE_CALLS")
             false
         }
     }
@@ -81,7 +80,8 @@ class VoipSignalingService @Inject constructor(
             sessionId = sessionId,
             senderId = fromUserId,
             receiverId = toUserId,
-            sdp = sdp
+            sdp = sdp,
+            sdpType = "offer"
         )
         sendSignal(callId, msg, "OFFER")
     }
@@ -99,7 +99,8 @@ class VoipSignalingService @Inject constructor(
             sessionId = sessionId,
             senderId = fromUserId,
             receiverId = toUserId,
-            sdp = sdp
+            sdp = sdp,
+            sdpType = "answer"
         )
         sendSignal(callId, msg, "ANSWER")
     }
@@ -166,6 +167,10 @@ class VoipSignalingService @Inject constructor(
                     Log.d(TAG, "Received ANSWER for call ${signal.callId}")
                 SignalingType.ICE.name ->
                     Log.d(TAG, "Received ICE for call ${signal.callId}")
+                SignalingType.ACCEPT.name ->
+                    Log.d(TAG, "Received ACCEPT for call ${signal.callId}")
+                SignalingType.REJECT.name ->
+                    Log.d(TAG, "Received REJECT for call ${signal.callId}")
                 SignalingType.HANGUP.name ->
                     Log.d(TAG, "Received HANGUP for call ${signal.callId}")
                 else ->

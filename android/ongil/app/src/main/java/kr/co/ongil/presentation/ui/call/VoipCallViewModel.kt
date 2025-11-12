@@ -1,13 +1,8 @@
 package kr.co.ongil.presentation.ui.call
 
-import android.Manifest
-import android.app.Application
-import android.content.pm.PackageManager
 import android.util.Log
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.location.LocationServices
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,25 +11,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kr.co.ongil.common.location.LocationPoint
-import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.core.webrtc.WebRtcCallClient
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.websocket.VoipSignalingService
-import kr.co.ongil.data.model.call.CallStartLocationRequest
 import kr.co.ongil.data.model.call.TurnCredentialsDto
 import kr.co.ongil.data.model.call.VoipCallDto
 import kr.co.ongil.data.model.websocket.SignalMessage
 import kr.co.ongil.domain.repository.CallRepository
 import org.webrtc.PeerConnection
-import java.time.Instant
 
 @HiltViewModel
 class VoipCallViewModel @Inject constructor(
     private val callRepository: CallRepository,
-    private val locationStreamBus: LocationStreamBus,
-    private val application: Application,
     private val webRtcCallClient: WebRtcCallClient,
     private val voipSignalingService: VoipSignalingService,
     private val userDataStoreManager: UserDataStoreManager
@@ -47,17 +35,6 @@ class VoipCallViewModel @Inject constructor(
     private var currentUserId: Long? = null
 
     init {
-        // 위치 스트림 구독
-        viewModelScope.launch {
-            locationStreamBus.updates.collect { point ->
-                _uiState.update {
-                    it.copy(
-                        currentLocation = "위도: ${point.latitude}, 경도: ${point.longitude}, 정확도: ${point.accuracyMeters}m"
-                    )
-                }
-            }
-        }
-
         // 로그인 사용자 ID 구독
         viewModelScope.launch {
             userDataStoreManager.getLoginUserId().collect { id ->
@@ -103,12 +80,7 @@ class VoipCallViewModel @Inject constructor(
                     )
                 }
 
-                // 2. 환자인 경우 시작 위치 전송
-                if (userType == "PATIENT") {
-                    sendStartLocationOnce(call.id)
-                }
-
-                // 3. WebSocket 연결
+                // 2. WebSocket 연결
                 val token = userDataStoreManager.getAccessToken().first()
                 if (token.isNullOrBlank()) {
                     Log.e(TAG, "Access token is null")
@@ -241,10 +213,6 @@ class VoipCallViewModel @Inject constructor(
                         )
                     }
 
-                    if (userType == "PATIENT") {
-                        sendStartLocationOnce(callId)
-                    }
-
                     setupWebRtcAsCallee()
                 }
                 .onFailure { e ->
@@ -272,6 +240,25 @@ class VoipCallViewModel @Inject constructor(
         Log.d(TAG, "=== endCall: callId=${call.id}, status=${call.status}")
 
         viewModelScope.launch {
+            // 1. 먼저 상대방에게 HANGUP 시그널 전송
+            val myUserId = currentUserId
+            val callerId = call.callerId
+            val receiverId = call.receiverId
+
+            if (myUserId != null && callerId != null && receiverId != null) {
+                val toUserId = if (myUserId == callerId) receiverId else callerId
+                voipSignalingService.sendHangup(
+                    callId = call.id,
+                    sessionId = call.sessionId,
+                    fromUserId = myUserId,
+                    toUserId = toUserId
+                )
+                Log.d(TAG, "✓ HANGUP signal sent to remote peer")
+            } else {
+                Log.w(TAG, "Cannot send HANGUP: myUserId=$myUserId, callerId=$callerId, receiverId=$receiverId")
+            }
+
+            // 2. 서버에 상태 업데이트
             callRepository.updateVoipCallStatus(call.id, "ENDED")
                 .onSuccess { updated ->
                     currentCall = updated
@@ -389,11 +376,78 @@ class VoipCallViewModel @Inject constructor(
                     )
                 }
             }
-            "HANGUP" -> {
-                Log.d(TAG, "Remote user hung up: ${signal.reason}")
-                _uiState.update {
-                    it.copy(message = "상대방이 통화를 종료했습니다.")
+            "ACCEPT" -> {
+                Log.d(TAG, "✅ Remote user accepted the call")
+                val call = currentCall ?: run {
+                    Log.w(TAG, "currentCall is null when receiving ACCEPT")
+                    return
                 }
+
+                Log.d(TAG, "[CALLER] Received ACCEPT for callId=${call.id}, current status=${call.status}")
+
+                viewModelScope.launch {
+                    callRepository.updateVoipCallStatus(call.id, "CONNECTED")
+                        .onSuccess { updated ->
+                            currentCall = updated
+                            Log.d(TAG, "✓ [CALLER] Call status updated to CONNECTED after ACCEPT")
+                            Log.d(TAG, "✓ [CALLER] Updated call: id=${updated.id}, status=${updated.status}")
+                            _uiState.update {
+                                it.copy(
+                                    call = updated,
+                                    message = "상대방이 통화를 수락했습니다."
+                                )
+                            }
+                            Log.d(TAG, "✓ [CALLER] UI state updated with CONNECTED call")
+                        }
+                        .onFailure { e ->
+                            Log.e(TAG, "Failed to update call status on ACCEPT: ${e.message}", e)
+                        }
+                }
+            }
+            "REJECT" -> {
+                Log.d(TAG, "❌ Remote user rejected the call")
+                _uiState.update {
+                    it.copy(
+                        call = currentCall?.copy(status = "REJECTED"),
+                        message = "상대방이 통화를 거절했습니다."
+                    )
+                }
+                webRtcCallClient.endCall()
+                voipSignalingService.disconnect()
+            }
+            "HANGUP" -> {
+                Log.d(TAG, "📞 Remote user hung up: ${signal.reason}")
+
+                val call = currentCall
+                if (call != null && call.status != "ENDED") {
+                    viewModelScope.launch {
+                        callRepository.updateVoipCallStatus(call.id, "ENDED")
+                            .onSuccess { updated ->
+                                currentCall = updated
+                                Log.d(TAG, "✓ Call status updated to ENDED")
+                                _uiState.update {
+                                    it.copy(
+                                        call = updated,
+                                        message = "상대방이 통화를 종료했습니다."
+                                    )
+                                }
+                            }
+                            .onFailure { e ->
+                                Log.e(TAG, "Failed to update call status on HANGUP: ${e.message}", e)
+                                _uiState.update {
+                                    it.copy(message = "상대방이 통화를 종료했습니다.")
+                                }
+                            }
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(message = "상대방이 통화를 종료했습니다.")
+                    }
+                }
+
+                // TODO: 타이머 정지 로직 추가 필요
+                // stopTimer()
+
                 webRtcCallClient.endCall()
                 voipSignalingService.disconnect()
             }
@@ -508,137 +562,6 @@ class VoipCallViewModel @Inject constructor(
                     Log.e(TAG, "setupWebRtcAsCallee TURN 실패: ${e.message}", e)
                     _uiState.update {
                         it.copy(error = "TURN 정보 조회 실패: ${e.message}")
-                    }
-                }
-        }
-    }
-
-    // =========================================================
-    // 📍 위치 관련
-    // =========================================================
-
-    fun fetchCurrentLocation() {
-        viewModelScope.launch {
-            if (!hasLocationPermission()) {
-                _uiState.update {
-                    it.copy(error = "⚠️ 위치 권한이 필요합니다. 앱 설정에서 위치 권한을 허용해주세요.")
-                }
-                return@launch
-            }
-
-            try {
-                val fusedClient = LocationServices.getFusedLocationProviderClient(application)
-                val lastLocation = lastLocationOrNull(fusedClient)
-
-                if (lastLocation != null) {
-                    val point = LocationPoint(
-                        latitude = lastLocation.latitude,
-                        longitude = lastLocation.longitude,
-                        accuracyMeters = lastLocation.accuracy,
-                        bearing = lastLocation.bearing,
-                        speedMps = lastLocation.speed,
-                        timeMillis = lastLocation.time
-                    )
-                    _uiState.update {
-                        it.copy(
-                            currentLocation = "위도: ${point.latitude}, 경도: ${point.longitude}, 정확도: ${point.accuracyMeters}m",
-                            message = "✓ 위치 가져오기 성공"
-                        )
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(error = "위치 정보가 없습니다. GPS를 켜고 잠시 기다려주세요.")
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(error = "위치 가져오기 실패: ${e.message}")
-                }
-            }
-        }
-    }
-
-    private suspend fun lastLocationOrNull(client: com.google.android.gms.location.FusedLocationProviderClient) =
-        try {
-            client.lastLocation.await()
-        } catch (e: Exception) {
-            Log.e(TAG, "lastLocation 실패", e)
-            null
-        }
-
-    private fun hasLocationPermission(): Boolean {
-        val fine = ContextCompat.checkSelfPermission(
-            application,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        val coarse = ContextCompat.checkSelfPermission(
-            application,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        return fine || coarse
-    }
-
-    private fun sendStartLocationOnce(callId: Long) {
-        viewModelScope.launch {
-            if (!hasLocationPermission()) {
-                _uiState.update {
-                    it.copy(error = "⚠️ 위치 권한이 필요합니다. 앱 설정에서 위치 권한을 허용해주세요.")
-                }
-                return@launch
-            }
-
-            var point = locationStreamBus.lastValue
-
-            if (point == null) {
-                try {
-                    val fusedClient =
-                        LocationServices.getFusedLocationProviderClient(application)
-                    val lastLocation = lastLocationOrNull(fusedClient)
-                    if (lastLocation != null) {
-                        point = LocationPoint(
-                            latitude = lastLocation.latitude,
-                            longitude = lastLocation.longitude,
-                            accuracyMeters = lastLocation.accuracy,
-                            bearing = lastLocation.bearing,
-                            speedMps = lastLocation.speed,
-                            timeMillis = lastLocation.time
-                        )
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "FusedLocation fallback 실패", e)
-                }
-            }
-
-            if (point == null) {
-                _uiState.update {
-                    it.copy(error = "⚠️ 위치 정보를 가져올 수 없습니다. 위치 권한과 GPS를 확인하세요.")
-                }
-                return@launch
-            }
-
-            val request = CallStartLocationRequest(
-                latitude = point.latitude,
-                longitude = point.longitude,
-                source = "GPS",
-                accuracy = point.accuracyMeters?.toDouble(),
-                timestamp = Instant.ofEpochMilli(point.timeMillis).toString()
-            )
-
-            callRepository.sendVoipCallStartLocation(callId, request)
-                .onSuccess {
-                    _uiState.update {
-                        it.copy(
-                            message = "✓ 위치 전송 완료 (${point.latitude}, ${point.longitude})"
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    _uiState.update {
-                        it.copy(
-                            error = "✗ 위치 전송 실패: ${e.message}"
-                        )
                     }
                 }
         }
