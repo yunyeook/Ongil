@@ -1,12 +1,9 @@
 package kr.co.ongil.domain.patient.location.service;
 
 import kr.co.ongil.domain.map.dto.response.CoordinateInfo;
-import kr.co.ongil.domain.patient.location.controller.LocationSSEController;
 import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
 import kr.co.ongil.domain.user.entity.User;
-import kr.co.ongil.global.eventListener.LocationUpdatedEvent;
-import kr.co.ongil.global.exception.BusinessException;
-import kr.co.ongil.global.exception.ErrorCode;
+import kr.co.ongil.global.sse.event.LocationUpdatedEvent;
 import kr.co.ongil.global.util.PatientAccessValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

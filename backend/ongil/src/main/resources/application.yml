@@ -22,16 +22,11 @@ spring:
       max-lifetime: 1800000
 
   # RabbitMQ
-#  rabbitmq:
-#    host: ${RABBITMQ_HOST:localhost}
-#    port: ${RABBITMQ_PORT:5672}
-#    username: ${RABBITMQ_USERNAME:guest}
-#    password: ${RABBITMQ_PASSWORD:guest}
   rabbitmq:
-    host: rabbitmq
-    port: 5672
-    username: admin
-    password: password
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
     # 선택적 설정
     virtual-host: /
     connection-timeout: 10000
@@ -85,7 +80,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,configprops  # ← 추가
+        include: health,info,env,configprops
   endpoint:
     env:
       enabled: true
