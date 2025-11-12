@@ -15,6 +15,7 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.datasource.remote.api.CallApi
+import kr.co.ongil.data.datasource.remote.api.DashboardApi
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
 import kr.co.ongil.data.datasource.remote.api.MapApi
 import kr.co.ongil.data.datasource.remote.api.NotificationApi
@@ -175,4 +176,9 @@ object NetworkModule {
     @Singleton
     fun providePatientInfoApi(retrofit: Retrofit): PatientInfoApi =
         retrofit.create(PatientInfoApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideDashboardApi(retrofit: Retrofit): DashboardApi =
+        retrofit.create(DashboardApi::class.java)
 }

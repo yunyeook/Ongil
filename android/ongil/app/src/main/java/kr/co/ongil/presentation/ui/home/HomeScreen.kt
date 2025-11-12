@@ -2,10 +2,7 @@ package kr.co.ongil.presentation.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -26,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 
 
 private object HomeColors {
@@ -42,19 +40,17 @@ private object HomeColors {
 data class HomeUiState(
     val guardianName: String,
     val patientName: String,
-    val mostVisitedLabel: String, // 예: "가장 많이 방문한 목적지"
-    val mostVisitedPlace: String, // 예: "집"
-    val outOfSafeZoneCount: Int,  // 안전구역 벗어난 횟수
-    val routeFailCount: Int       // 길찾기 실패 횟수
+    val mostVisitedLabel: String,
+    val mostVisitedPlace: String,
+    val outOfSafeZoneCount: Int,
+    val routeFailCount: Int
 )
 
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    modifier: Modifier = Modifier,
-    cardHeight: Dp = 120.dp // 여기를 수정하여 모든 카드 높이를 조절하세요
+    modifier: Modifier = Modifier
 ) {
-    // 헤더는 외부에서 제공. 여기서는 본문만 구성.
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -62,22 +58,9 @@ fun HomeScreen(
     ) {
         Spacer(Modifier.height(12.dp))
 
-        Text(
-            text = "안녕하세요, ${uiState.guardianName} 님",
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-        Spacer(Modifier.height(6.dp))
-
-        Text(
-            text = "${uiState.patientName}님의 위치를 찾아볼까요:)",
-            style = MaterialTheme.typography.bodyMedium,
-            color = HomeColors.TextSecondary
-        )
-
-        Spacer(Modifier.height(12.dp))
 
         // 지도 섹션 플레이스홀더(큰 네모 박스)
+        // 지도 알아서 넣어주세용
         MapSectionPlaceholder(
             modifier = Modifier
                 .fillMaxWidth()
@@ -100,7 +83,7 @@ fun HomeScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        DashboardCards(uiState = uiState, cardHeight = 160.dp)
+        DashboardCards(uiState = uiState)
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -129,32 +112,20 @@ private enum class CardStyle { Highlight, Default }
 @Composable
 private fun DashboardCards(
     uiState: HomeUiState,
-    modifier: Modifier = Modifier,
-    cardHeight: Dp
+    modifier: Modifier = Modifier
 ) {
-    // 한 줄에 3개, 반응형으로 weight 분배
+    // ===================== 카드 크기 설정 =======================
+    val cardHeight = 110.dp // 카드 높이
+    val cardSpacing = 12.dp // 카드 사이 간격
+    // =========================================================
+
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(cardSpacing)
     ) {
         SummaryCard(
             title = uiState.mostVisitedLabel,
             value = uiState.mostVisitedPlace,
-            leading = {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(HomeColors.Primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = null,
-                        tint = HomeColors.Primary
-                    )
-                }
-            },
             modifier = Modifier.weight(1f),
             style = CardStyle.Highlight,
             cardHeight = cardHeight
@@ -187,8 +158,20 @@ private fun SummaryCard(
     style: CardStyle = CardStyle.Default,
     cardHeight: Dp
 ) {
+    // ================= 폰트 크기 설정 ===========================
+
+    val contentFontSize = 22.sp           // 상단 내용 폰트 크기 ("집", "0회" 등)
+    val labelFontSize = 10.sp             // 하단 라벨 폰트 크기 ("가장 많이 방문한 목적지", "안전구역 벗어난 횟수" 등)
+    val titleLetterSpacing = (-0.7).sp    // 라벨 자간
+    val labelSpacing = 13.sp              // 줄 간격
+
+    // 카드 내부 여백
+    val cardPadding = 10.dp             // 카드 안쪽 여백
+    val cornerRadius = 16.dp            // 카드 모서리 둥글기
+    // =========================================================
+
     val bgColor = when (style) {
-        CardStyle.Highlight -> HomeColors.HighlightBg
+        CardStyle.Highlight -> HomeColors.Primary
         CardStyle.Default -> HomeColors.CardBg
     }
 
@@ -200,7 +183,7 @@ private fun SummaryCard(
                 val strokeWidth = 2.dp.toPx()
                 drawRoundRect(
                     color = HomeColors.Border,
-                    cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx()),
+                    cornerRadius = CornerRadius(20.dp.toPx(), 20.dp.toPx()),
                     style = Stroke(
                         width = strokeWidth,
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
@@ -213,54 +196,42 @@ private fun SummaryCard(
 
     Surface(
         modifier = shapedModifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(cornerRadius),
         color = bgColor
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(cardPadding),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.Start
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (style == CardStyle.Highlight) {
-                if (leading != null) leading()
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = HomeColors.TextSecondary
-                )
-                Surface(
-                    color = HomeColors.Primary,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = value,
-                        color = HomeColors.OnPrimary,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-            } else {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = HomeColors.TextPrimary,
-                    textAlign = TextAlign.Start
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = HomeColors.TextSecondary
-                )
-            }
+
+            // 상단 내용 (값)
+            Text(
+                text = value,
+                fontSize = contentFontSize, // 상단 내용 폰트 크기 ("집", "0회" 등)
+                color = if (style == CardStyle.Highlight) HomeColors.OnPrimary else HomeColors.TextPrimary,
+                lineHeight = labelSpacing,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(if (style == CardStyle.Highlight) 8.dp else 4.dp)) // 값과 라벨 사이 간격
+
+            // 하단 라벨
+            Text(
+                text = title,
+                fontSize = labelFontSize, // 하단 라벨 폰트 크기 ("가장 많이 방문한 목적지", "안전구역 벗어난 횟수" 등)
+                letterSpacing = titleLetterSpacing,
+                color = if (style == CardStyle.Highlight) HomeColors.OnPrimary else HomeColors.TextSecondary,
+                lineHeight = labelSpacing,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
 
-/* ============================== Previews ============================== */
+
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
@@ -274,8 +245,7 @@ private fun PreviewHomeScreen() {
                 mostVisitedPlace = "집",
                 outOfSafeZoneCount = 8,
                 routeFailCount = 0
-            ),
-            cardHeight = 100.dp // 이 값을 변경하여 프리뷰에서 카드 높이를 테스트할 수 있습니다.
+            )
         )
     }
 }
