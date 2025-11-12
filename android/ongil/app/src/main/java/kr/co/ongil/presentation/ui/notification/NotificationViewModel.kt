@@ -67,18 +67,14 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 알림 로드 (Channel을 통해 debounce 처리)
-     */
+   // 알림 로드 - 채널로 디바운싱되게
     private fun loadNotifications() {
         viewModelScope.launch {
             loadNotificationsChannel.send(Unit)
         }
     }
 
-    /**
-     * 실제 알림 로드 로직
-     */
+    // 알림 로드 로직
     private fun actuallyLoadNotifications() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -107,9 +103,7 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 에러 처리 (인증 실패 시 재인증 플래그 설정)
-     */
+  // 에러처리
     private fun handleError(exception: Throwable) {
         android.util.Log.e("NotificationViewModel", "Error occurred", exception)
 
@@ -142,11 +136,9 @@ class NotificationViewModel @Inject constructor(
     private fun markAsRead(id: Long) {
         viewModelScope.launch {
             try {
-                // 실제 API 호출
                 val result = repository.markAsRead(id)
 
                 result.onSuccess {
-                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
                     loadNotifications()
                 }.onFailure { exception ->
                     _uiState.update { it.copy(error = exception.message ?: "읽음 처리에 실패했습니다.") }
@@ -160,11 +152,9 @@ class NotificationViewModel @Inject constructor(
     private fun markAllAsRead() {
         viewModelScope.launch {
             try {
-                // 실제 API 호출
                 val result = repository.markAllAsRead()
 
                 result.onSuccess {
-                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
                     loadNotifications()
                 }.onFailure { exception ->
                     _uiState.update { it.copy(error = exception.message ?: "전체 읽음 처리에 실패했습니다.") }
@@ -175,15 +165,11 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 개별 알림 삭제 (낙관적 업데이트 패턴 적용)
-     */
+    // 개별 알림 삭제 기능
     private fun deleteNotification(id: Long) {
         viewModelScope.launch {
-            // 1. 백업 (롤백용)
             val originalList = _uiState.value.notifications
 
-            // 2. UI에서 먼저 제거 & 삭제 중 상태 추가
             _uiState.update {
                 it.copy(
                     notifications = it.notifications.filter { n -> n.id != id },
@@ -193,16 +179,13 @@ class NotificationViewModel @Inject constructor(
             }
 
             try {
-                // 3. API 호출
                 val result = repository.deleteNotification(id)
 
                 result.onSuccess {
-                    // 성공 - 삭제 중 상태만 제거
                     _uiState.update {
                         it.copy(deletingIds = it.deletingIds - id)
                     }
                 }.onFailure { exception ->
-                    // 실패 - 롤백 및 에러 메시지 표시
                     _uiState.update {
                         it.copy(
                             notifications = originalList,
@@ -213,7 +196,6 @@ class NotificationViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                // 예외 - 롤백 및 에러 메시지 표시
                 _uiState.update {
                     it.copy(
                         notifications = originalList,
@@ -226,15 +208,11 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 전체 알림 삭제 (낙관적 업데이트 패턴 적용)
-     */
+   //전체삭제
     private fun deleteAllNotifications() {
         viewModelScope.launch {
-            // 1. 백업 (롤백용)
             val originalList = _uiState.value.notifications
 
-            // 2. UI에서 먼저 모두 제거
             _uiState.update {
                 it.copy(
                     notifications = emptyList(),
@@ -249,12 +227,10 @@ class NotificationViewModel @Inject constructor(
 
                 result.onSuccess { deleteCount ->
                     android.util.Log.d("NotificationViewModel", "전체 알림 삭제 완료: ${deleteCount}개")
-                    // 성공 - 로딩 상태만 해제
                     _uiState.update {
                         it.copy(isLoading = false)
                     }
                 }.onFailure { exception ->
-                    // 실패 - 롤백 및 에러 메시지 표시
                     _uiState.update {
                         it.copy(
                             notifications = originalList,
@@ -265,7 +241,6 @@ class NotificationViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                // 예외 - 롤백 및 에러 메시지 표시
                 _uiState.update {
                     it.copy(
                         notifications = originalList,
@@ -286,9 +261,7 @@ class NotificationViewModel @Inject constructor(
         // TODO: 알림 타입별 네비게이션 처리
     }
 
-    /**
-     * NotificationDto를 NotificationUi로 변환
-     */
+
     private fun NotificationDto.toNotificationUi(): NotificationUi {
         return NotificationUi(
             id = this.notificationId,
@@ -300,10 +273,7 @@ class NotificationViewModel @Inject constructor(
         )
     }
 
-    /**
-     * 시간 차이를 "n분 전", "n시간 전" 형식으로 변환
-     */
-    // NotificationViewModel.kt
+    // 시간차이 관련 수정사항 n분 전 이렇게 나오게..
     private fun calculateTimeAgo(createdAt: String): String = try {
         val created = parseIso8601Lenient(createdAt) ?: return createdAt
         val now = Date()

@@ -14,10 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -25,12 +27,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 
+sealed interface StatValue {
+    data class Text(val value: String) : StatValue
+    data class Icon(val icon: ImageVector, val tint: Color = Color(0xFF101828)) : StatValue
+}
+
 @Composable
 fun InfoCard(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 24.dp,
     title: String,
-    stats: List<Pair<String, String>>
+    stats: List<Pair<String, StatValue>>
 ) {
     val borderColor = Color(0xFFD9D9D9)
     val mainTextColor = Color(0xFF101828)
@@ -55,7 +62,7 @@ fun InfoCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
+                CircleIcon(
                     bgColor = iconBgColor,
                     diameter = 20.dp,
                 )
@@ -91,13 +98,25 @@ fun InfoCard(
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = value,
-                            color = mainTextColor,
-                            fontSize = 20.sp,
-                            lineHeight = 24.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        when (value) {
+                            is StatValue.Text -> {
+                                Text(
+                                    text = value.value,
+                                    color = mainTextColor,
+                                    fontSize = 20.sp,
+                                    lineHeight = 24.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            is StatValue.Icon -> {
+                                Icon(
+                                    imageVector = value.icon,
+                                    contentDescription = label,
+                                    tint = value.tint,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -107,7 +126,7 @@ fun InfoCard(
 
 // 여기 아이콘 들어가면 됨. 영역만 잡아둠.
 @Composable
-fun Icon(
+fun CircleIcon(
     bgColor: Color,
     diameter: Dp,
     modifier: Modifier = Modifier
@@ -132,10 +151,10 @@ fun InfoCardPreview() {
         cornerRadius = 24.dp,
         title = "가장 많이 찾은 목적지",
         stats = listOf(
-            "집" to "13회", // "${place}" to "${count}회" 이런식으로 쓰면 됨.
-            "편의점" to "10회",
-            "마트" to "8회",
-            "양로원" to "5회"
+            "집" to StatValue.Text("13회"), // "${place}" to "${count}회" 이런식으로 쓰면 됨.
+            "편의점" to StatValue.Text("10회"),
+            "마트" to StatValue.Text("8회"),
+            "양로원" to StatValue.Text("5회")
         )
     )
 }
