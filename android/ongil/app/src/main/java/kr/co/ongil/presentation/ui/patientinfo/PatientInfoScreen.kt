@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.health.connect.client.PermissionController
 import kotlinx.coroutines.launch
 import kr.co.ongil.presentation.ui.common.patientinfo.InfoCard
+import kr.co.ongil.presentation.ui.common.patientinfo.StatValue
 
 
 
@@ -139,6 +144,29 @@ private fun zipStats(labels: String, values: String): List<Pair<String, String>>
     return ls.zip(vs)
 }
 
+/**
+ * 추이 문자열을 화살표 아이콘으로 변환
+ * - INCREASE: 상승 화살표 (↗)
+ * - DECREASE: 하강 화살표 (↘)
+ * - SAME: 수평 화살표 (→)
+ */
+private fun getTrendIcon(transition: String): StatValue.Icon {
+    return when (transition) {
+        "INCREASE" -> StatValue.Icon(
+            icon = Icons.AutoMirrored.Filled.TrendingUp,
+            tint = Color(0xFF101828)
+        )
+        "DECREASE" -> StatValue.Icon(
+            icon = Icons.AutoMirrored.Filled.TrendingDown,
+            tint = Color(0xFF101828)
+        )
+        else -> StatValue.Icon(
+            icon = Icons.AutoMirrored.Filled.TrendingFlat,
+            tint = Color(0xFF101828)
+        )
+    }
+}
+
 // ———————————————— Tab 1: 활동 기록 ————————————————
 @Composable
 private fun ActivityLogTab(uiState: PatientInfoUiState) {
@@ -181,11 +209,11 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                             } else {
                                 location.placeName
                             }
-                            displayName to "${location.placeCount}회"
+                            displayName to StatValue.Text("${location.placeCount}회")
                         }
                     } else {
                         listOf(
-                            "데이터 없음" to "-"
+                            "데이터 없음" to StatValue.Text("-")
                         )
                     }
                     InfoCard(
@@ -202,9 +230,9 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                     val third = activityLog.safezoneExit["THIRD"] ?: 0
 
                     val safezoneStats = listOf(
-                        "1단계" to "${first}회",
-                        "2단계" to "${second}회",
-                        "3단계" to "${third}회"
+                        "1단계" to StatValue.Text("${first}회"),
+                        "2단계" to StatValue.Text("${second}회"),
+                        "3단계" to StatValue.Text("${third}회")
                     )
                     InfoCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -215,72 +243,52 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
 
                 // 길찾기 이탈
                 item {
-                    val transition = when(activityLog.routeTransition) {
-                        "INCREASE" -> "증가"
-                        "DECREASE" -> "감소"
-                        else -> "동일"
-                    }
                     InfoCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = "길찾기 이탈",
                         stats = listOf(
-                            "합계" to "${activityLog.routeLost}회",
-                            "저번주 대비" to "${activityLog.routeLostDiff}회",
-                            "추이" to transition
+                            "합계" to StatValue.Text("${activityLog.routeLost}회"),
+                            "저번주 대비" to StatValue.Text("${activityLog.routeLostDiff}회"),
+                            "추이" to getTrendIcon(activityLog.routeTransition)
                         )
                     )
                 }
 
                 // 안전구역 이상탐지 발생 빈도
                 item {
-                    val transition = when(activityLog.safezoneTransition) {
-                        "INCREASE" -> "증가"
-                        "DECREASE" -> "감소"
-                        else -> "동일"
-                    }
                     InfoCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = "안전구역 이상탐지 발생 빈도",
                         stats = listOf(
-                            "합계" to "${activityLog.safezoneEmer}회",
-                            "저번주 대비" to "${activityLog.safezoneEmerDiff}회",
-                            "추이" to transition
+                            "합계" to StatValue.Text("${activityLog.safezoneEmer}회"),
+                            "저번주 대비" to StatValue.Text("${activityLog.safezoneEmerDiff}회"),
+                            "추이" to getTrendIcon(activityLog.safezoneTransition)
                         )
                     )
                 }
 
                 // 도움요청 이력
                 item {
-                    val transition = when(activityLog.sosSignTransition) {
-                        "INCREASE" -> "증가"
-                        "DECREASE" -> "감소"
-                        else -> "동일"
-                    }
                     InfoCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = "도움요청 이력",
                         stats = listOf(
-                            "합계" to "${activityLog.sosSign}회",
-                            "저번주 대비" to "${activityLog.sosSignDiff}회",
-                            "추이" to transition
+                            "합계" to StatValue.Text("${activityLog.sosSign}회"),
+                            "저번주 대비" to StatValue.Text("${activityLog.sosSignDiff}회"),
+                            "추이" to getTrendIcon(activityLog.sosSignTransition)
                         )
                     )
                 }
 
                 // 응급전화 이력
                 item {
-                    val transition = when(activityLog.emerCallTransition) {
-                        "INCREASE" -> "증가"
-                        "DECREASE" -> "감소"
-                        else -> "동일"
-                    }
                     InfoCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = "응급전화 이력",
                         stats = listOf(
-                            "합계" to "${activityLog.emerCall}회",
-                            "저번주 대비" to "${activityLog.emerCallDiff}회",
-                            "추이" to transition
+                            "합계" to StatValue.Text("${activityLog.emerCall}회"),
+                            "저번주 대비" to StatValue.Text("${activityLog.emerCallDiff}회"),
+                            "추이" to getTrendIcon(activityLog.emerCallTransition)
                         )
                     )
                 }
@@ -324,12 +332,12 @@ private fun HealthInfoTab(
                 val heartRate = healthData?.heartRate
                 val stats = if (heartRate != null) {
                     listOf(
-                        "평균" to "${heartRate.average} BPM",
-                        "최대" to "${heartRate.max} BPM",
-                        "최소" to "${heartRate.min} BPM"
+                        "평균" to StatValue.Text("${heartRate.average} BPM"),
+                        "최대" to StatValue.Text("${heartRate.max} BPM"),
+                        "최소" to StatValue.Text("${heartRate.min} BPM")
                     )
                 } else {
-                    listOf("" to "Samsung Health에서\n심박수를 측정해주세요")
+                    listOf("" to StatValue.Text("Samsung Health에서\n심박수를 측정해주세요"))
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -343,12 +351,12 @@ private fun HealthInfoTab(
                 val oxygen = healthData?.oxygenSaturation
                 val stats = if (oxygen != null) {
                     listOf(
-                        "평균" to "${String.format("%.1f", oxygen.average)}%",
-                        "최대" to "${String.format("%.1f", oxygen.max)}%",
-                        "최소" to "${String.format("%.1f", oxygen.min)}%"
+                        "평균" to StatValue.Text("${String.format("%.1f", oxygen.average)}%"),
+                        "최대" to StatValue.Text("${String.format("%.1f", oxygen.max)}%"),
+                        "최소" to StatValue.Text("${String.format("%.1f", oxygen.min)}%")
                     )
                 } else {
-                    listOf("" to "Samsung Health에서\n혈중산소포화도를 측정해주세요")
+                    listOf("" to StatValue.Text("Samsung Health에서\n혈중산소포화도를 측정해주세요"))
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -362,12 +370,12 @@ private fun HealthInfoTab(
                 val sleep = healthData?.sleep
                 val stats = if (sleep != null) {
                     listOf(
-                        "평균" to "${String.format("%.1f", sleep.average)}시간",
-                        "최대" to "${String.format("%.1f", sleep.max)}시간",
-                        "최소" to "${String.format("%.1f", sleep.min)}시간"
+                        "평균" to StatValue.Text("${String.format("%.1f", sleep.average)}시간"),
+                        "최대" to StatValue.Text("${String.format("%.1f", sleep.max)}시간"),
+                        "최소" to StatValue.Text("${String.format("%.1f", sleep.min)}시간")
                     )
                 } else {
-                    listOf("" to "Samsung Health에서\n수면 기록을 측정해주세요")
+                    listOf("" to StatValue.Text("Samsung Health에서\n수면 기록을 측정해주세요"))
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -381,12 +389,12 @@ private fun HealthInfoTab(
                 val steps = healthData?.steps
                 val stats = if (steps != null) {
                     listOf(
-                        "평균" to "${String.format("%,d", steps.average)}걸음",
-                        "최대" to "${String.format("%,d", steps.max)}걸음",
-                        "최소" to "${String.format("%,d", steps.min)}걸음"
+                        "평균" to StatValue.Text("${String.format("%,d", steps.average)}걸음"),
+                        "최대" to StatValue.Text("${String.format("%,d", steps.max)}걸음"),
+                        "최소" to StatValue.Text("${String.format("%,d", steps.min)}걸음")
                     )
                 } else {
-                    listOf("" to "Samsung Health에서\n걸음수를 측정해주세요")
+                    listOf("" to StatValue.Text("Samsung Health에서\n걸음수를 측정해주세요"))
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
