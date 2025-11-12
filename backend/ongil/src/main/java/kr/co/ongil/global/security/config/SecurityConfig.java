@@ -42,12 +42,12 @@ public class SecurityConfig {
     @Profile({"default", "dev", "local"})
     public SecurityFilterChain developmentSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))  // CORS 설정 적용
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()  // 개발용: 모든 요청 허용
-                )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))  // CORS 설정 적용
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .anyRequest().permitAll()  // 개발용: 모든 요청 허용
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -56,20 +56,22 @@ public class SecurityConfig {
     @Profile("prod")
     public SecurityFilterChain productionSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))  // CORS 설정 적용
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
-                .authorizeHttpRequests(auth -> auth
-                        // 인증 없이 접근 가능한 엔드포인트
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/*.html", "/static/**", "/css/**", "/js/**", "/images/**").permitAll()  // static 리소스 허용
-                        // 나머지는 인증 필요
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))  // CORS 설정 적용
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+            .authorizeHttpRequests(auth -> auth
+                // 인증 없이 접근 가능한 엔드포인트
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/ws/**").permitAll()  // WebSocket 엔드포인트 (VoIP)
+                .requestMatchers("/ws/**").permitAll()      // WebSocket 엔드포인트 (GPS)
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/*.html", "/static/**", "/css/**", "/js/**", "/images/**").permitAll()  // static 리소스 허용
+                // 나머지는 인증 필요
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
