@@ -423,10 +423,10 @@
         const socket = new SockJS(wsUrl);
         stompClient = Stomp.over(socket);
 
-      // 디버그 모드 활성화
-      stompClient.debug = (str) => {
-        log(`[STOMP] ${str}`, 'info');
-      };
+        // 디버그 모드 활성화 (메시지 수신 확인용)
+        stompClient.debug = (str) => {
+            log(`[STOMP] ${str}`, 'info');
+        };
 
         stompClient.connect(
             { Authorization: `Bearer ${accessToken}` },
@@ -441,12 +441,17 @@
 
                 // 모든 통화 메시지 구독
                 const subscription = stompClient.subscribe(`/user/queue/calls`, (message) => {
-                    log(`📥 메시지 수신 원본: ${message.body}`, 'info');
+                    log(`📥 ====== 메시지 수신 시작 ======`, 'success');
+                    log(`📥 Destination: ${message.headers.destination}`, 'info');
+                    log(`📥 Message Body: ${message.body}`, 'info');
+                    log(`📥 ====== 메시지 수신 종료 ======`, 'success');
+
                     const signal = JSON.parse(message.body);
                     handleSignalMessage(signal);
                 });
 
                 log(`📡 시그널 메시지 구독 시작: ${subscription.id}`, 'success');
+                log(`📡 구독 경로: /user/queue/calls (실제: /user/${frame.headers['user-name']}/queue/calls)`, 'info');
             },
             (error) => {
                 log(`❌ WebSocket 연결 실패: ${JSON.stringify(error)}`, 'error');
