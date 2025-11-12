@@ -191,11 +191,14 @@ fun MainScreen(
 //            modifier = Modifier.padding(paddingValues).imePadding(),
 //            startDestination = if (isLoggedIn == true) Routes.Home.route else Routes.Login.route
 //        )
+
+        // *** 여기 건들면 페이지에 따라 화면 패딩 망가지니까 건드리지 말것 (gu) ***
         AppNavGraph(
             navController = navController,
             modifier = Modifier
-                .padding(paddingValues)
+                .fillMaxSize()
                 .imePadding(),
+            paddingValues = paddingValues,
             startDestination = startDestination,
             authViewModel = authViewModel
         )

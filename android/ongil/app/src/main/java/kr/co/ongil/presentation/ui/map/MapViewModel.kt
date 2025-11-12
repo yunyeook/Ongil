@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.model.SearchPlace
 import kr.co.ongil.domain.repository.MapRepository
@@ -69,6 +70,9 @@ class MapViewModel @Inject constructor(
     // 길안내 ID (종료 시 필요, API 응답은 String)
     private var currentNavigationId: String? = null
 
+    // 길안내 중인 환자 ID (종료 시 필요)
+    private var currentPatientId: Long? = null
+
     // 목적지 좌표 (도착 감지용)
     private var destinationLatitude: Double? = null
     private var destinationLongitude: Double? = null
@@ -76,6 +80,10 @@ class MapViewModel @Inject constructor(
     // 도착 확인 모달 표시 상태
     private val _showArrivalDialog = MutableStateFlow(false)
     val showArrivalDialog: StateFlow<Boolean> = _showArrivalDialog.asStateFlow()
+
+    // 네비게이션 모드 (1인칭 시점)
+    private val _isNavigationMode = MutableStateFlow(false)
+    val isNavigationMode: StateFlow<Boolean> = _isNavigationMode.asStateFlow()
 
     // 로딩 상태
     private val _isSearching = MutableStateFlow(false)
@@ -314,7 +322,12 @@ class MapViewModel @Inject constructor(
     /**
      * 길안내 시작
      */
-    fun startNavigation(endLatitude: Double, endLongitude: Double, endName: String) {
+    fun startNavigation(
+        endLatitude: Double,
+        endLongitude: Double,
+        endName: String,
+        selectedPatientId: String? = null
+    ) {
         viewModelScope.launch {
             val location = locationBus.lastValue
             if (location == null) {
@@ -324,8 +337,20 @@ class MapViewModel @Inject constructor(
 
             Log.d("MapViewModel", "길안내 시작: $endName")
 
-            // TODO: 실제 patientId를 UserDataStore 등에서 가져오기
-            val patientId = 1L
+            // userType에 따라 patientId 결정
+            val userType = userDataStoreManager.getUserType().first()
+            val patientId = if (userType == "PATIENT") {
+                // 환자: 자기 자신의 ID
+                userDataStoreManager.getLoginUserId().first()?.toLongOrNull() ?: 1L
+            } else {
+                // 보호자: 선택된 환자 ID
+                selectedPatientId?.toLongOrNull() ?: 1L
+            }
+
+            Log.d("MapViewModel", "userType=$userType, patientId=$patientId")
+
+            // 길안내 종료 시 사용하기 위해 저장
+            currentPatientId = patientId
 
             findRouteUseCase(
                 patientId = patientId,
@@ -358,6 +383,15 @@ class MapViewModel @Inject constructor(
                 }
                 navigationRouteManager.setRoute(result.navigationId, routePath)
                 Log.d("MapViewModel", "경로 정보 저장 완료: ${routePath.size}개 포인트")
+
+                // 네비게이션 모드 활성화 (환자일 때만)
+                val userType = userDataStoreManager.getUserType().first()
+                if (userType == "PATIENT") {
+                    _isNavigationMode.value = true
+                    Log.d("MapViewModel", "네비게이션 모드 활성화 (환자)")
+                } else {
+                    Log.d("MapViewModel", "보호자는 네비게이션 모드 비활성화")
+                }
 
             }.onFailure { e ->
                 Log.e("MapViewModel", "경로 탐색 실패: ${e.message}", e)
@@ -436,8 +470,7 @@ class MapViewModel @Inject constructor(
      * 길안내 종료 API 호출 (공통)
      */
     private suspend fun endNavigationApi(navigationIdString: String, isSuccessful: Boolean) {
-        // TODO: 실제 patientId를 UserDataStore 등에서 가져오기
-        val patientId = 1L
+        val patientId = currentPatientId ?: 1L
 
         Log.d("MapViewModel", "길안내 종료 API 호출: navigationId=$navigationIdString, isSuccessful=$isSuccessful")
 
@@ -447,6 +480,7 @@ class MapViewModel @Inject constructor(
             Log.e("MapViewModel", "길안내 종료 실패: navigationId 변환 오류")
             _navigationRoute.value = null
             currentNavigationId = null
+            currentPatientId = null
             destinationLatitude = null
             destinationLongitude = null
             return
@@ -470,9 +504,13 @@ class MapViewModel @Inject constructor(
         navigationRouteManager.clearRoute()
         Log.d("MapViewModel", "경로 정보 초기화 완료")
 
+        _isNavigationMode.value = false
+        Log.d("MapViewModel", "네비게이션 모드 비활성화")
+
         // 상태 초기화
         _navigationRoute.value = null
         currentNavigationId = null
+        currentPatientId = null
         destinationLatitude = null
         destinationLongitude = null
     }
