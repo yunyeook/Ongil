@@ -15,14 +15,18 @@ object FcmPayloadMapper {
                 "NAVIGATION_END" -> MessageType.NAVIGATION_END
                 "ABNORMAL_DETECTED" -> MessageType.ABNORMAL_DETECTED
                 "CALL_REQUEST" -> MessageType.CALL_REQUEST
-                "SOS" -> MessageType.SOS
+                "SOS", "SOS_REQUEST" -> MessageType.SOS
+                "SOS_STOP", "SOS_END" -> MessageType.SOS_STOP
+                "SOS_ACK" -> MessageType.SOS_ACK
                 "INCOMING_CALL" -> MessageType.INCOMING_CALL
                 else -> throw IllegalArgumentException("Unknown type: ${dto.type}")
             },
             title = dto.title ?: "",
             senderId = dto.senderId ?: "",
             receiverId = dto.receiverId ?: "",
-            content = dto.content ?: ""
+            content = dto.content,
+            notificationId = dto.notificationId,
+            relatedTableId = dto.relatedTableId
         )
     }
 

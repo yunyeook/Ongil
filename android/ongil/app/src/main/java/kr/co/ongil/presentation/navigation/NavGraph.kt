@@ -71,6 +71,7 @@ fun AppNavGraph(
             }
 
             MapScreen(
+                navController = navController,
                 paddingValues = paddingValues,
                 authViewModel = authViewModel ?: hiltViewModel(),
                 searchPlaceholder = searchPlaceholder,

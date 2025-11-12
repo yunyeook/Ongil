@@ -37,5 +37,17 @@ data class FcmPayloadDto(
      * 알림에 표시될 내용.
      */
     @SerializedName("content")
-    val content: String?
+    val content: String?,
+
+    /**
+     * DB 알림 테이블 고유 ID.
+     */
+    @SerializedName("notificationId")
+    val notificationId: String?,
+
+    /**
+     * 해당 알림과 관련된 테이블의 고유 ID.
+     */
+    @SerializedName("relatedTableId")
+    val relatedTableId: String?
 )

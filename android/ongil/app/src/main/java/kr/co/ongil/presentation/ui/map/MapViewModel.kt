@@ -28,6 +28,8 @@ import javax.inject.Inject
 import kr.co.ongil.BuildConfig
 import kr.co.ongil.common.location.NavigationRouteManager
 import kr.co.ongil.data.websocket.GpsWebSocketManager
+import kr.co.ongil.domain.usecase.sosalert.SendSosAlertUseCase
+import kr.co.ongil.domain.usecase.sosalert.StopSosAlertUseCase
 
 /**
  * 지도 화면 ViewModel
@@ -40,7 +42,9 @@ class MapViewModel @Inject constructor(
     private val userDataStoreManager: UserDataStoreManager,
     private val findRouteUseCase: FindRouteUseCase,
     private val navigationRouteManager: NavigationRouteManager,
-    private val gpsWebSocketManager: GpsWebSocketManager
+    private val gpsWebSocketManager: GpsWebSocketManager,
+    private val sendSosAlertUseCase: SendSosAlertUseCase,
+    private val stopSosAlertUseCase: StopSosAlertUseCase
 ) : ViewModel() {
 
     companion object {
@@ -92,6 +96,10 @@ class MapViewModel @Inject constructor(
     // 안전구역 설정값
     private val _safeZoneSettings = MutableStateFlow(SafeZoneSettings())
     val safeZoneSettings: StateFlow<SafeZoneSettings> = _safeZoneSettings.asStateFlow()
+
+    // SOS 알림 활성화 상태
+    private val _isSosActive = MutableStateFlow(false)
+    val isSosActive: StateFlow<Boolean> = _isSosActive.asStateFlow()
 
     init {
         // 안전구역 설정값 구독
@@ -513,6 +521,30 @@ class MapViewModel @Inject constructor(
         currentPatientId = null
         destinationLatitude = null
         destinationLongitude = null
+    }
+
+    // SOS 알림 시작
+    fun sendSosAlert(patientId: Int) {
+        viewModelScope.launch {
+            sendSosAlertUseCase(patientId).onSuccess {
+                Log.d("MapViewModel", "SOS 알림 시작 성공")
+                _isSosActive.value = true
+            }.onFailure { error ->
+                Log.e("MapViewModel", "SOS 알림 시작 실패: ${error.message}")
+            }
+        }
+    }
+
+    // SOS 알림 종료
+    fun stopSosAlert(patientId: Int) {
+        viewModelScope.launch {
+            stopSosAlertUseCase(patientId).onSuccess {
+                Log.d("MapViewModel", "SOS 알림 종료 성공")
+                _isSosActive.value = false
+            }.onFailure { error ->
+                Log.e("MapViewModel", "SOS 알림 종료 실패: ${error.message}")
+            }
+        }
     }
 
     override fun onCleared() {
