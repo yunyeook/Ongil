@@ -5,21 +5,24 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 import kr.co.ongil.presentation.navigation.MainScreen
 import kr.co.ongil.presentation.theme.OngilTheme
-import kr.co.ongil.presentation.ui.Atest.PlayGroundGK
-//import kr.co.ongil.presentation.ui.Atest.PlayGroundMJ
-import kr.co.ongil.presentation.ui.Atest.PlayGroundSH
-import kr.co.ongil.presentation.ui.call.VoipCallDebugScreen
+import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
 
 
 // 나중에 커밋할때는 플레이그라운드 다 주석처리해주세요
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val authViewModel: AuthStateViewModel by viewModels()
 
     // FCM 수신 통화 데이터
     private var incomingCallData by mutableStateOf<IncomingCallData?>(null)
@@ -33,7 +36,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OngilTheme {
-//                VoipCallDebugScreen()
                  MainScreen(
                      incomingCallData = incomingCallData,
                      onIncomingCallHandled = { incomingCallData = null }
@@ -57,16 +59,23 @@ class MainActivity : ComponentActivity() {
             val sessionId = intent.getStringExtra("sessionId")
             val callerName = intent.getStringExtra("callerName") ?: ""
             val callerPhone = intent.getStringExtra("callerPhone") ?: ""
-            val userType = "PATIENT"  // TODO: 실제 사용자 role로 변경
 
             if (callId > 0) {
-                incomingCallData = IncomingCallData(
-                    callId = callId,
-                    sessionId = sessionId,
-                    callerName = callerName,
-                    callerPhone = callerPhone,
-                    userType = userType
-                )
+                lifecycleScope.launch {
+                    // AuthStateViewModel에서 실제 사용자 타입 가져오기
+                    val userType = authViewModel.currentUserInfo.firstOrNull()
+                        ?.getOrNull()
+                        ?.userType
+                        ?: "PATIENT"  // 기본값
+
+                    incomingCallData = IncomingCallData(
+                        callId = callId,
+                        sessionId = sessionId,
+                        callerName = callerName,
+                        callerPhone = callerPhone,
+                        userType = userType
+                    )
+                }
             }
         }
     }

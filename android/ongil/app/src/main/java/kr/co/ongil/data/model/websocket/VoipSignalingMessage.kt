@@ -10,6 +10,8 @@ enum class SignalingType {
     OFFER,          // SDP Offer
     ANSWER,         // SDP Answer
     ICE,            // ICE Candidate
+    ACCEPT,         // 통화 수락
+    REJECT,         // 통화 거절
     HANGUP          // 통화 종료
 }
 
@@ -27,6 +29,7 @@ data class SignalMessage(
     val callerPhone: String? = null,    // 발신자 전화번호 (INCOMING)
     val callType: String? = null,       // 통화 타입 (INCOMING)
     val sdp: String? = null,            // SDP (OFFER/ANSWER)
+    val sdpType: String? = null,        // SDP 타입 ("offer" 또는 "answer")
     val candidate: String? = null,      // ICE Candidate 문자열
     val sdpMid: String? = null,         // SDP media stream ID
     val sdpMLineIndex: Int? = null,     // SDP m-line index
