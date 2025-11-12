@@ -110,7 +110,7 @@ fun AppNavGraph(
 
         // 알림
         composable(Routes.Notifications.route) {
-            NotificationScreen(onNavigateBack = { navController.navigate(Routes.MyInfo.route) })
+            NotificationScreen(onNavigateBack = { navController.popBackStack() })
         }
 
 
