@@ -75,6 +75,7 @@ dependencies {
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
 
     // --- Test ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
