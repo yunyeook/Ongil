@@ -17,6 +17,7 @@ import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -92,6 +93,7 @@ public class DashboardService {
         }
     }
 
+    @Cacheable(value = "hotdeals", key = "#root.methodName + ':' + #patientId")
     public MainboardResponseDto getMainboardResponseDto(Integer patientId) {
         Long safezoneExit=abnormalRepository.countThisWeek(patientId,LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay(), AbnormalType.SAFEZONE_EXIT);
         Long routeLost=abnormalRepository.countThisWeek(patientId,LocalDate.now().with(DayOfWeek.MONDAY).atStartOfDay(), AbnormalType.DEVIATE_FROM_THE_PATH);
