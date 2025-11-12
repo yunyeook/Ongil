@@ -16,9 +16,12 @@ import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
+import kr.co.ongil.global.sse.event.NavigationEvent;
 import kr.co.ongil.global.util.PatientAccessValidator;
+import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -35,6 +38,7 @@ public class NavigationService {
     private final RelationshipRepository relationshipRepository;
     private final UserRepository userRepository;
     private final PatientAccessValidator patientAccessValidator;
+    private final ApplicationEventPublisher eventPublisher;
 
 
 
@@ -43,6 +47,7 @@ public class NavigationService {
      */
     public NavigationSessionResponse startNavigation(StartNavigationRequest request,Integer senderId) {
 
+        String userType = SecurityUtil.getCurrentUserType();
         // 1. 접근 권한 확인
         patientAccessValidator.validateAccess(request.patientId(),senderId);
 
@@ -83,10 +88,21 @@ public class NavigationService {
         // 8. 보호자에게 알림 전송
         sendNavigationStartNotification(userRepository.findById(senderId).get());
 
+        // 9. SSE 이벤트 발행
+        eventPublisher.publishEvent(
+            NavigationEvent.of(
+                request.patientId(),
+                senderId,
+                userType,
+                route,
+                "STARTED"
+            )
+        );
+
 
         log.info("길안내 시작 완료: navigationId={}", navigationId);
 
-        // 6. 응답 생성
+        // 10. 응답 생성
         return NavigationSessionResponse.of(
             navigationId,
             route,
@@ -104,6 +120,8 @@ public class NavigationService {
         log.info("길안내 종료: patientId={}, navigationId={}",
             request.patientId(), request.navigationId());
 
+        String userType = SecurityUtil.getCurrentUserType();
+
         // 1. DB 로그 완료 처리
         NavigationLog completedLog = novigationLogService.completeLog(
             request.navigationId(),
@@ -118,6 +136,17 @@ public class NavigationService {
 
         // 3. 보호자에게 알림 전송
         sendNavigationEndNotification(userRepository.findById(senderId).get());
+
+        //4. SSE 이벤트 발생
+        eventPublisher.publishEvent(
+            NavigationEvent.of(
+                request.patientId(),
+                senderId,
+                userType,
+                null,
+                "ENDED"
+            )
+        );
 
         // 4. 응답
         return EndNavigationResponse.of(

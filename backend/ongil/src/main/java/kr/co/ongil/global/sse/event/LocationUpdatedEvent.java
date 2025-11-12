@@ -1,4 +1,4 @@
-package kr.co.ongil.global.eventListener;
+package kr.co.ongil.global.sse.event;
 import kr.co.ongil.domain.map.dto.response.CoordinateInfo;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
