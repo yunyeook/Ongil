@@ -37,18 +37,15 @@ import kr.co.ongil.presentation.ui.common.map.SearchBar
 import kr.co.ongil.presentation.ui.common.map.SearchListItem
 import kr.co.ongil.service.location.LocationTrackingService
 
-/**
- * 지도 화면
- * - TMap 표시
- * - 장소 검색 (실시간)
- * - 도움요청 토글 버튼 (플로팅 버튼)
- */
+// TMap 지도 화면 (장소 검색, 도움요청 토글)
 @Composable
 fun MapScreen(
     modifier: Modifier = Modifier,
     paddingValues: PaddingValues,
     viewModel: MapViewModel = hiltViewModel(),
-    authViewModel: AuthStateViewModel
+    authViewModel: AuthStateViewModel,
+    searchPlaceholder: String = "장소를 검색해주세요",
+    requestSearchFocus: Boolean = false
 ) {
     // ViewModel 상태
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -185,7 +182,9 @@ fun MapScreen(
             SearchBar(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChange(it) },
-                onSearch = { viewModel.onFinalSearch() }
+                onSearch = { viewModel.onFinalSearch() },
+                placeholder = searchPlaceholder,
+                requestFocus = requestSearchFocus
             )
 
                 // 검색 결과 리스트

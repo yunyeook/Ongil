@@ -43,6 +43,7 @@ fun FavoriteScreen(
     onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
     onNavigateToPatientDetail: (relationshipId: Long) -> Unit,
     onGoSearchUserClick: () -> Unit,
+    onGoSearchPlaceClick: () -> Unit,
     modifier: Modifier = Modifier
 )
 {
@@ -178,6 +179,7 @@ fun FavoriteScreen(
                                 // place.patientId 대신 실제 조회에 사용한 currentPatientId 사용 (403 방지)
                                 onNavigateToPlaceDetail(uiState.currentPatientId, favoriteId)
                             },
+                            onGoSearchPlaceClick = onGoSearchPlaceClick
                         )
                     }
                 }
