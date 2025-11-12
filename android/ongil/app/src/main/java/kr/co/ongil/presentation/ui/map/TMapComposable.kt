@@ -34,12 +34,18 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kr.co.ongil.presentation.ui.map.SafetyZoneConfig.CircleColors
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.content.Context as AndroidContext
 
 
 /**
@@ -57,8 +63,8 @@ fun TMapComposable(
     onMapReady: ((TMapView) -> Unit)? = null,
     myLocationTrigger: Int = 0,
     northUpTrigger: Int = 0,  // 북쪽 고정 트리거
-    route: Route? = null  // 길안내 경로
-    ,
+    route: Route? = null,  // 길안내 경로
+    isNavigationMode: Boolean = false,  // 네비게이션 모드 (1인칭 시점)
     userType: String = "",
     selectedPatientId: String? = null,
     patientLocations: Map<Long, Coordinate> = emptyMap(),  // 환자 위치 (보호자용)
@@ -76,6 +82,8 @@ fun TMapComposable(
     var isFollowMode by remember { mutableStateOf(true) }
     var currentPulseFrame by remember { mutableStateOf(0) }
     var routePolyLine by remember { mutableStateOf<TMapPolyLine?>(null) }
+    var currentBearing by remember { mutableStateOf(0f) }  // 현재 방위각
+    var routeBearing by remember { mutableStateOf(0f) }  // 경로의 초기 방향
 
     // 환자 마커 (보호자는 선택된 환자 1명만)
     var patientMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
@@ -89,6 +97,96 @@ fun TMapComposable(
     // 펄스 애니메이션 프레임 생성 (녹색)
     val pulseFrames = remember {
         createPulseFrames(context, color = "#5C7165")
+    }
+
+    // 방위각 센서 (네비게이션 모드용)
+    DisposableEffect(isNavigationMode) {
+        val sensorManager = if (isNavigationMode) {
+            context.getSystemService(AndroidContext.SENSOR_SERVICE) as? SensorManager
+        } else null
+
+        val sensorListener: SensorEventListener? = if (isNavigationMode && sensorManager != null) {
+            val rotationMatrix = FloatArray(9)
+            val orientationAngles = FloatArray(3)
+
+            object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent?) {
+                    event ?: return
+
+                    // 회전 벡터를 회전 행렬로 변환
+                    SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+                    // 회전 행렬에서 방위각 추출
+                    SensorManager.getOrientation(rotationMatrix, orientationAngles)
+
+                    // 방위각 (라디안 -> 도)
+                    val azimuth = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
+                    currentBearing = (azimuth + 360) % 360  // 0-360 범위로 정규화
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+                    // 정확도 변경 무시
+                }
+            }
+        } else null
+
+        sensorListener?.let { listener ->
+            val sensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+            sensor?.let {
+                sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+                Log.d("TMapComposable", "🧭 방위각 센서 시작")
+            }
+        }
+
+        onDispose {
+            sensorListener?.let { listener ->
+                sensorManager?.unregisterListener(listener)
+                Log.d("TMapComposable", "🧭 방위각 센서 정지")
+            }
+        }
+    }
+
+    // 네비게이션 모드: 지도 회전 (경로 방향 기준) - 2D 평면 회전만
+    LaunchedEffect(isNavigationMode, isMapInitialized) {
+        if (!isNavigationMode || !isMapInitialized) return@LaunchedEffect
+        val tmap = mapView ?: return@LaunchedEffect
+
+        while (isActive) {
+            try {
+                withContext(Dispatchers.Main) {
+                    // 경로 방향 대비 상대 회전 계산
+                    val relativeRotation = (currentBearing - routeBearing + 360) % 360
+
+                    // 2D 평면 회전만 적용 (bearing 사용)
+                    val currentCenter = tmap.centerPoint
+                    if (currentCenter != null) {
+                        // 3번째 파라미터에 bearing 각도 전달하여 2D 회전
+                        trySetCenterWithBearing(tmap, currentCenter.latitude, currentCenter.longitude, -relativeRotation)
+                    }
+                }
+                delay(100)  // 100ms마다 업데이트
+            } catch (e: Exception) {
+                Log.e("TMapComposable", "지도 회전 실패", e)
+                break
+            }
+        }
+    }
+
+    // 네비게이션 모드 종료 시 지도 복구
+    LaunchedEffect(isNavigationMode, isMapInitialized) {
+        if (!isMapInitialized) return@LaunchedEffect
+        if (isNavigationMode) return@LaunchedEffect  // 네비게이션 모드 활성화 시에는 아무것도 안함
+
+        val tmap = mapView ?: return@LaunchedEffect
+
+        // 네비게이션 모드가 종료되면 회전 비활성화
+        withContext(Dispatchers.Main) {
+            try {
+                tmap.setCompassMode(false)
+                Log.d("TMapComposable", "🔄 네비게이션 모드 종료 - 회전 비활성화")
+            } catch (e: Exception) {
+                Log.e("TMapComposable", "지도 복구 실패", e)
+            }
+        }
     }
 
     // 펄스 애니메이션 루프 (환자용 - 자신의 위치)
@@ -460,7 +558,7 @@ fun TMapComposable(
                     }
                 }
 
-                // 팔로우 모드일 때 지도 중심 이동
+                // 팔로우 모드일 때만 지도 중심 이동
                 if (isFollowMode) {
                     tmap.setCenterPoint(point.latitude, point.longitude)
                 }
@@ -552,10 +650,21 @@ fun TMapComposable(
                         }
                     }
 
+                    // 경로의 초기 방향 계산 (첫 2개 점)
+                    if (route.path.size >= 2) {
+                        val start = route.path[0]
+                        val next = route.path[1]
+                        routeBearing = calculateBearing(start.latitude, start.longitude, next.latitude, next.longitude)
+                        Log.d("TMapComposable", "📐 경로 초기 방향: ${routeBearing}°")
+                    } else {
+                        routeBearing = 0f
+                    }
+
                     Log.d("TMapComposable", "✅ 경로 그리기 완료")
                 } else {
                     // 경로가 null이면 마커도 제거
                     routePolyLine = null
+                    routeBearing = 0f  // 경로 방향 리셋
                     tmap.removeTMapMarkerItem("start_marker")
                     tmap.removeTMapMarkerItem("end_marker")
                     Log.d("TMapComposable", "🗑️ 경로 제거")
@@ -675,6 +784,21 @@ private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Do
 }
 
 /**
+ * 두 지점 간 방위각 계산 (베어링, 북쪽 기준 시계방향 각도)
+ */
+private fun calculateBearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+    val dLon = Math.toRadians(lon2 - lon1)
+    val lat1Rad = Math.toRadians(lat1)
+    val lat2Rad = Math.toRadians(lat2)
+
+    val y = sin(dLon) * cos(lat2Rad)
+    val x = cos(lat1Rad) * sin(lat2Rad) - sin(lat1Rad) * cos(lat2Rad) * cos(dLon)
+
+    val bearing = Math.toDegrees(atan2(y, x))
+    return ((bearing + 360) % 360).toFloat()  // 0-360 범위로 정규화
+}
+
+/**
  * 원형 폴리라인 생성 (반경을 미터 단위로)
  */
 private fun createCirclePoints(centerLat: Double, centerLon: Double, radiusMeters: Int, points: Int = 72): ArrayList<TMapPoint> {
@@ -742,4 +866,60 @@ private fun createMarkerBitmap(
     canvas.drawText(text, centerX, textY, textPaint)
 
     return bitmap
+}
+
+/**
+ * TMap SDK 버전 독립적으로 지도 회전 설정 (2D 평면만)
+ */
+private fun setMapRotation(tmap: TMapView, angle: Float) {
+    try {
+        // 나침반 모드를 사용하여 2D 회전
+        tmap.setCompassMode(true)
+
+        // 2D 평면 회전 메서드 시도
+        val methods = listOf("setMapRotationAngle", "setMapBearing", "setBearing")
+        for (methodName in methods) {
+            if (tryInvokeRotation(tmap, methodName, angle)) {
+                return
+            }
+        }
+    } catch (_: Exception) {
+        // 조용히 실패
+    }
+}
+
+/**
+ * 리플렉션으로 회전 메서드 호출 시도
+ */
+private fun tryInvokeRotation(tmap: TMapView, methodName: String, angle: Float): Boolean {
+    return try {
+        val method = TMapView::class.java.getMethod(methodName, Float::class.javaPrimitiveType)
+        method.isAccessible = true
+        method.invoke(tmap, angle)
+        true
+    } catch (_: Throwable) {
+        false
+    }
+}
+
+/**
+ * 2D 평면 회전: bearing을 포함한 setCenterPoint 호출
+ */
+private fun trySetCenterWithBearing(tmap: TMapView, lat: Double, lon: Double, bearing: Float) {
+    try {
+        // setCenterPoint(double lat, double lon, float bearing)
+        val method = TMapView::class.java.getMethod(
+            "setCenterPoint",
+            Double::class.javaPrimitiveType,
+            Double::class.javaPrimitiveType,
+            Float::class.javaPrimitiveType
+        )
+        method.isAccessible = true
+        method.invoke(tmap, lat, lon, bearing)
+    } catch (e: NoSuchMethodException) {
+        // bearing 파라미터가 없는 SDK 버전 - 기본 회전 메서드 사용
+        setMapRotation(tmap, bearing)
+    } catch (_: Throwable) {
+        // 실패 시 조용히 무시
+    }
 }

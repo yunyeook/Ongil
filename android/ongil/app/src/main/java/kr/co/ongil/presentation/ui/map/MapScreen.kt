@@ -60,6 +60,7 @@ fun MapScreen(
     val navigationRoute by viewModel.navigationRoute.collectAsState()
     val isNavigating = navigationRoute != null
     val showArrivalDialog by viewModel.showArrivalDialog.collectAsState()
+    val isNavigationMode by viewModel.isNavigationMode.collectAsState()
 
     // 경로 변경 감지 로그
     LaunchedEffect(navigationRoute) {
@@ -163,6 +164,7 @@ fun MapScreen(
                     myLocationTrigger = myLocationTrigger,
                     route = navigationRoute,
                     northUpTrigger = northUpTrigger,
+                    isNavigationMode = isNavigationMode,
                     userType = userType,
                     selectedPatientId = selectedPatientId,
                     patientLocations = patientLocations,
@@ -300,7 +302,8 @@ fun MapScreen(
                         viewModel.startNavigation(
                             endLatitude = detail.latitude,
                             endLongitude = detail.longitude,
-                            endName = detail.name
+                            endName = detail.name,
+                            selectedPatientId = selectedPatientId
                         )
                         viewModel.closePlaceDetail()
                     }
