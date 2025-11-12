@@ -3,26 +3,22 @@ package kr.co.ongil.service
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import java.io.IOException
-import kr.co.ongil.BuildConfig
 import kr.co.ongil.data.model.fcm.FcmPayloadDto
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import org.json.JSONObject
 import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kr.co.ongil.data.mapper.FcmPayloadMapper
 import kr.co.ongil.domain.model.FcmMessage
 import kr.co.ongil.domain.model.MessageType
 import kr.co.ongil.domain.usecase.fcm.HandleSosUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleSosStopUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleSosAckUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleRelationshipRegistUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleSafezoneExitUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleNavigationStartUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleNavigationEndUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleAbnormalDetectedUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleCallRequestUseCase
+import kr.co.ongil.domain.helper.NotificationHelper
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -31,7 +27,38 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     @Inject
     lateinit var handleSosUseCase: HandleSosUseCase
 
-    private val scope = CoroutineScope(Dispatchers.IO)
+    @Inject
+    lateinit var handleSosStopUseCase: HandleSosStopUseCase
+
+    @Inject
+    lateinit var handleSosAckUseCase: HandleSosAckUseCase
+
+    @Inject
+    lateinit var handleRelationshipRegistUseCase: HandleRelationshipRegistUseCase
+
+    @Inject
+    lateinit var handleSafezoneExitUseCase: HandleSafezoneExitUseCase
+
+    @Inject
+    lateinit var handleNavigationStartUseCase: HandleNavigationStartUseCase
+
+    @Inject
+    lateinit var handleNavigationEndUseCase: HandleNavigationEndUseCase
+
+    @Inject
+    lateinit var handleAbnormalDetectedUseCase: HandleAbnormalDetectedUseCase
+
+    @Inject
+    lateinit var handleCallRequestUseCase: HandleCallRequestUseCase
+
+    @Inject
+    lateinit var notificationHelper: NotificationHelper
+
+    override fun onCreate() {
+        super.onCreate()
+        // 알림 채널 생성
+        notificationHelper.createNotificationChannels(this)
+    }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
@@ -51,9 +78,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
             when (fcmMessage.type) {
                 MessageType.SOS -> {
-                    scope.launch {
-                        handleSosUseCase(this@MyFirebaseMessagingService, fcmMessage)
-                    }
+                    handleSosUseCase(this, fcmMessage)
+                }
+
+                MessageType.SOS_STOP -> {
+                    handleSosStopUseCase(this, fcmMessage)
+                }
+
+                MessageType.SOS_ACK -> {
+                    handleSosAckUseCase(this, fcmMessage)
                 }
 
                 MessageType.INCOMING_CALL -> {
@@ -61,8 +94,28 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     handleIncomingCall(remoteMessage.data)
                 }
 
-                else -> {
-//                    sendNotification(fcmMessage)
+                MessageType.RELATIONSHIP_REGIST -> {
+                    handleRelationshipRegistUseCase(this, fcmMessage)
+                }
+
+                MessageType.SAFEZONE_EXIT -> {
+                    handleSafezoneExitUseCase(this, fcmMessage)
+                }
+
+                MessageType.NAVIGATION_START -> {
+                    handleNavigationStartUseCase(this, fcmMessage)
+                }
+
+                MessageType.NAVIGATION_END -> {
+                    handleNavigationEndUseCase(this, fcmMessage)
+                }
+
+                MessageType.ABNORMAL_DETECTED -> {
+                    handleAbnormalDetectedUseCase(this, fcmMessage)
+                }
+
+                MessageType.CALL_REQUEST -> {
+                    handleCallRequestUseCase(this, fcmMessage)
                 }
             }
         }
@@ -72,13 +125,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val jsonObject = Gson().toJsonTree(data)
         val payloadDto = Gson().fromJson(jsonObject, FcmPayloadDto::class.java)
         return payloadDto
-    }
-    private fun sendHelpRequest(data: FcmMessage) {
-
-    }
-
-    private fun sendNotification(data: FcmMessage) {
-
     }
 
     /**
@@ -119,11 +165,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         startActivity(intent)
         Log.d("FCM", "✓ MainActivity로 이동 (INCOMING_CALL)")
     }
-//
-//
-//    /**
-//     * 알림을 처리하고 타겟에 따라 분기
-//     */
+
+    /**
+     * 알림을 처리하고 타겟에 따라 분기
+     */
 //    private fun handleNotification(data: FcmMessage) {
 //        Log.d("FCM", "알림 타입: ${data.type}")
 //        Log.d("FCM", "보낸 사람: ${data.senderId}, 받는 사람: ${data.receiverId}")
@@ -209,30 +254,4 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 //        Log.d("FCM", "⌚ 워치 연결 상태 확인 (미구현)")
 //        return false
 //    }
-//
-    private fun sendFcmTokenToServer(token: String) {
-        val userId = 1
-        val client = OkHttpClient()
-
-        val json = JSONObject().apply {
-            put("token", token)
-        }
-
-        val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-        val request = Request.Builder()
-            .url("${BuildConfig.BASE_URL}api/v1/fcm/register")
-            .post(body)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("FCM", "토큰 전송 실패: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) Log.d("FCM", "서버에 FCM 토큰 전송 성공 ✅")
-                else Log.e("FCM", "서버 응답 오류 ❌ ${response.code}")
-            }
-        })
-    }
 }

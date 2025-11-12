@@ -21,6 +21,7 @@ import kr.co.ongil.data.datasource.remote.api.MapApi
 import kr.co.ongil.data.datasource.remote.api.NotificationApi
 import kr.co.ongil.data.datasource.remote.api.PatientInfoApi
 import kr.co.ongil.data.datasource.remote.api.SafeZoneApi
+import kr.co.ongil.data.datasource.remote.api.SosAlertApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.datasource.remote.interceptor.AuthInterceptor
 import kr.co.ongil.BuildConfig
@@ -181,4 +182,9 @@ object NetworkModule {
     @Singleton
     fun provideDashboardApi(retrofit: Retrofit): DashboardApi =
         retrofit.create(DashboardApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideSosAlertApi(retrofit: Retrofit): SosAlertApi =
+        retrofit.create(SosAlertApi::class.java)
 }

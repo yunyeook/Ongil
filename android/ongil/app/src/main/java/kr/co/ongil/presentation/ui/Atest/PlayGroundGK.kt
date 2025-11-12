@@ -40,7 +40,9 @@ fun PlayGroundGK() {
                         title = "테스트 SOS",
                         senderId = "1",
                         receiverId = "2",
-                        content = null
+                        content = null,
+                        notificationId = null,
+                        relatedTableId = null
                     )
                     sosHandler.startSosAction(context, testMessage)
                 }

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.RadioButtonChecked
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
@@ -30,16 +31,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import kr.co.ongil.data.model.location.Coordinate
 import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
 import kr.co.ongil.presentation.ui.common.map.CircleFloatingButton
 import kr.co.ongil.presentation.ui.common.map.SearchBar
 import kr.co.ongil.presentation.ui.common.map.SearchListItem
+import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettingRoutes
 import kr.co.ongil.service.location.LocationTrackingService
 
 // TMap 지도 화면 (장소 검색, 도움요청 토글)
 @Composable
 fun MapScreen(
+    navController: NavHostController,
     modifier: Modifier = Modifier,
     paddingValues: PaddingValues,
     viewModel: MapViewModel = hiltViewModel(),
@@ -77,8 +81,14 @@ fun MapScreen(
         android.util.Log.d("MapScreen", "patientLocations 변경: ${patientLocations.keys}, userType: $userType, selectedPatientId: $selectedPatientId")
     }
 
-    // 도움요청 토글 상태
-    var isSosEnabled by remember { mutableStateOf(false) }
+    // SOS 상태 (ViewModel과 동기화)
+    val isSosActiveFromViewModel by viewModel.isSosActive.collectAsState()
+    var isSosEnabled by remember { mutableStateOf(isSosActiveFromViewModel) }
+
+    // ViewModel의 SOS 상태와 동기화
+    LaunchedEffect(isSosActiveFromViewModel) {
+        isSosEnabled = isSosActiveFromViewModel
+    }
 
     // 안전범위 표시 토글 상태
     var showSafetyZones by remember { mutableStateOf(false) }
@@ -225,6 +235,17 @@ fun MapScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.End
             ) {
+                // 안전범위 설정 버튼 (보호자이고 안전범위가 켜져 있을 때만 표시)
+                if (userType == "GUARDIAN" && showSafetyZones) {
+                    CircleFloatingButton(
+                        icon = Icons.Default.Settings,
+                        onClick = {
+                            navController.navigate(SafeZoneSettingRoutes.SETTING)
+                        },
+                        containerColor = Color(0xFF8CA898),
+                        contentColor = Color.White
+                    )
+                }
 
                 // 안전범위 표시 토글 버튼
                 CircleFloatingButton(
@@ -243,20 +264,25 @@ fun MapScreen(
                     contentColor = Color.White
                 )
 
-                // 도움요청 토글 버튼
-                CircleFloatingButton(
-                    icon = Icons.Default.Warning,
-                    isToggled = isSosEnabled,
-                    onClick = {
-                        isSosEnabled = !isSosEnabled
-                        // TODO: 도움요청 토글 상태 변경 시 로직
-                        if (isSosEnabled) {
-                            // 도움요청 활성화
-                        } else {
-                            // 도움요청 비활성화
+                // 도움요청 토글 버튼 (보호자만 표시)
+                if (userType == "GUARDIAN") {
+                    CircleFloatingButton(
+                        icon = Icons.Default.Warning,
+                        isToggled = isSosEnabled,
+                        onClick = {
+                            selectedPatientId?.toIntOrNull()?.let { patientId ->
+                                if (isSosEnabled) {
+                                    // 꺼질 때 - 종료
+                                    viewModel.stopSosAlert(patientId)
+                                } else {
+                                    // 켜질 때 - 시작
+                                    viewModel.sendSosAlert(patientId)
+                                }
+                                isSosEnabled = !isSosEnabled
+                            }
                         }
-                    }
-                )
+                    )
+                }
 
                 // 북쪽 고정 버튼
                 CircleFloatingButton(

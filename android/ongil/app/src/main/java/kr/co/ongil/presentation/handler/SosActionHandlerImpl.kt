@@ -11,8 +11,6 @@ import javax.inject.Inject
 class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
 
     private var mediaPlayer: MediaPlayer? = null
-    private var playCount = 0
-    private val maxPlayCount = 100
 
     override fun startSosAction(context: Context, message: FcmMessage) {
         Log.d("SosActionHandlerImpl", "🚨 SOS 액션 시작: ${message.type}")
@@ -20,13 +18,13 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
         // 기존 사운드가 재생 중이면 중지
         stopSound()
 
-        // 재생 카운트 초기화
-        playCount = 0
-
-        // SOS 사운드 재생
+        // SOS 사운드 무한 재생
         playSosSound(context)
+    }
 
-        // TODO: 추가 SOS 액션 (진동, 화면 표시 등)
+    override fun stopSosAction() {
+        Log.d("SosActionHandlerImpl", "🛑 SOS 액션 중지")
+        stopSound()
     }
 
     /**
@@ -46,21 +44,7 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
             }
 
             mediaPlayer = MediaPlayer.create(context, soundResId).apply {
-                setOnCompletionListener {
-                    playCount++
-                    Log.d("SosActionHandlerImpl", "🔊 SOS 사운드 재생 완료 ($playCount/$maxPlayCount)")
-
-                    if (playCount < maxPlayCount) {
-                        // 다시 재생
-                        seekTo(0)
-                        start()
-                    } else {
-                        // 100번 재생 완료
-                        Log.d("SosActionHandlerImpl", "✅ SOS 사운드 100번 재생 완료")
-                        release()
-                        mediaPlayer = null
-                    }
-                }
+                isLooping = true // 무한 반복
 
                 setOnErrorListener { _, what, extra ->
                     Log.e("SosActionHandlerImpl", "❌ 사운드 재생 오류: what=$what, extra=$extra")
@@ -74,7 +58,7 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
 
                 // 재생 시작
                 start()
-                Log.d("SosActionHandlerImpl", "🔊 SOS 사운드 재생 시작")
+                Log.d("SosActionHandlerImpl", "🔊 SOS 사운드 무한 재생 시작")
             }
         } catch (e: Exception) {
             Log.e("SosActionHandlerImpl", "❌ 사운드 재생 실패: ${e.message}", e)
@@ -102,12 +86,31 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
      */
     private fun stopSound() {
         mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
-                Log.d("SosActionHandlerImpl", "🛑 기존 사운드 중지")
+            try {
+                Log.d("SosActionHandlerImpl", "🛑 사운드 중지 시작 - isPlaying: ${it.isPlaying}, isLooping: ${it.isLooping}")
+
+                // 루프 먼저 중지
+                it.isLooping = false
+
+                if (it.isPlaying) {
+                    it.stop()
+                    Log.d("SosActionHandlerImpl", "✅ 사운드 stop() 호출 완료")
+                }
+
+                it.reset()
+                Log.d("SosActionHandlerImpl", "✅ 사운드 reset() 호출 완료")
+
+                it.release()
+                Log.d("SosActionHandlerImpl", "✅ 사운드 release() 호출 완료")
+
+                mediaPlayer = null
+                Log.d("SosActionHandlerImpl", "✅ mediaPlayer null 설정 완료")
+            } catch (e: Exception) {
+                Log.e("SosActionHandlerImpl", "❌ 사운드 중지 실패: ${e.message}", e)
+                mediaPlayer = null
             }
-            it.release()
-            mediaPlayer = null
+        } ?: run {
+            Log.w("SosActionHandlerImpl", "⚠️ mediaPlayer가 null이어서 중지할 수 없습니다.")
         }
     }
 }
