@@ -11,6 +11,7 @@ import kr.co.ongil.domain.patient.dashboard.entity.DashboardEnum;
 import kr.co.ongil.domain.patient.dashboard.repository.DashboardRepository;
 import kr.co.ongil.domain.patient.favorite.repository.FavoriteRepository;
 import kr.co.ongil.domain.patient.sos.repository.SosRepository;
+import kr.co.ongil.domain.user.entity.UserType;
 import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
@@ -142,6 +143,7 @@ public class DashboardService {
                 ));
 
         // 모든 patient ID
+        Set<Long> activePatientIds=userRepository.findIdByUserType(UserType.PATIENT);
         Set<Long> allPatientIds = new HashSet<>();
         allPatientIds.addAll(abnormalMap.keySet());
         allPatientIds.addAll(callMap.keySet());
@@ -149,20 +151,31 @@ public class DashboardService {
         allPatientIds.addAll(favMap.keySet());
 
         // 합쳐서 저장
-        List<DashboardCalc> dashboards = allPatientIds.stream()
+        List<DashboardCalc> dashboards = activePatientIds.stream()
                 .map(patientId -> {
-                    AbnormalStatisticsDto abnormal = abnormalMap.get(patientId);
-                    CallStatisticsDto call = callMap.get(patientId);
-                    FavoriteStatisticsDto favorite = favMap.get(patientId);
-                    SosStatisticsDto sos = sosMap.get(patientId);
-                    return DashboardCalc.builder()
-                            .patient(userRepository.getReferenceById(Math.toIntExact(patientId)))  // 프록시만 생성
-                            .routeLost(abnormal != null ? abnormal.getPathCount() : 0)
-                            .safezoneEmer(abnormal != null ? abnormal.getWanderCount() : 0)
-                            .emerCall(call != null ? call.getCallCount() : 0)
-                            .sosSign(sos != null ? sos.getSosCount() : 0)
-                            .favorite(favorite != null ? favorite.getFavorites() : null)
-                            .safezoneExit(abnormal != null ? abnormal.getSafezoneExitByLevel() : null)
+                    if(allPatientIds.contains(patientId)) {
+                        AbnormalStatisticsDto abnormal = abnormalMap.get(patientId);
+                        CallStatisticsDto call = callMap.get(patientId);
+                        FavoriteStatisticsDto favorite = favMap.get(patientId);
+                        SosStatisticsDto sos = sosMap.get(patientId);
+                        return DashboardCalc.builder()
+                                .patient(userRepository.getReferenceById(Math.toIntExact(patientId)))  // 프록시만 생성
+                                .routeLost(abnormal != null ? abnormal.getPathCount() : 0)
+                                .safezoneEmer(abnormal != null ? abnormal.getWanderCount() : 0)
+                                .emerCall(call != null ? call.getCallCount() : 0)
+                                .sosSign(sos != null ? sos.getSosCount() : 0)
+                                .favorite(favorite != null ? favorite.getFavorites() : null)
+                                .safezoneExit(abnormal != null ? abnormal.getSafezoneExitByLevel() : null)
+                                .build();
+                    }
+                    else return DashboardCalc.builder()
+                            .patient(userRepository.getReferenceById(Math.toIntExact(patientId)))
+                            .routeLost(0L)
+                            .favorite(null)
+                            .safezoneEmer(0L)
+                            .emerCall(0L)
+                            .sosSign(0L)
+                            .safezoneExit(null)
                             .build();
                 })
                 .collect(Collectors.toList());
