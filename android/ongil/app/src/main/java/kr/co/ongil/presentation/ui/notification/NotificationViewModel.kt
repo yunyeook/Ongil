@@ -3,11 +3,16 @@ package kr.co.ongil.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+import kr.co.ongil.data.model.error.ApiException
 import kr.co.ongil.data.model.notification.NotificationDto
 import kr.co.ongil.domain.repository.NotificationRepository
 import kr.co.ongil.presentation.uistate.NotificationEvent
@@ -23,14 +28,32 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
-    private val repository: NotificationRepository
+    private val repository: NotificationRepository,
+    private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationUiState())
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
 
+    // Debounce를 위한 Channel
+    private val loadNotificationsChannel = Channel<Unit>(Channel.CONFLATED)
+
     init {
         loadNotifications()
+        setupDebouncedLoad()
+    }
+
+    /**
+     * Debounced load notifications (300ms 내 중복 호출 방지)
+     */
+    private fun setupDebouncedLoad() {
+        viewModelScope.launch {
+            loadNotificationsChannel.consumeAsFlow()
+                .debounce(300)
+                .collect {
+                    actuallyLoadNotifications()
+                }
+        }
     }
 
     fun onEvent(event: NotificationEvent) {
@@ -44,7 +67,19 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 알림 로드 (Channel을 통해 debounce 처리)
+     */
     private fun loadNotifications() {
+        viewModelScope.launch {
+            loadNotificationsChannel.send(Unit)
+        }
+    }
+
+    /**
+     * 실제 알림 로드 로직
+     */
+    private fun actuallyLoadNotifications() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
@@ -64,18 +99,40 @@ class NotificationViewModel @Inject constructor(
                         )
                     }
                 }.onFailure { exception ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = exception.message ?: "알림을 불러오는데 실패했습니다."
-                        )
-                    }
+                    handleError(exception)
                 }
             } catch (e: Exception) {
+                handleError(e)
+            }
+        }
+    }
+
+    /**
+     * 에러 처리 (인증 실패 시 재인증 플래그 설정)
+     */
+    private fun handleError(exception: Throwable) {
+        android.util.Log.e("NotificationViewModel", "Error occurred", exception)
+
+        when (exception) {
+            is ApiException.Unauthorized, is ApiException.Forbidden -> {
+                // 인증 실패 - 로그아웃 및 재인증 필요
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "알림을 불러오는데 실패했습니다."
+                        error = "세션이 만료되었습니다. 다시 로그인해주세요.",
+                        requiresReauth = true
+                    )
+                }
+                // 로그아웃 처리 (토큰 삭제)
+                viewModelScope.launch {
+                    userDataStoreManager.clearTokens()
+                }
+            }
+            else -> {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = exception.message ?: "알림을 불러오는데 실패했습니다."
                     )
                 }
             }
@@ -118,39 +175,105 @@ class NotificationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 개별 알림 삭제 (낙관적 업데이트 패턴 적용)
+     */
     private fun deleteNotification(id: Long) {
         viewModelScope.launch {
+            // 1. 백업 (롤백용)
+            val originalList = _uiState.value.notifications
+
+            // 2. UI에서 먼저 제거 & 삭제 중 상태 추가
+            _uiState.update {
+                it.copy(
+                    notifications = it.notifications.filter { n -> n.id != id },
+                    deletingIds = it.deletingIds + id,
+                    hasUnread = it.notifications.filter { n -> n.id != id }.any { n -> !n.isRead }
+                )
+            }
+
             try {
-                // 실제 API 호출
+                // 3. API 호출
                 val result = repository.deleteNotification(id)
 
                 result.onSuccess {
-                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
-                    loadNotifications()
+                    // 성공 - 삭제 중 상태만 제거
+                    _uiState.update {
+                        it.copy(deletingIds = it.deletingIds - id)
+                    }
                 }.onFailure { exception ->
-                    _uiState.update { it.copy(error = exception.message ?: "삭제에 실패했습니다.") }
+                    // 실패 - 롤백 및 에러 메시지 표시
+                    _uiState.update {
+                        it.copy(
+                            notifications = originalList,
+                            deletingIds = it.deletingIds - id,
+                            error = "삭제에 실패했습니다: ${exception.message}",
+                            hasUnread = originalList.any { n -> !n.isRead }
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "삭제에 실패했습니다.") }
+                // 예외 - 롤백 및 에러 메시지 표시
+                _uiState.update {
+                    it.copy(
+                        notifications = originalList,
+                        deletingIds = it.deletingIds - id,
+                        error = "삭제에 실패했습니다.",
+                        hasUnread = originalList.any { n -> !n.isRead }
+                    )
+                }
             }
         }
     }
 
+    /**
+     * 전체 알림 삭제 (낙관적 업데이트 패턴 적용)
+     */
     private fun deleteAllNotifications() {
         viewModelScope.launch {
+            // 1. 백업 (롤백용)
+            val originalList = _uiState.value.notifications
+
+            // 2. UI에서 먼저 모두 제거
+            _uiState.update {
+                it.copy(
+                    notifications = emptyList(),
+                    isLoading = true,
+                    hasUnread = false
+                )
+            }
+
             try {
-                // 실제 API 호출
+                // 3. API 호출
                 val result = repository.deleteAllNotifications()
 
                 result.onSuccess { deleteCount ->
-                    // API 호출 성공 시 서버에서 최신 데이터 다시 불러오기
                     android.util.Log.d("NotificationViewModel", "전체 알림 삭제 완료: ${deleteCount}개")
-                    loadNotifications()
+                    // 성공 - 로딩 상태만 해제
+                    _uiState.update {
+                        it.copy(isLoading = false)
+                    }
                 }.onFailure { exception ->
-                    _uiState.update { it.copy(error = exception.message ?: "전체 삭제에 실패했습니다.") }
+                    // 실패 - 롤백 및 에러 메시지 표시
+                    _uiState.update {
+                        it.copy(
+                            notifications = originalList,
+                            isLoading = false,
+                            error = "전체 삭제에 실패했습니다: ${exception.message}",
+                            hasUnread = originalList.any { n -> !n.isRead }
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = "전체 삭제에 실패했습니다.") }
+                // 예외 - 롤백 및 에러 메시지 표시
+                _uiState.update {
+                    it.copy(
+                        notifications = originalList,
+                        isLoading = false,
+                        error = "전체 삭제에 실패했습니다.",
+                        hasUnread = originalList.any { n -> !n.isRead }
+                    )
+                }
             }
         }
     }

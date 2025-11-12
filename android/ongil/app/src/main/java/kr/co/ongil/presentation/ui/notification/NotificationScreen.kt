@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,9 +34,17 @@ import kr.co.ongil.presentation.viewmodel.NotificationViewModel
 fun NotificationScreen(
     modifier: Modifier = Modifier,
     viewModel: NotificationViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // 재인증 필요 시 로그인 화면으로 이동
+    LaunchedEffect(uiState.requiresReauth) {
+        if (uiState.requiresReauth) {
+            onNavigateToLogin()
+        }
+    }
 
     NotificationContent(
         uiState = uiState,
