@@ -71,6 +71,9 @@ class LocationTrackingService : Service() {
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
 
+    // 마지막으로 LocationBus에 전송한 위치
+    private var lastEmittedLocation: LocationPoint? = null
+
     // 안전 범위 모니터 (DataStore에서 설정을 로드하여 초기화)
     private var safetyZoneMonitor: SafetyZoneMonitor? = null
 
@@ -256,7 +259,6 @@ class LocationTrackingService : Service() {
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             result.lastLocation?.let { loc ->
-                Log.d(TAG, "위치 수신됨: lat=${loc.latitude}, lon=${loc.longitude}, accuracy=${loc.accuracy}m")
                 serviceScope.launch {
                     val point = LocationPoint(
                         latitude = loc.latitude,
@@ -267,7 +269,67 @@ class LocationTrackingService : Service() {
                         timeMillis = loc.time
                     )
 
-                    // LocationBus에 위치 전송 (기존 로직 유지)
+                    val accuracy = loc.accuracy
+                    val speed = loc.speed
+
+                    // 1. 정확도 필터링 (50m 초과는 무시)
+                    if (accuracy > 50f) {
+                        Log.w(TAG, "⚠️ 정확도 낮음 (${accuracy}m) - 위치 무시")
+                        return@launch
+                    }
+
+                    // 2. 거리 및 속도 기반 필터링
+                    val lastEmitted = lastEmittedLocation
+                    if (lastEmitted != null) {
+                        val distance = calculateDistance(
+                            lastEmitted.latitude, lastEmitted.longitude,
+                            point.latitude, point.longitude
+                        )
+
+                        // 속도 기반 필터링 (정지/저속 상태에서 GPS 드리프트 방지)
+                        when {
+                            speed < 0.5f -> {
+                                // 거의 정지 상태 (0.5m/s = 1.8km/h 미만)
+                                if (distance > 3.0) {
+                                    Log.w(TAG, "⚠️ 정지 상태 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+                                    return@launch
+                                }
+                            }
+                            speed < 1.5f -> {
+                                // 느린 보행 (0.5-1.5m/s, 1.8-5.4km/h)
+                                val maxJump = when {
+                                    accuracy < 20f -> 8.0
+                                    accuracy < 30f -> 10.0
+                                    else -> 15.0
+                                }
+                                if (distance > maxJump) {
+                                    Log.w(TAG, "⚠️ 저속 이동 중 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+                                    return@launch
+                                }
+                            }
+                            // speed >= 1.5m/s (5.4km/h+): 정상 이동으로 간주, 점프 체크 안 함
+                        }
+
+                        // 정확도에 따른 최소 이동 거리 (동적 임계값)
+                        val minDistance = when {
+                            accuracy < 20f -> 2.0   // 정확도 좋음: 2m
+                            accuracy < 30f -> 5.0   // 정확도 보통: 5m
+                            else -> 10.0            // 정확도 나쁨: 10m
+                        }
+
+                        // 최소 이동 거리 체크
+                        if (distance < minDistance) {
+                            Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m < ${minDistance}m - 무시")
+                            return@launch
+                        }
+
+                        Log.d(TAG, "✅ 위치 수신: ${String.format("%.1f", distance)}m 이동, 속도: ${String.format("%.1f", speed)}m/s, 정확도: ${String.format("%.0f", accuracy)}m")
+                    } else {
+                        Log.d(TAG, "✅ 첫 위치 수신: lat=${loc.latitude}, lon=${loc.longitude}, accuracy=${accuracy}m")
+                    }
+
+                    // 필터링 통과 - LocationBus에 위치 전송
+                    lastEmittedLocation = point
                     locationBus.emit(point)
                     Log.d(TAG, "LocationBus에 위치 전송 완료")
 
