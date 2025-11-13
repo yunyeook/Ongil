@@ -564,14 +564,14 @@
             log('🔧 ICE Servers 설정:', 'info');
             log(`   ${JSON.stringify(iceServers, null, 2)}`, 'info');
 
-            // ICE Transport Policy: relay 강제 (NAT 우회)
+            // ICE Transport Policy: 일반 모드 (host + srflx + relay)
             const peerConnectionConfig = {
                 iceServers: iceServers,
-                iceTransportPolicy: 'relay'  // ⭐ TURN 서버만 사용 (host/srflx 무시)
+                iceTransportPolicy: 'all'  // ⭐ 필요하면 TURN, 아니면 직접 연결
             };
 
             log('🔧 RTCConfiguration:', 'info');
-            log(`   iceTransportPolicy: relay (TURN 서버 강제 사용)`, 'warn');
+            log(`   iceTransportPolicy: all (host/srflx + 필요 시 TURN 사용)`, 'info');
 
             peerConnection = new RTCPeerConnection(peerConnectionConfig);
             log('✅ PeerConnection 생성 완료', 'success');
