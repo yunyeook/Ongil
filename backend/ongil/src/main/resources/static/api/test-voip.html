@@ -581,6 +581,30 @@
                 peerConnection.addTrack(track, localStream);
                 log(`📤 트랙 추가: ${track.kind}`, 'info');
             });
+            
+            peerConnection.oniceconnectionstatechange = () => {
+                const state = peerConnection.iceConnectionState;
+                log(`🧊 ICE Connection State: ${state}`, 'info');
+        
+                if (state === 'connected' || state === 'completed') {
+                    log('✅ ICE 연결 성공!', 'success');
+                } else if (state === 'failed') {
+                  log('❌ ICE 연결 실패!', 'error');
+                } else if (state === 'disconnected') {
+                    log('⚠️ ICE 연결 끊김', 'warn');
+                }
+            };
+    
+            peerConnection.onconnectionstatechange = () => {
+                const state = peerConnection.connectionState;
+                log(`🔗 Connection State: ${state}`, 'info');
+        
+                if (state === 'connected') {
+                   log('✅✅✅ WebRTC P2P 연결 완료!', 'success');
+                } else if (state === 'failed') {
+                    log('❌❌❌ WebRTC 연결 실패', 'error');
+                }
+            };    
 
             // ICE candidate 이벤트
             peerConnection.onicecandidate = (event) => {
