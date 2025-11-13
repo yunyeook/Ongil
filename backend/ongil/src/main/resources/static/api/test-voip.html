@@ -393,12 +393,14 @@
                 {
                     urls: turnData.uris,
                     username: turnData.username,
-                    credential: turnData.credential
+                    credential: turnData.credential,
+                    credentialType: 'password'  // 명시적 설정
                 }
             ];
 
             log(`✅ TURN 자격증명 획득 성공`, 'success');
             log(`   Username: ${turnData.username}`, 'info');
+            log(`   Credential: ${turnData.credential.substring(0, 10)}... (${turnData.credential.length} chars)`, 'info');
             log(`   URIs: ${turnData.uris.join(', ')}`, 'info');
 
         } catch (error) {
@@ -553,7 +555,10 @@
             log('✅ 로컬 미디어 스트림 획득', 'success');
 
             // PeerConnection 생성
+            log('🔧 ICE Servers 설정:', 'info');
+            log(`   ${JSON.stringify(iceServers, null, 2)}`, 'info');
             peerConnection = new RTCPeerConnection({ iceServers });
+            log('✅ PeerConnection 생성 완료', 'success');
 
             // 로컬 스트림 추가
             localStream.getTracks().forEach(track => {
@@ -564,7 +569,15 @@
             // ICE candidate 이벤트
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
-                    log(`🧊 ICE Candidate 생성: ${event.candidate.type}`, 'info');
+                    const cand = event.candidate;
+                    log(`🧊 ICE Candidate 생성: type=${cand.type}, protocol=${cand.protocol}, address=${cand.address || 'N/A'}`, 'info');
+                    log(`   Full: ${cand.candidate}`, 'info');
+
+                    // TURN relay candidate 확인
+                    if (cand.type === 'relay') {
+                        log('⭐ TURN Relay Candidate 생성 성공!', 'success');
+                    }
+
                     sendSignal({
                         type: 'ICE',
                         candidate: event.candidate.candidate,
@@ -574,6 +587,8 @@
                         fromUserId: userId,
                         toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
                     });
+                } else {
+                    log('🧊 ICE Candidate 수집 완료 (null candidate)', 'info');
                 }
             };
 
@@ -597,6 +612,20 @@
             peerConnection.oniceconnectionstatechange = () => {
                 log(`🧊 ICE Connection State: ${peerConnection.iceConnectionState}`, 'info');
             };
+
+            // ICE Gathering 상태 모니터링
+            peerConnection.onicegatheringstatechange = () => {
+                log(`🔍 ICE Gathering State: ${peerConnection.iceGatheringState}`, 'info');
+                if (peerConnection.iceGatheringState === 'complete') {
+                    log('✅ ICE Candidate 수집 완료', 'success');
+                }
+            };
+
+            // ICE Candidate 에러 감지 (TURN 서버 연결 실패 등)
+            peerConnection.addEventListener('icecandidateerror', (event) => {
+                log(`⚠️ ICE Candidate Error: ${event.errorText || event.errorCode}`, 'warn');
+                log(`   URL: ${event.url}, Port: ${event.port}`, 'warn');
+            });
 
             // Offer 생성 (발신자만)
             if (shouldCreateOffer) {
