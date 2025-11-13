@@ -165,6 +165,40 @@ fun MapScreen(
     }
 
     // 뒤로가기 버튼 처리
+    // 즐겨찾기에서 길찾기 시작 요청 감지
+    LaunchedEffect(navController.currentBackStackEntry) {
+        val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+
+        savedStateHandle?.getStateFlow("start_navigation", false)?.collect { startNavigation ->
+            if (startNavigation) {
+                val endLat = savedStateHandle.get<Double>("navigation_end_lat")
+                val endLon = savedStateHandle.get<Double>("navigation_end_lon")
+                val endName = savedStateHandle.get<String>("navigation_end_name")
+
+                if (endLat != null && endLon != null && endName != null) {
+                    android.util.Log.d("MapScreen", "🗺️ 즐겨찾기에서 길찾기 시작: $endName ($endLat, $endLon)")
+
+                    // 길찾기 시작
+                    viewModel.startNavigation(
+                        endLatitude = endLat,
+                        endLongitude = endLon,
+                        endName = endName,
+                        selectedPatientId = selectedPatientId
+                    )
+
+                    // savedStateHandle 정리
+                    savedStateHandle.set("start_navigation", false)
+                    savedStateHandle.remove<Double>("navigation_end_lat")
+                    savedStateHandle.remove<Double>("navigation_end_lon")
+                    savedStateHandle.remove<String>("navigation_end_name")
+
+                    android.util.Log.d("MapScreen", "✅ 길찾기 시작 완료 및 savedStateHandle 정리")
+                }
+            }
+        }
+    }
+
+    // 뒤로가기 버튼 처리 (장소 상세 정보 표시 중일 때)
     val focusManager = LocalFocusManager.current
 
     // 검색 결과 표시 중일 때 뒤로가기 (키보드가 내려진 상태)
