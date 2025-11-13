@@ -1,0 +1,1 @@
+package kr.co.ongil.data.datasource.local.database.entity
