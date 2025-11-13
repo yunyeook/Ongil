@@ -11,6 +11,8 @@ import kotlinx.serialization.json.Json
 import kr.co.ongil.BuildConfig
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.model.location.GpsUpdateEvent
+import kr.co.ongil.data.model.location.NavigationUpdateEvent
+import kr.co.ongil.data.model.location.SseEvent
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -34,15 +36,17 @@ class LocationSseDataSource @Inject constructor(
     }
 
     private val sseClient = OkHttpClient.Builder()
-        .readTimeout(0, TimeUnit.SECONDS) // 무한 대기
+        .readTimeout(60, TimeUnit.SECONDS) // 60초 타임아웃 (서버 heartbeat 간격보다 길게)
         .connectTimeout(30, TimeUnit.SECONDS)
+        .pingInterval(20, TimeUnit.SECONDS)  // 20초마다 ping (연결 유지)
+        .retryOnConnectionFailure(true)  // 연결 실패 시 재시도
         .build()
 
     /**
-     * SSE 스트림 연결
-     * @return Flow<GpsUpdateEvent> - 환자 위치 업데이트 스트림
+     * SSE 스트림 연결 (통합)
+     * @return Flow<SseEvent> - SSE 이벤트 스트림
      */
-    fun connectSseStream(): Flow<GpsUpdateEvent> = callbackFlow {
+    fun connectSseStream(): Flow<SseEvent> = callbackFlow {
         var response: Response? = null
 
         try {
@@ -73,6 +77,7 @@ class LocationSseDataSource @Inject constructor(
                 }
 
                 Log.d(TAG, "SSE 연결 성공")
+                trySend(SseEvent.Connected)  // 연결 성공 이벤트 먼저 전송
 
                 val source: BufferedSource? = response.body?.source()
                 if (source == null) {
@@ -86,24 +91,45 @@ class LocationSseDataSource @Inject constructor(
                 while (!source.exhausted()) {
                     val line = source.readUtf8Line() ?: break
 
+                    // 모든 SSE 라인 로그 (디버깅용)
+                    if (line.isNotEmpty()) {
+                        Log.d(TAG, "📩 SSE 라인: $line")
+                    }
+
                     when {
                         line.startsWith("event:") -> {
                             currentEvent = line.removePrefix("event:").trim()
+                            Log.d(TAG, "🎯 이벤트 타입: $currentEvent")
+                        }
+                        line.startsWith(":") -> {
+                            // SSE 주석 (heartbeat/keep-alive) - 무시
+                            Log.v(TAG, "💓 SSE heartbeat 수신")
                         }
                         line.startsWith("data:") -> {
                             val data = line.removePrefix("data:").trim()
+                            Log.d(TAG, "📦 데이터 수신 (이벤트=$currentEvent): $data")
 
                             when (currentEvent) {
                                 "connected" -> {
                                     Log.d(TAG, "SSE 연결 확인: $data")
+                                    // connected 이벤트는 이미 위에서 전송했으므로 중복 전송하지 않음
                                 }
                                 "gps-update" -> {
                                     try {
                                         val gpsUpdate = json.decodeFromString<GpsUpdateEvent>(data)
                                         Log.d(TAG, "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}")
-                                        trySend(gpsUpdate)
+                                        trySend(SseEvent.GpsUpdate(gpsUpdate))
                                     } catch (e: Exception) {
                                         Log.e(TAG, "GPS 데이터 파싱 실패: $data", e)
+                                    }
+                                }
+                                "navigation-update" -> {
+                                    try {
+                                        val navUpdate = json.decodeFromString<NavigationUpdateEvent>(data)
+                                        Log.d(TAG, "길찾기 업데이트 수신: patientId=${navUpdate.patientId}, status=${navUpdate.status}, route=${navUpdate.route != null}")
+                                        trySend(SseEvent.NavigationUpdate(navUpdate))
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "길찾기 데이터 파싱 실패: $data", e)
                                     }
                                 }
                                 else -> {
