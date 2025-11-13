@@ -1,5 +1,7 @@
 package kr.co.ongil.global.sse.sevice;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import kr.co.ongil.global.sse.event.LocationUpdatedEvent;
 import kr.co.ongil.global.sse.event.NavigationEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,31 @@ public class SSEService {
 
     private final ConcurrentHashMap<Integer, SseEmitter> emitters = new ConcurrentHashMap<>();
 
+    /**
+     *  Heartbeat 이벤트(핑 이벤트) 주기적 발송
+     */
+    public SSEService() {
+        startHeartbeat();
+    }
+
+    private void startHeartbeat() {
+        // 15초마다 한번씩 모든 SSE 연결에 ping 이벤트 전송
+        Executors.newSingleThreadScheduledExecutor()
+            .scheduleAtFixedRate(() -> {
+                emitters.forEach((userId, emitter) -> {
+                    try {
+                        emitter.send(SseEmitter.event()
+                            .name("ping")
+                            .data("keep-alive"));
+                        log.debug("SSE heartbeat ping 전송: userId={}", userId);
+                    } catch (Exception e) {
+                        log.warn("SSE heartbeat 실패 → 연결 제거: userId={}", userId);
+                        emitters.remove(userId);
+                        emitter.complete();
+                    }
+                });
+            }, 10, 15, TimeUnit.SECONDS); // 10초 후 시작, 15초마다 전송
+    }
     /**
      * SSE Emitter 등록
      */
