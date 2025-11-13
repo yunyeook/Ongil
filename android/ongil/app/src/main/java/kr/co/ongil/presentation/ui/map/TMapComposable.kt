@@ -200,6 +200,8 @@ fun TMapComposable(
         val marker = locationMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
+        var consecutiveErrors = 0  // 연속 에러 카운트
+
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
             currentPulseFrame = (currentPulseFrame + 1) % pulseFrames.size
@@ -207,14 +209,28 @@ fun TMapComposable(
             try {
                 // 마커가 여전히 유효한지 확인
                 if (locationMarker != null && mapView != null) {
-                    marker.icon = pulseFrames[currentPulseFrame]
-                    tmap.updateTMapMarkerItem(marker)
+                    // 마커 ID가 유효한지 확인 (TMap SDK 내부에서 제거되었는지 체크)
+                    if (marker.id != null) {
+                        marker.icon = pulseFrames[currentPulseFrame]
+                        tmap.updateTMapMarkerItem(marker)
+                        consecutiveErrors = 0  // 성공 시 에러 카운트 리셋
+                    } else {
+                        Log.w("TMapComposable", "마커 ID가 null - 마커가 제거됨")
+                        break  // 마커가 완전히 제거되면 루프 종료
+                    }
                 } else {
                     break  // 마커나 맵이 제거되면 루프 종료
                 }
             } catch (e: Exception) {
-                Log.e("TMapComposable", "펄스 애니메이션 업데이트 실패", e)
-                break  // 에러 발생 시 루프 종료
+                consecutiveErrors++
+                Log.w("TMapComposable", "펄스 애니메이션 업데이트 실패 (${consecutiveErrors}회)", e)
+
+                // 연속 5번 이상 실패하면 루프 종료
+                if (consecutiveErrors >= 5) {
+                    Log.e("TMapComposable", "펄스 애니메이션 연속 실패 - 루프 종료")
+                    break
+                }
+                // 일시적 오류는 무시하고 계속 시도
             }
         }
     }
@@ -225,6 +241,8 @@ fun TMapComposable(
         val marker = patientMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
+        var consecutiveErrors = 0  // 연속 에러 카운트
+
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
             currentPulseFrame = (currentPulseFrame + 1) % pulseFrames.size
@@ -232,14 +250,28 @@ fun TMapComposable(
             try {
                 // 마커가 여전히 유효한지 확인
                 if (patientMarker != null && mapView != null) {
-                    marker.icon = pulseFrames[currentPulseFrame]
-                    tmap.updateTMapMarkerItem(marker)
+                    // 마커 ID가 유효한지 확인 (TMap SDK 내부에서 제거되었는지 체크)
+                    if (marker.id != null) {
+                        marker.icon = pulseFrames[currentPulseFrame]
+                        tmap.updateTMapMarkerItem(marker)
+                        consecutiveErrors = 0  // 성공 시 에러 카운트 리셋
+                    } else {
+                        Log.w("TMapComposable", "환자 마커 ID가 null - 마커가 제거됨")
+                        break  // 마커가 완전히 제거되면 루프 종료
+                    }
                 } else {
                     break  // 마커나 맵이 제거되면 루프 종료
                 }
             } catch (e: Exception) {
-                Log.e("TMapComposable", "환자 마커 애니메이션 업데이트 실패", e)
-                break  // 에러 발생 시 루프 종료
+                consecutiveErrors++
+                Log.w("TMapComposable", "환자 마커 애니메이션 업데이트 실패 (${consecutiveErrors}회)", e)
+
+                // 연속 5번 이상 실패하면 루프 종료
+                if (consecutiveErrors >= 5) {
+                    Log.e("TMapComposable", "환자 마커 애니메이션 연속 실패 - 루프 종료")
+                    break
+                }
+                // 일시적 오류는 무시하고 계속 시도
             }
         }
     }
@@ -600,8 +632,8 @@ fun TMapComposable(
                 val accuracy = point.accuracyMeters ?: 999f
                 val speed = point.speedMps ?: 0f
 
-                // 정확도 필터링 (50m 초과는 무시)
-                if (accuracy > 50f) {
+                // 정확도 필터링 (40m 초과는 무시)
+                if (accuracy > 40f) {
                     Log.w("TMapComposable", "⚠️ 정확도 낮음 (${accuracy}m) - 무시")
                     return@collectLatest
                 }
@@ -614,21 +646,38 @@ fun TMapComposable(
                         point.latitude, point.longitude
                     )
 
-                    // 속도 기반 필터링 (정지/저속 상태에서 GPS 드리프트 방지)
+                    // 시간 차이 계산 (초 단위)
+                    val timeDiffSeconds = (point.timeMillis - prevPoint.timeMillis) / 1000.0
+
+                    // 속도와 거리 일관성 체크
+                    if (speed > 1.0f && timeDiffSeconds > 0) {
+                        // 예상 이동 거리 (속도 * 시간)
+                        val expectedDistance = speed * timeDiffSeconds
+                        // 실제 이동 거리와 예상 이동 거리의 차이
+                        val distanceDiff = Math.abs(expectedDistance - distance)
+
+                        // 차이가 너무 크면 GPS 오류로 판단 (예상의 80% 이상 차이) - 기준 완화
+                        if (distanceDiff > expectedDistance * 0.8) {
+                            Log.w("TMapComposable", "⚠️ 속도-거리 불일치 감지 (속도: ${String.format("%.1f", speed)}m/s, 실제: ${String.format("%.1f", distance)}m, 예상: ${String.format("%.1f", expectedDistance)}m) - 무시")
+                            return@collectLatest
+                        }
+                    }
+
+                    // 속도 기반 필터링 (정지/저속 상태에서 GPS 드리프트 방지) - 기준 완화
                     when {
                         speed < 0.5f -> {
-                            // 거의 정지 상태 (0.5m/s = 1.8km/h 미만)
-                            if (distance > 3.0) {
+                            // 거의 정지 상태 (0.5m/s = 1.8km/h 미만) - 5m로 완화
+                            if (distance > 5.0) {
                                 Log.w("TMapComposable", "⚠️ 정지 상태 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
                                 return@collectLatest
                             }
                         }
                         speed < 1.5f -> {
-                            // 느린 보행 (0.5-1.5m/s, 1.8-5.4km/h)
+                            // 느린 보행 (0.5-1.5m/s, 1.8-5.4km/h) - 기준 완화
                             val maxJump = when {
-                                accuracy < 20f -> 8.0
-                                accuracy < 30f -> 10.0
-                                else -> 15.0
+                                accuracy < 20f -> 30.0   // 8.0 → 30.0
+                                accuracy < 30f -> 50.0   // 10.0 → 50.0
+                                else -> 60.0             // 12.0 → 60.0
                             }
                             if (distance > maxJump) {
                                 Log.w("TMapComposable", "⚠️ 저속 이동 중 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
@@ -640,9 +689,9 @@ fun TMapComposable(
 
                     // 정확도에 따른 최소 이동 거리 (동적 임계값)
                     val minDistance = when {
-                        accuracy < 20f -> 2.0   // 정확도 좋음: 2m
-                        accuracy < 30f -> 5.0   // 정확도 보통: 5m
-                        else -> 10.0            // 정확도 나쁨: 10m
+                        accuracy < 15f -> 2.0   // 정확도 좋음 (15m 미만): 2m
+                        accuracy < 25f -> 5.0   // 정확도 보통 (15-25m): 5m
+                        else -> 10.0            // 정확도 나쁨 (25-40m): 10m
                     }
 
                     // 최소 이동 거리 체크
