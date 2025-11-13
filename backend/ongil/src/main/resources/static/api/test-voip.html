@@ -683,7 +683,13 @@
 
             case 'HANGUP':
                 log('📴 상대방이 통화를 종료했습니다', 'warn');
-                hangup();
+                updateCallStatus('disconnected', '상대방이 통화를 종료했습니다');
+
+                // 시그널 재전송 없이 정리만 수행
+                cleanupCall();
+
+                // WebSocket 연결 종료 (테스트 페이지용: PING/PONG 중단)
+                disconnectWebSocket();
                 break;
         }
     }
@@ -787,19 +793,10 @@
         peerUserId = null;  // ✅ 상대방 ID 초기화
     }
 
-    // 통화 종료
-    function hangup() {
-        log('📴 통화 종료', 'info');
+    // 통화 정리 (신호 전송 없이 cleanup만 수행)
+    function cleanupCall() {
+        log('🧹 통화 리소스 정리 중...', 'info');
         updateCallStatus('disconnected', '통화 종료됨');
-
-        if (stompClient && currentCallId) {
-            sendSignal({
-                type: 'HANGUP',
-                callId: currentCallId,
-                fromUserId: userId,
-                toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
-            });
-        }
 
         // PeerConnection 정리
         if (peerConnection) {
@@ -825,7 +822,31 @@
 
         currentCallId = null;
         currentSessionId = null;
-        peerUserId = null;  // ✅ 상대방 ID 초기화
+        peerUserId = null;
+
+        log('✅ 통화 정리 완료', 'success');
+    }
+
+    // 통화 종료 (사용자가 직접 종료 버튼을 눌렀을 때)
+    function hangup() {
+        log('📴 통화 종료 요청', 'info');
+
+        // HANGUP 신호 전송
+        if (stompClient && stompClient.connected && currentCallId) {
+            sendSignal({
+                type: 'HANGUP',
+                callId: currentCallId,
+                fromUserId: userId,
+                toUserId: peerUserId
+            });
+            log('📤 HANGUP 신호 전송 완료', 'info');
+        }
+
+        // 리소스 정리
+        cleanupCall();
+
+        // WebSocket 연결 종료 (테스트 페이지용: PING/PONG 중단)
+        disconnectWebSocket();
     }
 
     // 페이지 로드 시
