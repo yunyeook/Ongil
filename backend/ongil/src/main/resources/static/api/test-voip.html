@@ -526,7 +526,7 @@
     }
 
     // PeerConnection 초기화
-    async function initializePeerConnection() {
+    async function initializePeerConnection(shouldCreateOffer = true) {
         try {
             log('🎥 로컬 미디어 스트림 가져오는 중...', 'info');
 
@@ -545,6 +545,7 @@
             // 로컬 스트림 추가
             localStream.getTracks().forEach(track => {
                 peerConnection.addTrack(track, localStream);
+                log(`📤 트랙 추가: ${track.kind}`, 'info');
             });
 
             // ICE candidate 이벤트
@@ -553,7 +554,9 @@
                     log(`🧊 ICE Candidate 생성: ${event.candidate.type}`, 'info');
                     sendSignal({
                         type: 'ICE',
-                        candidate: JSON.stringify(event.candidate),
+                        candidate: event.candidate.candidate,
+                        sdpMid: event.candidate.sdpMid,
+                        sdpMLineIndex: event.candidate.sdpMLineIndex,
                         callId: currentCallId,
                         fromUserId: userId,
                         toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
@@ -582,19 +585,21 @@
                 log(`🧊 ICE Connection State: ${peerConnection.iceConnectionState}`, 'info');
             };
 
-            // Offer 생성
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
+            // Offer 생성 (발신자만)
+            if (shouldCreateOffer) {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
 
-            log('📤 OFFER SDP 생성 및 전송', 'info');
+                log('📤 OFFER SDP 생성 및 전송', 'info');
 
-            sendSignal({
-                type: 'OFFER',
-                sdp: offer.sdp,
-                callId: currentCallId,
-                fromUserId: userId,
-                toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
-            });
+                sendSignal({
+                    type: 'OFFER',
+                    sdp: offer.sdp,
+                    callId: currentCallId,
+                    fromUserId: userId,
+                    toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
+                });
+            }
 
         } catch (error) {
             log(`❌ PeerConnection 초기화 실패: ${error.message}`, 'error');
@@ -672,27 +677,34 @@
 
     // OFFER 처리
     async function handleOffer(signal) {
-        if (!peerConnection) {
-            await initializePeerConnection();
+        try {
+            // PeerConnection이 없으면 초기화 (OFFER 생성 안 함)
+            if (!peerConnection) {
+                await initializePeerConnection(false);
+            }
+
+            log('📥 OFFER 수신, RemoteDescription 설정 중...', 'info');
+            await peerConnection.setRemoteDescription(new RTCSessionDescription({
+                type: 'offer',
+                sdp: signal.sdp
+            }));
+
+            log('📝 ANSWER 생성 중...', 'info');
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            sendSignal({
+                type: 'ANSWER',
+                sdp: answer.sdp,
+                callId: signal.callId,
+                fromUserId: userId,
+                toUserId: signal.fromUserId
+            });
+
+            log('📤 ANSWER 전송 완료', 'success');
+        } catch (error) {
+            log(`❌ OFFER 처리 실패: ${error.message}`, 'error');
         }
-
-        await peerConnection.setRemoteDescription(new RTCSessionDescription({
-            type: 'offer',
-            sdp: signal.sdp
-        }));
-
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-
-        sendSignal({
-            type: 'ANSWER',
-            sdp: answer.sdp,
-            callId: signal.callId,
-            fromUserId: userId,
-            toUserId: signal.fromUserId
-        });
-
-        log('📤 ANSWER 전송 완료', 'success');
     }
 
     // ANSWER 처리
@@ -709,8 +721,13 @@
     // ICE Candidate 처리
     async function handleIceCandidate(signal) {
         if (peerConnection) {
-            const candidate = JSON.parse(signal.candidate);
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            const candidate = new RTCIceCandidate({
+                candidate: signal.candidate,
+                sdpMid: signal.sdpMid,
+                sdpMLineIndex: signal.sdpMLineIndex
+            });
+            await peerConnection.addIceCandidate(candidate);
+            log('✅ ICE Candidate 추가 완료', 'success');
         }
     }
 
