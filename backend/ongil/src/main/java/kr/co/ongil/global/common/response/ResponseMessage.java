@@ -117,6 +117,12 @@ public enum ResponseMessage {
     REQUEST_SUCCESS("요청이 성공적으로 처리되었습니다."),
     // Dashboard
     DASHBOARD_SUCCESS("대쉬보드가 성공적으로 조회되었습니다."),
-    DASHBOARD_FAIL("대쉬보드 정보가 없습니다");
+    DASHBOARD_FAIL("대쉬보드 정보가 없습니다"),
+
+    // Health Data
+    HEALTH_DATA_UPLOADED("생체 데이터가 성공적으로 업로드되었습니다."),
+    HEALTH_DATA_FOUND("생체 데이터 조회가 완료되었습니다."),
+    HEALTH_DATA_SUMMARY_FOUND("생체 데이터 요약 통계 조회가 완료되었습니다."),
+    HEALTH_DATA_DELETED("생체 데이터가 성공적으로 삭제되었습니다.");
     private final String message;
 }
