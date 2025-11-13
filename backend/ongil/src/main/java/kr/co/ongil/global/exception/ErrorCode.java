@@ -54,6 +54,14 @@ public enum ErrorCode {
     NO_GUARDIAN_FOUND(HttpStatus.NOT_FOUND, "관계 등록된 보호자가 없습니다."),
     PATIENT_ALREADY_LINKED(HttpStatus.CONFLICT, "이미 보호자와 연결된 환자입니다."),
 
+    // HEALTH DATA
+    HEALTH_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "생체 데이터를 찾을 수 없습니다."),
+    INVALID_HEALTH_DATA_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 생체 데이터 유형입니다."),
+    HEALTH_DATA_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자의 생체 데이터에 접근할 권한이 없습니다."),
+    DUPLICATE_HEALTH_DATA(HttpStatus.CONFLICT, "중복된 생체 데이터가 존재합니다."),
+    INVALID_DATE_FORMAT(HttpStatus.BAD_REQUEST, "유효하지 않은 날짜 형식입니다. (yyyyMMdd 형식을 사용해주세요)"),
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "잘못된 날짜 범위입니다. 시작 날짜는 종료 날짜보다 이전이어야 합니다."),
+
     // RELATIONSHIP
     RELATIONSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 관계를 찾을 수 없습니다."),
     RELATIONSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 관계입니다."),
