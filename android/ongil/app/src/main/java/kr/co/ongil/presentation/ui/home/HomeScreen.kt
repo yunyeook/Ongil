@@ -1,6 +1,7 @@
 package kr.co.ongil.presentation.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -49,7 +50,8 @@ data class HomeUiState(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMapClick: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -58,18 +60,17 @@ fun HomeScreen(
     ) {
         Spacer(Modifier.height(12.dp))
 
-
-        // 지도 섹션 플레이스홀더(큰 네모 박스)
-        // 지도 알아서 넣어주세용
-        MapSectionPlaceholder(
+        // 지도 섹션 (클릭 시 위치 탭으로 이동)
+        MapSectionPreview(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(300.dp)
+                .height(300.dp),
+            onClick = onMapClick
         )
 
         Spacer(Modifier.height(20.dp))
 
-        // 대시보드 시작: “최근 정보를 요약했어요”
+        // 대시보드 시작: "최근 정보를 요약했어요"
         Text(
             text = buildAnnotatedString {
                 withStyle(SpanStyle(color = HomeColors.Primary)) {
@@ -89,20 +90,26 @@ fun HomeScreen(
 }
 
 @Composable
-private fun MapSectionPlaceholder(modifier: Modifier = Modifier) {
+private fun MapSectionPreview(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(HomeColors.CardBg)
-            .semantics {
-                contentDescription = "지도 영역 플레이스홀더"
-            },
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "지도 영역",
-            style = MaterialTheme.typography.titleMedium,
-            color = HomeColors.TextSecondary
+        // 실제 TMap 표시 (읽기 전용)
+        kr.co.ongil.presentation.ui.map.TMapComposable(
+            modifier = Modifier.fillMaxSize(),
+            enableTracking = false,
+            zoomLevel = 14
+        )
+
+        // 클릭 감지용 투명 레이어
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onClick)
         )
     }
 }

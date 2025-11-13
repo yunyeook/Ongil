@@ -217,6 +217,25 @@ class MapViewModel @Inject constructor(
     }
 
     /**
+     * 실시간 검색 결과만 숨김 (검색어는 유지)
+     */
+    fun clearSearchResults() {
+        _searchResults.value = emptyList()
+    }
+
+    /**
+     * 현재 검색어로 검색 다시 실행
+     */
+    fun refreshSearch() {
+        viewModelScope.launch {
+            val query = _searchQuery.value
+            if (query.isNotBlank()) {
+                searchPlaces(query)
+            }
+        }
+    }
+
+    /**
      * 최종 검색 (백엔드 API 호출)
      * 검색 버튼을 눌렀을 때 호출
      */
@@ -229,6 +248,9 @@ class MapViewModel @Inject constructor(
                 Log.d("MapViewModel", "검색어가 비어있음")
                 return@launch
             }
+
+            // 실시간 검색 결과 숨김
+            _searchResults.value = emptyList()
 
             val location = locationBus.lastValue
             val latitude = location?.latitude
@@ -261,6 +283,13 @@ class MapViewModel @Inject constructor(
      */
     fun closeFinalSearchResults() {
         _finalSearchResults.value = null
+        // 실시간 검색 결과 다시 표시
+        viewModelScope.launch {
+            val query = _searchQuery.value
+            if (query.isNotBlank()) {
+                searchPlaces(query)
+            }
+        }
     }
 
     /**

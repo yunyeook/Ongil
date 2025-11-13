@@ -128,11 +128,21 @@ fun MapScreen(
     // 검색창 포커스 상태
     var isSearchFocused by remember { mutableStateOf(false) }
 
-    // 검색 중 (검색창에 포커스가 있거나, 검색 쿼리가 있거나, 검색 결과가 있을 때)
-    val isSearchActive = isSearchFocused || searchQuery.isNotEmpty() || searchResults.isNotEmpty()
+    // 검색창 포커스 요청 트리거
+    var requestSearchFocusTrigger by remember { mutableStateOf(false) }
+
+    // 검색 중 (검색창에 포커스가 있거나, 검색 결과가 있을 때)
+    val isSearchActive = isSearchFocused || searchResults.isNotEmpty()
 
     // 장소 위치로 이동 트리거
     var placeLocationTrigger by remember { mutableStateOf(0 to Pair(0.0, 0.0)) }
+
+    // BottomSheet가 닫힐 때 검색창에 포커스
+    LaunchedEffect(finalSearchResults) {
+        if (finalSearchResults == null && searchQuery.isNotEmpty()) {
+            requestSearchFocusTrigger = true
+        }
+    }
 
     // 장소 상세 정보 표시 시 해당 장소로 지도 이동
     LaunchedEffect(selectedPlaceDetail) {
@@ -154,8 +164,15 @@ fun MapScreen(
         onShowBarsChange(!isShowingPlaceDetail && !isNavigationModalVisible)  // 장소 상세 또는 길찾기 모달 표시 중이면 false (숨김)
     }
 
-    // 뒤로가기 버튼 처리 (장소 상세 정보 표시 중일 때)
+    // 뒤로가기 버튼 처리
     val focusManager = LocalFocusManager.current
+
+    // 검색 결과 표시 중일 때 뒤로가기 (키보드가 내려진 상태)
+    BackHandler(enabled = isSearchActive && !isSearchFocused) {
+        viewModel.clearSearchResults()
+    }
+
+    // 장소 상세 정보 표시 중일 때 뒤로가기
     BackHandler(enabled = isShowingPlaceDetail) {
         viewModel.closePlaceDetail()
         viewModel.clearSearch()  // 검색 상태 초기화
@@ -299,6 +316,32 @@ fun MapScreen(
                 )
             }
 
+            // 검색 중일 때 바깥 클릭 감지용 투명 레이어
+            if (isSearchActive) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = paddingValues.calculateTopPadding(),
+                            bottom = 0.dp
+                        )
+                        .clickable(
+                            onClick = {
+                                if (isSearchFocused) {
+                                    // 포커스 중일 때: 키보드만 내림 (포커스 해제)
+                                    focusManager.clearFocus()
+                                    isSearchFocused = false
+                                } else {
+                                    // 포커스 해제 상태에서 다시 클릭: 검색 결과만 숨김 (검색어는 유지)
+                                    viewModel.clearSearchResults()
+                                }
+                            },
+                            indication = null,
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        )
+                )
+            }
+
         // 검색바 + 검색 결과 (장소 상세 정보 표시 중이 아니고, 길찾기 모달이 표시되지 않을 때만)
         if (!isShowingPlaceDetail && !isNavigationModalVisible) {
             Column(
@@ -315,9 +358,16 @@ fun MapScreen(
                     onSearch = { viewModel.onFinalSearch() },
                     onFocusChanged = { isFocused ->
                         isSearchFocused = isFocused
+                        if (isFocused) {
+                            requestSearchFocusTrigger = false  // 포커스를 받으면 트리거 리셋
+                            // 검색어가 있으면 검색 결과 다시 불러오기
+                            if (searchQuery.isNotEmpty() && searchResults.isEmpty()) {
+                                viewModel.refreshSearch()
+                            }
+                        }
                     },
                     placeholder = searchPlaceholder,
-                    requestFocus = requestSearchFocus
+                    requestFocus = requestSearchFocus || requestSearchFocusTrigger
                 )
 
                 // 길찾기 중 상태바 (길찾기 중이지만 모달이 닫혀있을 때)
