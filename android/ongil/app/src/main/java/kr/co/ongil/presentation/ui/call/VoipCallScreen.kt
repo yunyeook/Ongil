@@ -50,6 +50,13 @@ fun VoipCallScreen(
         }
     }
 
+    // 📞 상대방이 통화를 종료했을 때 화면 닫기
+    LaunchedEffect(uiState.shouldFinish) {
+        if (uiState.shouldFinish) {
+            onCallEnded()
+        }
+    }
+
     // 🕒 간단 타이머 (CONNECTED 이후부터 증가)
     var seconds by remember { mutableIntStateOf(0) }
     LaunchedEffect(uiState.call?.status) {
