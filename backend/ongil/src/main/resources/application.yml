@@ -173,3 +173,62 @@ cors:
 # Call Configuration
 call:
   timeout-seconds: ${CALL_TIMEOUT_SECONDS:60}  # 통화 타임아웃 (초), 기본 60초
+
+# GMS Configuration (SSAFY Generative Model Service)
+# 다양한 AI 모델 통합 지원
+gms:
+  api:
+    key: ${GMS_API_KEY}                # 통합 API 키 (환경변수)
+    timeout: 90                        # 타임아웃 (초)
+
+    # 현재 사용할 Provider와 Model 선택
+    provider: openai                   # openai | gemini | claude | runway
+    model: gpt-4.1-mini               # 선택한 provider의 모델명
+
+    # Provider별 설정
+    providers:
+      # OpenAI (텍스트 생성) - 가장 가성비 좋음
+      openai:
+        base-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1
+        endpoint: /chat/completions
+        auth-header: Authorization
+        auth-prefix: Bearer
+        models:
+          - gpt-4.1-mini          # Input: 0.004, Output: 0.016 (추천)
+          - gpt-4.1-nano          # 더 저렴
+          - gpt-4o-mini           # Input: 0.0015, Output: 0.006 (더 저렴)
+          - gpt-4o                # 고성능
+          - o3-mini               # 추론 특화
+
+      # Google Gemini (텍스트 생성) - 가장 빠르고 저렴
+      gemini:
+        base-url: https://gms.ssafy.io/gmsapi/generativelanguage.googleapis.com/v1beta
+        endpoint: /models
+        auth-type: query          # 쿼리스트링에 key 추가
+        models:
+          - gemini-2.5-flash-lite # Input: 0.001, Output: 0.004 (가장 저렴)
+          - gemini-2.5-flash      # 균형형
+          - gemini-2.5-pro        # 고성능
+
+      # Anthropic Claude (텍스트 생성) - 가장 강력
+      claude:
+        base-url: https://gms.ssafy.io/gmsapi/api.anthropic.com/v1
+        endpoint: /messages
+        auth-header: x-api-key
+        version-header: anthropic-version
+        version: 2023-06-01
+        models:
+          - claude-sonnet-4-20250514  # Input: 0.03, Output: 0.15 (강력하지만 비쌈)
+          - claude-3-7-sonnet-latest
+          - claude-3-5-haiku-latest
+
+      # Runway (비디오 생성) - 매우 비쌈, 신중한 사용 필요
+      runway:
+        base-url: https://gms.ssafy.io/gmsapi/api.dev.runwayml.com/v1
+        endpoint: /image_to_video
+        auth-header: Authorization
+        auth-prefix: Bearer
+        version-header: X-Runway-Version
+        version: 2024-11-06
+        models:
+          - gen3a_turbo           # Input: 1, Output: 4000 (매우 비쌈!)

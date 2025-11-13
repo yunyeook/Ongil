@@ -167,7 +167,14 @@ public enum ErrorCode {
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 Content-Type입니다."),
 
     //DASHBOARD
-    DASHBOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "대쉬보드가 존재하지 않습니다.");
+    DASHBOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "대쉬보드가 존재하지 않습니다."),
+
+    // PATIENT INSIGHT
+    PATIENT_INSIGHT_NOT_FOUND(HttpStatus.NOT_FOUND, "환자 인사이트를 찾을 수 없습니다."),
+    INSUFFICIENT_DATA_FOR_ANALYSIS(HttpStatus.BAD_REQUEST, "분석할 데이터가 부족합니다. 더 많은 활동 데이터가 필요합니다."),
+    INSIGHT_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "인사이트 생성 중 오류가 발생했습니다."),
+    LLM_API_ERROR(HttpStatus.BAD_GATEWAY, "AI 모델 호출 중 오류가 발생했습니다.");
+
     private final HttpStatus status;
     private final String message;
 

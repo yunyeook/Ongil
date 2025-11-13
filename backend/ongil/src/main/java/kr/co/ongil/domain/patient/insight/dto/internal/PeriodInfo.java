@@ -1,0 +1,103 @@
+package kr.co.ongil.domain.patient.insight.dto.internal;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import kr.co.ongil.domain.patient.insight.entity.PeriodType;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+
+/**
+ * 분석 기간 정보 (주간/월간)
+ */
+public record PeriodInfo(
+    @JsonProperty("period_type")
+    PeriodType periodType,
+
+    @JsonProperty("current_start")
+    LocalDate currentStart,
+
+    @JsonProperty("current_end")
+    LocalDate currentEnd,
+
+    @JsonProperty("previous_start")
+    LocalDate previousStart,
+
+    @JsonProperty("previous_end")
+    LocalDate previousEnd
+) {
+
+    /**
+     * 이번 주와 지난 주 기간 정보 생성
+     * 기준: 월요일 00:00 ~ 일요일 23:59
+     */
+    public static PeriodInfo thisWeekAndLastWeek() {
+        LocalDate today = LocalDate.now();
+
+        // 이번 주 월요일
+        LocalDate thisMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        // 이번 주 일요일
+        LocalDate thisSunday = thisMonday.plusDays(6);
+
+        // 지난 주 월요일
+        LocalDate lastMonday = thisMonday.minusWeeks(1);
+        // 지난 주 일요일
+        LocalDate lastSunday = lastMonday.plusDays(6);
+
+        return new PeriodInfo(PeriodType.WEEKLY, thisMonday, thisSunday, lastMonday, lastSunday);
+    }
+
+    /**
+     * 이번 달과 지난 달 기간 정보 생성
+     * 기준: 1일 00:00 ~ 말일 23:59
+     */
+    public static PeriodInfo thisMonthAndLastMonth() {
+        LocalDate today = LocalDate.now();
+
+        // 이번 달 1일
+        LocalDate thisMonthFirst = today.with(TemporalAdjusters.firstDayOfMonth());
+        // 이번 달 말일
+        LocalDate thisMonthLast = today.with(TemporalAdjusters.lastDayOfMonth());
+
+        // 지난 달 1일
+        LocalDate lastMonthFirst = thisMonthFirst.minusMonths(1);
+        // 지난 달 말일
+        LocalDate lastMonthLast = lastMonthFirst.with(TemporalAdjusters.lastDayOfMonth());
+
+        return new PeriodInfo(PeriodType.MONTHLY, thisMonthFirst, thisMonthLast, lastMonthFirst, lastMonthLast);
+    }
+
+    /**
+     * 특정 날짜가 속한 주와 그 이전 주 기간 정보 생성
+     */
+    public static PeriodInfo forWeek(LocalDate date) {
+        // 해당 날짜가 속한 주의 월요일
+        LocalDate monday = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        // 해당 주 일요일
+        LocalDate sunday = monday.plusDays(6);
+
+        // 지난 주 월요일
+        LocalDate lastMonday = monday.minusWeeks(1);
+        // 지난 주 일요일
+        LocalDate lastSunday = lastMonday.plusDays(6);
+
+        return new PeriodInfo(PeriodType.WEEKLY, monday, sunday, lastMonday, lastSunday);
+    }
+
+    /**
+     * 특정 날짜가 속한 월과 그 이전 월 기간 정보 생성
+     */
+    public static PeriodInfo forMonth(LocalDate date) {
+        // 해당 월 1일
+        LocalDate monthFirst = date.with(TemporalAdjusters.firstDayOfMonth());
+        // 해당 월 말일
+        LocalDate monthLast = date.with(TemporalAdjusters.lastDayOfMonth());
+
+        // 지난 달 1일
+        LocalDate lastMonthFirst = monthFirst.minusMonths(1);
+        // 지난 달 말일
+        LocalDate lastMonthLast = lastMonthFirst.with(TemporalAdjusters.lastDayOfMonth());
+
+        return new PeriodInfo(PeriodType.MONTHLY, monthFirst, monthLast, lastMonthFirst, lastMonthLast);
+    }
+}
