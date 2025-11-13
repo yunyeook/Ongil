@@ -133,6 +133,7 @@ class WebRtcCallClient @Inject constructor(
      * - init() 이후 호출
      * - 콜백으로 넘어오는 SDP를 시그널링 서버로 보내야 함
      */
+
     fun createOffer(onSdpReady: (SessionDescription) -> Unit) {
         val pc = peer ?: run {
             Log.e(TAG, "PeerConnection is null in createOffer. Did you call init()?")
@@ -169,6 +170,7 @@ class WebRtcCallClient @Inject constructor(
      * 수신자: Answer 생성
      * - remote Offer를 setRemoteDescription 한 뒤 호출
      */
+
     fun createAnswer(onSdpReady: (SessionDescription) -> Unit) {
         val pc = peer ?: run {
             Log.e(TAG, "PeerConnection is null in createAnswer. Did you call init() and setRemoteDescription(offer)?")
@@ -204,6 +206,7 @@ class WebRtcCallClient @Inject constructor(
     /**
      * 원격 SDP 설정 (Offer 또는 Answer)
      */
+
     fun setRemoteDescription(type: SessionDescription.Type, sdp: String) {
         val pc = peer ?: run {
             Log.e(TAG, "PeerConnection is null in setRemoteDescription. Did you call init()?")
