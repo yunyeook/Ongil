@@ -123,6 +123,12 @@ public enum ResponseMessage {
     HEALTH_DATA_UPLOADED("생체 데이터가 성공적으로 업로드되었습니다."),
     HEALTH_DATA_FOUND("생체 데이터 조회가 완료되었습니다."),
     HEALTH_DATA_SUMMARY_FOUND("생체 데이터 요약 통계 조회가 완료되었습니다."),
-    HEALTH_DATA_DELETED("생체 데이터가 성공적으로 삭제되었습니다.");
+    HEALTH_DATA_DELETED("생체 데이터가 성공적으로 삭제되었습니다."),
+
+    // Patient Insight
+    PATIENT_INSIGHT_GENERATED("환자 인사이트가 성공적으로 생성되었습니다."),
+    PATIENT_INSIGHT_FOUND("환자 인사이트 조회가 완료되었습니다."),
+    PATIENT_INSIGHT_LIST_FOUND("환자 인사이트 목록 조회가 완료되었습니다.");
+
     private final String message;
 }
