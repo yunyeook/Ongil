@@ -46,7 +46,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
 
         // 서버 → 클라이언트 메시지 브로커
         // 운영 환경에서는 RabbitMQ/Redis 사용 권장
-        config.enableSimpleBroker("/topic", "/queue");
+        config.enableSimpleBroker("/topic", "/queue")
+            .setTaskScheduler(null)  // 기본 스케줄러 사용
+            .setHeartbeatValue(new long[]{10000, 10000});  // 하트비트: 10초
 
         // 유저별 메시지 전송 프리픽스
         config.setUserDestinationPrefix("/user");
@@ -58,6 +60,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(authChannelInterceptor);
+        registration.taskExecutor()
+            .corePoolSize(10)       // VoIP 통화 동시 처리
+            .maxPoolSize(20)
+            .queueCapacity(100);
+    }
+
+    /**
+     * 아웃바운드 채널 설정 (메시지 전송 성능 향상)
+     */
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        registration.taskExecutor()
+            .corePoolSize(10)       // ICE Candidate 동시 전송 처리
+            .maxPoolSize(20)
+            .queueCapacity(100);
     }
 
     // ========== 순수 WebSocket (GPS용) ==========
