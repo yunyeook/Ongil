@@ -200,37 +200,34 @@ fun TMapComposable(
         val marker = locationMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
-        var consecutiveErrors = 0  // 연속 에러 카운트
-
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
             currentPulseFrame = (currentPulseFrame + 1) % pulseFrames.size
 
-            try {
-                // 마커가 여전히 유효한지 확인
-                if (locationMarker != null && mapView != null) {
-                    // 마커 ID가 유효한지 확인 (TMap SDK 내부에서 제거되었는지 체크)
-                    if (marker.id != null) {
-                        marker.icon = pulseFrames[currentPulseFrame]
-                        tmap.updateTMapMarkerItem(marker)
-                        consecutiveErrors = 0  // 성공 시 에러 카운트 리셋
-                    } else {
-                        Log.w("TMapComposable", "마커 ID가 null - 마커가 제거됨")
-                        break  // 마커가 완전히 제거되면 루프 종료
-                    }
-                } else {
-                    break  // 마커나 맵이 제거되면 루프 종료
-                }
-            } catch (e: Exception) {
-                consecutiveErrors++
-                Log.w("TMapComposable", "펄스 애니메이션 업데이트 실패 (${consecutiveErrors}회)", e)
+            // 마커와 맵이 유효한지 확인
+            if (locationMarker == null || mapView == null) {
+                Log.d("TMapComposable", "마커 또는 맵 제거됨 - 펄스 종료")
+                break
+            }
 
-                // 연속 5번 이상 실패하면 루프 종료
-                if (consecutiveErrors >= 5) {
-                    Log.e("TMapComposable", "펄스 애니메이션 연속 실패 - 루프 종료")
-                    break
-                }
-                // 일시적 오류는 무시하고 계속 시도
+            // 마커 ID 유효성 체크 - null이면 즉시 종료 (재시도 안 함)
+            if (marker.id == null) {
+                Log.d("TMapComposable", "마커 ID가 null - 펄스 종료")
+                break
+            }
+
+            try {
+                // 아이콘만 변경하고 업데이트
+                marker.icon = pulseFrames[currentPulseFrame]
+                tmap.updateTMapMarkerItem(marker)
+            } catch (e: NullPointerException) {
+                // NPE 발생 시 즉시 종료 (마커 무효화)
+                Log.d("TMapComposable", "마커 무효화됨 (NPE) - 펄스 종료")
+                break
+            } catch (e: Exception) {
+                // 기타 예외도 즉시 종료
+                Log.d("TMapComposable", "펄스 업데이트 실패 - 펄스 종료: ${e.message}")
+                break
             }
         }
     }
@@ -241,37 +238,34 @@ fun TMapComposable(
         val marker = patientMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
-        var consecutiveErrors = 0  // 연속 에러 카운트
-
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
             currentPulseFrame = (currentPulseFrame + 1) % pulseFrames.size
 
-            try {
-                // 마커가 여전히 유효한지 확인
-                if (patientMarker != null && mapView != null) {
-                    // 마커 ID가 유효한지 확인 (TMap SDK 내부에서 제거되었는지 체크)
-                    if (marker.id != null) {
-                        marker.icon = pulseFrames[currentPulseFrame]
-                        tmap.updateTMapMarkerItem(marker)
-                        consecutiveErrors = 0  // 성공 시 에러 카운트 리셋
-                    } else {
-                        Log.w("TMapComposable", "환자 마커 ID가 null - 마커가 제거됨")
-                        break  // 마커가 완전히 제거되면 루프 종료
-                    }
-                } else {
-                    break  // 마커나 맵이 제거되면 루프 종료
-                }
-            } catch (e: Exception) {
-                consecutiveErrors++
-                Log.w("TMapComposable", "환자 마커 애니메이션 업데이트 실패 (${consecutiveErrors}회)", e)
+            // 마커와 맵이 유효한지 확인
+            if (patientMarker == null || mapView == null) {
+                Log.d("TMapComposable", "환자 마커 또는 맵 제거됨 - 펄스 종료")
+                break
+            }
 
-                // 연속 5번 이상 실패하면 루프 종료
-                if (consecutiveErrors >= 5) {
-                    Log.e("TMapComposable", "환자 마커 애니메이션 연속 실패 - 루프 종료")
-                    break
-                }
-                // 일시적 오류는 무시하고 계속 시도
+            // 마커 ID 유효성 체크 - null이면 즉시 종료 (재시도 안 함)
+            if (marker.id == null) {
+                Log.d("TMapComposable", "환자 마커 ID가 null - 펄스 종료")
+                break
+            }
+
+            try {
+                // 아이콘만 변경하고 업데이트
+                marker.icon = pulseFrames[currentPulseFrame]
+                tmap.updateTMapMarkerItem(marker)
+            } catch (e: NullPointerException) {
+                // NPE 발생 시 즉시 종료 (마커 무효화)
+                Log.d("TMapComposable", "환자 마커 무효화됨 (NPE) - 펄스 종료")
+                break
+            } catch (e: Exception) {
+                // 기타 예외도 즉시 종료
+                Log.d("TMapComposable", "환자 마커 펄스 업데이트 실패 - 펄스 종료: ${e.message}")
+                break
             }
         }
     }
