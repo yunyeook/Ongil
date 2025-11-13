@@ -557,7 +557,17 @@
             // PeerConnection 생성
             log('🔧 ICE Servers 설정:', 'info');
             log(`   ${JSON.stringify(iceServers, null, 2)}`, 'info');
-            peerConnection = new RTCPeerConnection({ iceServers });
+
+            // ICE Transport Policy: relay 강제 (NAT 우회)
+            const peerConnectionConfig = {
+                iceServers: iceServers,
+                iceTransportPolicy: 'relay'  // ⭐ TURN 서버만 사용 (host/srflx 무시)
+            };
+
+            log('🔧 RTCConfiguration:', 'info');
+            log(`   iceTransportPolicy: relay (TURN 서버 강제 사용)`, 'warn');
+
+            peerConnection = new RTCPeerConnection(peerConnectionConfig);
             log('✅ PeerConnection 생성 완료', 'success');
 
             // 로컬 스트림 추가
