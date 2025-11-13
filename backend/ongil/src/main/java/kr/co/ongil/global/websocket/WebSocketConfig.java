@@ -47,8 +47,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
         // 서버 → 클라이언트 메시지 브로커
         // 운영 환경에서는 RabbitMQ/Redis 사용 권장
         config.enableSimpleBroker("/topic", "/queue")
-            .setTaskScheduler(null)  // 기본 스케줄러 사용
-            .setHeartbeatValue(new long[]{10000, 10000});  // 하트비트: 10초
+            .setHeartbeatValue(new long[]{10000, 10000});  // 하트비트: 10초, 기본 TaskScheduler 사용
 
         // 유저별 메시지 전송 프리픽스
         config.setUserDestinationPrefix("/user");
