@@ -241,16 +241,16 @@ public class GmsLLMClient {
             **출력 형식 (JSON):**
             {
               "summary": "전체 요약 (2-3문장)",
-              "overallRiskLevel": "LOW | MEDIUM | HIGH",
-              "positiveSignals": ["긍정적 신호 1", "긍정적 신호 2"],
-              "warningSignals": ["경고 신호 1", "경고 신호 2"],
-              "possibleInterpretations": ["해석 1", "해석 2"],
-              "caregiverSuggestions": ["제안 1", "제안 2"],
-              "dataNotes": ["데이터 제약사항 1", "데이터 제약사항 2"]
+              "overall_risk_level": "LOW | MEDIUM | HIGH",
+              "positive_signals": ["긍정적 신호 1", "긍정적 신호 2"],
+              "warning_signals": ["경고 신호 1", "경고 신호 2"],
+              "possible_interpretations": ["해석 1", "해석 2"],
+              "caregiver_suggestions": ["제안 1", "제안 2"],
+              "data_notes": ["데이터 제약사항 1", "데이터 제약사항 2"]
             }
 
             **주의사항:**
-            - 데이터가 부족한 경우, dataNotes에 명시하고 가능한 범위에서 분석합니다.
+            - 데이터가 부족한 경우, data_notes에 명시하고 가능한 범위에서 분석합니다.
             - 의학적 진단을 내리지 않으며, 관찰된 패턴만 설명합니다.
             - 보호자에게 실질적인 도움이 되는 구체적인 제안을 합니다.
             - 반드시 JSON 형식으로만 응답합니다.
@@ -287,7 +287,7 @@ public class GmsLLMClient {
                    - 패닉 반응: %s
 
                 3. 보호자가 주의해야 할 점과 실천 가능한 제안을 해주세요.
-                4. 데이터가 부족한 부분이 있다면 dataNotes에 명시해주세요.
+                4. 데이터가 부족한 부분이 있다면 data_notes에 명시해주세요.
 
                 반드시 JSON 형식으로 응답해주세요.
                 """,
