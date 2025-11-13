@@ -46,10 +46,10 @@ public class TurnCredentialsService {
             // 3. HMAC-SHA1 기반 credential 생성
             String credential = generateHmacSha1(username, sharedSecret);
 
-            // 4. TURN/STUN URI 목록
+            // 4. TURN/STUN URI 목록 (TCP 우선 - UDP 차단 네트워크 대응)
             List<String> uris = List.of(
+                String.format("turn:%s:%d?transport=tcp", turnHost, turnPort),  // TCP 우선
                 String.format("turn:%s:%d?transport=udp", turnHost, turnPort),
-                String.format("turn:%s:%d?transport=tcp", turnHost, turnPort),
                 String.format("stun:%s:%d", turnHost, turnPort)
             );
 
