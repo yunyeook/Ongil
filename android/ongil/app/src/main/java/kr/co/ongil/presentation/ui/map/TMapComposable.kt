@@ -71,7 +71,9 @@ fun TMapComposable(
     showSafetyZones: Boolean = false,  // 안전 범위 표시 여부
     level1Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS,
     level2Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS,
-    level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS
+    level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS,
+    placeLocationTrigger: Pair<Int, Pair<Double, Double>> = 0 to Pair(0.0, 0.0),  // 장소 위치로 이동 트리거
+    disableFollowMode: Boolean = false  // 팔로우 모드 강제 비활성화 (장소 상세 정보 표시 중)
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -87,6 +89,9 @@ fun TMapComposable(
 
     // 환자 마커 (보호자는 선택된 환자 1명만)
     var patientMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
+
+    // 장소 마커 (장소 상세 정보 표시 중)
+    var placeMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
 
     // 안전 범위 동심원
     var safetyCircles by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -335,6 +340,80 @@ fun TMapComposable(
                     Log.e("TMapComposable", "❌ 북쪽 고정 실패", e)
                 }
             }
+        }
+    }
+
+    // 장소 위치로 지도 이동 및 마커 표시
+    LaunchedEffect(placeLocationTrigger.first) {
+        if (placeLocationTrigger.first > 0) {
+            val tmap = mapView
+            val (lat, lon) = placeLocationTrigger.second
+
+            if (tmap != null && lat != 0.0 && lon != 0.0) {
+                try {
+                    withContext(Dispatchers.Main) {
+                        // 기존 장소 마커 제거
+                        placeMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "기존 장소 마커 제거 실패", e)
+                            }
+                        }
+
+                        // 장소 마커 생성
+                        val marker = TMapMarkerItem().apply {
+                            id = "place_marker"
+                            tMapPoint = TMapPoint(lat, lon)
+                            icon = createMarkerBitmap(context, "장소", Color.parseColor("#FF9800"))
+                        }
+
+                        try {
+                            tmap.addTMapMarkerItem(marker)
+                            placeMarker = marker
+                            Log.d("TMapComposable", "✅ 장소 마커 추가 성공: lat=$lat, lon=$lon")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "❌ 장소 마커 추가 실패", e)
+                        }
+
+                        // 지도 이동
+                        tmap.setCenterPoint(lat, lon)
+                        tmap.setZoomLevel(17)
+                        Log.d("TMapComposable", "📍 장소 위치로 이동: lat=$lat, lon=$lon")
+                    }
+                } catch (e: Exception) {
+                    Log.e("TMapComposable", "❌ 장소 위치 이동 실패", e)
+                }
+            } else if (tmap != null && lat == 0.0 && lon == 0.0) {
+                // 장소 상세 정보가 닫혔을 때 마커 제거
+                try {
+                    withContext(Dispatchers.Main) {
+                        placeMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                                placeMarker = null
+                                Log.d("TMapComposable", "🗑️ 장소 마커 제거")
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "장소 마커 제거 실패", e)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("TMapComposable", "❌ 장소 마커 제거 실패", e)
+                }
+            }
+        }
+    }
+
+    // disableFollowMode 변경 감지
+    LaunchedEffect(disableFollowMode) {
+        if (disableFollowMode) {
+            isFollowMode = false
+            Log.d("TMapComposable", "🚫 팔로우 모드 비활성화 (장소 상세 정보 표시 중)")
+        } else {
+            // disableFollowMode가 false로 변경되면 팔로우 모드 활성화
+            isFollowMode = true
+            Log.d("TMapComposable", "✅ 팔로우 모드 활성화 (장소 상세 정보 닫힘)")
         }
     }
 
@@ -711,12 +790,25 @@ fun TMapComposable(
 
                     Log.d("TMapComposable", "✅ 경로 그리기 완료")
                 } else {
-                    // 경로가 null이면 마커도 제거
+                    // 경로가 null이면 PolyLine과 마커 모두 제거
+                    routePolyLine?.let { oldPolyLine ->
+                        try {
+                            tmap.removeTMapPolyLine(oldPolyLine.id)
+                            Log.d("TMapComposable", "✅ 기존 PolyLine 제거 성공")
+                        } catch (e: Exception) {
+                            Log.w("TMapComposable", "기존 PolyLine 제거 실패", e)
+                        }
+                    }
                     routePolyLine = null
                     routeBearing = 0f  // 경로 방향 리셋
-                    tmap.removeTMapMarkerItem("start_marker")
-                    tmap.removeTMapMarkerItem("end_marker")
-                    Log.d("TMapComposable", "🗑️ 경로 제거")
+
+                    try {
+                        tmap.removeTMapMarkerItem("start_marker")
+                        tmap.removeTMapMarkerItem("end_marker")
+                    } catch (e: Exception) {
+                        Log.w("TMapComposable", "마커 제거 실패", e)
+                    }
+                    Log.d("TMapComposable", "🗑️ 경로 제거 완료")
                 }
             } catch (e: Exception) {
                 Log.e("TMapComposable", "❌ 경로 그리기 실패", e)

@@ -5,6 +5,7 @@ import javax.inject.Inject
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
 import kr.co.ongil.data.mapper.toDomain
 import kr.co.ongil.data.mapper.toDto
+import kr.co.ongil.data.model.favorite.AddFavoriteRequestDto
 import kr.co.ongil.domain.model.FavoritePlace
 import kr.co.ongil.domain.model.FavoritePlaces
 import kr.co.ongil.domain.model.placedetail.PlaceDetailUpdate
@@ -27,6 +28,33 @@ class FavoriteRepositoryImpl @Inject constructor(
         val body = response.body() ?: throw RuntimeException("Empty body")
         Log.d("FavoriteRepo", "GET 장소목록 - patientId=$patientId, 응답 데이터: ${body.data?.favorites?.map { "favoriteId=${it.favoriteId}, placeName=${it.placeName}, placeAlias=${it.placeAlias}" }}")
         body.toDomain() ?: FavoritePlaces(totalCount = 0, items = emptyList())
+    }
+
+    override suspend fun addFavoritePlace(
+        patientId: Long,
+        placeName: String,
+        placeAlias: String?,
+        category: String?,
+        address: String,
+        latitude: Double,
+        longitude: Double,
+        isDefault: Boolean
+    ): Result<FavoritePlace> = runCatching {
+        val request = AddFavoriteRequestDto(
+            placeName = placeName,
+            placeAlias = placeAlias,
+            category = category,
+            address = address,
+            latitude = latitude,
+            longitude = longitude,
+            isDefault = isDefault
+        )
+        Log.d("FavoriteRepo", "POST 즐겨찾기 추가 - patientId=$patientId, placeName=$placeName, address=$address")
+        val response = api.addFavoritePlace(patientId, request)
+        if (!response.isSuccessful) throw httpError("FavoriteRepo", "POST /favorites", response.code(), response.message())
+        val body = response.body() ?: throw RuntimeException("Empty body")
+        Log.d("FavoriteRepo", "POST 응답 - favoriteId=${body.data?.favoriteId}, message=${body.message}")
+        body.toDomain() ?: throw NoSuchElementException("No data")
     }
 
     override suspend fun getPlaceDetail(
@@ -59,10 +87,13 @@ class FavoriteRepositoryImpl @Inject constructor(
     override suspend fun deleteFavoritePlace(
         patientId: Long,
         favoriteId: Long
-    ): Result<Unit> = runCatching {
+    ): Result<String> = runCatching {
+        Log.d("FavoriteRepo", "DELETE 즐겨찾기 삭제 - patientId=$patientId, favoriteId=$favoriteId")
         val response = api.deleteFavoritePlace(patientId, favoriteId)
         if (!response.isSuccessful) throw httpError("FavoriteRepo", "DELETE /favorites/{id}", response.code(), response.message())
-        Unit
+        val body = response.body() ?: throw RuntimeException("Empty body")
+        Log.d("FavoriteRepo", "DELETE 응답 - message=${body.message}")
+        body.message
     }
 
     // 사용자(환자/보호자) 관계 관련
