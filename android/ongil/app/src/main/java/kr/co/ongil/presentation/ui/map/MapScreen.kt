@@ -184,15 +184,51 @@ fun MapScreen(
             )
         }
 
+        // 백그라운드 위치 권한 상태 (Android 10+)
+        var hasBackgroundLocationPermission by remember {
+            mutableStateOf(
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    true  // Android 10 미만은 백그라운드 권한 불필요
+                }
+            )
+        }
+
+        // 백그라운드 권한 요청 여부
+        var shouldRequestBackgroundPermission by remember { mutableStateOf(false) }
+
         // 위치 권한 요청 런처
         val locationPermissionLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
-            hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                     permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+            hasLocationPermission = granted
+
+            // 위치 권한이 승인되면 백그라운드 권한 요청 (Android 10+, 환자만)
+            if (granted && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+                && userType == "PATIENT" && !hasBackgroundLocationPermission) {
+                shouldRequestBackgroundPermission = true
+            }
         }
 
-        // 위치 권한 요청
+        // 백그라운드 위치 권한 요청 런처 (Android 10+)
+        val backgroundLocationPermissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            hasBackgroundLocationPermission = isGranted
+            if (isGranted) {
+                android.util.Log.d("MapScreen", "✅ 백그라운드 위치 권한 승인됨")
+            } else {
+                android.util.Log.w("MapScreen", "⚠️ 백그라운드 위치 권한 거부됨 - 앱이 백그라운드에서 위치를 추적할 수 없습니다")
+            }
+        }
+
+        // 일반 위치 권한 요청
         LaunchedEffect(Unit) {
             if (!inPreview && !hasLocationPermission) {
                 locationPermissionLauncher.launch(
@@ -201,6 +237,15 @@ fun MapScreen(
                         Manifest.permission.ACCESS_COARSE_LOCATION
                     )
                 )
+            }
+        }
+
+        // 백그라운드 위치 권한 요청 (일반 위치 권한 승인 후)
+        LaunchedEffect(shouldRequestBackgroundPermission) {
+            if (shouldRequestBackgroundPermission && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                android.util.Log.d("MapScreen", "📍 백그라운드 위치 권한 요청 중...")
+                backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                shouldRequestBackgroundPermission = false
             }
         }
 
