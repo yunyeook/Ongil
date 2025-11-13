@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -101,8 +103,11 @@ fun MainScreen(
         Routes.MyInfo.route
     )
 
-    val showBottomBar = baseRoute in bottomBarRoutes && baseRoute !in authRoutes
-    val showTopBar = baseRoute !in authRoutes && baseRoute != Routes.Notifications.route
+    // MapScreen에서 장소 상세 정보 표시 여부 (헤더/하단바 숨김 제어)
+    var showBarsFromMap by remember { mutableStateOf(true) }
+
+    val showBottomBar = baseRoute in bottomBarRoutes && baseRoute !in authRoutes && showBarsFromMap
+    val showTopBar = baseRoute !in authRoutes && baseRoute != Routes.Notifications.route && showBarsFromMap
 
     // SafeZoneSetting 라우트에서 OngilBrandHeaderCard 사용
     val safeZoneSettingRoutes = listOf("safezone_setting")
@@ -200,7 +205,10 @@ fun MainScreen(
                 .imePadding(),
             paddingValues = paddingValues,
             startDestination = startDestination,
-            authViewModel = authViewModel
+            authViewModel = authViewModel,
+            onMapShowBarsChange = { showBars ->
+                showBarsFromMap = showBars
+            }
         )
     }
 }

@@ -18,7 +18,10 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.model.location.Coordinate
+import kr.co.ongil.data.model.location.SseEvent
 import kr.co.ongil.data.model.user.UserDto
+import kr.co.ongil.domain.model.Route
+import kr.co.ongil.domain.model.LatLng as DomainLatLng
 import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.domain.repository.FavoriteRepository
 import kr.co.ongil.domain.repository.LocationSseRepository
@@ -94,6 +97,10 @@ class AuthStateViewModel @Inject constructor(
     private val _patientLocations = MutableStateFlow<Map<Long, Coordinate>>(emptyMap())
     val patientLocations: StateFlow<Map<Long, Coordinate>> = _patientLocations.asStateFlow()
 
+    // 환자들의 길찾기 경로 (Map<patientId, Route?>)
+    private val _patientNavigationRoutes = MutableStateFlow<Map<Long, Route?>>(emptyMap())
+    val patientNavigationRoutes: StateFlow<Map<Long, Route?>> = _patientNavigationRoutes.asStateFlow()
+
     /**
      * 환자 선택 시 DataStore에 저장
      */
@@ -115,12 +122,53 @@ class AuthStateViewModel @Inject constructor(
         sseConnectionJob = viewModelScope.launch {
             try {
                 android.util.Log.d("AuthStateViewModel", "SSE 연결 시작 중...")
-                locationSseRepository.subscribePatientLocations().collect { gpsUpdate ->
-                    android.util.Log.d("AuthStateViewModel", "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}")
-                    _patientLocations.update { currentMap ->
-                        val updated = currentMap + (gpsUpdate.patientId to gpsUpdate.coordinate)
-                        android.util.Log.d("AuthStateViewModel", "patientLocations 업데이트: ${updated.keys}")
-                        updated
+                locationSseRepository.subscribeSseEvents().collect { event ->
+                    when (event) {
+                        is SseEvent.Connected -> {
+                            android.util.Log.d("AuthStateViewModel", "SSE 연결 완료")
+                        }
+                        is SseEvent.GpsUpdate -> {
+                            val gpsUpdate = event.data
+                            android.util.Log.d("AuthStateViewModel", "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}")
+                            _patientLocations.update { currentMap ->
+                                val updated = currentMap + (gpsUpdate.patientId to gpsUpdate.coordinate)
+                                android.util.Log.d("AuthStateViewModel", "patientLocations 업데이트: ${updated.keys}")
+                                updated
+                            }
+                        }
+                        is SseEvent.NavigationUpdate -> {
+                            val navUpdate = event.data
+                            android.util.Log.d("AuthStateViewModel", "길찾기 업데이트 수신: patientId=${navUpdate.patientId}, status=${navUpdate.status}")
+
+                            when (navUpdate.status) {
+                                "STARTED" -> {
+                                    // 경로 데이터를 Domain Route로 변환
+                                    navUpdate.route?.let { sseRoute ->
+                                        val domainRoute = Route(
+                                            totalTimeMinutes = (sseRoute.totalTime + 59) / 60,
+                                            totalDistanceMeters = sseRoute.totalDistance,
+                                            path = sseRoute.path.map { coord ->
+                                                DomainLatLng(
+                                                    latitude = coord.latitude,
+                                                    longitude = coord.longitude
+                                                )
+                                            }
+                                        )
+
+                                        _patientNavigationRoutes.update { currentMap ->
+                                            currentMap + (navUpdate.patientId to domainRoute)
+                                        }
+                                        android.util.Log.d("AuthStateViewModel", "환자 ${navUpdate.patientId} 길찾기 시작: ${sseRoute.path.size}개 포인트")
+                                    }
+                                }
+                                "ENDED" -> {
+                                    _patientNavigationRoutes.update { currentMap ->
+                                        currentMap + (navUpdate.patientId to null)
+                                    }
+                                    android.util.Log.d("AuthStateViewModel", "환자 ${navUpdate.patientId} 길찾기 종료")
+                                }
+                            }
+                        }
                     }
                 }
             } catch (e: Exception) {

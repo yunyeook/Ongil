@@ -11,6 +11,8 @@ import kotlinx.serialization.json.Json
 import kr.co.ongil.BuildConfig
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.model.location.GpsUpdateEvent
+import kr.co.ongil.data.model.location.NavigationUpdateEvent
+import kr.co.ongil.data.model.location.SseEvent
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -39,10 +41,10 @@ class LocationSseDataSource @Inject constructor(
         .build()
 
     /**
-     * SSE 스트림 연결
-     * @return Flow<GpsUpdateEvent> - 환자 위치 업데이트 스트림
+     * SSE 스트림 연결 (통합)
+     * @return Flow<SseEvent> - SSE 이벤트 스트림
      */
-    fun connectSseStream(): Flow<GpsUpdateEvent> = callbackFlow {
+    fun connectSseStream(): Flow<SseEvent> = callbackFlow {
         var response: Response? = null
 
         try {
@@ -96,14 +98,24 @@ class LocationSseDataSource @Inject constructor(
                             when (currentEvent) {
                                 "connected" -> {
                                     Log.d(TAG, "SSE 연결 확인: $data")
+                                    trySend(SseEvent.Connected)
                                 }
                                 "gps-update" -> {
                                     try {
                                         val gpsUpdate = json.decodeFromString<GpsUpdateEvent>(data)
                                         Log.d(TAG, "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}")
-                                        trySend(gpsUpdate)
+                                        trySend(SseEvent.GpsUpdate(gpsUpdate))
                                     } catch (e: Exception) {
                                         Log.e(TAG, "GPS 데이터 파싱 실패: $data", e)
+                                    }
+                                }
+                                "navigation-update" -> {
+                                    try {
+                                        val navUpdate = json.decodeFromString<NavigationUpdateEvent>(data)
+                                        Log.d(TAG, "길찾기 업데이트 수신: patientId=${navUpdate.patientId}, status=${navUpdate.status}, route=${navUpdate.route != null}")
+                                        trySend(SseEvent.NavigationUpdate(navUpdate))
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "길찾기 데이터 파싱 실패: $data", e)
                                     }
                                 }
                                 else -> {

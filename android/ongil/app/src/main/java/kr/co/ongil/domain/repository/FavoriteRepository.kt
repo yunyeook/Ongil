@@ -9,6 +9,17 @@ interface FavoriteRepository {
     // 장소 관련
     suspend fun getFavoritePlaces(patientId: Long): Result<FavoritePlaces>
 
+    suspend fun addFavoritePlace(
+        patientId: Long,
+        placeName: String,
+        placeAlias: String?,
+        category: String?,
+        address: String,
+        latitude: Double,
+        longitude: Double,
+        isDefault: Boolean = false
+    ): Result<FavoritePlace>
+
     suspend fun getPlaceDetail(
         patientId: Long,
         favoriteId: Long
@@ -23,7 +34,7 @@ interface FavoriteRepository {
     suspend fun deleteFavoritePlace(
         patientId: Long,
         favoriteId: Long
-    ): Result<Unit>
+    ): Result<String>
 
     // 사용자(환자/보호자) 관계 관련
     suspend fun getMyRelationships(): Result<List<PatientData>>
