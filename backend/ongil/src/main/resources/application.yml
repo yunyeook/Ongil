@@ -98,7 +98,7 @@ management:
 decorator:
   datasource:
     p6spy:
-      enable-logging: true        # 로깅 활성화
+      enable-logging: false        # 로깅 활성화
       multiline: true             # SQL을 여러 줄로 예쁘게
       logging: slf4j              # SLF4J로 로깅
       tracing:

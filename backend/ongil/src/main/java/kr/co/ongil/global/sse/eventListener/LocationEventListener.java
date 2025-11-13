@@ -1,34 +1,32 @@
 package kr.co.ongil.global.sse.eventListener;
 
-import java.util.List;
-import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
 import kr.co.ongil.global.sse.event.LocationUpdatedEvent;
-import kr.co.ongil.global.sse.sevice.SSEService;
-import kr.co.ongil.domain.user.entity.User;
+import kr.co.ongil.global.sse.publisher.LocationRedisMessagePublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+/**
+ * 위치 업데이트 이벤트 리스너
+ *
+ * 특정 서버가 직접 SSE 전송 -> Redis Pub/Sub으로 발행만 함
+ */
 @Component
 @RequiredArgsConstructor
+
 @Slf4j
 public class LocationEventListener {
 
-    private final RelationshipRepository relationshipRepository;
-    private final SSEService SSEService;
+    private final LocationRedisMessagePublisher redisPublisher;
 
     @EventListener
     public void handleLocationUpdate(LocationUpdatedEvent event) {
-        // 1. 해당 환자의 보호자 조회
-        List<User> guardians = relationshipRepository.findGuardiansByPatientId(event.getPatientId());
 
-        // 2. 모든 보호자에게 SSE 전송
-        guardians.forEach(guardian -> {
-            SSEService.sendGPSUpdate(guardian.getId(), event);
-        });
+        redisPublisher.publishLocationUpdate(event);
 
-        log.info("GPS 업데이트 SSE 전송 완료: patientId={}, guardianCount={}",
-            event.getPatientId(), guardians.size());
+        log.info("위치 업데이트 Redis 발행 완료: patientId={}",
+            event.patientId()
+        );
     }
 }

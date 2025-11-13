@@ -41,7 +41,7 @@ public class LocationService {
         List<User> guardians = relationshipRepository.findGuardiansByPatientId(patientId);
 
         // 4. 모든 보호자에게 SSE로 브로드캐스트
-        eventPublisher.publishEvent(new LocationUpdatedEvent(patientId, coordinate));
+        eventPublisher.publishEvent(LocationUpdatedEvent.of(patientId, coordinate));
 
         log.info("GPS 업데이트 완료 (일반 모드): patientId={}, 보호자 수={}",
             patientId, guardians.size());
