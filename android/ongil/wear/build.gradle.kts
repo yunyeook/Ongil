@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
+    alias(libs.plugins.dagger.hilt.android)  // Hilt 플러그인
+    kotlin("kapt")
 }
 
 android {
@@ -58,9 +61,29 @@ dependencies {
     implementation(libs.horologist.compose.tools)
     implementation(libs.horologist.tiles)
     implementation(libs.androidx.watchface.complications.data.source.ktx)
+
+    // Hilt (의존성 주입)
+    implementation(libs.dagger.hilt.android)              // Hilt 핵심
+    kapt(libs.dagger.hilt.compiler)                       // Hilt 컴파일러
+    implementation(libs.androidx.hilt.navigation.compose) // Compose에서 Hilt ViewModel 사용
+    kapt(libs.androidx.hilt.compiler)                     // AndroidX Hilt 컴파일러
+
+    //DataStore (로그인 정보 등 저장)
+    implementation(libs.androidx.datastore.preferences)  // Key-Value 저장소
+
+    //Common 모듈 : 워치에서도 앱과 공통 코드 사용
+    implementation(project(":common"))  // 공통 모듈 연결
+
+    // Lifecycle & ViewModel (화면 로직 관리)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)  // ViewModel for Compose
+    implementation(libs.androidx.lifecycle.runtime.compose)    // Lifecycle utilities
+    implementation(libs.androidx.lifecycle.runtime.ktx)        // Coroutine 지원
+
+
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.tiles.tooling)
+
 }
