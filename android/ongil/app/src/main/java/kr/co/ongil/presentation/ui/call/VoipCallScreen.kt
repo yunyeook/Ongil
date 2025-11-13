@@ -45,8 +45,8 @@ fun VoipCallScreen(
             // 발신자: 통화 세션 생성 + 위치 전송 + WebRTC 준비
             viewModel.startVoipCall(receiverId = receiverId, userType = userType)
         } else if (!isCaller && callId != null) {
-            // 수신자: 백에서 call 상세 조회
-            viewModel.loadIncomingCall(callId)
+            // 수신자: WebSocket 연결 + 구독 + 통화 정보 조회
+            viewModel.initIncomingCall(callId, null)
         }
     }
 
