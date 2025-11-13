@@ -67,7 +67,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
             .setClientLogin(relayUsername)     // admin
             .setClientPasscode(relayPassword)  // password
             .setSystemLogin(relayUsername)     // admin
-            .setSystemPasscode(relayPassword); // password
+            .setSystemPasscode(relayPassword)  // password
+            // 여러 서버 인스턴스에서 user destination 공유
+            .setUserDestinationBroadcast("/topic/unresolved-user-destination")
+            .setUserRegistryBroadcast("/topic/simp-user-registry");
 
         // 유저별 메시지 전송 프리픽스
         config.setUserDestinationPrefix("/user");
