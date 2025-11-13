@@ -50,7 +50,7 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      #      password: ${REDIS_PASSWORD}
       ssl:
         enabled: ${REDIS_SSL_ENABLED}
 
@@ -80,12 +80,20 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,env,configprops
+        include: health,info,env,configprops,prometheus
   endpoint:
     env:
       enabled: true
     configprops:
       enabled: true
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+
 
 decorator:
   datasource:
