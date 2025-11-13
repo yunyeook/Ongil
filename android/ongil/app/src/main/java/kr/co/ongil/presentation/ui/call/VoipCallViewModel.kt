@@ -482,7 +482,8 @@ class VoipCallViewModel @Inject constructor(
                                 _uiState.update {
                                     it.copy(
                                         call = updated,
-                                        message = "상대방이 통화를 종료했습니다."
+                                        message = "상대방이 통화를 종료했습니다.",
+                                        shouldFinish = true
                                     )
                                 }
                             }
@@ -493,13 +494,19 @@ class VoipCallViewModel @Inject constructor(
                                     e
                                 )
                                 _uiState.update {
-                                    it.copy(message = "상대방이 통화를 종료했습니다.")
+                                    it.copy(
+                                        message = "상대방이 통화를 종료했습니다.",
+                                        shouldFinish = true
+                                    )
                                 }
                             }
                     }
                 } else {
                     _uiState.update {
-                        it.copy(message = "상대방이 통화를 종료했습니다.")
+                        it.copy(
+                            message = "상대방이 통화를 종료했습니다.",
+                            shouldFinish = true
+                        )
                     }
                 }
 
