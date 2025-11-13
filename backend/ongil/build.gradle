@@ -25,20 +25,61 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // --- Core ---
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+
+    // --- Security / Auth ---
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // --- WebSocket ---
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    implementation 'org.springframework.session:spring-session-data-redis'
-    compileOnly 'org.projectlombok:lombok'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+
+    // --- DB (RDS: PostgreSQL) ---
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'org.postgresql:postgresql'
+
+
+    // --- Redis (ElastiCache) ---
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis' // Lettuce + auto-config
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'org.springframework.session:spring-session-data-redis'
+    implementation 'org.redisson:redisson-spring-boot-starter:3.23.4'
+
+    // --- S3 ---
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.4.0'
+
+    // --- Swagger / OpenAPI ---
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
+
+    // --- 문자 발송용 SDK ---
+    implementation 'net.nurigo:sdk:4.3.2'
+
+    // --- FCM ---
+    implementation 'com.google.firebase:firebase-admin:9.2.0'
+
+    // --- RabbitMQ ---
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+    // --- 기타 ---
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+
+    // --- Test ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

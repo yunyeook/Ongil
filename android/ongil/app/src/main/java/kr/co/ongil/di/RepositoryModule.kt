@@ -1,0 +1,102 @@
+package kr.co.ongil.di
+
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import kr.co.ongil.data.repository.AuthRepositoryImpl
+import kr.co.ongil.data.repository.CallRepositoryImpl
+import kr.co.ongil.data.repository.DashboardRepositoryImpl
+import kr.co.ongil.data.repository.FavoriteRepositoryImpl
+import kr.co.ongil.data.repository.FindPasswordAuthRepositoryImpl
+import kr.co.ongil.data.repository.HealthConnectRepositoryImpl
+import kr.co.ongil.data.repository.LocationSseRepositoryImpl
+import kr.co.ongil.data.repository.NotificationRepositoryImpl
+import kr.co.ongil.data.repository.PatientInfoRepositoryImpl
+import kr.co.ongil.data.repository.SafeZoneRepositoryImpl
+import kr.co.ongil.data.repository.SearchUserRepositoryImpl
+import kr.co.ongil.data.repository.SosAlertRepositoryImpl
+import kr.co.ongil.data.repository.UserRepositoryImpl
+import kr.co.ongil.domain.repository.AuthRepository
+import kr.co.ongil.domain.repository.CallRepository
+import kr.co.ongil.domain.repository.DashboardRepository
+import kr.co.ongil.domain.repository.FavoriteRepository
+import kr.co.ongil.domain.repository.FindPasswordAuthRepository
+import kr.co.ongil.domain.repository.HealthConnectRepository
+import kr.co.ongil.domain.repository.LocationSseRepository
+import kr.co.ongil.domain.repository.NotificationRepository
+import kr.co.ongil.domain.repository.PatientInfoRepository
+import kr.co.ongil.domain.repository.SafeZoneRepository
+import kr.co.ongil.domain.repository.SearchUserRepository
+import kr.co.ongil.domain.repository.SosAlertRepository
+import kr.co.ongil.domain.repository.UserRepository
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class RepositoryModule {
+
+    @Binds
+    abstract fun bindAuthRepository(
+        impl: AuthRepositoryImpl
+    ): AuthRepository
+
+    @Binds
+    abstract fun bindUserRepository(
+        impl: UserRepositoryImpl
+    ): UserRepository
+
+    @Binds
+    abstract fun bindFavoriteRepository(
+        impl: FavoriteRepositoryImpl
+    ): FavoriteRepository
+
+    @Binds
+    abstract fun bindFindPasswordAuthRepository(
+        impl: FindPasswordAuthRepositoryImpl
+    ): FindPasswordAuthRepository
+
+    @Binds
+    abstract fun bindCallRepository(
+        impl: CallRepositoryImpl
+    ): CallRepository
+
+    @Binds
+    abstract fun bindNotificationRepository(
+        impl: NotificationRepositoryImpl
+    ): NotificationRepository
+
+    @Binds
+    abstract fun bindSearchUserRepository(
+        impl: SearchUserRepositoryImpl
+    ): SearchUserRepository
+
+    @Binds
+    abstract fun bindLocationSseRepository(
+        impl: LocationSseRepositoryImpl
+    ): LocationSseRepository
+
+    @Binds
+    abstract fun bindSafeZoneRepository(
+        impl: SafeZoneRepositoryImpl
+    ): SafeZoneRepository
+
+    @Binds
+    abstract fun bindPatientInfoRepository(
+        impl: PatientInfoRepositoryImpl
+    ): PatientInfoRepository
+
+    @Binds
+    abstract fun bindDashboardRepository(
+        impl: DashboardRepositoryImpl
+    ): DashboardRepository
+
+    @Binds
+    abstract fun bindHealthConnectRepository(
+        impl: HealthConnectRepositoryImpl
+    ): HealthConnectRepository
+
+    @Binds
+    abstract fun bindSosAlertRepository(
+        impl: SosAlertRepositoryImpl
+    ): SosAlertRepository
+}
