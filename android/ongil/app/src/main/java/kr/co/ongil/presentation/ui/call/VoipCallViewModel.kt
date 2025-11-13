@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +36,7 @@ class VoipCallViewModel @Inject constructor(
 
     private var currentCall: VoipCallDto? = null
     private var currentUserId: Long? = null
+    private var callTimerJob: Job? = null
 
     init {
         // 로그인 사용자 ID 구독
@@ -196,15 +199,32 @@ class VoipCallViewModel @Inject constructor(
     }
 
     fun acceptCall(userType: String) {
-        val callId = currentCall?.id ?: run {
+        val call = currentCall ?: run {
             Log.w(TAG, "acceptCall: currentCall is null")
             return
         }
 
-        Log.d(TAG, "=== [CALLEE] acceptCall: callId=$callId, userType=$userType")
+        Log.d(TAG, "=== [CALLEE] acceptCall: callId=${call.id}, userType=$userType")
 
         viewModelScope.launch {
-            callRepository.updateVoipCallStatus(callId, "CONNECTED")
+            // 1. 먼저 발신자에게 ACCEPT 시그널 전송
+            val myUserId = currentUserId
+            val callerId = call.callerId
+
+            if (myUserId != null && callerId != null) {
+                voipSignalingService.sendAccept(
+                    callId = call.id,
+                    sessionId = call.sessionId,
+                    fromUserId = myUserId,
+                    toUserId = callerId
+                )
+                Log.d(TAG, "✓ ACCEPT signal sent to caller")
+            } else {
+                Log.w(TAG, "Cannot send ACCEPT: myUserId=$myUserId, callerId=$callerId")
+            }
+
+            // 2. 서버에 상태 업데이트
+            callRepository.updateVoipCallStatus(call.id, "CONNECTED")
                 .onSuccess { updated ->
                     currentCall = updated
                     Log.d(TAG, "acceptCall: status=${updated.status}")
@@ -215,6 +235,9 @@ class VoipCallViewModel @Inject constructor(
                             message = "통화 연결됨"
                         )
                     }
+
+                    // ⏱️ 타이머 시작
+                    startTimer()
 
                     setupWebRtcAsCallee()
                 }
@@ -246,6 +269,9 @@ class VoipCallViewModel @Inject constructor(
         }
 
         Log.d(TAG, "=== endCall: callId=${call.id}, status=${call.status}")
+
+        // ⏱️ 타이머 정지
+        stopTimer()
 
         viewModelScope.launch {
             // 1. 먼저 상대방에게 HANGUP 시그널 전송
@@ -414,6 +440,10 @@ class VoipCallViewModel @Inject constructor(
                                     message = "상대방이 통화를 수락했습니다."
                                 )
                             }
+
+                            // ⏱️ 타이머 시작
+                            startTimer()
+
                             Log.d(TAG, "✓ [CALLER] UI state updated with CONNECTED call")
                         }
                         .onFailure { e ->
@@ -438,6 +468,9 @@ class VoipCallViewModel @Inject constructor(
             }
             "HANGUP" -> {
                 Log.d(TAG, "📞 Remote user hung up: ${signal.reason}")
+
+                // ⏱️ 타이머 정지
+                stopTimer()
 
                 val call = currentCall
                 if (call != null && call.status != "ENDED") {
@@ -469,9 +502,6 @@ class VoipCallViewModel @Inject constructor(
                         it.copy(message = "상대방이 통화를 종료했습니다.")
                     }
                 }
-
-                // TODO: 타이머 정지 로직 추가 필요
-                // stopTimer()
 
                 webRtcCallClient.endCall()
                 voipSignalingService.disconnect()
@@ -702,9 +732,55 @@ class VoipCallViewModel @Inject constructor(
         }
     }
 
+    // =========================================================
+    // ⏱️ 타이머 관리
+    // =========================================================
+
+    private fun startTimer() {
+        // 이미 타이머가 실행 중이면 중복 실행 방지
+        if (callTimerJob?.isActive == true) {
+            Log.d(TAG, "Timer already running, skip startTimer()")
+            return
+        }
+
+        Log.d(TAG, "✓ Timer started")
+        callTimerJob = viewModelScope.launch {
+            var seconds = 0
+            while (true) {
+                delay(1000)
+                seconds++
+                _uiState.update { it.copy(callDurationSeconds = seconds) }
+            }
+        }
+    }
+
+    private fun stopTimer() {
+        callTimerJob?.cancel()
+        callTimerJob = null
+        _uiState.update { it.copy(callDurationSeconds = 0) }
+        Log.d(TAG, "✓ Timer stopped and reset")
+    }
+
+    // =========================================================
+
     override fun onCleared() {
         super.onCleared()
         Log.d(TAG, "VoipCallViewModel onCleared")
+
+        val currentStatus = currentCall?.status
+        Log.d(TAG, "onCleared called with call status: $currentStatus")
+
+        // 통화 중(CONNECTED)이거나 연결 중(RINGING)일 때는 리소스를 정리하지 않음
+        // Activity 재생성 등으로 인한 의도치 않은 종료 방지
+        if (currentStatus == "CONNECTED" || currentStatus == "RINGING") {
+            Log.w(TAG, "⚠️ Call is active ($currentStatus), skipping resource cleanup to prevent premature termination")
+            // 타이머는 정리하지 않고, WebSocket/WebRTC도 유지
+            return
+        }
+
+        // 통화가 종료되었거나 시작되지 않은 경우에만 리소스 정리
+        Log.d(TAG, "✓ Cleaning up resources (status: $currentStatus)")
+        stopTimer()
         voipSignalingService.disconnect()
         webRtcCallClient.endCall()
     }

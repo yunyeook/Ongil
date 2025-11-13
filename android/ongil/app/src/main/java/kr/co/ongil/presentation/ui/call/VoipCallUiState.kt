@@ -10,5 +10,6 @@ data class VoipCallUiState(
     val isLoading: Boolean = false,        // 로딩 중인지 여부
     val call: VoipCallDto? = null,         // 현재 통화 세션 정보
     val message: String? = null,           // 사용자 피드백 메시지
-    val error: String? = null              // 에러 메시지
+    val error: String? = null,             // 에러 메시지
+    val callDurationSeconds: Int = 0       // 통화 시간 (초)
 )
