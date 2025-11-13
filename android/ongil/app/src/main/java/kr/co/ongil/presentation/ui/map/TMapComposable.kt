@@ -833,14 +833,9 @@ fun TMapComposable(
 
     DisposableEffect(Unit) {
         onDispose {
-            try {
-                mapView?.onDestroy()
-                Log.d("TMapComposable", "🗑️ TMapView destroyed")
-            } catch (e: Exception) {
-                Log.e("TMapComposable", "❌ TMapView destroy 실패", e)
-            } finally {
-                mapView = null
-            }
+            // TMapView를 캐싱하여 재사용하므로 destroy하지 않음
+            // 부모에서만 제거하고 TMapView 인스턴스는 유지
+            Log.d("TMapComposable", "🔄 TMapComposable dispose (TMapView는 캐시에 유지)")
         }
     }
 }
