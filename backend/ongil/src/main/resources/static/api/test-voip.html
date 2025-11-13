@@ -401,7 +401,13 @@
             log(`✅ TURN 자격증명 획득 성공`, 'success');
             log(`   Username: ${turnData.username}`, 'info');
             log(`   Credential: ${turnData.credential.substring(0, 10)}... (${turnData.credential.length} chars)`, 'info');
-            log(`   URIs: ${turnData.uris.join(', ')}`, 'info');
+            log(`   TURN/STUN 서버 목록 (우선순위 순):`, 'info');
+            turnData.uris.forEach((uri, index) => {
+                const isTcp = uri.includes('transport=tcp');
+                const isUdp = uri.includes('transport=udp');
+                const transportType = isTcp ? '[TCP] ⭐' : (isUdp ? '[UDP]' : '[STUN]');
+                log(`      ${index + 1}. ${transportType} ${uri}`, isTcp ? 'success' : 'info');
+            });
 
         } catch (error) {
             log(`⚠️ TURN 자격증명 실패: ${error.message}`, 'warn');
@@ -580,12 +586,16 @@
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
                     const cand = event.candidate;
-                    log(`🧊 ICE Candidate 생성: type=${cand.type}, protocol=${cand.protocol}, address=${cand.address || 'N/A'}`, 'info');
+                    const transportInfo = cand.protocol === 'tcp' ? '[TCP] ⭐' : `[${cand.protocol.toUpperCase()}]`;
+                    log(`🧊 ICE Candidate 생성: type=${cand.type}, ${transportInfo}, address=${cand.address || 'N/A'}`, 'info');
                     log(`   Full: ${cand.candidate}`, 'info');
 
                     // TURN relay candidate 확인
                     if (cand.type === 'relay') {
-                        log('⭐ TURN Relay Candidate 생성 성공!', 'success');
+                        const relayMsg = cand.protocol === 'tcp'
+                            ? '⭐ TURN Relay Candidate 생성 성공! [TCP - UDP 차단 우회]'
+                            : `⭐ TURN Relay Candidate 생성 성공! [${cand.protocol.toUpperCase()}]`;
+                        log(relayMsg, 'success');
                     }
 
                     sendSignal({
