@@ -2,6 +2,7 @@ package kr.co.ongil.global.websocket;
 
 import kr.co.ongil.global.websocket.gps.GPSWebSocketHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -22,6 +23,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
     private final GPSWebSocketHandler gpsWebSocketHandler;
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
 
+    // ==== RabbitMQ STOMP Relay 설정 ====
+    @Value("${RABBITMQ_HOST:localhost}")
+    private String relayHost;
+
+    @Value("${RABBITMQ_STOMP_PORT:61613}")
+    private int relayPort;
+
+    @Value("${RABBITMQ_USERNAME:guest}")
+    private String relayUsername;
+
+    @Value("${RABBITMQ_PASSWORD:guest}")
+    private String relayPassword;
+
 
     // ========== STOMP WebSocket (VoIP용) ==========
 
@@ -38,15 +52,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
 
     /**
      * 메시지 브로커 설정 (VoIP용)
+     * SimpleBroker 대신 RabbitMQ STOMP Broker Relay 사용
+     * → 서버 여러 대 띄워도 메시지가 RabbitMQ를 통해 공유됨
      */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // 클라이언트 → 서버 메시지 프리픽스
         config.setApplicationDestinationPrefixes("/app");
 
-        // 서버 → 클라이언트 메시지 브로커
-        // 운영 환경에서는 RabbitMQ/Redis 사용 권장
-        config.enableSimpleBroker("/topic", "/queue");
+        // 서버 → 클라이언트 메시지는 RabbitMQ STOMP 브로커를 통해 라우팅
+        config.enableStompBrokerRelay("/topic", "/queue")
+            .setRelayHost(relayHost)           // rabbitmq (Docker service name)
+            .setRelayPort(relayPort)           // 61613 (STOMP port)
+            .setClientLogin(relayUsername)     // admin
+            .setClientPasscode(relayPassword)  // password
+            .setSystemLogin(relayUsername)     // admin
+            .setSystemPasscode(relayPassword); // password
 
         // 유저별 메시지 전송 프리픽스
         config.setUserDestinationPrefix("/user");
