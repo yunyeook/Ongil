@@ -18,6 +18,7 @@ enum class SignalingType {
 /**
  * WebRTC 시그널링 메시지 (백엔드 스펙)
  */
+////
 @Serializable
 data class SignalMessage(
     val type: String,                   // SignalingType 문자열
