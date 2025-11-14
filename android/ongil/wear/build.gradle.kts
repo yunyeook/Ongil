@@ -46,6 +46,9 @@ dependencies {
     // implementation("com.google.android.wearable:wear:2.9.0")
     compileOnly("com.google.android.wearable:wearable:2.9.0")
     implementation(libs.play.services.wearable)
+
+    // Coroutines Play Services (await() 사용을 위해)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
