@@ -1,5 +1,12 @@
 package kr.co.ongil.presentation.ui.map
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -25,11 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 
 import kr.co.ongil.domain.model.PlaceDetail
 import kr.co.ongil.domain.model.Route
@@ -120,6 +129,54 @@ private fun PlaceDetailContent(
     onCallClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    var showCallDialog by remember { mutableStateOf(false) }
+
+    // 전화 권한 요청 런처
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted && !placeDetail.phoneNumber.isNullOrEmpty()) {
+                // 권한이 승인되면 바로 전화 걸기
+                val intent = Intent(Intent.ACTION_CALL).apply {
+                    data = Uri.parse("tel:${placeDetail.phoneNumber}")
+                }
+                context.startActivity(intent)
+            } else {
+                // 권한 거부 시 토스트 표시
+                Toast.makeText(context, "전화 권한이 필요합니다", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    // 전화 확인 다이얼로그
+    if (showCallDialog && !placeDetail.phoneNumber.isNullOrEmpty()) {
+        CallConfirmationDialog(
+            phoneNumber = placeDetail.phoneNumber!!,
+            onDismissRequest = { showCallDialog = false },
+            onConfirm = {
+                showCallDialog = false
+
+                // 권한 체크
+                val hasPermission = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CALL_PHONE
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (hasPermission) {
+                    // 권한이 있으면 바로 전화 걸기
+                    val intent = Intent(Intent.ACTION_CALL).apply {
+                        data = Uri.parse("tel:${placeDetail.phoneNumber}")
+                    }
+                    context.startActivity(intent)
+                } else {
+                    // 권한이 없으면 권한 요청
+                    callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+                }
+            }
+        )
+    }
+
     // 상단 정보 섹션 (장소명, 주소, 즐겨찾기)
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -172,7 +229,7 @@ private fun PlaceDetailContent(
             FloatingButton(
                 text = placeDetail.phoneNumber,
                 icon = Icons.Default.Call,
-                onClick = onCallClick,
+                onClick = { showCallDialog = true }, // 시스템 전화 다이얼로그 띄우기
                 modifier = Modifier.weight(1f)
             )
         }
@@ -288,6 +345,63 @@ private fun ConfirmationDialog(
                         )
                     ) {
                         Text("확인")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 전화 확인 다이얼로그
+ */
+@Composable
+private fun CallConfirmationDialog(
+    phoneNumber: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "다음 번호로 전화하시겠습니까?\n$phoneNumber",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    color = Color.Black
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onDismissRequest,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text("취소")
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF8A9A8A),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("전화")
                     }
                 }
             }

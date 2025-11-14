@@ -21,6 +21,9 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
+    <!-- 시스템 전화 걸기 권한 -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
     <!-- Health Connect 권한 -->
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
