@@ -377,14 +377,14 @@ class MapViewModel @Inject constructor(
 
             Log.d("MapViewModel", "통화 로그 기록 시작: $phoneNumber")
 
-            // ISO 8601 형식으로 현재 시간 포맷
-            val currentTime = java.time.ZonedDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            // 백엔드가 요구하는 형식: yyyy-MM-dd'T'HH:mm:ss (타임존 제외)
+            val currentTime = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
 
             mapRepository.createCallLog(
                 receiverPhoneNumber = phoneNumber,
-                callType = "OUTGOING",
-                source = "MAP",
+                callType = "NORMAL",  // 백엔드 CallType enum: NORMAL, EMERGENCY
+                source = "SYSTEM_DIALER",  // 백엔드 CallSource enum: APP, SYSTEM_DIALER
                 patientState = "NORMAL",
                 latitude = location.latitude,
                 longitude = location.longitude,

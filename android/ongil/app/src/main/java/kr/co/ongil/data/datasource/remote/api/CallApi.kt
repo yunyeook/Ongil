@@ -75,9 +75,9 @@ interface CallApi {
 
     /**
      * 통화 로그 기록
-     * POST /api/v1/calls/log
+     * POST /api/v1/calls/logs
      */
-    @POST("/api/v1/calls/log")
+    @POST("/api/v1/calls/logs")
     suspend fun createCallLog(
         @Body request: CallLogRequest
     ): Response<Unit>

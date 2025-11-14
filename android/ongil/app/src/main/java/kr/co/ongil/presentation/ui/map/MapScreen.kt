@@ -566,13 +566,8 @@ fun MapScreen(
                     }
                 },
                 onCallClick = {
+                    // PlaceDetailFloatingPanel에서 시스템 전화를 걸고, 여기서는 통화 로그만 기록
                     selectedPlaceDetail?.phoneNumber?.let { phoneNumber ->
-                        val intent = Intent(Intent.ACTION_DIAL).apply {
-                            data = android.net.Uri.parse("tel:$phoneNumber")
-                        }
-                        context.startActivity(intent)
-
-                        // 통화 로그 기록
                         viewModel.logCall(phoneNumber)
                     }
                 },
