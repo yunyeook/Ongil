@@ -82,6 +82,19 @@ public class CallSignalController {
 
         log.info("시그널 전달: type={}, callId={}, fromUserId={}, toUserId={}, toPrincipalName={}",
             message.type(), callId, fromUserId, toUserId, targetPrincipalName);
+
+        // ✅ 6) WebRTC 시그널은 토픽으로도 브로드캐스트
+        if ("OFFER".equals(message.type()) ||
+                "ANSWER".equals(message.type()) ||
+                "ICE".equals(message.type())) {
+
+            messagingTemplate.convertAndSend(
+                    "/topic/calls/" + callId,
+                    message
+            );
+
+            log.info("📡 WebRTC 시그널 브로드캐스트: /topic/calls/{}", callId);
+        }
     }
 
     private Integer extractUserId(Principal principal) {
