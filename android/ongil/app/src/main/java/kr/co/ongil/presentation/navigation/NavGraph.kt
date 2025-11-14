@@ -56,7 +56,7 @@ fun AppNavGraph(
         modifier = modifier.background(Color.White)
     ) {
         // 홈
-        homeGraph(navController, paddingValues)
+        homeGraph(navController, paddingValues, authViewModel)
 
         // 위치 - 지도 화면
         composable(Routes.Location.route) { backStackEntry ->

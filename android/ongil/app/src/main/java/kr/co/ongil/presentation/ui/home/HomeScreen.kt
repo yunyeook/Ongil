@@ -25,6 +25,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import kr.co.ongil.data.model.location.Coordinate
+import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import android.Manifest
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import kr.co.ongil.service.location.LocationTrackingService
 
 
 private object HomeColors {
@@ -51,8 +61,34 @@ data class HomeUiState(
 fun HomeScreen(
     uiState: HomeUiState,
     modifier: Modifier = Modifier,
-    onMapClick: () -> Unit = {}
+    onMapClick: () -> Unit = {},
+    userType: String = "",
+    selectedPatientId: String? = null,
+    patientLocations: Map<Long, Coordinate> = emptyMap(),
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null
 ) {
+    val context = LocalContext.current
+    val inPreview = LocalInspectionMode.current
+
+    // 위치 권한 확인
+    val hasLocationPermission = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    // 위치 추적 서비스 시작 (환자만, 권한이 있을 때)
+    LaunchedEffect(hasLocationPermission, userType) {
+        if (!inPreview && hasLocationPermission && userType == "PATIENT") {
+            android.util.Log.d("HomeScreen", "🚀 위치 추적 서비스 시작")
+            val intent = Intent(context, LocationTrackingService::class.java)
+                .setAction(LocationTrackingService.ACTION_START)
+            ContextCompat.startForegroundService(context, intent)
+        }
+    }
+
+    // 화면 종료 시 위치 추적 서비스는 중지하지 않음 (MapScreen에서도 사용하므로)
+    // MapScreen이 종료될 때 중지됨
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -65,7 +101,11 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp),
-            onClick = onMapClick
+            onClick = onMapClick,
+            userType = userType,
+            selectedPatientId = selectedPatientId,
+            patientLocations = patientLocations,
+            locationBus = locationBus
         )
 
         Spacer(Modifier.height(20.dp))
@@ -92,17 +132,26 @@ fun HomeScreen(
 @Composable
 private fun MapSectionPreview(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    userType: String = "",
+    selectedPatientId: String? = null,
+    patientLocations: Map<Long, Coordinate> = emptyMap(),
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
     ) {
-        // 실제 TMap 표시 (읽기 전용)
+        // 실제 TMap 표시 (환자는 본인 위치 추적, 보호자는 환자 위치 표시)
         kr.co.ongil.presentation.ui.map.TMapComposable(
             modifier = Modifier.fillMaxSize(),
-            enableTracking = false,
-            zoomLevel = 14
+            enableTracking = userType == "PATIENT",  // 환자만 위치 추적
+            locationBus = locationBus,
+            zoomLevel = 14,
+            userType = userType,
+            selectedPatientId = selectedPatientId,
+            patientLocations = patientLocations,
+            isHomeScreen = true  // 홈 화면용 TMapView 사용
         )
 
         // 클릭 감지용 투명 레이어

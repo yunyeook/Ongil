@@ -19,6 +19,7 @@ import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.domain.repository.FavoriteRepository
 import kr.co.ongil.domain.usecase.dashboard.GetDashboardUseCase
+import kr.co.ongil.common.location.LocationStreamBus
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,7 +27,8 @@ class HomeViewModel @Inject constructor(
     private val userDataStoreManager: UserDataStoreManager,
     private val userRepository: UserRepository,
     private val favoriteRepository: FavoriteRepository,
-    private val getDashboardUseCase: GetDashboardUseCase
+    private val getDashboardUseCase: GetDashboardUseCase,
+    val locationBus: LocationStreamBus
 ) : ViewModel() {
 
     companion object {

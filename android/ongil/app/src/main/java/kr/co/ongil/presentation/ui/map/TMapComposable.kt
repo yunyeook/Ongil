@@ -73,7 +73,8 @@ fun TMapComposable(
     level2Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS,
     level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS,
     placeLocationTrigger: Pair<Int, Pair<Double, Double>> = 0 to Pair(0.0, 0.0),  // 장소 위치로 이동 트리거
-    disableFollowMode: Boolean = false  // 팔로우 모드 강제 비활성화 (장소 상세 정보 표시 중)
+    disableFollowMode: Boolean = false,  // 팔로우 모드 강제 비활성화 (장소 상세 정보 표시 중)
+    isHomeScreen: Boolean = false  // 홈 화면 여부
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -195,10 +196,16 @@ fun TMapComposable(
     }
 
     // 펄스 애니메이션 루프 (환자용 - 자신의 위치)
-    LaunchedEffect(locationMarker, mapView) {
+    LaunchedEffect(locationMarker, isMapInitialized) {
         if (userType != "PATIENT") return@LaunchedEffect  // 환자만 자신의 위치 표시
+        if (!isMapInitialized) return@LaunchedEffect  // 지도 초기화 완료 후 시작
         val marker = locationMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
+
+        // 마커가 완전히 지도에 추가될 때까지 대기
+        delay(200)
+
+        Log.d("TMapComposable", "🎬 펄스 애니메이션 시작 (환자) - marker: ${marker.id}")
 
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
@@ -233,10 +240,16 @@ fun TMapComposable(
     }
 
     // 펄스 애니메이션 루프 (보호자용 - 선택된 환자의 위치)
-    LaunchedEffect(patientMarker, mapView) {
+    LaunchedEffect(patientMarker, mapView, isMapInitialized) {
         if (userType != "GUARDIAN") return@LaunchedEffect  // 보호자만 환자 위치 표시
+        if (!isMapInitialized) return@LaunchedEffect  // 지도 초기화 완료 후 시작
         val marker = patientMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
+
+        // 마커가 완전히 지도에 추가될 때까지 대기
+        delay(200)
+
+        Log.d("TMapComposable", "🎬 펄스 애니메이션 시작 (보호자)")
 
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
@@ -270,20 +283,46 @@ fun TMapComposable(
         }
     }
 
+    // 컴포넌트 시작 시 로그 및 상태 초기화
+    LaunchedEffect(Unit) {
+        Log.d("TMapComposable", "📍 TMapComposable 시작 - enableTracking=$enableTracking, userType=$userType, selectedPatientId=$selectedPatientId, patientLocations=${patientLocations.keys}")
+        // 기존 마커 상태 초기화 (TMapViewFactory에서 마커 제거했으므로)
+        locationMarker = null
+        patientMarker = null
+        Log.d("TMapComposable", "🔄 마커 상태 초기화")
+    }
+
+    // 환자 위치 변경 로그
+    LaunchedEffect(patientLocations) {
+        Log.d("TMapComposable", "📍 환자 위치 변경됨: ${patientLocations.keys}, userType=$userType")
+    }
+
     // 지도 초기화
     LaunchedEffect(Unit) {
         try {
-            Log.d("TMapComposable", "🔄 지도 초기화 시작")
+            Log.d("TMapComposable", "🔄 지도 초기화 시작 (isHomeScreen=$isHomeScreen)")
 
-            val tmapView = TMapViewFactory.createTMapView(
+            val (tmapView, isCached) = TMapViewFactory.createTMapView(
                 context = context,
-                zoomLevel = zoomLevel
+                zoomLevel = zoomLevel,
+                isHomeScreen = isHomeScreen
             )
 
-            Log.d("TMapComposable", "🗺️ 지도 생성 완료")
+            Log.d("TMapComposable", "🗺️ 지도 생성 완료 (캐싱됨: $isCached)")
 
-            // 지도 엔진 초기화 대기
-            delay(300)
+            if (isCached) {
+                // 캐싱된 TMapView는 이미 초기화 완료 상태 - 즉시 사용 가능
+                Log.d("TMapComposable", "✅ TMapView 엔진 준비 완료 (캐싱됨: 즉시 설정)")
+                isMapInitialized = true
+                onMapReady?.invoke(tmapView)
+            } else {
+                // 새로 생성된 TMapView - OnMapReadyListener 대기
+                tmapView.setOnMapReadyListener {
+                    Log.d("TMapComposable", "✅ TMapView 엔진 준비 완료 (새로 생성됨)")
+                    isMapInitialized = true
+                    onMapReady?.invoke(tmapView)
+                }
+            }
 
             tmapView.setCompassMode(false)
 
@@ -299,10 +338,8 @@ fun TMapComposable(
             }
 
             mapView = tmapView
-            isMapInitialized = true
             isLoading = false
 
-            onMapReady?.invoke(tmapView)
             Log.d("TMapComposable", "✅ 지도 초기화 완료")
         } catch (e: Exception) {
             Log.e("TMapComposable", "❌ 지도 초기화 실패", e)
@@ -620,6 +657,9 @@ fun TMapComposable(
         val tmap = mapView ?: return@LaunchedEffect
         val bus = locationBus ?: return@LaunchedEffect
 
+        // TMapViewFactory의 removeAllTMapMarkerItem()이 완료될 때까지 충분히 대기
+        delay(450)
+
         Log.d("TMapComposable", "📡 위치 업데이트 수신 시작 (환자)")
         bus.updates.collectLatest { point ->
             try {
@@ -698,8 +738,22 @@ fun TMapComposable(
 
                 lastPoint = point
 
-                // 마커 생성 (최초 1회)
-                if (locationMarker == null) {
+                // 마커 생성 또는 업데이트
+                val currentMarker = locationMarker
+
+                // 마커가 없거나 무효화된 경우 재생성
+                if (currentMarker == null || currentMarker.id == null) {
+                    // 기존 마커가 있으면 제거 시도
+                    if (currentMarker != null) {
+                        try {
+                            tmap.removeTMapMarkerItem("location_marker")
+                            Log.d("TMapComposable", "무효화된 마커 제거")
+                        } catch (e: Exception) {
+                            // 이미 제거되었을 수 있음
+                        }
+                    }
+
+                    // 새 마커 생성
                     val markerBitmap = pulseFrames[currentPulseFrame]
                     val marker = TMapMarkerItem().apply {
                         id = "location_marker"
@@ -709,21 +763,25 @@ fun TMapComposable(
 
                     try {
                         tmap.addTMapMarkerItem(marker)
+                        locationMarker = marker
                         Log.d("TMapComposable", "✅ 마커 생성 완료")
+
+                        // 첫 위치로 지도 이동
+                        tmap.setCenterPoint(point.latitude, point.longitude)
+                        tmap.setZoomLevel(17)
                     } catch (e: Exception) {
                         Log.e("TMapComposable", "마커 추가 실패", e)
+                        locationMarker = null
                     }
-
-                    locationMarker = marker
-
-                    // 첫 위치로 지도 이동
-                    tmap.setCenterPoint(point.latitude, point.longitude)
-                    tmap.setZoomLevel(17)
                 } else {
                     // 마커 위치 업데이트
                     try {
-                        locationMarker?.tMapPoint = TMapPoint(point.latitude, point.longitude)
-                        locationMarker?.let { tmap.updateTMapMarkerItem(it) }
+                        currentMarker.tMapPoint = TMapPoint(point.latitude, point.longitude)
+                        tmap.updateTMapMarkerItem(currentMarker)
+                    } catch (e: NullPointerException) {
+                        // 마커가 무효화됨 - 다음 위치 업데이트 시 재생성
+                        Log.w("TMapComposable", "마커 무효화됨 - 재생성 필요")
+                        locationMarker = null
                     } catch (e: Exception) {
                         Log.e("TMapComposable", "마커 위치 업데이트 실패", e)
                     }
@@ -877,8 +935,11 @@ fun TMapComposable(
     DisposableEffect(Unit) {
         onDispose {
             // TMapView를 캐싱하여 재사용하므로 destroy하지 않음
-            // 부모에서만 제거하고 TMapView 인스턴스는 유지
-            Log.d("TMapComposable", "🔄 TMapComposable dispose (TMapView는 캐시에 유지)")
+            // 하지만 마커 상태는 초기화하여 펄스 애니메이션 종료
+            locationMarker = null
+            patientMarker = null
+            placeMarker = null
+            Log.d("TMapComposable", "🔄 TMapComposable dispose - 마커 상태 초기화 (TMapView는 캐시에 유지)")
         }
     }
 }
