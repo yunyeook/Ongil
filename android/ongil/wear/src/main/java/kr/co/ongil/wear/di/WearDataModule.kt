@@ -8,8 +8,8 @@ import dagger.hilt.components.SingletonComponent
 import kr.co.ongil.wear.data.datasource.local.WearDataStoreManager
 import kr.co.ongil.wear.data.datasource.local.WearDataStoreManagerImpl
 import javax.inject.Singleton
-import kr.co.ongil.wear.data.repository.WearAuthRepositoryImpl
 import kr.co.ongil.wear.domain.repository.WearAuthRepository
+import kr.co.ongil.wear.data.repository.WearAuthRepositoryImpl
 
 /**
  * 데이터 관련 의존성 주입 모듈

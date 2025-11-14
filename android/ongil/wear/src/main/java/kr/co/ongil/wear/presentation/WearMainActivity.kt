@@ -8,7 +8,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.wear.compose.material.MaterialTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kr.co.ongil.wear.presentation.theme.OngilTheme
 import kr.co.ongil.wear.presentation.ui.LoginSyncScreen
