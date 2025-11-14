@@ -18,5 +18,7 @@ data class PlaceDetail(
     val businessHours: String?,
     val closedDays: String?,
     val is24Hours: Boolean?,
-    val isYearRound: Boolean?
+    val isYearRound: Boolean?,
+    val isFavorite: Boolean = false,
+    val favoriteId: Long? = null
 )

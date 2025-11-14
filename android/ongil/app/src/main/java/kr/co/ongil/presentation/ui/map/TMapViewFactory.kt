@@ -14,8 +14,13 @@ import kr.co.ongil.common.BuildConfig
  */
 object TMapViewFactory {
 
+    // 싱글톤으로 TMapView 캐싱 (재사용)
+    @Volatile
+    private var cachedTMapView: TMapView? = null
+
     /**
      * 현재 기기 위치를 중심으로 지도를 초기화하여 TMapView를 생성합니다.
+     * 이미 생성된 TMapView가 있으면 재사용합니다.
      *
      * @param context 애플리케이션 컨텍스트
      * @param zoomLevel 줌 레벨
@@ -25,6 +30,17 @@ object TMapViewFactory {
         context: Context,
         zoomLevel: Int = 15
     ): TMapView = withContext(Dispatchers.Main) {
+        // 이미 생성된 TMapView가 있으면 재사용
+        cachedTMapView?.let { existingView ->
+            Log.d("TMapManager", "기존 TMapView 재사용")
+
+            // 기존 부모에서 제거 (중요!)
+            (existingView.parent as? android.view.ViewGroup)?.removeView(existingView)
+
+            return@withContext existingView
+        }
+
+        Log.d("TMapManager", "새로운 TMapView 생성")
         // 현재 위치 우선 확보
         val fusedClient = LocationServices.getFusedLocationProviderClient(context)
         val loc = try {
@@ -44,7 +60,7 @@ object TMapViewFactory {
             throw IllegalStateException("현재 위치를 가져오지 못했습니다. 권한/설정 확인 후 다시 시도하세요.")
         }
 
-        TMapView(context).apply {
+        val newTMapView = TMapView(context).apply {
             // API 키 설정
             setSKTMapApiKey(BuildConfig.TMAP_API_KEY)
             resetNorthUp(this)
@@ -52,6 +68,19 @@ object TMapViewFactory {
             setCenterPoint(lat, lon) // TMap 3.0: (위도, 경도)
             Log.d("TMapManager", "TMapView 초기화 - 내 위치: ($lat, $lon), Zoom: $zoomLevel")
         }
+
+        // 캐시에 저장
+        cachedTMapView = newTMapView
+        return@withContext newTMapView
+    }
+
+    /**
+     * 캐시된 TMapView를 해제합니다.
+     * 앱 종료 시 호출하여 메모리 누수를 방지합니다.
+     */
+    fun clearCache() {
+        cachedTMapView = null
+        Log.d("TMapManager", "TMapView 캐시 해제")
     }
 }
 

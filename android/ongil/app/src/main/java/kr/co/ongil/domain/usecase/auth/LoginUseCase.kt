@@ -4,6 +4,7 @@ import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.model.auth.LoginResponse
 import kr.co.ongil.domain.repository.AuthRepository
 import javax.inject.Inject
+import kr.co.ongil.data.datasource.wear.WearDataClient
 
 /**
  * 로그인 UseCase
@@ -12,7 +13,8 @@ import javax.inject.Inject
  */
 class LoginUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val tokenManager: UserDataStoreManager
+    private val tokenManager: UserDataStoreManager,
+    private val wearDataClient: WearDataClient
 ) {
     /**
      * 로그인 실행
@@ -39,6 +41,20 @@ class LoginUseCase @Inject constructor(
             // 사용자 ID와 타입 저장
             tokenManager.saveLoginUserId(response.data.user.id.toString())
             tokenManager.saveUserType(response.data.user.userType)
+
+            //  워치 동기화 로직
+            try {
+                wearDataClient.syncLoginData(
+                    accessToken = response.data.accessToken,
+                    refreshToken = response.data.refreshToken,
+                    userId = response.data.user.id.toString(),
+                    userType = response.data.user.userType,
+                    selectedPatientId = null  // 로그인 시점에는 선택 안됨
+                )
+            } catch (e: Exception) {
+                // 워치 동기화 실패해도 로그인은 성공으로 처리
+                android.util.Log.e("LoginUseCase", "워치 동기화 실패 (무시)", e)
+            }
         }
     }
 }

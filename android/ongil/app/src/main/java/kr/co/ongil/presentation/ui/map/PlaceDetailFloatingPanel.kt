@@ -1,16 +1,18 @@
 package kr.co.ongil.presentation.ui.map
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -64,14 +66,27 @@ fun MapFloatingPanel(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(start = 16.dp, end = 16.dp, bottom = 100.dp), // 하단 네비게이션 바 위로 오도록 패딩 조절
+            .clickable(
+                onClick = {
+                    // 바깥 클릭 시 모달 닫기 (장소 상세 또는 길찾기 모달)
+                    onDismiss()
+                },
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ),
         contentAlignment = Alignment.BottomCenter
     ) {
         // 메인 패널 카드
         Column(
             modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, bottom = 100.dp) // 하단 네비게이션 바 위로 오도록 패딩 조절
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0xFF8A9A8A).copy(alpha = 0.9f)) // 이미지의 녹색 계열, 약간 투명하게
+                .clickable(
+                    onClick = { /* 패널 내부 클릭 시 이벤트 전파 방지 */ },
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                )
                 .padding(16.dp)
         ) {
             if (isNavigating) {
@@ -79,6 +94,7 @@ fun MapFloatingPanel(
                 route?.let {
                     NavigatingContent(
                         route = it,
+                        onDismiss = onDismiss,
                         onStopNavigationClick = onStopNavigationClick
                     )
                 }
@@ -104,27 +120,11 @@ private fun PlaceDetailContent(
     onCallClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
-    // 상단 정보 섹션 (아이콘, 장소명, 주소, 즐겨찾기)
+    // 상단 정보 섹션 (장소명, 주소, 즐겨찾기)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 아이콘
-        Icon(
-            imageVector = Icons.Default.Delete, // TODO: 적절한 아이콘으로 변경 (예: 건물 아이콘)
-            contentDescription = "장소 아이콘",
-            tint = Color.White,
-            modifier = Modifier
-                .size(40.dp)
-                .background(
-                    Color.Black.copy(alpha = 0.1f),
-                    RoundedCornerShape(8.dp)
-                )
-                .padding(8.dp)
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
         // 장소명, 주소
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -145,9 +145,9 @@ private fun PlaceDetailContent(
         // 즐겨찾기 버튼
         IconButton(onClick = onFavoriteClick) {
             Icon(
-                imageVector = Icons.Default.StarBorder, // TODO: 즐겨찾기 여부에 따라 아이콘 변경
-                contentDescription = "즐겨찾기",
-                tint = Color.White,
+                imageVector = if (placeDetail.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = if (placeDetail.isFavorite) "즐겨찾기 해제" else "즐겨찾기 추가",
+                tint = if (placeDetail.isFavorite) Color(0xFFFFD700) else Color.White, // 금색 또는 흰색
                 modifier = Modifier.size(28.dp)
             )
         }
@@ -166,12 +166,16 @@ private fun PlaceDetailContent(
             onClick = onShowDialog,
             modifier = Modifier.weight(1f)
         )
-        FloatingButton(
-            text = "전화번호",
-            icon = Icons.Default.Call,
-            onClick = onCallClick,
-            modifier = Modifier.weight(1f)
-        )
+
+        // 전화번호가 있을 때만 버튼 표시
+        if (!placeDetail.phoneNumber.isNullOrEmpty()) {
+            FloatingButton(
+                text = placeDetail.phoneNumber,
+                icon = Icons.Default.Call,
+                onClick = onCallClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -181,6 +185,7 @@ private fun PlaceDetailContent(
 @Composable
 private fun NavigatingContent(
     route: Route,
+    onDismiss: () -> Unit,
     onStopNavigationClick: () -> Unit
 ) {
     Row(
@@ -188,13 +193,15 @@ private fun NavigatingContent(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Icon(
-            imageVector = Icons.Default.Close,
-            contentDescription = "닫기",
-            tint = Color.White,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
+        // X 아이콘 버튼
+        IconButton(onClick = onDismiss) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "닫기",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
         Text(
             text = "목적지까지",
             color = Color.White,
@@ -203,9 +210,7 @@ private fun NavigatingContent(
             modifier = Modifier.weight(1f)
         )
 
-        // 닫기, 안내중지 버튼 (작은버튼)
-        SmallFloatingButton(text = "닫기", onClick = { /* TODO */ })
-        Spacer(modifier = Modifier.width(8.dp))
+        // 안내중지 버튼
         SmallFloatingButton(text = "안내중지", onClick = onStopNavigationClick)
     }
     Spacer(modifier = Modifier.height(12.dp))

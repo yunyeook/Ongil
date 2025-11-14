@@ -127,6 +127,40 @@ class VoipSignalingService @Inject constructor(
         sendSignal(callId, msg, "ICE")
     }
 
+    fun sendAccept(
+        callId: Long,
+        sessionId: String?,
+        fromUserId: Long,
+        toUserId: Long
+    ) {
+        val msg = SignalMessage(
+            type = SignalingType.ACCEPT.name,
+            callId = callId,
+            sessionId = sessionId,
+            senderId = fromUserId,
+            receiverId = toUserId
+        )
+        sendSignal(callId, msg, "ACCEPT")
+    }
+
+    fun sendReject(
+        callId: Long,
+        sessionId: String?,
+        fromUserId: Long,
+        toUserId: Long,
+        reason: String? = null
+    ) {
+        val msg = SignalMessage(
+            type = SignalingType.REJECT.name,
+            callId = callId,
+            sessionId = sessionId,
+            senderId = fromUserId,
+            receiverId = toUserId,
+            reason = reason
+        )
+        sendSignal(callId, msg, "REJECT")
+    }
+
     fun sendHangup(
         callId: Long,
         sessionId: String?,
