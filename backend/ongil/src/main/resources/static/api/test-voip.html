@@ -292,6 +292,7 @@
     let peerUserId = null;  // ✅ 통화 상대방 ID (세션 전체에서 사용)
     let currentCallStatus = null; // ✅ 서버 CallStatus 추적 (CREATED/RINGING/CONNECTED/...)
 
+
     // 로그 함수
     function log(message, type = 'info') {
         const logsDiv = document.getElementById('logs');
@@ -726,6 +727,36 @@
         log(`📤 시그널 전송: ${signal.type}`, 'info');
     }
 
+    // ✅ 새 수신 통화 세션 준비 (INCOMING 또는 OFFER에서 공통으로 사용)
+    function prepareIncomingCallSession(signal) {
+        log(`📞 새 수신 통화 세션 준비: callId=${signal.callId}, fromUserId=${signal.fromUserId}`, 'info');
+
+        // 혹시 이전 통화 리소스 남아있으면 정리
+        if (peerConnection || localStream || currentCallId) {
+            log('⚠️ 이전 통화 세션이 남아 있어 정리 후 새 통화로 전환합니다.', 'warn');
+            // 여기서는 WebSocket은 끊지 않음
+            cleanupCall();
+        }
+
+        currentCallId = signal.callId;
+        currentCallStatus = 'RINGING';
+        peerUserId = signal.fromUserId;
+        log(`✅ 상대방 ID 저장: ${peerUserId}`, 'info');
+
+        updateCallStatus('calling', `수신 통화 (Call ID: ${signal.callId})`);
+
+        // 새 통화 수신이므로 수락/거절 버튼 활성화
+        const acceptBtn = document.getElementById('acceptBtn');
+        const rejectBtn = document.getElementById('rejectBtn');
+        const hangupBtn = document.getElementById('hangupBtn');
+
+        acceptBtn.disabled = false;
+        rejectBtn.disabled = false;
+        hangupBtn.disabled = true;   // 아직 수락 전
+
+        log('✅ 수신 통화 UI 준비 완료 (수락/거절 가능)', 'success');
+    }
+
     // 시그널 메시지 처리
     async function handleSignalMessage(signal) {
         log(`📥 시그널 수신: ${signal.type}`, 'info');
@@ -733,16 +764,9 @@
         switch (signal.type) {
             case 'INCOMING':
                 log(`📞 수신 통화: Call ID ${signal.callId}`, 'success');
-                updateCallStatus('calling', `수신 통화 (Call ID: ${signal.callId})`);
-                currentCallId = signal.callId;
-                currentCallStatus = 'RINGING';
 
-                // ✅ 통화 상대방 ID 저장 (수신자가 받을 때)
-                peerUserId = signal.fromUserId;
-                log(`✅ 상대방 ID 저장: ${peerUserId}`, 'info');
-
-                document.getElementById('acceptBtn').disabled = false;
-                document.getElementById('rejectBtn').disabled = false;
+                // ✅ 공통 초기화 함수 사용
+                prepareIncomingCallSession(signal);
                 break;
 
             case 'ACCEPT':
@@ -762,12 +786,20 @@
             case 'OFFER':
                 log('📥 OFFER 수신, ANSWER 생성 중...', 'info');
 
-                // ✅ 상대방 ID가 없으면 OFFER에서 저장 (안전장치)
+                // ✅ 1) 아직 통화 세션이 없거나, 다른 callId라면
+                //     → INCOMING을 못 받은 새 수신 통화로 간주하고 UI/상태 셋업
+                if (!currentCallId || currentCallId !== signal.callId) {
+                    log('⚠️ INCOMING 없이 OFFER가 먼저 도착했습니다. 새 수신 통화로 처리합니다.', 'warn');
+                    prepareIncomingCallSession(signal);
+                }
+
+                // ✅ 2) 안전장치: peerUserId가 비어있으면 OFFER에서라도 세팅
                 if (peerUserId == null) {
                     peerUserId = signal.fromUserId;
                     log(`✅ 상대방 ID 저장 (OFFER에서): ${peerUserId}`, 'info');
                 }
 
+                // ✅ 3) 실제 WebRTC 처리는 기존 로직 그대로
                 await handleOffer(signal);
                 break;
 
