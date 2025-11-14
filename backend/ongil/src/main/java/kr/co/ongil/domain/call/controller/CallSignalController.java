@@ -89,7 +89,7 @@ public class CallSignalController {
                 "ICE".equals(message.type())) {
 
             messagingTemplate.convertAndSend(
-                    "/topic/calls/" + callId,
+                    "/topic/calls." + callId,
                     message
             );
 
