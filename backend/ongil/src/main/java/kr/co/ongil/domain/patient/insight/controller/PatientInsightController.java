@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.ongil.domain.patient.insight.dto.response.PatientInsightResponse;
-import kr.co.ongil.domain.patient.insight.entity.PatientInsight;
 import kr.co.ongil.domain.patient.insight.entity.PeriodType;
 import kr.co.ongil.domain.patient.insight.service.PatientInsightService;
 import kr.co.ongil.global.common.response.ApiResponse;
@@ -44,8 +43,7 @@ public class PatientInsightController {
     ) {
         log.info("주간 인사이트 생성 요청 - patientId: {}", patientId);
 
-        PatientInsight insight = insightService.generateInsight(patientId, PeriodType.WEEKLY);
-        PatientInsightResponse response = PatientInsightResponse.from(insight);
+        PatientInsightResponse response = insightService.generateInsight(patientId, PeriodType.WEEKLY);
 
         return ApiResponse.success(ResponseMessage.PATIENT_INSIGHT_GENERATED, response);
     }
@@ -64,8 +62,7 @@ public class PatientInsightController {
     ) {
         log.info("월간 인사이트 생성 요청 - patientId: {}", patientId);
 
-        PatientInsight insight = insightService.generateInsight(patientId, PeriodType.MONTHLY);
-        PatientInsightResponse response = PatientInsightResponse.from(insight);
+        PatientInsightResponse response = insightService.generateInsight(patientId, PeriodType.MONTHLY);
 
         return ApiResponse.success(ResponseMessage.PATIENT_INSIGHT_GENERATED, response);
     }
@@ -84,8 +81,7 @@ public class PatientInsightController {
     ) {
         log.info("최신 주간 인사이트 조회 - patientId: {}", patientId);
 
-        PatientInsight insight = insightService.getLatestInsight(patientId, PeriodType.WEEKLY);
-        PatientInsightResponse response = PatientInsightResponse.from(insight);
+        PatientInsightResponse response = insightService.getLatestInsight(patientId, PeriodType.WEEKLY);
 
         return ApiResponse.success(ResponseMessage.PATIENT_INSIGHT_FOUND, response);
     }
@@ -104,8 +100,7 @@ public class PatientInsightController {
     ) {
         log.info("최신 월간 인사이트 조회 - patientId: {}", patientId);
 
-        PatientInsight insight = insightService.getLatestInsight(patientId, PeriodType.MONTHLY);
-        PatientInsightResponse response = PatientInsightResponse.from(insight);
+        PatientInsightResponse response = insightService.getLatestInsight(patientId, PeriodType.MONTHLY);
 
         return ApiResponse.success(ResponseMessage.PATIENT_INSIGHT_FOUND, response);
     }
@@ -127,10 +122,7 @@ public class PatientInsightController {
     ) {
         log.info("주간 인사이트 이력 조회 - patientId: {}, limit: {}", patientId, limit);
 
-        List<PatientInsight> insights = insightService.getInsightHistory(patientId, PeriodType.WEEKLY, limit);
-        List<PatientInsightResponse> response = insights.stream()
-            .map(PatientInsightResponse::from)
-            .toList();
+        List<PatientInsightResponse> response = insightService.getInsightHistory(patientId, PeriodType.WEEKLY, limit);
 
         return ApiResponse.success(ResponseMessage.PATIENT_INSIGHT_LIST_FOUND, response);
     }
@@ -152,10 +144,7 @@ public class PatientInsightController {
     ) {
         log.info("월간 인사이트 이력 조회 - patientId: {}, limit: {}", patientId, limit);
 
-        List<PatientInsight> insights = insightService.getInsightHistory(patientId, PeriodType.MONTHLY, limit);
-        List<PatientInsightResponse> response = insights.stream()
-            .map(PatientInsightResponse::from)
-            .toList();
+        List<PatientInsightResponse> response = insightService.getInsightHistory(patientId, PeriodType.MONTHLY, limit);
 
         return ApiResponse.success(ResponseMessage.PATIENT_INSIGHT_LIST_FOUND, response);
     }

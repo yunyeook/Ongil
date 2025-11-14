@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.co.ongil.domain.patient.dashboard.repository.DashboardRepository;
 import kr.co.ongil.domain.patient.insight.dto.internal.*;
+import kr.co.ongil.domain.patient.insight.dto.response.InsightDataAvailability;
+import kr.co.ongil.domain.patient.insight.dto.response.PatientInsightResponse;
 import kr.co.ongil.domain.patient.insight.entity.PatientInsight;
 import kr.co.ongil.domain.patient.insight.entity.PeriodType;
 import kr.co.ongil.domain.patient.insight.repository.PatientInsightRepository;
@@ -38,9 +40,11 @@ public class PatientInsightService {
 
     /**
      * 환자 인사이트 생성 (WEEKLY 또는 MONTHLY)
+     *
+     * @return PatientInsightResponse (데이터 가용성 정보 포함)
      */
     @Transactional
-    public PatientInsight generateInsight(Integer patientId, PeriodType periodType) {
+    public PatientInsightResponse generateInsight(Integer patientId, PeriodType periodType) {
         log.info("환자 인사이트 생성 시작 - patientId: {}, periodType: {}", patientId, periodType);
 
         // 1. 환자 존재 확인
@@ -62,14 +66,17 @@ public class PatientInsightService {
                 patientId, periodType, period.currentStart(), period.currentEnd())
             .orElse(null);
 
-        if (existing != null) {
-            log.info("이미 생성된 인사이트 반환 - patientId: {}, periodType: {}", patientId, periodType);
-            return existing;
-        }
-
-        // 5. 데이터 집계
+        // 5. 데이터 집계 (기존 인사이트가 있어도 dataAvailability를 위해 조회)
         ActivityStats activity = aggregatorService.aggregateActivityStats(patientId, period);
         HealthStats health = aggregatorService.aggregateHealthStats(patientId, period);
+
+        // 데이터 가용성 정보 생성
+        InsightDataAvailability dataAvailability = InsightDataAvailability.from(activity, health);
+
+        if (existing != null) {
+            log.info("이미 생성된 인사이트 반환 - patientId: {}, periodType: {}", patientId, periodType);
+            return PatientInsightResponse.from(existing, dataAvailability);
+        }
 
         // 6. 플래그 평가
         InsightFlags flags = flagEvaluator.evaluateFlags(activity, health);
@@ -107,40 +114,63 @@ public class PatientInsightService {
         PatientInsight saved = insightRepository.save(insight);
         log.info("환자 인사이트 생성 완료 - insightId: {}, patientId: {}", saved.getId(), patientId);
 
-        return saved;
+        return PatientInsightResponse.from(saved, dataAvailability);
     }
 
     /**
      * 환자 인사이트 조회 (최신 1건)
+     *
+     * @return PatientInsightResponse (데이터 가용성 정보 포함)
      */
     @Transactional(readOnly = true)
-    public PatientInsight getLatestInsight(Integer patientId, PeriodType periodType) {
-        return insightRepository
+    public PatientInsightResponse getLatestInsight(Integer patientId, PeriodType periodType) {
+        PatientInsight insight = insightRepository
             .findFirstByPatientIdAndPeriodTypeOrderByPeriodEndDateDesc(patientId, periodType)
             .orElseThrow(() -> new BusinessException(ErrorCode.PATIENT_INSIGHT_NOT_FOUND));
+
+        // 데이터 가용성 정보 생성
+        InsightDataAvailability dataAvailability = createDataAvailability(
+            patientId, insight.getPeriodStartDate(), insight.getPeriodEndDate());
+
+        return PatientInsightResponse.from(insight, dataAvailability);
     }
 
     /**
      * 환자 인사이트 조회 (특정 기간)
+     *
+     * @return PatientInsightResponse (데이터 가용성 정보 포함)
      */
     @Transactional(readOnly = true)
-    public PatientInsight getInsightByPeriod(Integer patientId, PeriodType periodType,
+    public PatientInsightResponse getInsightByPeriod(Integer patientId, PeriodType periodType,
                                                LocalDate startDate, LocalDate endDate) {
-        return insightRepository
+        PatientInsight insight = insightRepository
             .findByPatientIdAndPeriodTypeAndPeriodStartDateAndPeriodEndDate(
                 patientId, periodType, startDate, endDate)
             .orElseThrow(() -> new BusinessException(ErrorCode.PATIENT_INSIGHT_NOT_FOUND));
+
+        // 데이터 가용성 정보 생성
+        InsightDataAvailability dataAvailability = createDataAvailability(
+            patientId, startDate, endDate);
+
+        return PatientInsightResponse.from(insight, dataAvailability);
     }
 
     /**
      * 환자 인사이트 목록 조회 (최근 N개)
+     *
+     * @return List<PatientInsightResponse> (데이터 가용성 정보 포함)
      */
     @Transactional(readOnly = true)
-    public List<PatientInsight> getInsightHistory(Integer patientId, PeriodType periodType, int limit) {
+    public List<PatientInsightResponse> getInsightHistory(Integer patientId, PeriodType periodType, int limit) {
         return insightRepository
             .findByPatientIdAndPeriodTypeOrderByPeriodEndDateDesc(patientId, periodType)
             .stream()
             .limit(limit)
+            .map(insight -> {
+                InsightDataAvailability dataAvailability = createDataAvailability(
+                    patientId, insight.getPeriodStartDate(), insight.getPeriodEndDate());
+                return PatientInsightResponse.from(insight, dataAvailability);
+            })
             .toList();
     }
 
@@ -148,7 +178,7 @@ public class PatientInsightService {
      * 인사이트 재생성 (기존 데이터 삭제 후 재생성)
      */
     @Transactional
-    public PatientInsight regenerateInsight(Integer patientId, PeriodType periodType,
+    public PatientInsightResponse regenerateInsight(Integer patientId, PeriodType periodType,
                                              LocalDate startDate, LocalDate endDate) {
         log.info("인사이트 재생성 - patientId: {}, periodType: {}, period: {} ~ {}",
             patientId, periodType, startDate, endDate);
@@ -166,8 +196,8 @@ public class PatientInsightService {
 
     private PeriodInfo createPeriodInfo(PeriodType periodType) {
         return switch (periodType) {
-            case WEEKLY -> PeriodInfo.thisWeekAndLastWeek();
-            case MONTHLY -> PeriodInfo.thisMonthAndLastMonth();
+            case WEEKLY -> PeriodInfo.lastCompletedWeek();   // 완료된 지난 주 분석
+            case MONTHLY -> PeriodInfo.lastCompletedMonth(); // 완료된 지난 달 분석
         };
     }
 
@@ -201,6 +231,28 @@ public class PatientInsightService {
             .ageGroup(ageGroup)
             .gender(gender)
             .build();
+    }
+
+    /**
+     * 데이터 가용성 정보 생성
+     * 특정 기간의 ActivityStats와 HealthStats를 집계하여 데이터 가용성 확인
+     */
+    private InsightDataAvailability createDataAvailability(Integer patientId,
+                                                            LocalDate periodStart,
+                                                            LocalDate periodEnd) {
+        // PeriodInfo 생성 (주어진 기간 기반)
+        PeriodInfo period = PeriodInfo.forWeek(periodStart);  // 주간/월간 구분 없이 범용 사용
+
+        try {
+            // 데이터 집계
+            ActivityStats activity = aggregatorService.aggregateActivityStats(patientId, period);
+            HealthStats health = aggregatorService.aggregateHealthStats(patientId, period);
+
+            return InsightDataAvailability.from(activity, health);
+        } catch (Exception e) {
+            log.warn("데이터 가용성 정보 생성 실패 - patientId: {}, 기본값 반환", patientId, e);
+            return InsightDataAvailability.noData();
+        }
     }
 
     private String toJsonString(Object obj) {
