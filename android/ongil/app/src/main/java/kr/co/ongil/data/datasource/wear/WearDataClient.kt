@@ -32,6 +32,10 @@ class WearDataClient @Inject constructor(
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_TYPE = "user_type"
         private const val KEY_SELECTED_PATIENT_ID = "selected_patient_id"
+
+        private const val LOCATION_DATA_PATH = "/location_data"
+        private const val KEY_LATITUDE = "latitude"
+        private const val KEY_LONGITUDE = "longitude"
     }
 
     private val dataClient: DataClient = Wearable.getDataClient(context)
@@ -116,4 +120,39 @@ class WearDataClient @Inject constructor(
             false
         }
     }
+
+    /**
+     * 현재 위치를 워치로 전송
+     *
+     * @param latitude 위도
+     * @param longitude 경도
+     */
+    suspend fun syncLocation(
+        latitude: Double,
+        longitude: Double
+    ): Boolean {
+        return try {
+            // PutDataMapRequest 생성
+            val putDataReq = PutDataMapRequest.create(LOCATION_DATA_PATH).apply {
+                dataMap.apply {
+                    putDouble(KEY_LATITUDE, latitude)
+                    putDouble(KEY_LONGITUDE, longitude)
+                    putLong("timestamp", System.currentTimeMillis())
+                }
+            }
+
+            // 데이터 전송
+            val putDataTask = dataClient.putDataItem(putDataReq.asPutDataRequest())
+            putDataTask.await()
+
+            Log.d(TAG, "워치로 위치 전송 성공: lat=$latitude, lon=$longitude")
+            true
+
+        } catch (e: Exception) {
+            Log.e(TAG, "워치로 위치 전송 실패", e)
+            false
+        }
+    }
+
+
 }
