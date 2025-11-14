@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  */
 enum class SignalingType {
     INCOMING,       // 수신 통화
-    OFFER,          // SDP Offer
+    OFFER,          // SDP Offe
     ANSWER,         // SDP Answer
     ICE,            // ICE Candidate
     ACCEPT,         // 통화 수락
@@ -18,6 +18,7 @@ enum class SignalingType {
 /**
  * WebRTC 시그널링 메시지 (백엔드 스펙)
  */
+////
 @Serializable
 data class SignalMessage(
     val type: String,                   // SignalingType 문자열

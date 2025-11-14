@@ -12,6 +12,7 @@ import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
+import org.webrtc.audio.JavaAudioDeviceModule
 
 /**
  * 우리 앱 VOIP용 WebRTC 클라이언트 (음성 전용)
@@ -39,6 +40,9 @@ class WebRtcCallClient @Inject constructor(
         onPeerConnectionStateChange = listener
     }
 
+
+
+
     /**
      * ICE 서버 정보로 WebRTC 초기화
      * - 반드시 Offer/Answer 생성 전에 한 번 호출
@@ -54,24 +58,17 @@ class WebRtcCallClient @Inject constructor(
             "Initializing WebRTC with iceServers=${iceServers.joinToString { it.uri }}"
         )
 
-        // 1) 전역 초기화
-        val initOptions = PeerConnectionFactory.InitializationOptions
-            .builder(context)
-            .createInitializationOptions()
-        PeerConnectionFactory.initialize(initOptions)
+        // 1) Factory 생성 (AudioDeviceModule 포함)
+        factory = buildPeerConnectionFactory()
 
-        // 2) Factory 생성
-        factory = PeerConnectionFactory.builder()
-            .createPeerConnectionFactory()
-
-        // 3) 오디오 Source/Track 생성
+        // 2) 오디오 Source/Track 생성
         val audioConstraints = MediaConstraints()
         audioSource = factory?.createAudioSource(audioConstraints)
         audioTrack = factory?.createAudioTrack(AUDIO_TRACK_ID, audioSource).apply {
             this?.setEnabled(true) // 🔹 명시적으로 활성화
         }
 
-        // 4) PeerConnection 생성 (Unified Plan SDP 사용)
+        // 3) PeerConnection 생성 (Unified Plan SDP 사용)
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
         }
@@ -117,7 +114,7 @@ class WebRtcCallClient @Inject constructor(
             }
         )
 
-        // 5) Unified Plan에서는 addTrack() 사용
+        // 4) Unified Plan에서는 addTrack() 사용
         audioTrack?.let { track ->
             val sender = peer?.addTrack(track, listOf(LOCAL_STREAM_ID))
             Log.d(TAG, "Audio track added to PeerConnection. sender=$sender")
@@ -142,6 +139,7 @@ class WebRtcCallClient @Inject constructor(
 
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"))
         }
 
         Log.d(TAG, "createOffer() called")
@@ -179,6 +177,7 @@ class WebRtcCallClient @Inject constructor(
 
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"))
         }
 
         Log.d(TAG, "createAnswer() called")
@@ -279,5 +278,26 @@ class WebRtcCallClient @Inject constructor(
         private const val TAG = "WebRtcCallClient"
         private const val LOCAL_STREAM_ID = "LOCAL_AUDIO_STREAM"
         private const val AUDIO_TRACK_ID = "AUDIO_TRACK"
+    }
+
+
+    private fun buildPeerConnectionFactory(): PeerConnectionFactory {
+        // WebRTC 초기화
+        val initOptions = PeerConnectionFactory.InitializationOptions
+            .builder(context)
+            .setEnableInternalTracer(true)
+            .createInitializationOptions()
+        PeerConnectionFactory.initialize(initOptions)
+
+        // AudioDeviceModule 설정 (마이크/스피커 연결)
+        val adm = JavaAudioDeviceModule.builder(context)
+            .setUseHardwareAcousticEchoCanceler(true)
+            .setUseHardwareNoiseSuppressor(true)
+            .createAudioDeviceModule()
+
+        return PeerConnectionFactory
+            .builder()
+            .setAudioDeviceModule(adm)
+            .createPeerConnectionFactory()
     }
 }
