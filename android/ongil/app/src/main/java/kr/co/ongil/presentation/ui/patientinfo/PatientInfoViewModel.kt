@@ -13,8 +13,14 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+import kr.co.ongil.data.mapper.toDomain
 import kr.co.ongil.domain.repository.HealthConnectRepository
+import kr.co.ongil.domain.model.HealthDataType
+import kr.co.ongil.domain.usecase.health.DeleteHealthDataUseCase
+import kr.co.ongil.domain.usecase.health.GetHealthDataFromServerUseCase
+import kr.co.ongil.domain.usecase.health.GetHealthDataSummaryUseCase
 import kr.co.ongil.domain.usecase.health.GetHealthDataUseCase
+import kr.co.ongil.domain.usecase.health.UploadHealthDataUseCase
 import kr.co.ongil.domain.usecase.patientinfo.GetPatientInfoUseCase
 import javax.inject.Inject
 
@@ -22,12 +28,18 @@ import javax.inject.Inject
 class PatientInfoViewModel @Inject constructor(
     private val getPatientInfoUseCase: GetPatientInfoUseCase,
     private val getHealthDataUseCase: GetHealthDataUseCase,
+    private val uploadHealthDataUseCase: UploadHealthDataUseCase,
+    private val getHealthDataFromServerUseCase: GetHealthDataFromServerUseCase,
+    private val getHealthDataSummaryUseCase: GetHealthDataSummaryUseCase,
+    private val deleteHealthDataUseCase: DeleteHealthDataUseCase,
     private val healthConnectRepository: HealthConnectRepository,
     private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PatientInfoUiState())
     val uiState: StateFlow<PatientInfoUiState> = _uiState.asStateFlow()
+
+    private var currentPatientId: Long? = null
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -100,6 +112,8 @@ class PatientInfoViewModel @Inject constructor(
                     return@launch
                 }
 
+                // 현재 환자 ID 저장
+                currentPatientId = patientId.toLong()
                 Log.d(TAG, "loadPatientInfo() - 환자 정보 로드 시작 (patientId: $patientId)")
 
                 getPatientInfoUseCase(patientId).collectLatest { result ->
@@ -202,16 +216,33 @@ class PatientInfoViewModel @Inject constructor(
         checkHealthPermissions()
     }
 
-    // 건강 데이터 로드
+    // 건강 데이터 로드 + 서버 동기화
     private fun loadHealthData() {
         viewModelScope.launch {
             try {
                 Log.d(TAG, "loadHealthData() - 건강 데이터 로드 시작")
 
                 getHealthDataUseCase().collectLatest { result ->
-                    result.onSuccess { healthData ->
-                        Log.d(TAG, "loadHealthData() - 건강 데이터 조회 성공: $healthData")
-                        _uiState.value = _uiState.value.copy(healthData = healthData)
+                    result.onSuccess { localHealthData ->
+                        Log.d(TAG, "loadHealthData() - 건강 데이터 조회 성공: $localHealthData")
+                        _uiState.value = _uiState.value.copy(healthData = localHealthData)
+
+                        // 🔁 서버에 동기화
+                        val pid = currentPatientId
+                        if (pid != null && localHealthData != null) {
+                            launch {
+                                // LocalHealthData → 도메인 모델로 변환
+                                val domainData = localHealthData.toDomain()
+
+                                uploadHealthDataUseCase(pid, domainData)
+                                    .onSuccess { message ->
+                                        Log.d(TAG, "HealthData 서버 업로드 성공: $message")
+                                    }
+                                    .onFailure { e ->
+                                        Log.e(TAG, "HealthData 서버 업로드 실패", e)
+                                    }
+                            }
+                        }
                     }.onFailure { exception ->
                         Log.e(TAG, "loadHealthData() - 건강 데이터 조회 실패", exception)
                         // 건강 데이터 조회 실패는 치명적이지 않으므로 에러 표시하지 않음
@@ -221,6 +252,149 @@ class PatientInfoViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "loadHealthData() - 예외 발생", e)
                 _uiState.value = _uiState.value.copy(healthData = null)
+            }
+        }
+    }
+
+    // 수동 동기화 함수 (버튼으로 호출 가능)
+    fun syncHealthDataToServer() {
+        viewModelScope.launch {
+            val pid = currentPatientId
+            if (pid == null) {
+                Log.w(TAG, "syncHealthDataToServer() - 환자 ID가 없습니다")
+                return@launch
+            }
+
+            val localHealthData = _uiState.value.healthData
+            if (localHealthData == null) {
+                Log.w(TAG, "syncHealthDataToServer() - 건강 데이터가 없습니다")
+                return@launch
+            }
+
+            try {
+                // LocalHealthData → 도메인 모델로 변환
+                val domainData = localHealthData.toDomain()
+
+                uploadHealthDataUseCase(pid, domainData)
+                    .onSuccess { message ->
+                        Log.d(TAG, "수동 동기화 성공: $message")
+                        // TODO: UI 업데이트 (Toast 등)
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "수동 동기화 실패", e)
+                        // TODO: 에러 처리
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "syncHealthDataToServer() - 예외 발생", e)
+            }
+        }
+    }
+
+    /**
+     * 서버에서 건강 데이터 조회
+     * @param type 조회할 데이터 종류 (null이면 전체 조회)
+     * @param from 조회 시작 날짜 (yyyyMMdd)
+     * @param to 조회 종료 날짜 (yyyyMMdd)
+     * @param sort 정렬 기준 (기본: measuredAt,desc)
+     */
+    fun getHealthDataFromServer(
+        type: HealthDataType? = null,
+        from: String? = null,
+        to: String? = null,
+        sort: String = "measuredAt,desc"
+    ) {
+        viewModelScope.launch {
+            val pid = currentPatientId
+            if (pid == null) {
+                Log.w(TAG, "getHealthDataFromServer() - 환자 ID가 없습니다")
+                return@launch
+            }
+
+            try {
+                getHealthDataFromServerUseCase(
+                    patientId = pid,
+                    type = type,
+                    from = from,
+                    to = to,
+                    sort = sort
+                ).onSuccess { response ->
+                    Log.d(TAG, "서버에서 건강 데이터 조회 성공: ${response.data.records.size}개 레코드")
+                    Log.d(TAG, "응답 데이터: ${response.data}")
+                    // TODO: UI 업데이트 (필요시 UiState에 서버 데이터 필드 추가)
+                }.onFailure { exception ->
+                    Log.e(TAG, "서버에서 건강 데이터 조회 실패", exception)
+                    // TODO: 에러 처리
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "getHealthDataFromServer() - 예외 발생", e)
+            }
+        }
+    }
+
+    /**
+     * 서버에서 건강 데이터 요약 통계 조회 (일별 단위)
+     * @param type 통계할 데이터 종류 (null이면 전체)
+     * @param from 조회 시작 날짜 (yyyyMMdd)
+     * @param to 조회 종료 날짜 (yyyyMMdd)
+     */
+    fun getHealthDataSummary(
+        type: HealthDataType? = null,
+        from: String? = null,
+        to: String? = null
+    ) {
+        viewModelScope.launch {
+            val pid = currentPatientId
+            if (pid == null) {
+                Log.w(TAG, "getHealthDataSummary() - 환자 ID가 없습니다")
+                return@launch
+            }
+
+            try {
+                getHealthDataSummaryUseCase(
+                    patientId = pid,
+                    type = type,
+                    from = from,
+                    to = to
+                ).onSuccess { response ->
+                    Log.d(TAG, "건강 데이터 요약 조회 성공: ${response.data.summary.size}개 일별 요약")
+                    Log.d(TAG, "요약 데이터: ${response.data}")
+                    // TODO: UI 업데이트 (필요시 UiState에 요약 데이터 필드 추가)
+                }.onFailure { exception ->
+                    Log.e(TAG, "건강 데이터 요약 조회 실패", exception)
+                    // TODO: 에러 처리
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "getHealthDataSummary() - 예외 발생", e)
+            }
+        }
+    }
+
+    /**
+     * 건강 데이터 삭제
+     * @param healthDataId 삭제할 건강 데이터 ID
+     */
+    fun deleteHealthData(healthDataId: Long) {
+        viewModelScope.launch {
+            val pid = currentPatientId
+            if (pid == null) {
+                Log.w(TAG, "deleteHealthData() - 환자 ID가 없습니다")
+                return@launch
+            }
+
+            try {
+                deleteHealthDataUseCase(
+                    patientId = pid,
+                    healthDataId = healthDataId
+                ).onSuccess { message ->
+                    Log.d(TAG, "건강 데이터 삭제 성공: $message")
+                    // TODO: UI 업데이트 (Toast 등)
+                    // TODO: 데이터 목록 새로고침
+                }.onFailure { exception ->
+                    Log.e(TAG, "건강 데이터 삭제 실패", exception)
+                    // TODO: 에러 처리
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteHealthData() - 예외 발생", e)
             }
         }
     }
