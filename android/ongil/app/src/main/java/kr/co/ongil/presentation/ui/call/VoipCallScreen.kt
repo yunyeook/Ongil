@@ -131,13 +131,6 @@ fun VoipCallScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            // 번호
-            Text(
-                text = targetPhone,
-                color = Color(0xFF9FA9B8),
-                fontSize = 14.sp
-            )
-
             Spacer(Modifier.height(24.dp))
 
             // 통화 시간
@@ -353,13 +346,6 @@ private fun VoipCallScreenPreviewContent(
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
-            )
-
-            // 번호
-            Text(
-                text = targetPhone,
-                color = Color(0xFF9FA9B8),
-                fontSize = 14.sp
             )
 
             Spacer(Modifier.height(24.dp))
