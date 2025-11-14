@@ -125,26 +125,42 @@ class PhoneDataSyncManager @Inject constructor(
      *
      * 앱 시작 시 한 번 호출 (폰에서 이미 보낸 데이터 확인)
      */
+    /**
+     * 현재 저장된 데이터 수동으로 가져오기
+     *
+     * 앱 시작 시 한 번 호출 (폰에서 이미 보낸 데이터 확인)
+     */
     suspend fun fetchCurrentLoginData(): WearLoginData? {
         return try {
-            val dataItems = dataClient.getDataItems(
-                com.google.android.gms.wearable.WearableUris.fromPath(LOGIN_DATA_PATH)
-            ).await()
+            // getDataItems()를 인자 없이 호출 (모든 데이터 가져오기)
+            val dataItems = dataClient.getDataItems().await()
 
-            if (dataItems.count > 0) {
-                val dataItem = dataItems.first()
-                val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+            // LOGIN_DATA_PATH와 일치하는 항목 찾기
+            var result: WearLoginData? = null
 
-                WearLoginData(
-                    accessToken = dataMap.getString(KEY_ACCESS_TOKEN) ?: "",
-                    refreshToken = dataMap.getString(KEY_REFRESH_TOKEN) ?: "",
-                    userId = dataMap.getString(KEY_USER_ID) ?: "",
-                    userType = dataMap.getString(KEY_USER_TYPE) ?: "",
-                    selectedPatientId = dataMap.getString(KEY_SELECTED_PATIENT_ID)
-                )
-            } else {
-                null
+            for (i in 0 until dataItems.count) {
+                val dataItem = dataItems.get(i)
+
+                // path 확인
+                if (dataItem.uri.path == LOGIN_DATA_PATH) {
+                    val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+
+                    result = WearLoginData(
+                        accessToken = dataMap.getString(KEY_ACCESS_TOKEN) ?: "",
+                        refreshToken = dataMap.getString(KEY_REFRESH_TOKEN) ?: "",
+                        userId = dataMap.getString(KEY_USER_ID) ?: "",
+                        userType = dataMap.getString(KEY_USER_TYPE) ?: "",
+                        selectedPatientId = dataMap.getString(KEY_SELECTED_PATIENT_ID)
+                    )
+                    break
+                }
             }
+
+            // DataItemBuffer 닫기 (메모리 누수 방지)
+            dataItems.release()
+
+            result
+
         } catch (e: Exception) {
             Log.e(TAG, "데이터 가져오기 에러", e)
             null
