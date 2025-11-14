@@ -12,22 +12,10 @@ import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
+import org.webrtc.audio.JavaAudioDeviceModule
 
 /**
  * 우리 앱 VOIP용 WebRTC 클라이언트 (음성 전용)
- *
- * - TURN/STUN 정보(ICE 서버 리스트)를 받아 PeerConnection 초기화
- * - Offer / Answer 생성
- * - Remote SDP / ICE Candidate 설정
- * - 실제 시그널링 전송(WebSocket 등)은 외부(뷰모델/별도 클래스)에서 처리
- *
- * 사용 흐름 (ViewModel 기준):
- *  1) getTurnCredentials()로 TURN 정보 받음
- *  2) TURN → IceServer 리스트 만든 후 webRtcCallClient.init(iceServers)
- *  3) 발신자: createOffer { sdp -> 서버로 전송 }
- *  4) 수신자: setRemoteDescription(offerSdp) 후 createAnswer { sdp -> 서버로 전송 }
- *  5) 서로 addRemoteIceCandidate(...) 호출
- *  6) 통화 종료 시 endCall()
  */
 class WebRtcCallClient @Inject constructor(
     @ApplicationContext private val context: Context
@@ -44,6 +32,12 @@ class WebRtcCallClient @Inject constructor(
     // PeerConnection 상태 변경 콜백
     private var onPeerConnectionStateChange: ((PeerConnection.PeerConnectionState) -> Unit)? = null
 
+    // ICE Candidate 대기열 (Remote Description 설정 전까지 보관)
+    private val pendingIceCandidates = mutableListOf<IceCandidate>()
+
+    // Remote Description 설정 여부 플래그
+    private var remoteDescriptionSet = false
+
     fun setOnLocalIceCandidateListener(listener: (IceCandidate) -> Unit) {
         onLocalIceCandidate = listener
     }
@@ -52,32 +46,39 @@ class WebRtcCallClient @Inject constructor(
         onPeerConnectionStateChange = listener
     }
 
+
+
+
     /**
      * ICE 서버 정보로 WebRTC 초기화
      * - 반드시 Offer/Answer 생성 전에 한 번 호출
      */
     fun init(iceServers: List<PeerConnection.IceServer>) {
         if (factory != null && peer != null) {
-            Log.d(TAG, "WebRTC already initialized")
+            Log.d(TAG, "init() called but WebRTC already initialized")
             return
         }
 
-        // 1) 전역 초기화
-        val initOptions = PeerConnectionFactory.InitializationOptions
-            .builder(context)
-            .createInitializationOptions()
-        PeerConnectionFactory.initialize(initOptions)
+        // ✅ ICE 관련 변수 초기화
+        pendingIceCandidates.clear()
+        remoteDescriptionSet = false
 
-        // 2) Factory 생성
-        factory = PeerConnectionFactory.builder()
-            .createPeerConnectionFactory()
+        Log.d(
+            TAG,
+            "Initializing WebRTC with iceServers=${iceServers.joinToString { it.uri }}"
+        )
 
-        // 3) 오디오 Source/Track 생성
+        // 1) Factory 생성 (AudioDeviceModule 포함)
+        factory = buildPeerConnectionFactory()
+
+        // 2) 오디오 Source/Track 생성
         val audioConstraints = MediaConstraints()
         audioSource = factory?.createAudioSource(audioConstraints)
-        audioTrack = factory?.createAudioTrack(AUDIO_TRACK_ID, audioSource)
+        audioTrack = factory?.createAudioTrack(AUDIO_TRACK_ID, audioSource).apply {
+            this?.setEnabled(true) // 🔹 명시적으로 활성화
+        }
 
-        // 4) PeerConnection 생성 (Unified Plan SDP 사용)
+        // 3) PeerConnection 생성 (Unified Plan SDP 사용)
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
         }
@@ -85,8 +86,18 @@ class WebRtcCallClient @Inject constructor(
             rtcConfig,
             object : PeerConnection.Observer {
                 override fun onIceCandidate(candidate: IceCandidate) {
-                    Log.d(TAG, "Local ICE candidate: $candidate")
-                    onLocalIceCandidate?.invoke(candidate)
+                    Log.d(TAG, "🧊 Local ICE candidate generated: type=${candidate.sdp}")
+
+                    // ✅ Remote Description 설정 여부 확인
+                    if (remoteDescriptionSet) {
+                        // 이미 설정됨 → 즉시 전송
+                        onLocalIceCandidate?.invoke(candidate)
+                        Log.d(TAG, "📤 ICE candidate 즉시 전송")
+                    } else {
+                        // 아직 미설정 → 대기열에 저장
+                        pendingIceCandidates.add(candidate)
+                        Log.d(TAG, "📦 ICE candidate 대기열 추가 (대기: ${pendingIceCandidates.size}개)")
+                    }
                 }
 
                 override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
@@ -112,17 +123,23 @@ class WebRtcCallClient @Inject constructor(
                 override fun onRenegotiationNeeded() {}
                 override fun onAddStream(p0: org.webrtc.MediaStream) {}
                 override fun onRemoveStream(p0: org.webrtc.MediaStream) {}
+
                 override fun onAddTrack(
-                    p0: org.webrtc.RtpReceiver,
-                    p1: Array<out org.webrtc.MediaStream>
-                ) {}
+                    receiver: org.webrtc.RtpReceiver,
+                    mediaStreams: Array<out org.webrtc.MediaStream>
+                ) {
+                    Log.d(TAG, "onAddTrack() called. receiver=$receiver, streams=${mediaStreams.size}")
+                    // 오디오 전용일 경우, 별도 renderer 없이도 기본 AudioDeviceModule이 재생 처리
+                }
             }
         )
 
-        // 5) Unified Plan에서는 addTrack() 사용 (addStream 대신)
+        // 4) Unified Plan에서는 addTrack() 사용
         audioTrack?.let { track ->
-            peer?.addTrack(track, listOf(LOCAL_STREAM_ID))
-            Log.d(TAG, "Audio track added to PeerConnection")
+            val sender = peer?.addTrack(track, listOf(LOCAL_STREAM_ID))
+            Log.d(TAG, "Audio track added to PeerConnection. sender=$sender")
+        } ?: run {
+            Log.e(TAG, "Audio track is null, WebRTC init may be wrong")
         }
 
         Log.d(TAG, "WebRTC initialized with ${iceServers.size} ICE servers")
@@ -133,21 +150,32 @@ class WebRtcCallClient @Inject constructor(
      * - init() 이후 호출
      * - 콜백으로 넘어오는 SDP를 시그널링 서버로 보내야 함
      */
+
     fun createOffer(onSdpReady: (SessionDescription) -> Unit) {
         val pc = peer ?: run {
-            Log.e(TAG, "PeerConnection is null in createOffer")
+            Log.e(TAG, "PeerConnection is null in createOffer. Did you call init()?")
             return
         }
 
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"))
         }
 
+        Log.d(TAG, "createOffer() called")
         pc.createOffer(object : SimpleSdpObserver() {
             override fun onCreateSuccess(sdp: SessionDescription) {
-                Log.d(TAG, "Offer created")
-                pc.setLocalDescription(this, sdp)
-                onSdpReady(sdp)
+                Log.d(TAG, "Offer created: type=${sdp.type}, length=${sdp.description.length}")
+                pc.setLocalDescription(object : SimpleSdpObserver() {
+                    override fun onSetSuccess() {
+                        Log.d(TAG, "Local SDP set success (offer)")
+                        onSdpReady(sdp)
+                    }
+
+                    override fun onSetFailure(reason: String) {
+                        Log.e(TAG, "Local SDP set failure (offer): $reason")
+                    }
+                }, sdp)
             }
 
             override fun onCreateFailure(error: String) {
@@ -160,21 +188,32 @@ class WebRtcCallClient @Inject constructor(
      * 수신자: Answer 생성
      * - remote Offer를 setRemoteDescription 한 뒤 호출
      */
+
     fun createAnswer(onSdpReady: (SessionDescription) -> Unit) {
         val pc = peer ?: run {
-            Log.e(TAG, "PeerConnection is null in createAnswer")
+            Log.e(TAG, "PeerConnection is null in createAnswer. Did you call init() and setRemoteDescription(offer)?")
             return
         }
 
         val constraints = MediaConstraints().apply {
             mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"))
         }
 
+        Log.d(TAG, "createAnswer() called")
         pc.createAnswer(object : SimpleSdpObserver() {
             override fun onCreateSuccess(sdp: SessionDescription) {
-                Log.d(TAG, "Answer created")
-                pc.setLocalDescription(this, sdp)
-                onSdpReady(sdp)
+                Log.d(TAG, "Answer created: type=${sdp.type}, length=${sdp.description.length}")
+                pc.setLocalDescription(object : SimpleSdpObserver() {
+                    override fun onSetSuccess() {
+                        Log.d(TAG, "Local SDP set success (answer)")
+                        onSdpReady(sdp)
+                    }
+
+                    override fun onSetFailure(reason: String) {
+                        Log.e(TAG, "Local SDP set failure (answer): $reason")
+                    }
+                }, sdp)
             }
 
             override fun onCreateFailure(error: String) {
@@ -185,28 +224,54 @@ class WebRtcCallClient @Inject constructor(
 
     /**
      * 원격 SDP 설정 (Offer 또는 Answer)
-     * - type: "offer" 또는 "answer"
      */
+
     fun setRemoteDescription(type: SessionDescription.Type, sdp: String) {
         val pc = peer ?: run {
-            Log.e(TAG, "PeerConnection is null in setRemoteDescription")
+            Log.e(TAG, "PeerConnection is null in setRemoteDescription. Did you call init()?")
             return
         }
 
+        Log.d(TAG, "setRemoteDescription() type=$type, length=${sdp.length}")
         val desc = SessionDescription(type, sdp)
-        pc.setRemoteDescription(object : SimpleSdpObserver() {}, desc)
+        pc.setRemoteDescription(object : SimpleSdpObserver() {
+            override fun onSetSuccess() {
+                Log.d(TAG, "✅ Remote SDP set success: $type")
+
+                // ✅ 플래그 설정
+                remoteDescriptionSet = true
+
+                // ✅ 대기 중이던 ICE candidates 일괄 전송
+                if (pendingIceCandidates.isNotEmpty()) {
+                    Log.d(TAG, "📤 대기 중이던 ICE candidates 전송 (${pendingIceCandidates.size}개)")
+
+                    for (candidate in pendingIceCandidates) {
+                        onLocalIceCandidate?.invoke(candidate)
+                    }
+
+                    Log.d(TAG, "✅ 대기 중이던 ICE candidates 전송 완료")
+                    pendingIceCandidates.clear()  // 대기열 비우기
+                }
+            }
+
+            override fun onSetFailure(reason: String) {
+                Log.e(TAG, "Remote SDP set failure ($type): $reason")
+            }
+        }, desc)
     }
 
     /**
      * 원격 ICE Candidate 추가
-     * - 시그널링 서버를 통해 받은 candidate 정보를 그대로 넣어주면 됨
      */
     fun addRemoteIceCandidate(sdpMid: String?, sdpMLineIndex: Int, candidate: String) {
         val pc = peer ?: run {
-            Log.e(TAG, "PeerConnection is null in addRemoteIceCandidate")
+            Log.e(TAG, "PeerConnection is null in addRemoteIceCandidate. Did you call init()?")
             return
         }
-        pc.addIceCandidate(IceCandidate(sdpMid, sdpMLineIndex, candidate))
+        Log.d(TAG, "addRemoteIceCandidate() mid=$sdpMid, line=$sdpMLineIndex, candidateLength=${candidate.length}")
+        val ice = IceCandidate(sdpMid, sdpMLineIndex, candidate)
+        val success = pc.addIceCandidate(ice)
+        Log.d(TAG, "addIceCandidate success=$success")
     }
 
     /**
@@ -214,7 +279,7 @@ class WebRtcCallClient @Inject constructor(
      */
     fun endCall() {
         try {
-            Log.d(TAG, "endCall()")
+            Log.d(TAG, "endCall() called. Releasing WebRTC resources.")
             peer?.close()
             audioTrack?.dispose()
             audioSource?.dispose()
@@ -226,6 +291,10 @@ class WebRtcCallClient @Inject constructor(
             audioTrack = null
             audioSource = null
             factory = null
+
+            // ✅ ICE 관련 변수 초기화
+            pendingIceCandidates.clear()
+            remoteDescriptionSet = false
         }
     }
 
@@ -248,5 +317,26 @@ class WebRtcCallClient @Inject constructor(
         private const val TAG = "WebRtcCallClient"
         private const val LOCAL_STREAM_ID = "LOCAL_AUDIO_STREAM"
         private const val AUDIO_TRACK_ID = "AUDIO_TRACK"
+    }
+
+
+    private fun buildPeerConnectionFactory(): PeerConnectionFactory {
+        // WebRTC 초기화
+        val initOptions = PeerConnectionFactory.InitializationOptions
+            .builder(context)
+            .setEnableInternalTracer(true)
+            .createInitializationOptions()
+        PeerConnectionFactory.initialize(initOptions)
+
+        // AudioDeviceModule 설정 (마이크/스피커 연결)
+        val adm = JavaAudioDeviceModule.builder(context)
+            .setUseHardwareAcousticEchoCanceler(true)
+            .setUseHardwareNoiseSuppressor(true)
+            .createAudioDeviceModule()
+
+        return PeerConnectionFactory
+            .builder()
+            .setAudioDeviceModule(adm)
+            .createPeerConnectionFactory()
     }
 }
