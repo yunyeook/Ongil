@@ -290,6 +290,7 @@
     let localStream = null;
     let iceServers = null;
     let peerUserId = null;  // ✅ 통화 상대방 ID (세션 전체에서 사용)
+    let currentCallStatus = null; // ✅ 서버 CallStatus 추적 (CREATED/RINGING/CONNECTED/...)
 
     // 로그 함수
     function log(message, type = 'info') {
@@ -307,7 +308,7 @@
         document.getElementById('logs').innerHTML = '';
     }
 
-    // 상태 업데이트
+    // 상태 업데이트 (UI)
     function updateAuthStatus(status, message) {
         const statusDiv = document.getElementById('authStatus');
         statusDiv.className = `status ${status}`;
@@ -324,6 +325,42 @@
         const statusDiv = document.getElementById('wsStatus');
         statusDiv.className = `status ${status}`;
         statusDiv.textContent = message;
+    }
+
+    // ✅ 서버 통화 상태 업데이트 (REST API)
+    async function updateCallStatusOnServer(newStatus) {
+        if (!currentCallId) {
+            log('⚠️ 서버 상태 업데이트 실패: currentCallId가 없습니다', 'warn');
+            return;
+        }
+
+        const serverUrl = document.getElementById('serverUrl').value;
+
+        try {
+            log(`🌐 서버 통화 상태 업데이트 요청: callId=${currentCallId}, status=${newStatus}`, 'info');
+
+            const response = await fetch(`${serverUrl}/api/v1/calls/${currentCallId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                log(`❌ 서버 상태 업데이트 실패: ${response.status} - ${text}`, 'error');
+                return;
+            }
+
+            const data = await response.json();
+            const updated = data.data;
+            currentCallStatus = updated.status;
+            log(`✅ 서버 상태 업데이트 성공: ${updated.status}`, 'success');
+        } catch (e) {
+            log(`❌ 서버 상태 업데이트 중 예외 발생: ${e.message}`, 'error');
+        }
     }
 
     // 로그인
@@ -505,7 +542,7 @@
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`
                 },
-                body: JSON.stringify({ receiverId: parseInt(receiverId), callType })
+                body: JSON.stringify({ receiverId: parseInt(receiverId, 10), callType })
             });
 
             if (!response.ok) {
@@ -517,8 +554,9 @@
 
             currentCallId = call.id;
             currentSessionId = call.sessionId;
+            currentCallStatus = call.status || 'RINGING';
 
-            log(`✅ 통화 요청 성공! Call ID: ${currentCallId}`, 'success');
+            log(`✅ 통화 요청 성공! Call ID: ${currentCallId}, status=${currentCallStatus}`, 'success');
             updateCallStatus('calling', `통화 요청 중... (Call ID: ${currentCallId})`);
 
             // WebRTC 초기화
@@ -581,30 +619,30 @@
                 peerConnection.addTrack(track, localStream);
                 log(`📤 트랙 추가: ${track.kind}`, 'info');
             });
-            
+
             peerConnection.oniceconnectionstatechange = () => {
                 const state = peerConnection.iceConnectionState;
                 log(`🧊 ICE Connection State: ${state}`, 'info');
-        
+
                 if (state === 'connected' || state === 'completed') {
                     log('✅ ICE 연결 성공!', 'success');
                 } else if (state === 'failed') {
-                  log('❌ ICE 연결 실패!', 'error');
+                    log('❌ ICE 연결 실패!', 'error');
                 } else if (state === 'disconnected') {
                     log('⚠️ ICE 연결 끊김', 'warn');
                 }
             };
-    
+
             peerConnection.onconnectionstatechange = () => {
                 const state = peerConnection.connectionState;
                 log(`🔗 Connection State: ${state}`, 'info');
-        
+
                 if (state === 'connected') {
-                   log('✅✅✅ WebRTC P2P 연결 완료!', 'success');
+                    log('✅✅✅ WebRTC P2P 연결 완료!', 'success');
                 } else if (state === 'failed') {
                     log('❌❌❌ WebRTC 연결 실패', 'error');
                 }
-            };    
+            };
 
             // ICE candidate 이벤트
             peerConnection.onicecandidate = (event) => {
@@ -640,21 +678,6 @@
             peerConnection.ontrack = (event) => {
                 log('📹 원격 미디어 스트림 수신', 'success');
                 document.getElementById('remoteVideo').srcObject = event.streams[0];
-            };
-
-            // 연결 상태 변화 모니터링 (디버깅용)
-            peerConnection.onconnectionstatechange = () => {
-                log(`🔗 Connection State: ${peerConnection.connectionState}`, 'info');
-                if (peerConnection.connectionState === 'connected') {
-                    log('✅ WebRTC P2P 연결 완료!', 'success');
-                } else if (peerConnection.connectionState === 'failed') {
-                    log('❌ WebRTC 연결 실패', 'error');
-                }
-            };
-
-            // ICE 연결 상태 모니터링
-            peerConnection.oniceconnectionstatechange = () => {
-                log(`🧊 ICE Connection State: ${peerConnection.iceConnectionState}`, 'info');
             };
 
             // ICE Gathering 상태 모니터링
@@ -712,6 +735,7 @@
                 log(`📞 수신 통화: Call ID ${signal.callId}`, 'success');
                 updateCallStatus('calling', `수신 통화 (Call ID: ${signal.callId})`);
                 currentCallId = signal.callId;
+                currentCallStatus = 'RINGING';
 
                 // ✅ 통화 상대방 ID 저장 (수신자가 받을 때)
                 peerUserId = signal.fromUserId;
@@ -723,13 +747,16 @@
 
             case 'ACCEPT':
                 log('✅ 상대방이 통화를 수락했습니다', 'success');
+                currentCallStatus = 'CONNECTED';
                 updateCallStatus('connected', '통화 연결 중...');
                 break;
 
             case 'REJECT':
                 log('❌ 상대방이 통화를 거절했습니다', 'warn');
                 updateCallStatus('disconnected', '통화 거절됨');
-                hangup();
+                // 상대방이 이미 서버 상태를 REJECTED로 변경했으므로 여기서는 UI/리소스 정리만 수행
+                cleanupCall();
+                disconnectWebSocket();
                 break;
 
             case 'OFFER':
@@ -812,6 +839,7 @@
             sdp: signal.sdp
         }));
 
+        currentCallStatus = 'CONNECTED';
         log('✅ 통화 연결 완료', 'success');
         updateCallStatus('connected', '통화 중');
     }
@@ -830,14 +858,21 @@
     }
 
     // 통화 수락
-    function acceptCall() {
+    async function acceptCall() {
         log('✅ 통화 수락', 'success');
+
+        // 1) 서버 상태 CONNECTED로 업데이트
+        await updateCallStatusOnServer('CONNECTED');
+        currentCallStatus = 'CONNECTED';
+
+        // 2) UI 상태
         updateCallStatus('connected', '통화 중');
 
         document.getElementById('acceptBtn').disabled = true;
         document.getElementById('rejectBtn').disabled = true;
         document.getElementById('hangupBtn').disabled = false;
 
+        // 3) 시그널 전송
         sendSignal({
             type: 'ACCEPT',
             callId: currentCallId,
@@ -847,13 +882,20 @@
     }
 
     // 통화 거절
-    function rejectCall() {
+    async function rejectCall() {
         log('❌ 통화 거절', 'warn');
+
+        // 1) 서버 상태 REJECTED로 업데이트
+        await updateCallStatusOnServer('REJECTED');
+        currentCallStatus = 'REJECTED';
+
+        // 2) UI
         updateCallStatus('disconnected', '통화 거절됨');
 
         document.getElementById('acceptBtn').disabled = true;
         document.getElementById('rejectBtn').disabled = true;
 
+        // 3) 시그널 전송
         sendSignal({
             type: 'REJECT',
             callId: currentCallId,
@@ -896,15 +938,27 @@
         currentCallId = null;
         currentSessionId = null;
         peerUserId = null;
+        currentCallStatus = null;
 
         log('✅ 통화 정리 완료', 'success');
     }
 
     // 통화 종료 (사용자가 직접 종료 버튼을 눌렀을 때)
-    function hangup() {
+    async function hangup() {
         log('📴 통화 종료 요청', 'info');
 
-        // HANGUP 신호 전송
+        // 1) 서버 상태 결정 (연결 전이면 CANCELED, 연결 후면 ENDED)
+        let statusForHangup = 'CANCELED';
+        if (currentCallStatus === 'CONNECTED') {
+            statusForHangup = 'ENDED';
+        } else if (currentCallStatus === 'RINGING') {
+            statusForHangup = 'CANCELED';
+        }
+
+        await updateCallStatusOnServer(statusForHangup);
+        currentCallStatus = statusForHangup;
+
+        // 2) HANGUP 신호 전송
         if (stompClient && stompClient.connected && currentCallId) {
             sendSignal({
                 type: 'HANGUP',
@@ -915,7 +969,7 @@
             log('📤 HANGUP 신호 전송 완료', 'info');
         }
 
-        // 리소스 정리
+        // 3) 리소스 정리
         cleanupCall();
 
         // WebSocket 연결 종료 (테스트 페이지용: PING/PONG 중단)
