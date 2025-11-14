@@ -36,7 +36,7 @@ class WebRtcCallClient @Inject constructor(
     private val pendingIceCandidates = mutableListOf<IceCandidate>()
 
     // Remote Description 설정 여부 플래그
-    private var remoteDescriptionSet = false
+    private var localDescriptionSet = false
 
     fun setOnLocalIceCandidateListener(listener: (IceCandidate) -> Unit) {
         onLocalIceCandidate = listener
@@ -61,7 +61,7 @@ class WebRtcCallClient @Inject constructor(
 
         // ✅ ICE 관련 변수 초기화
         pendingIceCandidates.clear()
-        remoteDescriptionSet = false
+        localDescriptionSet = false
 
         Log.d(
             TAG,
@@ -89,7 +89,7 @@ class WebRtcCallClient @Inject constructor(
                     Log.d(TAG, "🧊 Local ICE candidate generated: type=${candidate.sdp}")
 
                     // ✅ Remote Description 설정 여부 확인
-                    if (remoteDescriptionSet) {
+                    if (localDescriptionSet) {
                         // 이미 설정됨 → 즉시 전송
                         onLocalIceCandidate?.invoke(candidate)
                         Log.d(TAG, "📤 ICE candidate 즉시 전송")
@@ -169,6 +169,8 @@ class WebRtcCallClient @Inject constructor(
                 pc.setLocalDescription(object : SimpleSdpObserver() {
                     override fun onSetSuccess() {
                         Log.d(TAG, "Local SDP set success (offer)")
+                        localDescriptionSet = true
+                        flushPendingIceCandidates()
                         onSdpReady(sdp)
                     }
 
@@ -207,6 +209,8 @@ class WebRtcCallClient @Inject constructor(
                 pc.setLocalDescription(object : SimpleSdpObserver() {
                     override fun onSetSuccess() {
                         Log.d(TAG, "Local SDP set success (answer)")
+                        localDescriptionSet = true
+                        flushPendingIceCandidates()
                         onSdpReady(sdp)
                     }
 
@@ -238,8 +242,6 @@ class WebRtcCallClient @Inject constructor(
             override fun onSetSuccess() {
                 Log.d(TAG, "✅ Remote SDP set success: $type")
 
-                // ✅ 플래그 설정
-                remoteDescriptionSet = true
 
                 // ✅ 대기 중이던 ICE candidates 일괄 전송
                 if (pendingIceCandidates.isNotEmpty()) {
@@ -258,6 +260,20 @@ class WebRtcCallClient @Inject constructor(
                 Log.e(TAG, "Remote SDP set failure ($type): $reason")
             }
         }, desc)
+    }
+
+    // ✅ ICE candidates 일괄 전송 헬퍼 함수
+    private fun flushPendingIceCandidates() {
+        if (pendingIceCandidates.isEmpty()) return
+
+        Log.d(TAG, "📤 대기 중이던 ICE candidates 전송 (${pendingIceCandidates.size}개)")
+
+        pendingIceCandidates.forEach { candidate ->
+            onLocalIceCandidate?.invoke(candidate)
+        }
+
+        Log.d(TAG, "✅ 대기 중이던 ICE candidates 전송 완료")
+        pendingIceCandidates.clear()
     }
 
     /**
@@ -294,7 +310,7 @@ class WebRtcCallClient @Inject constructor(
 
             // ✅ ICE 관련 변수 초기화
             pendingIceCandidates.clear()
-            remoteDescriptionSet = false
+            localDescriptionSet = false
         }
     }
 

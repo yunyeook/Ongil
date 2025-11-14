@@ -405,9 +405,27 @@ class VoipCallViewModel @Inject constructor(
             }
             "OFFER" -> {
                 signal.sdp?.let { sdp ->
-                    val callId = signal.callId ?: return
-                    val senderId = signal.senderId ?: return
+                    val callId = signal.callId ?: run {
+                        Log.e(TAG, "OFFER received but callId is null")
+                        return
+                    }
+
+                    // ✅ currentCall에서 senderId 가져오기 (이미 loadIncomingCall에서 로드됨)
+                    val call = currentCall
+                    if (call == null || call.id != callId) {
+                        Log.e(TAG, "Cannot process OFFER: currentCall is null or mismatched")
+                        return
+                    }
+
+                    val senderId = call.callerId ?: run {
+                        Log.e(TAG, "Cannot process OFFER: callerId is null in currentCall")
+                        return
+                    }
+
+                    Log.d(TAG, "✅ Processing OFFER from senderId=$senderId")
                     handleOffer(sdp, callId, senderId)
+                } ?: run {
+                    Log.e(TAG, "OFFER received but SDP is null")
                 }
             }
             "ANSWER" -> {
