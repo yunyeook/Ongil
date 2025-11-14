@@ -1,13 +1,13 @@
 package kr.co.ongil.presentation.ui.patientinfo
 
 import kotlinx.serialization.Serializable
-import kr.co.ongil.data.model.health.HealthData
+import kr.co.ongil.data.model.health.LocalHealthData
 
 data class PatientInfoUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val activityLog: ActivityLog? = null,
-    val healthData: HealthData? = null,
+    val healthData: LocalHealthData? = null,
     val healthPermissionGranted: Boolean = false
 )
 
