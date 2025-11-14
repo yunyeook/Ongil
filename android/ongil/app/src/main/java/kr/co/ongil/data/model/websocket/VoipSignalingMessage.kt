@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  */
 enum class SignalingType {
     INCOMING,       // 수신 통화
-    OFFER,          // SDP Offer
+    OFFER,          // SDP Offe
     ANSWER,         // SDP Answer
     ICE,            // ICE Candidate
     ACCEPT,         // 통화 수락
