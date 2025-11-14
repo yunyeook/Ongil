@@ -30,7 +30,15 @@ class VoipCallViewModel @Inject constructor(
     private val voipSignalingService: VoipSignalingService,
     private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
+    private val pendingIceCandidates = mutableListOf<IceCandidateInfo>()
+    private var isRemoteDescriptionSet = false
+    private var isWebRtcInitialized = false
 
+    data class IceCandidateInfo(
+        val candidate: String,
+        val sdpMid: String?,
+        val sdpMLineIndex: Int
+    )
     private val _uiState = MutableStateFlow(VoipCallUiState())
     val uiState: StateFlow<VoipCallUiState> = _uiState.asStateFlow()
 
@@ -120,12 +128,7 @@ class VoipCallViewModel @Inject constructor(
                 setupPeerConnectionStateMonitoring()
 
                 // 4-2. Offer 생성 전 사용자 ID 확인
-                val fromUserId = currentUserId
-                if (fromUserId == null) {
-                    Log.e(TAG, "currentUserId is null → Offer 전송 불가")
-                    _uiState.update { it.copy(error = "로그인 정보 없음 (UserId)") }
-                    return@launch
-                }
+                val fromUserId = currentUserId ?: return@launch
 
                 // 4-3. ICE candidate 리스너 설정
                 setupIceCandidateListener(call.id, call.sessionId, fromUserId, receiverId)
@@ -239,7 +242,9 @@ class VoipCallViewModel @Inject constructor(
                     // ⏱️ 타이머 시작
                     startTimer()
 
-                    setupWebRtcAsCallee()
+                    if (callerId != null) {
+                        ensureWebRtcInitializedForCallee(call.id, callerId)
+                    }
                 }
                 .onFailure { e ->
                     Log.e(TAG, "acceptCall failed: ${e.message}", e)
@@ -535,6 +540,10 @@ class VoipCallViewModel @Inject constructor(
      */
     private suspend fun ensureWebRtcInitializedForCallee(callId: Long, senderId: Long) {
         // 이미 currentCall이 있고 id도 맞으면 그대로 사용
+        if (isWebRtcInitialized) {
+            Log.d(TAG, "WebRTC already initialized, skipping")
+            return
+        }
         if (currentCall == null || currentCall?.id != callId) {
             callRepository.getVoipCall(callId)
                 .onSuccess { call ->
@@ -582,6 +591,7 @@ class VoipCallViewModel @Inject constructor(
                 "[CALLEE] ensureWebRtcInitializedForCallee: myUserId=$myUserId, callerId=$callerId → ICE 전송 설정 못함"
             )
         }
+        isWebRtcInitialized = true
     }
 
     private fun handleOffer(sdp: String, callId: Long, senderId: Long) {
@@ -589,20 +599,17 @@ class VoipCallViewModel @Inject constructor(
 
         viewModelScope.launch {
             // 0. 수신자 WebRTC 초기화 먼저
-            try {
-                ensureWebRtcInitializedForCallee(callId, senderId)
-            } catch (e: Exception) {
-                Log.e(TAG, "ensureWebRtcInitializedForCallee failed: ${e.message}", e)
-                _uiState.update { it.copy(error = "수신자 WebRTC 초기화 실패: ${e.message}") }
-                return@launch
-            }
+            ensureWebRtcInitializedForCallee(callId, senderId)
 
-            // 1. Remote Offer SDP 설정
+            // Remote Description 설정
             webRtcCallClient.setRemoteDescription(
                 type = SessionDescription.Type.OFFER,
                 sdp = sdp
             )
-            Log.d(TAG, "Remote Offer SDP set (callee)")
+            isRemoteDescriptionSet = true  // 플래그 설정
+
+            // 버퍼링된 ICE candidate 처리
+            processPendingIceCandidates()
 
             // 2. Answer 생성 및 전송
             webRtcCallClient.createAnswer { answerSdp ->
@@ -632,7 +639,10 @@ class VoipCallViewModel @Inject constructor(
             type = SessionDescription.Type.ANSWER,
             sdp = sdp
         )
+        isRemoteDescriptionSet = true  // 플래그 설정
         Log.d(TAG, "Remote Answer SDP set")
+
+        processPendingIceCandidates()
 
         // 2. 발신자 측: Answer를 받았으므로 통화 상태를 CONNECTED로 업데이트
         val call = currentCall
@@ -660,56 +670,33 @@ class VoipCallViewModel @Inject constructor(
     }
 
     private fun handleIceCandidate(candidate: String, sdpMid: String?, sdpMLineIndex: Int) {
-        Log.d(TAG, "Handling ICE candidate")
+        if (!isRemoteDescriptionSet) {
+            Log.d(TAG, "Remote description not set yet, buffering ICE candidate")
+            pendingIceCandidates.add(
+                IceCandidateInfo(candidate, sdpMid, sdpMLineIndex)
+            )
+            return
+        }
+
+        Log.d(TAG, "Adding remote ICE candidate")
         webRtcCallClient.addRemoteIceCandidate(sdpMid, sdpMLineIndex, candidate)
+    }
+
+    private fun processPendingIceCandidates() {
+        Log.d(TAG, "Processing ${pendingIceCandidates.size} buffered ICE candidates")
+        pendingIceCandidates.forEach { ice ->
+            webRtcCallClient.addRemoteIceCandidate(
+                ice.sdpMid,
+                ice.sdpMLineIndex,
+                ice.candidate
+            )
+        }
+        pendingIceCandidates.clear()
     }
 
     // =========================================================
     // 🔧 수신자 WebRTC 초기화 (accept 이후 호출)
     // =========================================================
-
-    private fun setupWebRtcAsCallee() {
-        val call = currentCall ?: run {
-            Log.w(TAG, "setupWebRtcAsCallee: currentCall is null")
-            return
-        }
-
-        viewModelScope.launch {
-            runCatching { callRepository.getTurnCredentials().getOrThrow() }
-                .onSuccess { turn ->
-                    val iceServers = turn.toIceServers()
-                    webRtcCallClient.init(iceServers)
-                    Log.d(TAG, "[CALLEE] WebRTC init 완료 in setupWebRtcAsCallee()")
-
-                    // PeerConnection 상태 모니터링 설정
-                    setupPeerConnectionStateMonitoring()
-
-                    // ICE candidate 리스너 설정
-                    val myUserId = currentUserId
-                    val callerId = call.callerId
-
-                    if (myUserId != null && callerId != null) {
-                        setupIceCandidateListener(
-                            call.id,
-                            call.sessionId,
-                            myUserId,
-                            callerId  // 수신자 입장에서 상대방은 발신자
-                        )
-                    } else {
-                        Log.w(
-                            TAG,
-                            "[CALLEE] setupWebRtcAsCallee: currentUserId=$myUserId, callerId=$callerId - ICE candidate 전송 불가"
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    Log.e(TAG, "setupWebRtcAsCallee TURN 실패: ${e.message}", e)
-                    _uiState.update {
-                        it.copy(error = "TURN 정보 조회 실패: ${e.message}")
-                    }
-                }
-        }
-    }
 
     // =========================================================
 
