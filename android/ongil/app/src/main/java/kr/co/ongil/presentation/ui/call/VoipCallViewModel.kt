@@ -299,9 +299,7 @@ class VoipCallViewModel @Inject constructor(
             callRepository.updateVoipCallStatus(call.id, "ENDED")
                 .onSuccess { updated ->
                     currentCall = updated
-                    webRtcCallClient.endCall()
-                    voipSignalingService.disconnect()
-
+                    Log.d(TAG, "✓ Call status updated to ENDED")
                     _uiState.update {
                         it.copy(
                             call = updated,
@@ -310,13 +308,21 @@ class VoipCallViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    Log.e(TAG, "endCall failed: ${e.message}", e)
+                    Log.e(TAG, "endCall failed: ${e.message}, but cleaning up anyway", e)
+                    // 409 에러 등으로 이미 종료된 경우에도 로컬 상태 업데이트
+                    currentCall = call.copy(status = "ENDED")
                     _uiState.update {
                         it.copy(
-                            error = e.message ?: "통화 종료 실패"
+                            call = call.copy(status = "ENDED"),
+                            message = "통화 종료됨"
                         )
                     }
                 }
+
+            // 3. 성공/실패 관계없이 항상 리소스 정리
+            webRtcCallClient.endCall()
+            voipSignalingService.disconnect()
+            Log.d(TAG, "✓ WebRTC and signaling cleaned up")
         }
     }
 
@@ -490,16 +496,24 @@ class VoipCallViewModel @Inject constructor(
                             .onFailure { e ->
                                 Log.e(
                                     TAG,
-                                    "Failed to update call status on HANGUP: ${e.message}",
+                                    "Failed to update call status on HANGUP: ${e.message}, but cleaning up anyway",
                                     e
                                 )
+                                // 409 에러 등으로 이미 종료된 경우에도 로컬 상태 업데이트
+                                currentCall = call.copy(status = "ENDED")
                                 _uiState.update {
                                     it.copy(
+                                        call = call.copy(status = "ENDED"),
                                         message = "상대방이 통화를 종료했습니다.",
                                         shouldFinish = true
                                     )
                                 }
                             }
+
+                        // 성공/실패 관계없이 항상 리소스 정리
+                        webRtcCallClient.endCall()
+                        voipSignalingService.disconnect()
+                        Log.d(TAG, "✓ WebRTC and signaling cleaned up on HANGUP")
                     }
                 } else {
                     _uiState.update {
@@ -508,10 +522,9 @@ class VoipCallViewModel @Inject constructor(
                             shouldFinish = true
                         )
                     }
+                    webRtcCallClient.endCall()
+                    voipSignalingService.disconnect()
                 }
-
-                webRtcCallClient.endCall()
-                voipSignalingService.disconnect()
             }
         }
     }

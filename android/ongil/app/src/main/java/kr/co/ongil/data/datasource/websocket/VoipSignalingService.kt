@@ -26,7 +26,7 @@ class VoipSignalingService @Inject constructor(
         private fun destCallSignal(callId: Long) = "/app/calls/$callId/signal"
     }
 
-    private val callSubscriptions = mutableMapOf<Long, Disposable>()
+    private val callSubscriptions = mutableMapOf<Long, MutableList<Disposable>>()
 
     private val _signalingMessages = MutableSharedFlow<SignalMessage>()
     val signalingMessages: SharedFlow<SignalMessage> = _signalingMessages.asSharedFlow()
@@ -52,7 +52,7 @@ class VoipSignalingService @Inject constructor(
         }
 
         return if (disposable != null) {
-            callSubscriptions[callId] = disposable
+            callSubscriptions[callId] = mutableListOf(disposable)
             Log.d(TAG, "✓ Subscribed to $USER_QUEUE_CALLS for call $callId")
             true
         } else {
@@ -62,7 +62,7 @@ class VoipSignalingService @Inject constructor(
     }
 
     fun unsubscribeFromCall(callId: Long) {
-        callSubscriptions[callId]?.dispose()
+        callSubscriptions[callId]?.forEach { it.dispose() }
         callSubscriptions.remove(callId)
         Log.d(TAG, "Unsubscribed from call $callId")
     }
@@ -220,7 +220,9 @@ class VoipSignalingService @Inject constructor(
     }
 
     fun disconnect() {
-        callSubscriptions.values.forEach { it.dispose() }
+        callSubscriptions.values.forEach { disposables ->
+            disposables.forEach { it.dispose() }
+        }
         callSubscriptions.clear()
         webSocketManager.disconnect()
         Log.d(TAG, "VoipSignalingService disconnected")
