@@ -4,14 +4,17 @@
 -- ==========================================
 --
 -- 사용법:
--- 1. 환자 3명의 ID를 지정 (예: 100, 101, 102)
+-- 1. 환자 4명의 ID를 지정 (예: 100, 101, 102, 103)
 -- 2. 보호자 1명의 ID를 지정 (예: 1)
 -- 3. SQL 실행하면 각 환자별로 다른 유형의 데이터 생성
 --
 -- 환자 유형:
--- - 환자 100: 정상 (LOW 위험) - 안정적, 큰 이슈 없음
--- - 환자 101: 주의 (MEDIUM 위험) - 루틴 변화, 일부 경고
--- - 환자 102: 위험 (HIGH 위험) - 여러 플래그 활성화, 긴급 상황
+-- - 환자 100: 정상 (LOW 위험) - 안정적, 큰 이슈 없음, 건강 데이터 포함
+-- - 환자 101: 주의 (MEDIUM 위험) - 루틴 변화, 일부 경고, 건강 데이터 포함
+-- - 환자 102: 위험 (HIGH 위험) - 여러 플래그 활성화, 긴급 상황, 건강 데이터 포함
+-- - 환자 103: 건강 정보 없음 - 활동 데이터만 있고 건강 데이터 없음 (테스트용)
+--
+-- 중요: 이번 주가 아직 진행 중이므로, 완료된 "지난 주"를 분석합니다.
 -- ==========================================
 
 -- ==========================================
@@ -19,10 +22,11 @@
 -- ==========================================
 DO $$
 DECLARE
-    guardian_id INT := 1;          -- 보호자 ID
-    patient_normal_id INT := 100;  -- 정상 환자 ID
-    patient_warning_id INT := 101; -- 주의 환자 ID
-    patient_danger_id INT := 102;  -- 위험 환자 ID
+    guardian_id INT := 1;              -- 보호자 ID
+    patient_normal_id INT := 100;      -- 정상 환자 ID
+    patient_warning_id INT := 101;     -- 주의 환자 ID
+    patient_danger_id INT := 102;      -- 위험 환자 ID
+    patient_no_health_id INT := 103;   -- 건강 정보 없는 환자 ID (테스트용)
 BEGIN
 
 -- ==========================================
@@ -113,17 +117,17 @@ VALUES (
     NOW() - INTERVAL '8 days'
 ) ON CONFLICT DO NOTHING;
 
--- 주의 환자: 루틴 변화 있음
+-- 주의 환자: 경미한 변화 (MEDIUM 위험도 목표: 플래그 1-2개)
 -- 이번 주
 INSERT INTO dashboard_calc (patient_id, route_lost, safezone_emer, emer_call, sos_sign, safezone_exit, favorite, created_at, updated_at)
 VALUES (
     patient_warning_id,
-    2,
-    4,
-    1,
-    1,
-    '{"LEVEL1": 2, "LEVEL2": 2, "LEVEL3": 0}'::jsonb,
-    '{"집": 20, "마트": 3}'::jsonb,
+    1,  -- 경미한 길 잃음 (이전: 2)
+    2,  -- 안전구역 이탈 2회 (이전: 4, 3 미만으로 조정)
+    0,  -- 긴급 통화 없음 (이전: 1)
+    0,  -- SOS 없음 (이전: 1)
+    '{"LEVEL1": 2, "LEVEL2": 0, "LEVEL3": 0}'::jsonb,
+    '{"집": 20, "마트": 6, "공원": 3}'::jsonb,  -- 다양성 유지
     NOW() - INTERVAL '1 day',
     NOW() - INTERVAL '1 day'
 ) ON CONFLICT DO NOTHING;
@@ -350,13 +354,14 @@ VALUES
 -- 심박수 (정상 범위)
 INSERT INTO health_data (patient_id, type, average, max, min, unit, measured_at, created_at, updated_at)
 VALUES
-    (patient_normal_id, 'HEART_RATE', 72, 95, 60, 'bpm', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-    (patient_normal_id, 'HEART_RATE', 73, 96, 61, 'bpm', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-    (patient_normal_id, 'HEART_RATE', 71, 94, 59, 'bpm', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
-    (patient_normal_id, 'HEART_RATE', 74, 97, 62, 'bpm', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-    (patient_normal_id, 'HEART_RATE', 72, 95, 60, 'bpm', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
-    (patient_normal_id, 'HEART_RATE', 73, 96, 61, 'bpm', NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
-    (patient_normal_id, 'HEART_RATE', 71, 94, 58, 'bpm', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days');
+    -- 심박수 변동성 낮음 (variability = max - min ≈ 25, 정상)
+    (patient_normal_id, 'HEART_RATE', 72, 90, 65, 'bpm', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+    (patient_normal_id, 'HEART_RATE', 73, 91, 66, 'bpm', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+    (patient_normal_id, 'HEART_RATE', 71, 89, 64, 'bpm', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+    (patient_normal_id, 'HEART_RATE', 74, 92, 67, 'bpm', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
+    (patient_normal_id, 'HEART_RATE', 72, 90, 65, 'bpm', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+    (patient_normal_id, 'HEART_RATE', 73, 91, 66, 'bpm', NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
+    (patient_normal_id, 'HEART_RATE', 71, 89, 64, 'bpm', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days');
 
 -- 산소포화도 (정상)
 INSERT INTO health_data (patient_id, type, average, max, min, unit, measured_at, created_at, updated_at)
@@ -459,6 +464,83 @@ VALUES
     (patient_danger_id, 'OXYGEN_SATURATION', 96.6, 98.6, 94.6, '%', NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
     (patient_danger_id, 'OXYGEN_SATURATION', 96.9, 98.9, 94.9, '%', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days');
 
+-- ==========================================
+-- 환자 103: 건강 정보 없는 환자 (HealthData 없음)
+-- 목적: AI가 건강 데이터 없이도 분석을 잘 수행하는지 테스트
+-- ==========================================
+
+-- 1. 사용자 데이터 (환자 103) - 건강 정보 없는 환자
+INSERT INTO users (id, provider, name, birth, phone_number, password, user_type, created_at, updated_at)
+VALUES (
+    patient_no_health_id,
+    'LOCAL',
+    '최건강무',
+    '19500101',
+    '010-3333-0103',
+    '$2a$10$dummyHashedPassword103',
+    'PATIENT',
+    NOW() - INTERVAL '30 days',
+    NOW() - INTERVAL '30 days'
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    birth = EXCLUDED.birth,
+    phone_number = EXCLUDED.phone_number;
+
+-- 2. DashboardCalc (이번 주 & 지난 주) - 중간 위험도
+INSERT INTO dashboard_calc (patient_id, route_lost, safezone_emer, emer_call, sos_sign, safezone_exit, favorite, created_at, updated_at)
+VALUES
+    -- 이번 주
+    (patient_no_health_id, 1, 2, 0, 1, '{"exits": [{"time": "2025-11-13 14:00:00", "level": "SECOND"}]}'::jsonb, '{"집": 18, "마트": 5}'::jsonb, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+    -- 지난 주
+    (patient_no_health_id, 0, 1, 0, 0, '{"exits": [{"time": "2025-11-06 10:00:00", "level": "FIRST"}]}'::jsonb, '{"집": 20, "마트": 6, "공원": 3}'::jsonb, NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days')
+ON CONFLICT DO NOTHING;
+
+-- 3. Abnormal Logs (이번 주 기준)
+INSERT INTO abnormal_logs (
+    patient_id, abnormal_type, safe_zone_level,
+    latitude, longitude, center_latitude, center_longitude,
+    distance_from_center, boundary_radius,
+    elapsed_time, threshold_time,
+    created_at, updated_at
+)
+VALUES
+    -- 지난 주: SAFEZONE_EXIT 1단계 (마포 근처)
+    (patient_no_health_id, 'SAFEZONE_EXIT', 'FIRST',
+     37.5510, 126.9100, 37.5500, 126.9100,
+     150.0, 200.0,
+     NULL, NULL,
+     NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
+
+    -- 이번 주: SAFEZONE_EXIT 2단계 (용산 근처)
+    (patient_no_health_id, 'SAFEZONE_EXIT', 'SECOND',
+     37.5323, 126.9900, 37.5300, 126.9900,
+     220.0, 200.0,
+     NULL, NULL,
+     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+
+    -- 이번 주: 길 잃음(DEVIATE_FROM_THE_PATH) (강남 근처)
+    (patient_no_health_id, 'DEVIATE_FROM_THE_PATH', NULL,
+     37.4979, 127.0276, NULL, NULL,
+     NULL, NULL,
+     NULL, NULL,
+     NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days')
+ON CONFLICT DO NOTHING;
+
+-- 4. SOS Logs (이번 주 기준)
+INSERT INTO sos_logs (guardian_id, patient_id, latitude, longitude, is_responsed, created_at, updated_at)
+VALUES
+    -- 이번 주: 상암동 근처에서 SOS, 보호자 응답함
+    (guardian_id, patient_no_health_id,
+     37.5796, 126.8900,
+     TRUE,
+     NOW() - INTERVAL '3 days',
+     NOW() - INTERVAL '3 days')
+ON CONFLICT DO NOTHING;
+
+-- 5. 건강 데이터 없음
+-- *** 건강 데이터 (health_data)는 의도적으로 추가하지 않음 ***
+-- AI가 활동 데이터만으로도 인사이트를 생성할 수 있는지 테스트
+
 END $$;
 
 -- ==========================================
@@ -470,13 +552,17 @@ BEGIN
     RAISE NOTICE '테스트 데이터 생성 완료!';
     RAISE NOTICE '========================================';
     RAISE NOTICE '환자 ID:';
-    RAISE NOTICE '  - 정상 (LOW): 100';
-    RAISE NOTICE '  - 주의 (MEDIUM): 101';
-    RAISE NOTICE '  - 위험 (HIGH): 102';
+    RAISE NOTICE '  - 정상 (LOW): 100 (건강 데이터 포함)';
+    RAISE NOTICE '  - 주의 (MEDIUM): 101 (건강 데이터 포함)';
+    RAISE NOTICE '  - 위험 (HIGH): 102 (건강 데이터 포함)';
+    RAISE NOTICE '  - 건강 정보 없음: 103 (건강 데이터 없음, 활동만)';
     RAISE NOTICE '';
-    RAISE NOTICE '다음 API로 인사이트 생성:';
+    RAISE NOTICE '다음 API로 인사이트 생성 (완료된 지난 주 분석):';
     RAISE NOTICE '  POST /api/v1/patients/100/insights/weekly';
     RAISE NOTICE '  POST /api/v1/patients/101/insights/weekly';
     RAISE NOTICE '  POST /api/v1/patients/102/insights/weekly';
+    RAISE NOTICE '  POST /api/v1/patients/103/insights/weekly  (건강 정보 없음 테스트)';
+    RAISE NOTICE '';
+    RAISE NOTICE '주의: 이번 주가 아직 진행 중이므로, 완료된 "지난 주"를 분석합니다.';
     RAISE NOTICE '========================================';
 END $$;

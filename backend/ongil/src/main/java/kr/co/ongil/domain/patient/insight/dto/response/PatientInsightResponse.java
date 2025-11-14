@@ -63,14 +63,21 @@ public record PatientInsightResponse(
 
     @Schema(description = "데이터 제약사항 목록")
     @JsonProperty("data_notes")
-    List<String> dataNotes
+    List<String> dataNotes,
+
+    @Schema(description = "데이터 가용성 정보")
+    @JsonProperty("data_availability")
+    InsightDataAvailability dataAvailability
 
 ) {
 
     /**
      * PatientInsight Entity를 PatientInsightResponse로 변환
+     *
+     * @param entity PatientInsight 엔티티
+     * @param dataAvailability 데이터 가용성 정보 (Service 레이어에서 생성)
      */
-    public static PatientInsightResponse from(PatientInsight entity) {
+    public static PatientInsightResponse from(PatientInsight entity, InsightDataAvailability dataAvailability) {
         ObjectMapper mapper = new ObjectMapper();
 
         return new PatientInsightResponse(
@@ -85,7 +92,8 @@ public record PatientInsightResponse(
             parseJsonArray(entity.getWarningSignals(), mapper),
             parseJsonArray(entity.getPossibleInterpretations(), mapper),
             parseJsonArray(entity.getCaregiverSuggestions(), mapper),
-            parseJsonArray(entity.getDataNotes(), mapper)
+            parseJsonArray(entity.getDataNotes(), mapper),
+            dataAvailability
         );
     }
 

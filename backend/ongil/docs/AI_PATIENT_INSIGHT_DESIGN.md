@@ -104,12 +104,33 @@ public record PatientInsightFeatures(
 
 ```java
 public record PeriodInfo(
-    LocalDate currentWeekStart,
-    LocalDate currentWeekEnd,
-    LocalDate previousWeekStart,
-    LocalDate previousWeekEnd
-) {}
+    PeriodType periodType,       // WEEKLY | MONTHLY
+    LocalDate currentStart,      // 분석 대상 기간 시작
+    LocalDate currentEnd,        // 분석 대상 기간 종료
+    LocalDate previousStart,     // 비교 기간 시작
+    LocalDate previousEnd        // 비교 기간 종료
+) {
+    /**
+     * 완료된 지난 주와 그 전 주 기간 정보 생성 (권장)
+     *
+     * 예시: 오늘이 2025-11-14 (목요일)
+     * - current: 2025-11-04(월) ~ 2025-11-10(일) (지난 주, 완료됨)
+     * - previous: 2025-10-28(월) ~ 2025-11-03(일) (그 전 주)
+     */
+    public static PeriodInfo lastCompletedWeek() { ... }
+
+    /**
+     * 완료된 지난 달과 그 전 달 기간 정보 생성 (권장)
+     *
+     * 예시: 오늘이 2025-11-14
+     * - current: 2025-10-01 ~ 2025-10-31 (지난 달, 완료됨)
+     * - previous: 2025-09-01 ~ 2025-09-30 (그 전 달)
+     */
+    public static PeriodInfo lastCompletedMonth() { ... }
+}
 ```
+
+**중요:** 진행 중인 기간(이번 주/이번 달)이 아닌 **완료된 기간**을 분석하는 것을 권장합니다. 불완전한 데이터는 잘못된 패턴 감지를 유발할 수 있습니다.
 
 #### 3.1.2 `ActivityStats`
 
@@ -211,174 +232,172 @@ public record DataAvailability(
 
 #### 3.1.4 `InsightFlags` (핵심!)
 
-**룰 기반으로 판단하는 위험 신호 플래그**
+**룰 기반으로 판단하는 위험 신호 플래그 (심각도 점수 기반)**
+
+각 플래그는 단순 true/false뿐만 아니라 0-10점의 심각도 점수를 가집니다.
+
+**심각도 분류:**
+- **0-3점**: 경미 (정상 또는 가벼운 이상)
+- **4-6점**: 주의 필요
+- **7-10점**: 심각 (즉시 대응 필요)
+
+**최종 위험도 평가: 매트릭스 방식**
+
+```
+           주의(4+) 개수
+           0    1    2    3+
+심각  0    L    L    M    M
+(7+)  1    L    M    H    H
+개수  2+   M    H    H    H
+```
 
 ```java
 public record InsightFlags(
+    // 플래그 활성화 여부
     boolean routineChangeDetected,           // 루틴 변화
     boolean spatialConfusionDetected,        // 공간 인지 혼란
     boolean anxietyOrRiskEscalation,         // 불안/위험 증가
     boolean physicalConditionDrop,           // 컨디션 저하
     boolean sleepActivityCorrelation,        // 수면-활동 상관관계
-    boolean panicResponsePattern             // 패닉 반응 패턴
-) {}
-```
+    boolean panicResponsePattern,            // 패닉 반응 패턴
 
-### 3.2 플래그 판단 로직 (예시)
+    // 각 플래그의 심각도 점수 (0-10점)
+    int routineChangeSeverity,               // 루틴 변화 심각도
+    int spatialConfusionSeverity,            // 공간 혼란 심각도
+    int anxietyEscalationSeverity,           // 불안 증가 심각도
+    int physicalDropSeverity,                // 컨디션 저하 심각도
+    int sleepActivitySeverity,               // 수면-활동 상관 심각도
+    int panicResponseSeverity                // 패닉 반응 심각도
+) {
+    /**
+     * 매트릭스 방식 위험도 평가
+     */
+    public String estimateRiskLevel() {
+        int severe = severeCount();      // 7+ 점수 항목 개수
+        int moderate = moderateCount();  // 4+ 점수 항목 개수
 
-#### 3.2.1 `routineChangeDetected`
-
-```java
-public boolean evaluateRoutineChange(FavoriteStats favorite) {
-    // 1. 상위 3개 목적지 중 2개 이상 바뀜
-    Set<String> currentTop3 = favorite.topCurrentWeek().stream()
-        .limit(3)
-        .map(PlaceFrequency::placeName)
-        .collect(Collectors.toSet());
-
-    Set<String> previousTop3 = favorite.topPreviousWeek().stream()
-        .limit(3)
-        .map(PlaceFrequency::placeName)
-        .collect(Collectors.toSet());
-
-    long commonPlaces = currentTop3.stream()
-        .filter(previousTop3::contains)
-        .count();
-
-    if (commonPlaces <= 1) return true;  // 2개 이상 바뀜
-
-    // 2. 상위 1개 목적지 집중도 70% 이상 (한 곳만 반복)
-    if (!favorite.topCurrentWeek().isEmpty()) {
-        int topVisit = favorite.topCurrentWeek().get(0).visitCount();
-        int totalVisit = favorite.topCurrentWeek().stream()
-            .mapToInt(PlaceFrequency::visitCount)
-            .sum();
-
-        if (totalVisit > 0 && (double) topVisit / totalVisit >= 0.7) {
-            return true;
+        if (severe == 0) {
+            if (moderate <= 1) return "LOW";
+            return "MEDIUM";
         }
-    }
-
-    return false;
-}
-```
-
-#### 3.2.2 `spatialConfusionDetected`
-
-```java
-public boolean evaluateSpatialConfusion(SafezoneExitStats safezone, RouteStats route) {
-    // 1. 안전구역 이탈 + 길찾기 이탈 합이 지난주 대비 +3 이상
-    int currentTotal = safezone.currentWeek() + route.currentWeek();
-    int previousTotal = safezone.previousWeek() + route.previousWeek();
-
-    if (currentTotal - previousTotal >= 3) return true;
-
-    // 2. 안전구역 이탈이 3회 이상이면서, 같은 시간대에 집중
-    if (safezone.currentWeek() >= 3) {
-        // timePatterns에서 특정 시간대(2시간 범위)에 60% 이상 집중 확인
-        for (TimeSlotPattern pattern : safezone.timePatterns()) {
-            if (pattern.concentrationRate() >= 0.6) {
-                return true;
-            }
+        if (severe == 1) {
+            if (moderate <= 1) return "LOW";
+            return moderate == 2 ? "MEDIUM" : "HIGH";
         }
+        // severe >= 2
+        if (moderate == 0) return "MEDIUM";
+        return "HIGH";
+    }
+}
+```
+
+**NULL-SAFE 평가:** 건강 데이터가 없어도 활동 데이터만으로 평가 가능한 플래그는 계속 작동합니다.
+
+### 3.2 플래그 판단 및 심각도 계산 (예시)
+
+각 플래그는 **2단계 평가**를 거칩니다:
+1. **활성화 여부** (boolean): 이상 신호가 있는가?
+2. **심각도 점수** (0-10점): 얼마나 심각한가?
+
+#### 3.2.1 `spatialConfusionDetected` - 공간 혼란 (활동 데이터만 사용)
+
+**건강 데이터 없어도 완전히 평가 가능**
+
+```java
+// 1단계: 플래그 활성화 여부
+public boolean evaluateSpatialConfusion(ActivityStats activity) {
+    int routeLost = activity.route().current();
+    int wanderIncrease = activity.wander().current() - activity.wander().previous();
+
+    // 길 잃음이 2회 이상 또는 배회 증가
+    return routeLost >= 2 || wanderIncrease >= 2;
+}
+
+// 2단계: 심각도 점수 계산 (0-10점)
+private int calculateSpatialConfusionSeverity(ActivityStats activity, boolean detected) {
+    if (!detected) return 0;
+
+    int severity = 0;
+
+    // 길 잃음 빈도 (매우 위험)
+    int routeLost = activity.route().current();
+    if (routeLost >= 4) severity += 5;
+    else if (routeLost >= 3) severity += 4;
+    else if (routeLost >= 2) severity += 3;
+    else severity += 2;
+
+    // 배회 시간
+    double wanderDuration = activity.wander().avgDurationMinutes();
+    if (wanderDuration >= 20.0) severity += 3;
+    else if (wanderDuration >= 10.0) severity += 2;
+    else if (wanderDuration > 0) severity += 1;
+
+    // 야간 배회 (매우 위험)
+    if (activity.wander().nightOccurrences() > 0) severity += 2;
+
+    return Math.min(severity, 10);  // 최대 10점
+}
+```
+
+**예시:**
+- 길 잃음 3회 + 배회 평균 15분 + 야간 배회 1회 → **9점** (심각)
+
+#### 3.2.2 `physicalConditionDrop` - 신체 상태 저하 (건강 데이터 필수)
+
+**건강 데이터 없으면 0점 반환 (NULL-SAFE)**
+
+```java
+// 1단계: 플래그 활성화 여부
+public boolean evaluatePhysicalConditionDrop(HealthStats health) {
+    if (health == null) return false;  // 건강 데이터 없으면 평가 불가
+
+    // 수면 부족 또는 걸음수 급감
+    boolean sleepDrop = health.dataAvailability().sleep()
+        && health.sleep().avgHoursCurrent() != null
+        && health.sleep().avgHoursCurrent() < 5.5;
+
+    boolean stepDrop = health.dataAvailability().steps()
+        && health.steps().changeRate() < -20.0;
+
+    return sleepDrop || stepDrop;
+}
+
+// 2단계: 심각도 점수 계산 (0-10점)
+private int calculatePhysicalDropSeverity(HealthStats health, boolean detected) {
+    if (!detected) return 0;
+    if (health == null) return 0;  // NULL-SAFE
+
+    int severity = 0;
+
+    // 수면 부족 (데이터 있을 때만)
+    if (health.dataAvailability().sleep() && health.sleep().avgHoursCurrent() != null) {
+        double sleepHours = health.sleep().avgHoursCurrent();
+        if (sleepHours < 4.5) severity += 4;
+        else if (sleepHours < 5.5) severity += 2;
+        else if (sleepHours < 6.5) severity += 1;
     }
 
-    return false;
-}
-```
-
-#### 3.2.3 `anxietyOrRiskEscalation`
-
-```java
-public boolean evaluateAnxietyOrRisk(
-    RouteStats route,
-    EmergencyStats emergency,
-    SafezoneExitStats safezone
-) {
-    // 1. 길찾기 이탈 증가 + 응급전화 증가
-    boolean routeIncreased = route.currentWeek() > route.previousWeek();
-    boolean emerCallIncreased = emergency.emerCallCurrent() > emergency.emerCallPrevious();
-
-    if (routeIncreased && emerCallIncreased) return true;
-
-    // 2. 안전구역 이탈 증가 + SOS 증가
-    boolean safezoneIncreased = safezone.currentWeek() > safezone.previousWeek();
-    boolean sosIncreased = emergency.sosSignCurrent() > emergency.sosSignPrevious();
-
-    if (safezoneIncreased && sosIncreased) return true;
-
-    // 3. 응답 안 된 SOS가 2개 이상
-    if (emergency.sosNotResponded() >= 2) return true;
-
-    return false;
-}
-```
-
-#### 3.2.4 `physicalConditionDrop`
-
-```java
-public boolean evaluatePhysicalConditionDrop(
-    SleepStats sleep,
-    StepStats steps
-) {
-    // 1. 수면 평균 1.5시간 이상 감소 + 걸음수 30% 이상 감소
-    boolean sleepDropped = sleep.avgHoursCurrent() != null
-        && sleep.avgHoursPrevious() != null
-        && (sleep.avgHoursPrevious() - sleep.avgHoursCurrent()) >= 1.5;
-
-    boolean stepsDropped = steps.changeRate() <= -0.3;  // -30%
-
-    if (sleepDropped && stepsDropped) return true;
-
-    // 2. 걸음수만 급감 (50% 이상)
-    if (steps.changeRate() <= -0.5) return true;
-
-    return false;
-}
-```
-
-#### 3.2.5 `sleepActivityCorrelation`
-
-```java
-public boolean evaluateSleepActivityCorrelation(
-    SleepStats sleep,
-    RouteStats route,
-    SafezoneExitStats safezone
-) {
-    // 수면 감소 + (길찾기 이탈 OR 안전구역 이탈) 증가
-    if (sleep.avgHoursCurrent() == null || sleep.avgHoursPrevious() == null) {
-        return false;
+    // 걸음수 급감 (데이터 있을 때만)
+    if (health.dataAvailability().steps()) {
+        double stepChangeRate = health.steps().changeRate();
+        if (stepChangeRate < -40.0) severity += 3;
+        else if (stepChangeRate < -20.0) severity += 2;
     }
 
-    boolean sleepDecreased = sleep.avgHoursCurrent() < sleep.avgHoursPrevious();
-    boolean confusionIncreased =
-        (route.currentWeek() > route.previousWeek()) ||
-        (safezone.currentWeek() > safezone.previousWeek());
-
-    return sleepDecreased && confusionIncreased;
-}
-```
-
-#### 3.2.6 `panicResponsePattern`
-
-```java
-public boolean evaluatePanicResponsePattern(
-    HeartRateStats heartRate,
-    EmergencyStats emergency
-) {
-    // 심박 변동성 높음 (>20 bpm) + SOS/응급전화 증가
-    if (heartRate.variabilityCurrent() == null) {
-        return false;
+    // 산소포화도 저하 (데이터 있을 때만)
+    if (health.dataAvailability().oxygen() && health.oxygenSaturation().avgCurrent() != null) {
+        double oxygen = health.oxygenSaturation().avgCurrent();
+        if (oxygen < 94.0) severity += 2;
+        else if (oxygen < 95.0) severity += 1;
     }
 
-    boolean highVariability = heartRate.variabilityCurrent() > 20.0;
-    boolean emergencyIncreased =
-        (emergency.sosSignCurrent() > emergency.sosSignPrevious()) ||
-        (emergency.emerCallCurrent() > emergency.emerCallPrevious());
-
-    return highVariability && emergencyIncreased;
+    return Math.min(severity, 9);  // 최대 9점
 }
 ```
+
+**예시:**
+- 수면 4시간 + 걸음수 -45% + 산소포화도 데이터 없음 → **7점** (심각)
+- 건강 데이터 전혀 없음 → **0점** (평가 불가, 활동 데이터만으로 분석)
 
 ---
 
@@ -392,6 +411,18 @@ public boolean evaluatePanicResponsePattern(
 [역할]
 - 제공된 수치와 패턴 데이터를 바탕으로 환자의 행동 경향과 위험 신호를 **명확하고 쉽게** 설명합니다.
 - 보호자가 실행 가능한 조언을 제공합니다.
+- **심각도 점수**(0-10점)를 참고하여 위험 신호의 우선순위를 판단합니다.
+
+[심각도 점수 해석]
+- 0-3점: 경미 (정상 또는 가벼운 이상)
+- 4-6점: 주의 필요 (모니터링 강화)
+- 7-10점: 심각 (즉시 대응 필요)
+- 심각(7+) 항목이 2개 이상이면 HIGH 위험으로 평가
+
+[데이터 가용성 활용]
+- `data_availability` 필드를 확인하여 어떤 데이터가 있는지 파악하세요.
+- 건강 데이터가 없어도 활동 데이터만으로 충분히 분석 가능합니다.
+- 데이터가 없는 항목에 대해서는 `data_notes`에 명시하세요.
 
 [중요 제약사항]
 1. 절대 질병을 진단하거나 치료를 지시하지 마세요.
@@ -503,12 +534,36 @@ public boolean evaluatePanicResponsePattern(
     }
   },
   "flags": {
+    // 플래그 활성화 여부
     "routine_change_detected": true,
     "spatial_confusion_detected": true,
     "anxiety_or_risk_escalation": true,
     "physical_condition_drop": true,
     "sleep_activity_correlation": true,
-    "panic_response_pattern": false
+    "panic_response_pattern": false,
+
+    // 각 플래그의 심각도 점수 (0-10점)
+    "routine_change_severity": 4,        // 주의
+    "spatial_confusion_severity": 9,     // 심각
+    "anxiety_escalation_severity": 6,    // 주의
+    "physical_drop_severity": 7,         // 심각
+    "sleep_activity_severity": 5,        // 주의
+    "panic_response_severity": 0         // 없음
+  },
+  "data_availability": {
+    // 활동 데이터
+    "has_activity_data": true,
+    "has_safezone_exit_data": true,
+    "has_route_data": true,
+    "has_wander_data": true,
+    "has_emergency_data": true,
+    "has_favorite_data": true,
+    // 건강 데이터
+    "has_health_data": true,
+    "has_sleep_data": true,
+    "has_step_data": true,
+    "has_heart_rate_data": false,
+    "has_oxygen_data": false
   }
 }
 ```
