@@ -291,7 +291,8 @@
     let iceServers = null;
     let peerUserId = null;  // ✅ 통화 상대방 ID (세션 전체에서 사용)
     let currentCallStatus = null; // ✅ 서버 CallStatus 추적 (CREATED/RINGING/CONNECTED/...)
-
+    let pendingIceCandidates = [];  // ✅ 추가
+    let remoteDescriptionSet = false;  // ✅ 추가
 
     // 로그 함수
     function log(message, type = 'info') {
@@ -661,15 +662,26 @@
                         log(relayMsg, 'success');
                     }
 
-                    sendSignal({
-                        type: 'ICE',
-                        candidate: event.candidate.candidate,
-                        sdpMid: event.candidate.sdpMid,
-                        sdpMLineIndex: event.candidate.sdpMLineIndex,
-                        callId: currentCallId,
-                        fromUserId: userId,
-                        toUserId: peerUserId  // ✅ 세션 상대방 ID 사용
-                    });
+                  const candidateData = {
+                    type: 'ICE',
+                    candidate: event.candidate.candidate,
+                    sdpMid: event.candidate.sdpMid,
+                    sdpMLineIndex: event.candidate.sdpMLineIndex,
+                    callId: currentCallId,
+                    fromUserId: userId,
+                    toUserId: peerUserId
+                  };
+
+                  // ✅ Remote Description 설정 여부 확인
+                  if (remoteDescriptionSet) {
+                    // 이미 설정되었으면 즉시 전송
+                    sendSignal(candidateData);
+                    log(`📤 ICE Candidate 즉시 전송 (remoteDesc 설정됨)`, 'info');
+                  } else {
+                    // 아직 설정 안 됐으면 큐에 저장
+                    pendingIceCandidates.push(candidateData);
+                    log(`📦 ICE Candidate 대기열 추가 (대기: ${pendingIceCandidates.length}개)`, 'warn');
+                  }
                 } else {
                     log('🧊 ICE Candidate 수집 완료 (null candidate)', 'info');
                 }
@@ -846,6 +858,20 @@
                 sdp: signal.sdp
             }));
 
+          // ✅ Remote Description 설정됨 플래그
+          remoteDescriptionSet = true;
+          log('✅ Remote Description 설정 완료 (수신자)', 'success');
+
+          // ✅ 대기 중이던 ICE candidates 전송 (수신자도 candidates를 생성할 수 있음)
+          if (pendingIceCandidates.length > 0) {
+            log(`📤 대기 중이던 ICE Candidates 전송 시작 (${pendingIceCandidates.length}개)`, 'success');
+            for (const candidate of pendingIceCandidates) {
+              sendSignal(candidate);
+            }
+            log(`✅ 대기 중이던 ICE Candidates 전송 완료`, 'success');
+            pendingIceCandidates = [];
+          }
+
             log('📝 ANSWER 생성 중...', 'info');
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
@@ -871,9 +897,23 @@
             sdp: signal.sdp
         }));
 
-        currentCallStatus = 'CONNECTED';
-        log('✅ 통화 연결 완료', 'success');
-        updateCallStatus('connected', '통화 중');
+      // ✅ Remote Description 설정됨 플래그
+      remoteDescriptionSet = true;
+      log('✅ Remote Description 설정 완료 (발신자)', 'success');
+
+      // ✅ 대기 중이던 ICE candidates 전송
+      if (pendingIceCandidates.length > 0) {
+        log(`📤 대기 중이던 ICE Candidates 전송 시작 (${pendingIceCandidates.length}개)`, 'success');
+        for (const candidate of pendingIceCandidates) {
+          sendSignal(candidate);
+        }
+        log(`✅ 대기 중이던 ICE Candidates 전송 완료`, 'success');
+        pendingIceCandidates = [];
+      }
+
+      currentCallStatus = 'CONNECTED';
+      log('✅ 통화 연결 완료', 'success');
+      updateCallStatus('connected', '통화 중');
     }
 
     // ICE Candidate 처리
@@ -960,6 +1000,10 @@
         // 비디오 초기화
         document.getElementById('localVideo').srcObject = null;
         document.getElementById('remoteVideo').srcObject = null;
+
+        // ✅ ICE 관련 변수 초기화
+        pendingIceCandidates = [];
+        remoteDescriptionSet = false;
 
         // 버튼 상태
         document.getElementById('callBtn').disabled = false;
