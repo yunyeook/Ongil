@@ -32,6 +32,12 @@ class WebRtcCallClient @Inject constructor(
     // PeerConnection 상태 변경 콜백
     private var onPeerConnectionStateChange: ((PeerConnection.PeerConnectionState) -> Unit)? = null
 
+    // ICE Candidate 대기열 (Remote Description 설정 전까지 보관)
+    private val pendingIceCandidates = mutableListOf<IceCandidate>()
+
+    // Remote Description 설정 여부 플래그
+    private var remoteDescriptionSet = false
+
     fun setOnLocalIceCandidateListener(listener: (IceCandidate) -> Unit) {
         onLocalIceCandidate = listener
     }
@@ -52,6 +58,10 @@ class WebRtcCallClient @Inject constructor(
             Log.d(TAG, "init() called but WebRTC already initialized")
             return
         }
+
+        // ✅ ICE 관련 변수 초기화
+        pendingIceCandidates.clear()
+        remoteDescriptionSet = false
 
         Log.d(
             TAG,
@@ -76,8 +86,18 @@ class WebRtcCallClient @Inject constructor(
             rtcConfig,
             object : PeerConnection.Observer {
                 override fun onIceCandidate(candidate: IceCandidate) {
-                    Log.d(TAG, "Local ICE candidate: $candidate")
-                    onLocalIceCandidate?.invoke(candidate)
+                    Log.d(TAG, "🧊 Local ICE candidate generated: type=${candidate.sdp}")
+
+                    // ✅ Remote Description 설정 여부 확인
+                    if (remoteDescriptionSet) {
+                        // 이미 설정됨 → 즉시 전송
+                        onLocalIceCandidate?.invoke(candidate)
+                        Log.d(TAG, "📤 ICE candidate 즉시 전송")
+                    } else {
+                        // 아직 미설정 → 대기열에 저장
+                        pendingIceCandidates.add(candidate)
+                        Log.d(TAG, "📦 ICE candidate 대기열 추가 (대기: ${pendingIceCandidates.size}개)")
+                    }
                 }
 
                 override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
@@ -216,7 +236,22 @@ class WebRtcCallClient @Inject constructor(
         val desc = SessionDescription(type, sdp)
         pc.setRemoteDescription(object : SimpleSdpObserver() {
             override fun onSetSuccess() {
-                Log.d(TAG, "Remote SDP set success: $type")
+                Log.d(TAG, "✅ Remote SDP set success: $type")
+
+                // ✅ 플래그 설정
+                remoteDescriptionSet = true
+
+                // ✅ 대기 중이던 ICE candidates 일괄 전송
+                if (pendingIceCandidates.isNotEmpty()) {
+                    Log.d(TAG, "📤 대기 중이던 ICE candidates 전송 (${pendingIceCandidates.size}개)")
+
+                    for (candidate in pendingIceCandidates) {
+                        onLocalIceCandidate?.invoke(candidate)
+                    }
+
+                    Log.d(TAG, "✅ 대기 중이던 ICE candidates 전송 완료")
+                    pendingIceCandidates.clear()  // 대기열 비우기
+                }
             }
 
             override fun onSetFailure(reason: String) {
@@ -256,6 +291,10 @@ class WebRtcCallClient @Inject constructor(
             audioTrack = null
             audioSource = null
             factory = null
+
+            // ✅ ICE 관련 변수 초기화
+            pendingIceCandidates.clear()
+            remoteDescriptionSet = false
         }
     }
 
