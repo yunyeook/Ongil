@@ -40,57 +40,58 @@ public class CallSignalController {
      */
     @MessageMapping("/calls/{callId}/signal")
     public void relaySignal(
-        @DestinationVariable Integer callId,
-        @Payload SignalMessage message,
-        Principal principal
+            @DestinationVariable Integer callId,
+            @Payload SignalMessage message,
+            Principal principal
     ) {
-        // 1) 발신자 ID는 CustomUserDetails에서 정확히 꺼낸다 (전화번호 아님)
+        // 1) 발신자 ID 추출
         Integer fromUserId = extractUserId(principal);
 
         // 2) 통화 세션 확인
         Call call = callRepository.findById(callId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
 
-        // 3) 권한 확인 (발신자/수신자만 허용)
+        // 3) 권한 확인
         boolean isAuthorized = call.getCaller().getId().equals(fromUserId)
-            || call.getReceiver().getId().equals(fromUserId);
+                || call.getReceiver().getId().equals(fromUserId);
 
         if (!isAuthorized) {
             log.warn("시그널링 권한 없음: callId={}, userId={}", callId, fromUserId);
             throw new BusinessException(ErrorCode.CALL_PERMISSION_DENIED);
         }
 
-        // 4) 수신 대상 사용자 ID 계산 (명시 없으면 상대편으로)
+        // 4) 수신 대상 사용자 ID 계산
         Integer toUserId = message.toUserId();
         if (toUserId == null) {
             toUserId = call.getCaller().getId().equals(fromUserId)
-                ? call.getReceiver().getId()
-                : call.getCaller().getId();
+                    ? call.getReceiver().getId()
+                    : call.getCaller().getId();
         }
 
-        // 5) convertAndSendToUser 라우팅 키는 'Principal.getName()'과 동일해야 하므로 "전화번호" 사용
-        //    LAZY 엔티티를 건드리지 않고 전화번호만 안전하게 조회
-        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        // ✅ 5) fromUserId와 toUserId가 설정된 새 메시지 생성
+        SignalMessage enrichedMessage = message.withUserIds(fromUserId, toUserId);
 
-        // 6) 메시지 전송
+        // 6) 개인 큐로 전송
+        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         messagingTemplate.convertAndSendToUser(
-            targetPrincipalName,  // phoneNumber
-            "/queue/calls",
-            message
+                targetPrincipalName,
+                "/queue/calls",
+                enrichedMessage  // ✅ fromUserId가 설정된 메시지
         );
 
         log.info("시그널 전달: type={}, callId={}, fromUserId={}, toUserId={}, toPrincipalName={}",
-            message.type(), callId, fromUserId, toUserId, targetPrincipalName);
+                enrichedMessage.type(), callId, fromUserId, toUserId, targetPrincipalName);
 
-        // ✅ 6) WebRTC 시그널은 토픽으로도 브로드캐스트
-        if ("OFFER".equals(message.type()) ||
-                "ANSWER".equals(message.type()) ||
-                "ICE".equals(message.type())) {
+        // ✅ 7) WebRTC 시그널은 토픽으로도 브로드캐스트
+        if ("OFFER".equals(enrichedMessage.type()) ||
+                "ANSWER".equals(enrichedMessage.type()) ||
+                "ICE".equals(enrichedMessage.type())) {
 
             messagingTemplate.convertAndSend(
                     "/topic/calls." + callId,
-                    message
+                    enrichedMessage  // ✅ fromUserId가 설정된 메시지
             );
 
             log.info("📡 WebRTC 시그널 브로드캐스트: /topic/calls/{}", callId);

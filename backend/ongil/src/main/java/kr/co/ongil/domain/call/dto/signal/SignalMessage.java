@@ -38,6 +38,20 @@ public record SignalMessage(
     Integer toUserId
 ) {
 
+    // ✅ 추가: fromUserId와 toUserId를 설정한 새 인스턴스 반환
+    public SignalMessage withUserIds(Integer fromUserId, Integer toUserId) {
+        return new SignalMessage(
+                this.type,
+                this.sdp,
+                this.candidate,
+                this.sdpMid,
+                this.sdpMLineIndex,
+                this.callId,
+                fromUserId,  // ✅ 새로 설정
+                toUserId     // ✅ 새로 설정
+        );
+    }
+
     /**
      * INCOMING 메시지 생성 (통화 요청)
      */
