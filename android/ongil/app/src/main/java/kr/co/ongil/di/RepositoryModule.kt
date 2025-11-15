@@ -14,6 +14,7 @@ import kr.co.ongil.data.repository.HealthDataRepositoryImpl
 import kr.co.ongil.data.repository.LocationSseRepositoryImpl
 import kr.co.ongil.data.repository.NotificationRepositoryImpl
 import kr.co.ongil.data.repository.PatientInfoRepositoryImpl
+import kr.co.ongil.data.repository.PatientInsightRepositoryImpl
 import kr.co.ongil.data.repository.SafeZoneRepositoryImpl
 import kr.co.ongil.data.repository.SearchUserRepositoryImpl
 import kr.co.ongil.data.repository.SosAlertRepositoryImpl
@@ -28,6 +29,7 @@ import kr.co.ongil.domain.repository.HealthDataRepository
 import kr.co.ongil.domain.repository.LocationSseRepository
 import kr.co.ongil.domain.repository.NotificationRepository
 import kr.co.ongil.domain.repository.PatientInfoRepository
+import kr.co.ongil.domain.repository.PatientInsightRepository
 import kr.co.ongil.domain.repository.SafeZoneRepository
 import kr.co.ongil.domain.repository.SearchUserRepository
 import kr.co.ongil.domain.repository.SosAlertRepository
@@ -106,4 +108,9 @@ abstract class RepositoryModule {
     abstract fun bindSosAlertRepository(
         impl: SosAlertRepositoryImpl
     ): SosAlertRepository
+
+    @Binds
+    abstract fun bindPatientInsightRepository(
+        impl: PatientInsightRepositoryImpl
+    ): PatientInsightRepository
 }

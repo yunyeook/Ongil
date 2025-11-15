@@ -45,13 +45,14 @@ fun LoginScreen(
     onClickFindPw: () -> Unit = {},
     onClickSignup: () -> Unit = {},
     onClickKakao: () -> Unit = {},
-    onClickGoogle: () -> Unit = {}
+    onClickGoogle: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     // 비밀번호 보기/숨기기 토글은 로컬 UI 상태로 유지
     var pwVisible by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 24.dp),
