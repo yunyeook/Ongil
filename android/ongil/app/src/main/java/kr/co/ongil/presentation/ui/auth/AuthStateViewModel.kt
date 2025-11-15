@@ -129,14 +129,14 @@ class AuthStateViewModel @Inject constructor(
         sseConnectionJob = viewModelScope.launch {
             while (true) {  // 무한 재연결 루프
                 try {
-                    android.util.Log.d("AuthStateViewModel", "SSE 연결 시작 중... (재시도 ${retryCount}회)")
+                    // android.util.Log.d("AuthStateViewModel", "SSE 연결 시작 중... (재시도 ${retryCount}회)")
                     locationSseRepository.subscribeSseEvents().collect { event ->
                         // 연결 성공 시 재시도 카운트 리셋
                         retryCount = 0
 
                         when (event) {
                             is SseEvent.Connected -> {
-                                android.util.Log.d("AuthStateViewModel", "✅ SSE 연결 완료")
+                                //android.util.Log.d("AuthStateViewModel", "✅ SSE 연결 완료")
                             }
 
                             is SseEvent.GpsUpdate -> {
@@ -209,11 +209,11 @@ class AuthStateViewModel @Inject constructor(
                         maxRetryDelay
                     )
 
-                    android.util.Log.e(
-                        "AuthStateViewModel",
-                        "⚠️ SSE 연결 중 오류 (재시도 ${retryCount}회, ${delay/1000}초 후 재연결)",
-                        e
-                    )
+//                    android.util.Log.e(
+//                        "AuthStateViewModel",
+//                        "⚠️ SSE 연결 중 오류 (재시도 ${retryCount}회, ${delay/1000}초 후 재연결)",
+//                        e
+//                    )
 
                     // 재연결 대기
                     kotlinx.coroutines.delay(delay)
