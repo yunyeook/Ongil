@@ -67,101 +67,51 @@ class VoipCallViewModel @Inject constructor(
     // 📞 발신자 플로우
     // =========================================================
 
-    fun startVoipCall(
-        receiverId: Long,
-        userType: String,
-        callType: String = "NORMAL"
-    ) {
+    fun startVoipCall(receiverId: Long, userType: String, callType: String = "NORMAL") {
         Log.d(TAG, "=== [CALLER] startVoipCall: to=$receiverId, userType=$userType, type=$callType")
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, message = null, error = null) }
 
             try {
-                // 1. 통화 세션 생성
+                // 1-3. 통화 생성, WebSocket 연결, 구독
                 val call = callRepository.createVoipCall(receiverId, callType).getOrThrow()
                 currentCall = call
 
-                Log.d(TAG, "createVoipCall success: callId=${call.id}, sessionId=${call.sessionId}")
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        call = call,
-                        message = "통화 생성 완료"
-                    )
-                }
-
-                // 2. WebSocket 연결
                 val token = userDataStoreManager.getAccessToken().first()
-                if (token.isNullOrBlank()) {
-                    Log.e(TAG, "Access token is null")
-                    _uiState.update { it.copy(error = "인증 토큰 없음") }
-                    return@launch
-                }
-
-                val connected = voipSignalingService.connectAndWait(token)
-                if (!connected) {
-                    Log.e(TAG, "WebSocket 연결 실패")
-                    _uiState.update { it.copy(error = "시그널링 서버 연결 실패") }
-                    return@launch
-                }
-                Log.d(TAG, "✓ WebSocket 연결 성공")
-
-                // 3. 통화방 구독
+                val connected = voipSignalingService.connectAndWait(token!!)
                 val subscribed = voipSignalingService.subscribeToCall(call.id)
-                if (!subscribed) {
-                    Log.e(TAG, "통화방 구독 실패")
-                    _uiState.update { it.copy(error = "통화방 구독 실패") }
-                    return@launch
-                }
-                Log.d(TAG, "✓ Subscribed to /topic/calls/${call.id}")
 
-                // 4. TURN 조회 & WebRTC 초기화
+                // ✅ 4. 구독 후 1초 대기 (RabbitMQ 구독 완전 완료 보장)
+                Log.d(TAG, "⏳ Waiting for subscription to be fully established...")
+                delay(1000)
+
+                // 5. TURN 조회 & WebRTC 초기화
                 val turn = callRepository.getTurnCredentials().getOrThrow()
-                Log.d(TAG, "getTurnCredentials success: uris=${turn.uris}")
-
                 val iceServers = turn.toIceServers()
                 webRtcCallClient.init(iceServers)
 
-                // 4-1. PeerConnection 상태 모니터링 설정
                 setupPeerConnectionStateMonitoring()
+                setupIceCandidateListener(call.id, call.sessionId, currentUserId!!, receiverId)
 
-                // 4-2. Offer 생성 전 사용자 ID 확인
-                val fromUserId = currentUserId ?: return@launch
-
-                // 4-3. ICE candidate 리스너 설정
-                setupIceCandidateListener(call.id, call.sessionId, fromUserId, receiverId)
-
-                // 5. Offer 생성 및 전송
+                // 6. Offer 생성 및 전송
                 webRtcCallClient.createOffer { sdp ->
-                    Log.d(TAG, "Offer SDP created")
+                    Log.d(TAG, "📤 Now sending OFFER (after subscription delay)")
 
                     voipSignalingService.sendOffer(
                         callId = call.id,
                         sessionId = call.sessionId,
-                        fromUserId = fromUserId,
+                        fromUserId = currentUserId!!,
                         toUserId = receiverId,
                         sdp = sdp.description
                     )
 
-                    Log.d(
-                        TAG,
-                        "Offer sent via signaling: callId=${call.id}, sessionId=${call.sessionId}"
-                    )
-                    _uiState.update {
-                        it.copy(message = "통화 요청 전송 완료 (Offer)")
-                    }
+                    Log.d(TAG, "✅ Offer sent: callId=${call.id}")
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "startVoipCall failed: ${e.message}", e)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "통화 시작 실패"
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "통화 시작 실패") }
             }
         }
     }
@@ -452,9 +402,12 @@ class VoipCallViewModel @Inject constructor(
             }
 
             "ANSWER" -> {
-                if (call?.callerId == myUserId) {
+                // ✅ currentCall이 없어도 ANSWER 처리 가능하도록 수정
+                val isCallerRole = call?.callerId == myUserId
+
+                if (isCallerRole || call == null) {  // call이 null이면 일단 처리 시도
                     signal.sdp?.let { sdp ->
-                        Log.d(TAG, "📥 Processing ANSWER from senderId=$actualSenderId")  // ✅
+                        Log.d(TAG, "📥 Processing ANSWER from senderId=$actualSenderId")
                         handleAnswer(sdp)
                     } ?: run {
                         Log.e(TAG, "ANSWER received but SDP is null")
