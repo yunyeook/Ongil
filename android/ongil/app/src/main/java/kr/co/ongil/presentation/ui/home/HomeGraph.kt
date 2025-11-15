@@ -34,7 +34,9 @@ fun NavGraphBuilder.homeGraph(
             onMapClick = {
                 android.util.Log.d("HomeGraph", "🗺️ 지도 클릭 - 위치 탭으로 이동")
                 navController.navigate(Routes.Location.route) {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
                     launchSingleTop = true
+                    restoreState = true
                 }
             },
             userType = userType,
