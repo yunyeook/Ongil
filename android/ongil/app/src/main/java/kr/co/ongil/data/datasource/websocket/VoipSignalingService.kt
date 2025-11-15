@@ -47,18 +47,32 @@ class VoipSignalingService @Inject constructor(
             return true
         }
 
-        val disposable = webSocketManager.subscribe(USER_QUEUE_CALLS) { message ->
+        val disposables = mutableListOf<Disposable>()
+
+        // 1. 개인 메시지 구독
+        webSocketManager.subscribe(USER_QUEUE_CALLS) { message ->
             handleSignalMessage(message)
+        }?.let {
+            disposables.add(it)
+            Log.d(TAG, "✓ Subscribed to $USER_QUEUE_CALLS")
+        } ?: run {
+            Log.e(TAG, "✗ Failed to subscribe to $USER_QUEUE_CALLS")
+            return false
         }
 
-        return if (disposable != null) {
-            callSubscriptions[callId] = mutableListOf(disposable)
-            Log.d(TAG, "✓ Subscribed to $USER_QUEUE_CALLS for call $callId")
-            true
-        } else {
-            Log.e(TAG, "✗ Failed to subscribe to $USER_QUEUE_CALLS")
-            false
+        // 2. 통화방 토픽 구독 (점으로 구분)
+        val topicPath = "/topic/calls.$callId"  // ✅ 슬래시 대신 점
+        webSocketManager.subscribe(topicPath) { message ->
+            handleSignalMessage(message)
+        }?.let {
+            disposables.add(it)
+            Log.d(TAG, "✓ Subscribed to $topicPath")
+        } ?: run {
+            Log.w(TAG, "⚠️ Failed to subscribe to $topicPath")
         }
+
+        callSubscriptions[callId] = disposables
+        return true
     }
 
     fun unsubscribeFromCall(callId: Long) {

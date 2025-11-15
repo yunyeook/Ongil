@@ -137,7 +137,8 @@ private fun PlaceDetailContent(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
             if (isGranted && !placeDetail.phoneNumber.isNullOrEmpty()) {
-                // 권한이 승인되면 바로 전화 걸기
+                // 권한이 승인되면 통화 로그 기록 후 전화 걸기
+                onCallClick()
                 val intent = Intent(Intent.ACTION_CALL).apply {
                     data = Uri.parse("tel:${placeDetail.phoneNumber}")
                 }
@@ -164,13 +165,14 @@ private fun PlaceDetailContent(
                 ) == PackageManager.PERMISSION_GRANTED
 
                 if (hasPermission) {
-                    // 권한이 있으면 바로 전화 걸기
+                    // 권한이 있으면 통화 로그 기록 후 전화 걸기
+                    onCallClick()
                     val intent = Intent(Intent.ACTION_CALL).apply {
                         data = Uri.parse("tel:${placeDetail.phoneNumber}")
                     }
                     context.startActivity(intent)
                 } else {
-                    // 권한이 없으면 권한 요청
+                    // 권한이 없으면 권한 요청 (승인 시 callPermissionLauncher에서 로그 기록 & 전화 걸기)
                     callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
                 }
             }
