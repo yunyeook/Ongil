@@ -85,7 +85,7 @@ class LoginViewModel @Inject constructor(
 
     /**
      * 로그인 성공 시 FCM 토큰을 서버로 전송
-     * 로컬에 저장된 토큰과 비교해서 변경된 경우에만 서버로 전송
+     * 매 로그인마다 서버로 전송
      */
     private fun sendFcmTokenToServer() {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
@@ -93,19 +93,27 @@ class LoginViewModel @Inject constructor(
                 val fcmToken = task.result
                 Log.d("FCM", "로그인 시 토큰 조회 성공: $fcmToken")
 
-                // 로컬에 저장된 토큰과 비교
+                // 매번 서버로 전송
                 viewModelScope.launch {
-                    val savedToken = userDataStoreManager.getFcmToken().firstOrNull()
-                    if (savedToken != fcmToken) {
-                        // 토큰이 변경되었거나 처음 저장하는 경우
-                        Log.d("FCM", "토큰이 변경됨 (기존: $savedToken -> 새: $fcmToken)")
-                        sendTokenToBackend(fcmToken)
-                        // 서버 전송 후 로컬에 저장
-                        userDataStoreManager.saveFcmToken(fcmToken)
-                    } else {
-                        Log.d("FCM", "토큰이 동일함, 서버 전송 스킵")
-                    }
+                    sendTokenToBackend(fcmToken)
+                    // 서버 전송 후 로컬에 저장
+                    userDataStoreManager.saveFcmToken(fcmToken)
                 }
+
+                // TODO: 나중에 최적화 필요시 아래 로직 활용
+                // 로컬에 저장된 토큰과 비교
+//                viewModelScope.launch {
+//                    val savedToken = userDataStoreManager.getFcmToken().firstOrNull()
+//                    if (savedToken != fcmToken) {
+//                        // 토큰이 변경되었거나 처음 저장하는 경우
+//                        Log.d("FCM", "토큰이 변경됨 (기존: $savedToken -> 새: $fcmToken)")
+//                        sendTokenToBackend(fcmToken)
+//                        // 서버 전송 후 로컬에 저장
+//                        userDataStoreManager.saveFcmToken(fcmToken)
+//                    } else {
+//                        Log.d("FCM", "토큰이 동일함, 서버 전송 스킵")
+//                    }
+//                }
             } else {
                 Log.e("FCM", "로그인 시 토큰 조회 실패", task.exception)
             }
