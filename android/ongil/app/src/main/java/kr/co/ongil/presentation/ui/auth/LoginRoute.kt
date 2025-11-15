@@ -1,9 +1,11 @@
 package kr.co.ongil.presentation.ui.auth
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -44,7 +46,8 @@ fun LoginRoute(
             onPasswordChange = viewModel::onPasswordChange,
             onLoginClick = viewModel::onClickLogin,
             onClickFindPw = onClickFindPw,
-            onClickSignup = onClickSignup
+            onClickSignup = onClickSignup,
+            modifier = Modifier.padding(paddingValues)
         )
     }
 

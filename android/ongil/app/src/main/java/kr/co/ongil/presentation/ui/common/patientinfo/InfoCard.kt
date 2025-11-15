@@ -35,28 +35,27 @@ sealed interface StatValue {
 @Composable
 fun InfoCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 24.dp,
+    cornerRadius: Dp = 20.dp,
     title: String,
     stats: List<Pair<String, StatValue>>
 ) {
-    val borderColor = Color(0xFFD9D9D9)
-    val mainTextColor = Color(0xFF101828)
-    val subTextColor = Color(0xFF99A1AF)
-    val iconBgColor = Color(0xFF257A3F)
+    val mainTextColor = Color(0xFF2A2F2E)
+    val subTextColor = Color(0xFF6B767A)
+    val iconBgColor = Color(0xFF8CA898)
 
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(cornerRadius),
-        border = BorderStroke(1.dp, borderColor),
+        border = null,
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
 
             Row(
@@ -64,27 +63,26 @@ fun InfoCard(
             ) {
                 CircleIcon(
                     bgColor = iconBgColor,
-                    diameter = 20.dp,
+                    diameter = 24.dp,
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
                     text = title,
                     color = mainTextColor,
-                    fontSize = 18.sp,
+                    fontSize = 17.sp,
                     lineHeight = 22.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 하단 3열 통계
             Row(
-                modifier = Modifier.fillMaxWidth(0.8f) .align(Alignment.CenterHorizontally),
-                horizontalArrangement = Arrangement.SpaceBetween,
-
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 stats.forEach { (label, value) ->
                     Column(
@@ -93,19 +91,19 @@ fun InfoCard(
                         Text(
                             text = label,
                             color = subTextColor,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             lineHeight = 18.sp,
                             fontWeight = FontWeight.Medium
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         when (value) {
                             is StatValue.Text -> {
                                 Text(
                                     text = value.value,
                                     color = mainTextColor,
-                                    fontSize = 20.sp,
+                                    fontSize = 19.sp,
                                     lineHeight = 24.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                             is StatValue.Icon -> {

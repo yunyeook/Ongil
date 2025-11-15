@@ -7,6 +7,11 @@ data class PatientInfoUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val activityLog: ActivityLog? = null,
+    val summary: String = "",
+    val positiveSignals: List<String> = emptyList(),
+    val warningSignals: List<String> = emptyList(),
+    val caregiverSuggestions: List<String> = emptyList(),
+    val userType: String = "",
     val healthData: LocalHealthData? = null,
     val healthPermissionGranted: Boolean = false
 )

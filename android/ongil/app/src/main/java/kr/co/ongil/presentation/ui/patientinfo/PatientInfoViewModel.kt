@@ -15,6 +15,7 @@ import kotlinx.serialization.decodeFromString
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.mapper.toDomain
 import kr.co.ongil.domain.repository.HealthConnectRepository
+import kr.co.ongil.domain.repository.PatientInsightRepository
 import kr.co.ongil.domain.model.HealthDataType
 import kr.co.ongil.domain.usecase.health.DeleteHealthDataUseCase
 import kr.co.ongil.domain.usecase.health.GetHealthDataFromServerUseCase
@@ -33,7 +34,8 @@ class PatientInfoViewModel @Inject constructor(
     private val getHealthDataSummaryUseCase: GetHealthDataSummaryUseCase,
     private val deleteHealthDataUseCase: DeleteHealthDataUseCase,
     private val healthConnectRepository: HealthConnectRepository,
-    private val userDataStoreManager: UserDataStoreManager
+    private val userDataStoreManager: UserDataStoreManager,
+    private val patientInsightRepository: PatientInsightRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PatientInfoUiState())
@@ -53,6 +55,7 @@ class PatientInfoViewModel @Inject constructor(
     init {
         observePatientIdChanges()
         checkHealthPermissions()
+        observeUserTypeAndPatientId()
     }
 
     // 환자 ID 변경 감지
@@ -252,6 +255,69 @@ class PatientInfoViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "loadHealthData() - 예외 발생", e)
                 _uiState.value = _uiState.value.copy(healthData = null)
+            }
+        }
+    }
+
+    // 사용자 타입과 환자 ID 관찰
+    private fun observeUserTypeAndPatientId() {
+        viewModelScope.launch {
+            try {
+                // 먼저 userType 로드
+                userDataStoreManager.getUserType().collectLatest { userType ->
+                    Log.d(TAG, "observeUserTypeAndPatientId() - userType: $userType")
+                    _uiState.value = _uiState.value.copy(userType = userType ?: "")
+
+                    // userType에 따라 적절한 환자 ID로 인사이트 로드
+                    if (userType == "PATIENT") {
+                        userDataStoreManager.getLoginUserId().firstOrNull()?.let { patientIdStr ->
+                            if (patientIdStr.isNotEmpty()) {
+                                loadInsightData(patientIdStr)
+                            }
+                        }
+                    } else {
+                        userDataStoreManager.getSelectedPatientId().firstOrNull()?.let { patientIdStr ->
+                            if (patientIdStr.isNotEmpty()) {
+                                loadInsightData(patientIdStr)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "observeUserTypeAndPatientId() - 예외 발생", e)
+            }
+        }
+    }
+
+    // 인사이트 데이터 로드
+    private fun loadInsightData(patientIdStr: String) {
+        viewModelScope.launch {
+            try {
+                val patientId = patientIdStr.toIntOrNull()
+                if (patientId == null) {
+                    Log.e(TAG, "loadInsightData() - 잘못된 환자 ID: $patientIdStr")
+                    return@launch
+                }
+
+                Log.d(TAG, "loadInsightData() - 인사이트 데이터 로드 시작 (patientId: $patientId)")
+
+                patientInsightRepository.getLatestWeeklyInsight(patientId).collectLatest { result ->
+                    result.onSuccess { insightDto ->
+                        Log.d(TAG, "loadInsightData() - 인사이트 조회 성공: $insightDto")
+
+                        _uiState.value = _uiState.value.copy(
+                            summary = insightDto.summary,
+                            positiveSignals = insightDto.positiveSignals,
+                            warningSignals = insightDto.warningSignals,
+                            caregiverSuggestions = insightDto.caregiverSuggestions
+                        )
+                    }.onFailure { exception ->
+                        Log.e(TAG, "loadInsightData() - 인사이트 조회 실패", exception)
+                        // 실패 시 빈 리스트 유지
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "loadInsightData() - 예외 발생", e)
             }
         }
     }
