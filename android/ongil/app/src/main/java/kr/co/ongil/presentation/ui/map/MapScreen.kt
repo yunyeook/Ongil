@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
@@ -150,6 +151,11 @@ fun MapScreen(
 
     // 검색 중 (검색창에 포커스가 있거나, 검색 결과가 있을 때)
     val isSearchActive = isSearchFocused || searchResults.isNotEmpty()
+
+    // 키보드 높이 감지
+    val density = LocalDensity.current
+    val imeInsets = WindowInsets.ime
+    val imeHeightDp = with(density) { imeInsets.getBottom(density).toDp() }
 
     // 장소 위치로 이동 트리거
     var placeLocationTrigger by remember { mutableStateOf(0 to Pair(0.0, 0.0)) }
@@ -410,8 +416,12 @@ fun MapScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .padding(
+                        top = paddingValues.calculateTopPadding() + 16.dp,
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = if (isSearchActive) 16.dp else 16.dp  // 검색 중일 때 하단 패딩 줄임
+                    )
             ) {
                 // 검색 입력 필드
                 SearchBar(
@@ -443,17 +453,28 @@ fun MapScreen(
                     )
                 }
 
-                    // 검색 결과 리스트
+                    // 검색 결과 리스트 (키보드 높이에 따라 동적으로 조정)
                     if (searchResults.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        // 키보드가 있을 때와 없을 때 최대 표시 개수 계산
+                        val maxVisibleItems = if (imeHeightDp > 0.dp) {
+                            3  // 키보드 올라왔을 때: 최대 3개
+                        } else {
+                            minOf(searchResults.size, 6)  // 키보드 없을 때: 최대 6개
+                        }
+
+                        val visibleItemCount = minOf(searchResults.size, maxVisibleItems)
+
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 400.dp)
+                                .height(77.dp * visibleItemCount)  // 동적 높이
                                 .background(
                                     Color.White,
                                     RoundedCornerShape(8.dp)
-                                )
+                                ),
+                            userScrollEnabled = searchResults.size > maxVisibleItems
                         ) {
                             items(searchResults) { place ->
                                 SearchListItem(
