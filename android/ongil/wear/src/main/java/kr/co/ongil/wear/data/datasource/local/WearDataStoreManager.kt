@@ -18,6 +18,16 @@ interface WearDataStoreManager {
     suspend fun saveLoginData(loginData: WearLoginData)
 
     /**
+     * 액세스 토큰만 저장 (Token Refresh 시 사용)
+     */
+    suspend fun saveAccessToken(accessToken: String)
+
+    /**
+     * 리프레시 토큰만 저장 (Token Refresh 시 사용)
+     */
+    suspend fun saveRefreshToken(refreshToken: String)
+
+    /**
      * 액세스 토큰 가져오기
      */
     fun getAccessToken(): Flow<String?>

@@ -8,10 +8,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kr.co.ongil.wear.presentation.navigation.WearNavGraph
+import kr.co.ongil.wear.presentation.navigation.WearRoute
 import kr.co.ongil.wear.presentation.theme.OngilTheme
-import kr.co.ongil.wear.presentation.ui.LoginSyncScreen
-import kr.co.ongil.wear.presentation.ui.MainScreen
 import kr.co.ongil.wear.presentation.viewmodel.WearAuthViewModel
 
 /**
@@ -43,7 +44,8 @@ class WearMainActivity : ComponentActivity() {
 /**
  * 워치 앱 메인 Composable
  *
- * 로그인 상태에 따라 화면 분기
+ * Navigation을 사용하여 화면 전환 관리
+ * 로그인 상태에 따라 시작 화면 결정
  */
 @Composable
 fun WearApp(
@@ -53,19 +55,21 @@ fun WearApp(
     OngilTheme {
         // ViewModel 상태 관찰
         val isLoggedIn by viewModel.isLoggedIn.collectAsState()
-        val userId by viewModel.userId.collectAsState()
-        val userType by viewModel.userType.collectAsState()
 
-        // 로그인 상태에 따라 화면 분기
-        if (isLoggedIn) {
-            // 로그인됨 → 메인 화면
-            MainScreen(
-                userId = userId,
-                userType = userType
-            )
+        // Navigation Controller
+        val navController = rememberSwipeDismissableNavController()
+
+        // 로그인 상태에 따라 시작 화면 결정
+        val startDestination = if (isLoggedIn) {
+            WearRoute.Dashboard.route
         } else {
-            // 비로그인 → 동기화 대기 화면
-            LoginSyncScreen()
+            WearRoute.LoginSync.route
         }
+
+        // Navigation Graph
+        WearNavGraph(
+            navController = navController,
+            startDestination = startDestination
+        )
     }
 }

@@ -52,6 +52,24 @@ class WearDataStoreManagerImpl @Inject constructor(
     }
 
     /**
+     * 액세스 토큰만 저장 (Token Refresh 시 사용)
+     */
+    override suspend fun saveAccessToken(accessToken: String) {
+        context.dataStore.edit { preferences ->
+            preferences[DataStoreKeys.ACCESS_TOKEN_KEY] = accessToken
+        }
+    }
+
+    /**
+     * 리프레시 토큰만 저장 (Token Refresh 시 사용)
+     */
+    override suspend fun saveRefreshToken(refreshToken: String) {
+        context.dataStore.edit { preferences ->
+            preferences[DataStoreKeys.REFRESH_TOKEN_KEY] = refreshToken
+        }
+    }
+
+    /**
      * 액세스 토큰 가져오기
      */
     override fun getAccessToken(): Flow<String?> {

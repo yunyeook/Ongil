@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.dagger.hilt.android)
     kotlin("kapt")
+    kotlin("plugin.serialization") version "1.9.22"
 }
 
 android {
@@ -82,6 +83,19 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    // Network - Retrofit & OkHttp
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Kotlinx Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+
+    // Navigation (Compose)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.wear.compose:compose-navigation:1.3.1")
 
     // Test
     androidTestImplementation(platform(libs.androidx.compose.bom))
