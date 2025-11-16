@@ -33,6 +33,7 @@ import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.presentation.MainActivity
+import kr.co.ongil.BuildConfig
 import java.time.Instant
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -62,6 +63,7 @@ class LocationTrackingService : Service() {
     @Inject lateinit var userDataStoreManager: UserDataStoreManager
     @Inject lateinit var gpsWebSocketManager: GpsWebSocketManager
     @Inject lateinit var favoriteRepository: kr.co.ongil.domain.repository.FavoriteRepository
+    @Inject lateinit var findRouteUseCase: kr.co.ongil.domain.usecase.map.FindRouteUseCase
 
     private lateinit var fusedClient: FusedLocationProviderClient
 
@@ -138,20 +140,40 @@ class LocationTrackingService : Service() {
      */
     private suspend fun loadDefaultDestination() {
         try {
+            Log.d(TAG, "🔍 기본 목적지 조회 시작")
+
             val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            Log.d(TAG, "환자 ID: $patientId")
+
             if (patientId == null) {
                 Log.w(TAG, "환자 ID를 가져올 수 없어 기본 목적지를 조회할 수 없습니다")
                 return
             }
 
             val userType = userDataStoreManager.getUserType().first()
+            Log.d(TAG, "사용자 타입: $userType")
+
             if (userType != "PATIENT") {
                 Log.d(TAG, "환자가 아니므로 기본 목적지 조회를 스킵합니다")
                 return
             }
 
             // 기본 목적지 조회
+            Log.d(TAG, "favoriteRepository.getFavoritePlaces 호출 중... (patientId=$patientId)")
             val favoritePlaces = favoriteRepository.getFavoritePlaces(patientId)
+
+            favoritePlaces.fold(
+                onSuccess = { places ->
+                    Log.d(TAG, "즐겨찾기 장소 조회 성공: 총 ${places.items.size}개")
+                    places.items.forEachIndexed { index, place ->
+                        Log.d(TAG, "  [$index] ${place.displayName} - isDefault: ${place.isDefault}")
+                    }
+                },
+                onFailure = { error ->
+                    Log.e(TAG, "즐겨찾기 장소 조회 실패: ${error.message}", error)
+                }
+            )
+
             val defaultPlace = favoritePlaces.getOrNull()?.items?.firstOrNull { it.isDefault }
 
             if (defaultPlace == null) {
@@ -564,6 +586,7 @@ class LocationTrackingService : Service() {
      * 이상 상황 감지 시 처리
      * - 백엔드 API로 알림 전송
      * - DataStore에 상태 저장
+     * - 기본 목적지로 자동 길찾기 시작
      */
     private suspend fun handleAbnormalDetection(stage: Int, durationMinutes: Long) {
         try {
@@ -641,6 +664,9 @@ class LocationTrackingService : Service() {
                 detectedTime = Instant.now().toString()
             )
 
+            // 🚨 자동 길찾기 시작 (기본 목적지로)
+            startAutoNavigationToDefaultDestination(patientId)
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ 이상 상황 처리 실패", e)
         }
@@ -682,8 +708,76 @@ class LocationTrackingService : Service() {
 
             mapApi.reportAbnormal(patientId, request)
             Log.d(TAG, "경로 이탈 알림 전송 성공: ${String.format("%.1f", distanceFromRoute)}m")
+
+            // 🚨 자동 길찾기 시작 (기본 목적지로)
+            startAutoNavigationToDefaultDestination(patientId)
         } catch (e: Exception) {
             Log.e(TAG, "경로 이탈 알림 전송 실패", e)
+        }
+    }
+
+    /**
+     * 기본 목적지로 자동 길찾기 시작
+     */
+    private suspend fun startAutoNavigationToDefaultDestination(patientId: Long) {
+        try {
+            // 1. 이미 길찾기 중이면 스킵
+            if (navigationRouteManager.getCurrentRoute() != null) {
+                Log.d(TAG, "이미 길찾기 중이므로 자동 길찾기 스킵")
+                return
+            }
+
+            // 2. 기본 목적지 조회
+            val favoritePlaces = favoriteRepository.getFavoritePlaces(patientId)
+            val defaultPlace = favoritePlaces.getOrNull()?.items?.firstOrNull { it.isDefault }
+
+            if (defaultPlace == null) {
+                Log.w(TAG, "기본 목적지가 설정되어 있지 않아 자동 길찾기를 시작할 수 없습니다")
+                return
+            }
+
+            Log.d(TAG, "기본 목적지 발견: ${defaultPlace.displayName} (${defaultPlace.latitude}, ${defaultPlace.longitude})")
+
+            // 3. 현재 위치 확인
+            val currentLocation = locationBus.lastValue
+            if (currentLocation == null) {
+                Log.w(TAG, "현재 위치를 가져올 수 없어 자동 길찾기를 시작할 수 없습니다")
+                return
+            }
+
+            // 4. 길찾기 시작
+            Log.d(TAG, "🚨 자동 길찾기 시작: ${defaultPlace.displayName}로 안내")
+
+            findRouteUseCase(
+                patientId = patientId,
+                startLatitude = currentLocation.latitude,
+                startLongitude = currentLocation.longitude,
+                startName = "현재 위치",
+                endLatitude = defaultPlace.latitude,
+                endLongitude = defaultPlace.longitude,
+                endName = defaultPlace.displayName,
+                initiatedBy = "SYSTEM"  // 시스템에 의한 자동 시작
+            ).onSuccess { result ->
+                Log.d(TAG, "✅ 자동 길찾기 경로 탐색 성공: navigationId=${result.navigationId}")
+
+                // 5. 경로 설정 (RouteDeviationMonitor 자동 활성화됨)
+                navigationRouteManager.setRoute(
+                    navigationId = result.navigationId,
+                    path = result.route.path.map {
+                        NavigationRouteManager.LatLng(it.latitude, it.longitude)
+                    }
+                )
+
+                // 6. GPS WebSocket 연결
+                gpsWebSocketManager.connect(BuildConfig.BASE_URL)
+
+                Log.d(TAG, "✅ 자동 길찾기 시작 완료")
+            }.onFailure { e ->
+                Log.e(TAG, "❌ 자동 길찾기 경로 탐색 실패: ${e.message}", e)
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 자동 길찾기 시작 실패", e)
         }
     }
 }
