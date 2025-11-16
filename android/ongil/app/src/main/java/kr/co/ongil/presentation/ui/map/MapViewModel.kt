@@ -93,6 +93,16 @@ class MapViewModel @Inject constructor(
     private val _showArrivalDialog = MutableStateFlow(false)
     val showArrivalDialog: StateFlow<Boolean> = _showArrivalDialog.asStateFlow()
 
+    // 목적지 변경 확인 모달 상태
+    data class DestinationChangeRequest(
+        val endLatitude: Double,
+        val endLongitude: Double,
+        val endName: String,
+        val selectedPatientId: String?
+    )
+    private val _showDestinationChangeDialog = MutableStateFlow<DestinationChangeRequest?>(null)
+    val showDestinationChangeDialog: StateFlow<DestinationChangeRequest?> = _showDestinationChangeDialog.asStateFlow()
+
     // 네비게이션 모드 (1인칭 시점)
     private val _isNavigationMode = MutableStateFlow(false)
     val isNavigationMode: StateFlow<Boolean> = _isNavigationMode.asStateFlow()
@@ -514,9 +524,67 @@ class MapViewModel @Inject constructor(
     }
 
     /**
-     * 길안내 시작
+     * 길안내 시작 요청 (길찾기 중이면 확인 모달 표시)
      */
     fun startNavigation(
+        endLatitude: Double,
+        endLongitude: Double,
+        endName: String,
+        selectedPatientId: String? = null
+    ) {
+        // 이미 길찾기 중이면 목적지 변경 확인 모달 표시
+        if (_navigationRoute.value != null) {
+            _showDestinationChangeDialog.value = DestinationChangeRequest(
+                endLatitude = endLatitude,
+                endLongitude = endLongitude,
+                endName = endName,
+                selectedPatientId = selectedPatientId
+            )
+            Log.d("MapViewModel", "길찾기 중 - 목적지 변경 확인 모달 표시")
+            return
+        }
+
+        // 길찾기 중이 아니면 바로 시작
+        startNavigationInternal(endLatitude, endLongitude, endName, selectedPatientId)
+    }
+
+    /**
+     * 목적지 변경 확인
+     */
+    fun confirmDestinationChange() {
+        val request = _showDestinationChangeDialog.value
+        if (request != null) {
+            _showDestinationChangeDialog.value = null
+            // 기존 길찾기 종료 후 새로운 길찾기 시작
+            viewModelScope.launch {
+                // 기존 길찾기 종료
+                val navigationIdString = currentNavigationId
+                if (navigationIdString != null) {
+                    endNavigationApi(navigationIdString, isSuccessful = false)
+                }
+                // 새로운 길찾기 시작
+                startNavigationInternal(
+                    request.endLatitude,
+                    request.endLongitude,
+                    request.endName,
+                    request.selectedPatientId
+                )
+            }
+        }
+    }
+
+    /**
+     * 목적지 변경 취소
+     */
+    fun cancelDestinationChange() {
+        _showDestinationChangeDialog.value = null
+        Log.d("MapViewModel", "목적지 변경 취소")
+    }
+
+    /**
+     * 길안내 시작 (내부 함수)
+     */
+    private fun startNavigationInternal(
         endLatitude: Double,
         endLongitude: Double,
         endName: String,

@@ -72,6 +72,7 @@ fun MapScreen(
     val navigationRoute by viewModel.navigationRoute.collectAsState()
     val isNavigating = navigationRoute != null
     val showArrivalDialog by viewModel.showArrivalDialog.collectAsState()
+    val showDestinationChangeDialog by viewModel.showDestinationChangeDialog.collectAsState()
     val isNavigationMode by viewModel.isNavigationMode.collectAsState()
     val isNavigationModalVisible by viewModel.isNavigationModalVisible.collectAsState()
 
@@ -123,7 +124,23 @@ fun MapScreen(
     var showSafetyZones by remember { mutableStateOf(false) }
 
     // 장소 상세 정보 표시 중 (검색창, 플로팅 버튼 숨김)
-    val isShowingPlaceDetail = selectedPlaceDetail != null && !isNavigating
+    // 길찾기 중이더라도 선택한 장소가 현재 목적지와 다르면 장소 상세 표시
+    val isShowingPlaceDetail = selectedPlaceDetail != null && (
+        !isNavigating || run {
+            // 길찾기 중일 때: 선택한 장소와 현재 목적지의 좌표가 다른지 확인
+            val detail = selectedPlaceDetail
+            val route = navigationRoute
+            if (detail != null && route != null && route.path.isNotEmpty()) {
+                val destination = route.path.last()
+                val latDiff = kotlin.math.abs(detail.latitude - destination.latitude)
+                val lonDiff = kotlin.math.abs(detail.longitude - destination.longitude)
+                // 좌표 차이가 0.0001도 이상이면 다른 장소로 간주 (약 11m)
+                latDiff > 0.0001 || lonDiff > 0.0001
+            } else {
+                false
+            }
+        }
+    )
 
     // 검색창 포커스 상태
     var isSearchFocused by remember { mutableStateOf(false) }
@@ -145,16 +162,21 @@ fun MapScreen(
     }
 
     // 장소 상세 정보 표시 시 해당 장소로 지도 이동
-    LaunchedEffect(selectedPlaceDetail) {
+    LaunchedEffect(selectedPlaceDetail, isShowingPlaceDetail) {
         val detail = selectedPlaceDetail  // 로컬 변수로 복사
-        if (detail != null && !isNavigating) {
-            // 장소 상세 정보 표시 시 마커 추가
+        if (detail != null && isShowingPlaceDetail) {
+            // 장소 상세 정보 표시 시 마커 추가 (길찾기 중이어도 다른 장소 클릭하면 이동)
             placeLocationTrigger = (placeLocationTrigger.first + 1) to Pair(
                 detail.latitude,
                 detail.longitude
             )
-        } else if (detail == null) {
-            // 장소 상세 정보가 닫혔을 때 마커 제거
+            android.util.Log.d("MapScreen", "장소 상세로 지도 이동: ${detail.name} (${detail.latitude}, ${detail.longitude})")
+        } else if (detail == null && isNavigating) {
+            // 장소 상세 정보가 닫히고 길찾기 중이면 마커 제거 (경로로 복귀)
+            placeLocationTrigger = (placeLocationTrigger.first + 1) to Pair(0.0, 0.0)
+            android.util.Log.d("MapScreen", "장소 상세 닫힘 - 길찾기 경로로 복귀")
+        } else if (detail == null && !isNavigating) {
+            // 길찾기 중이 아닐 때 장소 상세가 닫히면 마커 제거
             placeLocationTrigger = (placeLocationTrigger.first + 1) to Pair(0.0, 0.0)
         }
     }
@@ -410,8 +432,8 @@ fun MapScreen(
                     requestFocus = requestSearchFocus || requestSearchFocusTrigger
                 )
 
-                // 길찾기 중 상태바 (길찾기 중이지만 모달이 닫혀있을 때)
-                if (isNavigating && !isNavigationModalVisible) {
+                // 길찾기 중 상태바 (길찾기 중이지만 모달이 닫혀있을 때, 검색어가 없을 때만 표시)
+                if (isNavigating && !isNavigationModalVisible && searchQuery.isEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     NavigationStatusBar(
                         route = navigationRoute,
@@ -542,21 +564,22 @@ fun MapScreen(
         }
 
         // 장소 상세 정보 / 길찾기 Floating Panel
-        if (selectedPlaceDetail != null || (isNavigating && isNavigationModalVisible)) {
+        // 장소 상세가 우선순위 (길찾기 중에 다른 장소를 검색한 경우)
+        if (isShowingPlaceDetail || (isNavigating && isNavigationModalVisible && selectedPlaceDetail == null)) {
             MapFloatingPanel(
                 placeDetail = selectedPlaceDetail,
                 route = navigationRoute,
-                isNavigating = isNavigating,
+                isNavigating = isNavigating && selectedPlaceDetail == null,  // 장소 상세 표시 중이면 길찾기 모드 아님
                 onDismiss = {
-                    if (isNavigating) {
-                        // 길찾기 중일 때: 모달만 닫기
-                        viewModel.closeNavigationModal()
-                    } else {
-                        // 장소 상세일 때: 장소 상세 닫기
+                    if (selectedPlaceDetail != null) {
+                        // 장소 상세가 있으면: 장소 상세 닫기
                         viewModel.closePlaceDetail()
                         viewModel.clearSearch()  // 검색 상태 초기화
                         focusManager.clearFocus()  // 키보드 숨김
                         isSearchFocused = false  // 검색 포커스 상태 초기화
+                    } else if (isNavigating) {
+                        // 길찾기 중일 때: 모달만 닫기
+                        viewModel.closeNavigationModal()
                     }
                 },
                 onSetDestinationClick = {
@@ -602,6 +625,19 @@ fun MapScreen(
                 },
                 onDismiss = {
                     viewModel.dismissArrivalDialog()
+                }
+            )
+        }
+
+        // 목적지 변경 확인 모달
+        showDestinationChangeDialog?.let { request ->
+            DestinationChangeConfirmationDialog(
+                newDestinationName = request.endName,
+                onConfirm = {
+                    viewModel.confirmDestinationChange()
+                },
+                onDismiss = {
+                    viewModel.cancelDestinationChange()
                 }
             )
         }
@@ -685,6 +721,63 @@ private fun ArrivalConfirmationDialog(
             ) {
                 androidx.compose.material3.Text(
                     text = "목적지 도착했습니다.\n길안내를 종료하시겠습니까?",
+                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = Color.Black
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        androidx.compose.material3.Text("취소")
+                    }
+                    androidx.compose.material3.Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF8A9A8A),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        androidx.compose.material3.Text("확인")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 목적지 변경 확인 다이얼로그
+ */
+@Composable
+private fun DestinationChangeConfirmationDialog(
+    newDestinationName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+            ) {
+                androidx.compose.material3.Text(
+                    text = "목적지를 '$newDestinationName'(으)로\n변경하시겠습니까?",
                     style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     color = Color.Black
