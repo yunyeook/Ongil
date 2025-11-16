@@ -113,7 +113,7 @@ fun SafeZoneSettingScreen(
                     distanceMeters = uiState.level1.distanceMeters,
                     dwellMinutes = uiState.level1.dwellMinutes,
                     distanceRange = 50..150,
-                    dwellRange = 1..30,
+                    dwellRange = 1..60,
                     onDistanceChange = { onEvent(SafeZoneSettingUiEvent.ChangeLevelDistance(1, it)) },
                     onDwellChange = { onEvent(SafeZoneSettingUiEvent.ChangeLevelDwell(1, it)) },
                     modifier = Modifier
@@ -126,7 +126,7 @@ fun SafeZoneSettingScreen(
                     distanceMeters = uiState.level2.distanceMeters,
                     dwellMinutes = uiState.level2.dwellMinutes,
                     distanceRange = 200..500,
-                    dwellRange = 10..60,
+                    dwellRange = 1..30,
                     onDistanceChange = { onEvent(SafeZoneSettingUiEvent.ChangeLevelDistance(2, it)) },
                     onDwellChange = { onEvent(SafeZoneSettingUiEvent.ChangeLevelDwell(2, it)) },
                     modifier = Modifier
@@ -139,7 +139,7 @@ fun SafeZoneSettingScreen(
                     distanceMeters = uiState.level3.distanceMeters,
                     dwellMinutes = uiState.level3.dwellMinutes,
                     distanceRange = 500..1000,
-                    dwellRange = 30..180,
+                    dwellRange = 1..15,
                     onDistanceChange = { onEvent(SafeZoneSettingUiEvent.ChangeLevelDistance(3, it)) },
                     onDwellChange = { onEvent(SafeZoneSettingUiEvent.ChangeLevelDwell(3, it)) },
                     modifier = Modifier

@@ -61,6 +61,7 @@ class LocationTrackingService : Service() {
     @Inject lateinit var navigationRouteManager: NavigationRouteManager
     @Inject lateinit var userDataStoreManager: UserDataStoreManager
     @Inject lateinit var gpsWebSocketManager: GpsWebSocketManager
+    @Inject lateinit var favoriteRepository: kr.co.ongil.domain.repository.FavoriteRepository
 
     private lateinit var fusedClient: FusedLocationProviderClient
 
@@ -83,6 +84,9 @@ class LocationTrackingService : Service() {
     // 경로 이탈 모니터 (길찾기 중에만 활성화)
     private var routeDeviationMonitor: RouteDeviationMonitor? = null
 
+    // 기본 목적지 좌표 (SafetyZoneMonitor 기준점)
+    private var defaultDestinationLatitude: Double? = null
+    private var defaultDestinationLongitude: Double? = null
 
     // 현재 적용된 안전구역 설정 (handleAbnormalDetection에서 사용)
     private var currentSafeZoneSettings: kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings? = null
@@ -91,6 +95,11 @@ class LocationTrackingService : Service() {
         super.onCreate()
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
         ensureNotificationChannel()
+
+        // 기본 목적지 조회 (SafetyZoneMonitor 기준점)
+        serviceScope.launch {
+            loadDefaultDestination()
+        }
 
         // 경로 변경 구독 (길찾기 시작/종료 감지)
         serviceScope.launch {
@@ -124,14 +133,63 @@ class LocationTrackingService : Service() {
             }
         }
     }
+    /**
+     * 기본 목적지 조회 (SafetyZoneMonitor 기준점)
+     */
+    private suspend fun loadDefaultDestination() {
+        try {
+            val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            if (patientId == null) {
+                Log.w(TAG, "환자 ID를 가져올 수 없어 기본 목적지를 조회할 수 없습니다")
+                return
+            }
+
+            val userType = userDataStoreManager.getUserType().first()
+            if (userType != "PATIENT") {
+                Log.d(TAG, "환자가 아니므로 기본 목적지 조회를 스킵합니다")
+                return
+            }
+
+            // 기본 목적지 조회
+            val favoritePlaces = favoriteRepository.getFavoritePlaces(patientId)
+            val defaultPlace = favoritePlaces.getOrNull()?.items?.firstOrNull { it.isDefault }
+
+            if (defaultPlace == null) {
+                Log.w(TAG, "⚠️ 기본 목적지가 설정되어 있지 않습니다. 안전범위 모니터링이 비활성화됩니다.")
+                return
+            }
+
+            defaultDestinationLatitude = defaultPlace.latitude
+            defaultDestinationLongitude = defaultPlace.longitude
+
+            Log.d(TAG, "✅ 기본 목적지 로드 완료: ${defaultPlace.displayName} (${defaultPlace.latitude}, ${defaultPlace.longitude})")
+
+            // 기본 목적지 로드 후 SafetyZoneMonitor 재초기화
+            val settings = userDataStoreManager.getSafeZoneSettings()
+            updateSafetyZoneMonitor(settings)
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 기본 목적지 조회 실패", e)
+        }
+    }
+
     private fun updateSafetyZoneMonitor(settings: kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings) {
         try {
             currentSafeZoneSettings = settings
 
-            // SafetyZoneMonitor 재생성 (홈 위치는 하드코딩, 추후 사용자 설정 추가 가능)
+            // 기본 목적지 좌표가 없으면 SafetyZoneMonitor 생성하지 않음
+            val homeLat = defaultDestinationLatitude
+            val homeLon = defaultDestinationLongitude
+
+            if (homeLat == null || homeLon == null) {
+                Log.w(TAG, "기본 목적지가 설정되지 않아 SafetyZoneMonitor를 생성하지 않습니다")
+                safetyZoneMonitor = null
+                return
+            }
+
+            // SafetyZoneMonitor 재생성 (기본 목적지를 기준점으로 사용)
             safetyZoneMonitor = SafetyZoneMonitor(
-                homeLatitude = 37.50175822768635,
-                homeLongitude = 127.03958229478599,
+                homeLatitude = homeLat,
+                homeLongitude = homeLon,
                 level1Distance = settings.level1Distance,
                 level1Dwell = settings.level1Dwell,
                 level2Distance = settings.level2Distance,
@@ -146,7 +204,7 @@ class LocationTrackingService : Service() {
                     }
                 }
             )
-            Log.d(TAG, "SafetyZoneMonitor 업데이트 완료: L1=${settings.level1Distance}m/${settings.level1Dwell}분, L2=${settings.level2Distance}m/${settings.level2Dwell}분, L3=${settings.level3Distance}m/${settings.level3Dwell}분")
+            Log.d(TAG, "SafetyZoneMonitor 업데이트 완료 (기준점: ${homeLat}, ${homeLon}): L1=${settings.level1Distance}m/${settings.level1Dwell}분, L2=${settings.level2Distance}m/${settings.level2Dwell}분, L3=${settings.level3Distance}m/${settings.level3Dwell}분")
         } catch (e: Exception) {
             Log.e(TAG, "SafetyZoneMonitor 업데이트 실패", e)
         }
@@ -522,9 +580,14 @@ class LocationTrackingService : Service() {
                 return
             }
 
-            // 홈 위치 (SafetyZoneMonitor와 동일한 값 사용)
-            val homeLatitude = 37.50175822768635
-            val homeLongitude = 127.03958229478599
+            // 기본 목적지 좌표 (SafetyZoneMonitor와 동일한 값 사용)
+            val homeLatitude = defaultDestinationLatitude
+            val homeLongitude = defaultDestinationLongitude
+
+            if (homeLatitude == null || homeLongitude == null) {
+                Log.w(TAG, "기본 목적지가 설정되지 않아 이상 상황을 처리할 수 없습니다")
+                return
+            }
 
             // 거리 계산
             val distance = calculateDistance(
