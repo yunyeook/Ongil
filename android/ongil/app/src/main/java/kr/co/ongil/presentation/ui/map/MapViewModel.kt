@@ -288,19 +288,40 @@ class MapViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
+    // 환자 위치 저장 (보호자가 검색할 때 사용)
+    private var patientLocationForSearch: kr.co.ongil.data.model.location.Coordinate? = null
+
+    /**
+     * 환자 위치 업데이트 (보호자용)
+     */
+    fun updatePatientLocation(location: kr.co.ongil.data.model.location.Coordinate?) {
+        patientLocationForSearch = location
+    }
+
     /**
      * 장소 검색 (실시간 TMap 검색)
      */
     private suspend fun searchPlaces(query: String) {
         _isSearching.value = true
 
-        val location = locationBus.lastValue
-        Log.d("MapViewModel", "장소 검색: $query (lat: ${location?.latitude}, lng: ${location?.longitude})")
+        // 보호자인 경우 선택된 환자의 위치를 기준으로 검색
+        val userType = userDataStoreManager.getUserType().first()
+        val selectedPatientId = userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+
+        val (latitude, longitude) = if (userType == "GUARDIAN" && selectedPatientId != null && patientLocationForSearch != null) {
+            // 보호자는 환자의 위치를 사용
+            patientLocationForSearch!!.latitude to patientLocationForSearch!!.longitude
+        } else {
+            // 환자는 본인의 위치 사용
+            locationBus.lastValue?.latitude to locationBus.lastValue?.longitude
+        }
+
+        Log.d("MapViewModel", "장소 검색: $query (userType: $userType, selectedPatientId: $selectedPatientId, lat: $latitude, lng: $longitude)")
 
         searchPlaceUseCase(
             query = query,
-            latitude = location?.latitude,
-            longitude = location?.longitude
+            latitude = latitude,
+            longitude = longitude
         )
             .onSuccess { places ->
                 _searchResults.value = places
@@ -358,12 +379,20 @@ class MapViewModel @Inject constructor(
             // 실시간 검색 결과 숨김
             _searchResults.value = emptyList()
 
-            val location = locationBus.lastValue
-            val latitude = location?.latitude
-            val longitude = location?.longitude
+            // 보호자인 경우 선택된 환자의 위치를 기준으로 검색
+            val userType = userDataStoreManager.getUserType().first()
+            val selectedPatientId = userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+
+            val (latitude, longitude) = if (userType == "GUARDIAN" && selectedPatientId != null && patientLocationForSearch != null) {
+                // 보호자는 환자의 위치를 사용
+                patientLocationForSearch!!.latitude to patientLocationForSearch!!.longitude
+            } else {
+                // 환자는 본인의 위치 사용
+                locationBus.lastValue?.latitude to locationBus.lastValue?.longitude
+            }
 
             _isSearching.value = true
-            Log.d("MapViewModel", "최종 검색 시작: $query (lat: $latitude, lng: $longitude)")
+            Log.d("MapViewModel", "최종 검색 시작: $query (userType: $userType, selectedPatientId: $selectedPatientId, lat: $latitude, lng: $longitude)")
 
             mapRepository.searchPlaces(
                 query = query,
@@ -925,12 +954,13 @@ class MapViewModel @Inject constructor(
                 return@launch
             }
 
-            // patientId 가져오기
+            // patientId 가져오기 (환자는 본인, 보호자는 선택된 환자)
             val userType = userDataStoreManager.getUserType().first()
             val patientId = if (userType == "PATIENT") {
                 userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
             } else {
-                null
+                // 보호자는 선택된 환자의 즐겨찾기에 추가
+                userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
             }
 
             if (patientId == null) {
