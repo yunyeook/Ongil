@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -53,6 +54,13 @@ class MainActivity : ComponentActivity() {
         // FCM으로부터 전달된 Intent 처리
         handleIncomingCallIntent(intent)
 
+        // ✅ 전화 올 때만 화면 설정
+        if (intent.getStringExtra("type") == "INCOMING_CALL") {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
         setContent {
             OngilTheme {
                  MainScreen(
@@ -65,6 +73,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
