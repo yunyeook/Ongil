@@ -1,6 +1,17 @@
 package kr.co.ongil.service
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.os.Build
+import android.os.PowerManager
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kr.co.ongil.data.model.fcm.FcmPayloadDto
@@ -19,6 +30,7 @@ import kr.co.ongil.domain.usecase.fcm.HandleNavigationEndUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleAbnormalDetectedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleCallRequestUseCase
 import kr.co.ongil.domain.helper.NotificationHelper
+import kr.co.ongil.presentation.MainActivity
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -53,6 +65,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var notificationHelper: NotificationHelper
+
+    // ✅ Wake Lock 관리
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -127,9 +142,60 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         return payloadDto
     }
 
-    /**
-     * VoIP 수신 통화 처리
-     */
+    private fun showIncomingCallNotification(
+        callId: Long,
+        sessionId: String?,
+        callerName: String,
+        callerPhone: String,
+        userType: String
+    ) {
+        val notificationManager = getSystemService(NotificationManager::class.java)
+
+        // 채널 생성
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "voip_call",
+                "수신 전화",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        // Full-Screen Intent
+        val fullScreenIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("type", "INCOMING_CALL")
+            putExtra("callId", callId)
+            putExtra("sessionId", sessionId)
+            putExtra("callerName", callerName)
+            putExtra("callerPhone", callerPhone)
+            putExtra("userType", userType)
+        }
+
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            this,
+            callId.toInt(),
+            fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 알림 생성
+        val notification = NotificationCompat.Builder(this, "voip_call")
+            .setSmallIcon(android.R.drawable.ic_menu_call)
+            .setContentTitle("수신 전화")
+            .setContentText(callerName)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setFullScreenIntent(fullScreenPendingIntent, true) // ✅ 핵심!
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(callId.toInt(), notification)
+    }
+
+    // MyFirebaseMessagingService.kt
     private fun handleIncomingCall(data: Map<String, String>) {
         Log.d("FCM", "📞 VoIP 수신 통화 처리")
 
@@ -141,29 +207,23 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val sessionId = data["sessionId"]
         val callerName = data["callerName"] ?: "알 수 없음"
         val callerPhone = data["callerPhone"] ?: ""
-        val userType = data["userType"] ?: "PATIENT"   // 👈 추가 (GUARDIAN이면 그 값 들어오게)
+        val userType = data["userType"] ?: "PATIENT"
 
         Log.d("FCM", "callId: $callId, sessionId: $sessionId, caller: $callerName")
 
-        val intent = android.content.Intent(
-            this,
-            kr.co.ongil.presentation.MainActivity::class.java
-        ).apply {
-            addFlags(
-                android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP // 👈 이거 추가
-            )
-            putExtra("type", "INCOMING_CALL")
-            putExtra("callId", callId)
-            putExtra("sessionId", sessionId)
-            putExtra("callerName", callerName)
-            putExtra("callerPhone", callerPhone)
-            putExtra("userType", userType) // 👈 이걸로 NavGraph 쪽 VoipIncomingCall로 전달
-        }
+        // ✅ Full-Screen Intent로 알림 생성
+        showIncomingCallNotification(callId, sessionId, callerName, callerPhone, userType)
+    }
 
-        startActivity(intent)
-        Log.d("FCM", "✓ MainActivity로 이동 (INCOMING_CALL)")
+    // ✅ 이것만 추가
+    override fun onDestroy() {
+        super.onDestroy()
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+                Log.d("FCM", "✅ Wake Lock released")
+            }
+        }
     }
 
     /**
