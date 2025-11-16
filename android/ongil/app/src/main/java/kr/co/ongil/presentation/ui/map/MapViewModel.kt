@@ -155,7 +155,7 @@ class MapViewModel @Inject constructor(
                 }
         }
 
-        // 길찾기 경로 변경 감지 (화면 복귀 시 모달 자동 표시)
+        // 길찾기 경로 변경 감지
         viewModelScope.launch {
             navigationRouteManager.currentRoute.collect { route ->
                 if (route != null) {
@@ -169,11 +169,10 @@ class MapViewModel @Inject constructor(
                         totalTimeMinutes = route.totalTimeMinutes,
                         totalDistanceMeters = route.totalDistanceMeters
                     )
-                    // 길찾기가 시작되면 모달 표시
-                    if (!_isNavigationModalVisible.value) {
-                        _isNavigationModalVisible.value = true
-                        Log.d("MapViewModel", "길찾기 경로 감지 - 모달 자동 표시")
-                    }
+                    Log.d("MapViewModel", "길찾기 경로 업데이트")
+                } else {
+                    _navigationRoute.value = null
+                    Log.d("MapViewModel", "길찾기 경로 제거")
                 }
             }
         }
@@ -681,27 +680,39 @@ class MapViewModel @Inject constructor(
      */
     fun stopNavigation() {
         viewModelScope.launch {
-            val navigationIdString = currentNavigationId
+            // NavigationRouteManager에서 navigationId 가져오기 (ViewModel 재생성 시에도 유지됨)
+            val navigationIdString = navigationRouteManager.getCurrentRoute()?.navigationId
             if (navigationIdString == null) {
-                Log.e("MapViewModel", "길안내 종료 실패: navigationId 없음")
+                Log.e("MapViewModel", "길안내 종료 실패: navigationId 없음 (경로 정보 없음)")
+                // 상태만 정리
                 _navigationRoute.value = null
+                _isNavigationMode.value = false
+                _isNavigationModalVisible.value = false
                 return@launch
             }
+
+            Log.d("MapViewModel", "길안내 종료: navigationId=$navigationIdString")
 
             // 현재 위치 확인
             val currentLocation = locationBus.lastValue
             if (currentLocation == null) {
                 Log.e("MapViewModel", "길안내 종료 실패: 위치 정보 없음")
+                // 위치 없어도 종료는 진행 (실패로 처리)
+                endNavigationApi(navigationIdString, isSuccessful = false)
                 return@launch
             }
 
-            // 목적지 좌표 확인
-            val destLat = destinationLatitude
-            val destLng = destinationLongitude
-            if (destLat == null || destLng == null) {
-                Log.e("MapViewModel", "길안내 종료 실패: 목적지 정보 없음")
+            // 목적지 좌표 - NavigationRouteManager에서 가져오기
+            val route = navigationRouteManager.getCurrentRoute()
+            if (route == null || route.path.isEmpty()) {
+                Log.e("MapViewModel", "길안내 종료 실패: 경로 정보 없음")
+                endNavigationApi(navigationIdString, isSuccessful = false)
                 return@launch
             }
+
+            val destination = route.path.last()
+            val destLat = destination.latitude
+            val destLng = destination.longitude
 
             // 현재 위치와 목적지 거리 계산
             val distance = calculateDistance(
