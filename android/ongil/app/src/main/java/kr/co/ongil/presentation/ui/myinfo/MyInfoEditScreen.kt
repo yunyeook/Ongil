@@ -51,6 +51,7 @@ fun formatDateForStorage(date: String): String = date.replace(".", "")
 @Composable
 fun MyInfoEditScreen(
     modifier: Modifier = Modifier,
+    paddingValues: PaddingValues = PaddingValues(0.dp),
     viewModel: MyInfoEditViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onChangePasswordClick: () -> Unit = {}
@@ -62,7 +63,8 @@ fun MyInfoEditScreen(
         onEvent = viewModel::onEvent,
         onNavigateBack = onNavigateBack,
         onChangePasswordClick = onChangePasswordClick,
-        modifier = modifier
+        modifier = modifier,
+        outerPaddingValues = paddingValues
     )
 }
 
@@ -75,7 +77,8 @@ fun MyInfoEditContent(
     onEvent: (MyInfoEditEvent) -> Unit,
     onNavigateBack: () -> Unit,
     onChangePasswordClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    outerPaddingValues: PaddingValues = PaddingValues(0.dp)
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -127,6 +130,7 @@ fun MyInfoEditContent(
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .padding(outerPaddingValues)
                 .padding(paddingValues)
                 .padding(horizontal = 24.dp, vertical = 24.dp)
                 .verticalScroll(rememberScrollState()) // ✅ 스크롤

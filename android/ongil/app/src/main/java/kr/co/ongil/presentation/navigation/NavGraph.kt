@@ -184,7 +184,8 @@ fun AppNavGraph(
                     // 내정보 화면으로 명시적으로 이동 (EditInfo 화면 제거)
                     navController.popBackStack(Routes.MyInfo.route, inclusive = false)
                 },
-                onChangePasswordClick = { navController.navigate(Routes.ChangePassword.route) }
+                onChangePasswordClick = { navController.navigate(Routes.ChangePassword.route) },
+                paddingValues = paddingValues
             )
         }
 
