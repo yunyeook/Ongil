@@ -422,7 +422,7 @@ fun TMapComposable(
                         val marker = TMapMarkerItem().apply {
                             id = "place_marker"
                             tMapPoint = TMapPoint(lat, lon)
-                            icon = createMarkerBitmap(context, "장소", Color.parseColor("#FF9800"))
+                            icon = createPlaceMarkerBitmap(context, Color.parseColor("#FF9800"))
                         }
 
                         try {
@@ -847,7 +847,7 @@ fun TMapComposable(
                         val startMarker = TMapMarkerItem().apply {
                             id = "start_marker"
                             tMapPoint = TMapPoint(startPoint.latitude, startPoint.longitude)
-                            icon = createMarkerBitmap(context, "출발", Color.parseColor("#4CAF50"))
+                            icon = createStartMarkerBitmap(context, Color.parseColor("#4CAF50"))
                         }
                         try {
                             tmap.addTMapMarkerItem(startMarker)
@@ -863,7 +863,7 @@ fun TMapComposable(
                         val endMarker = TMapMarkerItem().apply {
                             id = "end_marker"
                             tMapPoint = TMapPoint(endPoint.latitude, endPoint.longitude)
-                            icon = createMarkerBitmap(context, "도착", Color.parseColor("#F44336"))
+                            icon = createEndMarkerBitmap(context, Color.parseColor("#F44336"))
                         }
                         try {
                             tmap.addTMapMarkerItem(endMarker)
@@ -921,6 +921,16 @@ fun TMapComposable(
                             Log.d("TMapComposable", "🔍 홈 화면 자동 줌 조정: $autoZoomLevel (범위: ${String.format("%.4f", maxDiff)}, 약 ${String.format("%.1f", maxDiff * 111)}km)")
                         } catch (e: Exception) {
                             Log.e("TMapComposable", "자동 줌 조정 실패", e)
+                        }
+                    } else if (!isHomeScreen && route.path.isNotEmpty()) {
+                        // 위치 탭에서 길찾기 시작 시: 출발지(환자 위치)로 이동 + 줌 레벨 18
+                        try {
+                            val startPoint = route.path.first()
+                            tmap.setCenterPoint(startPoint.latitude, startPoint.longitude)
+                            tmap.setZoomLevel(19)
+                            Log.d("TMapComposable", "🔍 길찾기 시작 - 출발지로 이동 (줌 레벨 18)")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "출발지 이동 실패", e)
                         }
                     }
 
@@ -1109,47 +1119,340 @@ private fun createCirclePoints(centerLat: Double, centerLon: Double, radiusMeter
 }
 
 /**
- * 출발/도착 마커 비트맵 생성
+ * 출발/도착/장소 마커 비트맵 생성 (핀 모양)
  */
 private fun createMarkerBitmap(
     context: android.content.Context,
     text: String,
     backgroundColor: Int
 ): Bitmap {
-    val sizeDp = 40
-    val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt()
-    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val widthDp = 48
+    val heightDp = 64  // 핀 모양이므로 높이가 더 김
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    val centerX = sizePx / 2f
-    val centerY = sizePx / 2f
+    val centerX = widthPx / 2f
 
-    // 배경 원
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자 효과
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(8f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리 (하단 삼각형)
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2f, pinHeadCenterY + pinHeadRadius - 4f)
+        lineTo(centerX + pinHeadRadius / 2f, pinHeadCenterY + pinHeadRadius - 4f)
+        lineTo(centerX, heightPx - 8f)
+        close()
+    }
+
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 배경 (외곽 원)
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 3f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
     val bgPaint = Paint().apply {
         color = backgroundColor
         style = Paint.Style.FILL
         isAntiAlias = true
     }
-    canvas.drawCircle(centerX, centerY, sizePx / 2f - 4f, bgPaint)
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
 
-    // 흰색 테두리
-    val borderPaint = Paint().apply {
+    // 내부 흰색 원 (텍스트 배경)
+    val innerCirclePaint = Paint().apply {
         color = Color.WHITE
-        style = Paint.Style.STROKE
-        strokeWidth = 4f
+        style = Paint.Style.FILL
         isAntiAlias = true
     }
-    canvas.drawCircle(centerX, centerY, sizePx / 2f - 4f, borderPaint)
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius - 6f, innerCirclePaint)
 
     // 텍스트
     val textPaint = Paint().apply {
-        color = Color.WHITE
-        textSize = 14 * context.resources.displayMetrics.density
+        color = backgroundColor
+        textSize = 16 * context.resources.displayMetrics.density
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
         isFakeBoldText = true
     }
-    val textY = centerY - (textPaint.descent() + textPaint.ascent()) / 2
+    val textY = pinHeadCenterY - (textPaint.descent() + textPaint.ascent()) / 2
     canvas.drawText(text, centerX, textY, textPaint)
+
+    return bitmap
+}
+
+/**
+ * 출발 마커 비트맵 생성 (핀 모양 + 원형 아이콘)
+ */
+private fun createStartMarkerBitmap(
+    context: android.content.Context,
+    backgroundColor: Int
+): Bitmap {
+    val widthDp = 36
+    val heightDp = 48
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = widthPx / 2f
+
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(6f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX + pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX, heightPx - 6f)
+        close()
+    }
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 외곽
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
+    val bgPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
+
+    // 내부 흰색 원형 아이콘
+    val iconRadius = pinHeadRadius * 0.5f
+    val iconPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, iconRadius, iconPaint)
+
+    return bitmap
+}
+
+/**
+ * 도착 마커 비트맵 생성 (핀 모양 + 깃발 아이콘)
+ */
+private fun createEndMarkerBitmap(
+    context: android.content.Context,
+    backgroundColor: Int
+): Bitmap {
+    val widthDp = 36
+    val heightDp = 48
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = widthPx / 2f
+
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(6f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX + pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX, heightPx - 6f)
+        close()
+    }
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 외곽
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
+    val bgPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
+
+    // 내부 흰색 깃발 아이콘
+    val iconSize = pinHeadRadius * 0.8f
+    val flagLeft = centerX - iconSize * 0.35f
+    val flagTop = pinHeadCenterY - iconSize * 0.4f
+
+    // 깃대
+    val polePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        isAntiAlias = true
+    }
+    canvas.drawLine(
+        flagLeft,
+        flagTop,
+        flagLeft,
+        flagTop + iconSize * 0.8f,
+        polePaint
+    )
+
+    // 깃발
+    val flagPath = android.graphics.Path().apply {
+        moveTo(flagLeft, flagTop)
+        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.15f)
+        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.45f)
+        lineTo(flagLeft, flagTop + iconSize * 0.3f)
+        close()
+    }
+    val flagPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(flagPath, flagPaint)
+
+    return bitmap
+}
+
+/**
+ * 장소 마커 비트맵 생성 (핀 모양)
+ */
+private fun createPlaceMarkerBitmap(
+    context: android.content.Context,
+    backgroundColor: Int
+): Bitmap {
+    val widthDp = 36
+    val heightDp = 48
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = widthPx / 2f
+
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(6f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX + pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX, heightPx - 6f)
+        close()
+    }
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 외곽
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
+    val bgPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
+
+    // 내부 아이콘 (위치 핀 아이콘)
+    val iconSize = pinHeadRadius * 0.8f
+    val iconPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    val iconStrokePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        isAntiAlias = true
+    }
+
+    // 작은 핀 모양 아이콘
+    val iconPinRadius = iconSize * 0.25f
+    val iconPinCenterY = pinHeadCenterY - iconSize * 0.15f
+
+    // 아이콘 핀 헤드 (원)
+    canvas.drawCircle(centerX, iconPinCenterY, iconPinRadius, iconPaint)
+
+    // 아이콘 핀 꼬리 (삼각형)
+    val iconPinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - iconPinRadius * 0.4f, iconPinCenterY + iconPinRadius - 1f)
+        lineTo(centerX + iconPinRadius * 0.4f, iconPinCenterY + iconPinRadius - 1f)
+        lineTo(centerX, pinHeadCenterY + iconSize * 0.25f)
+        close()
+    }
+    canvas.drawPath(iconPinTailPath, iconPaint)
 
     return bitmap
 }
