@@ -141,17 +141,17 @@ class AuthStateViewModel @Inject constructor(
 
                             is SseEvent.GpsUpdate -> {
                                 val gpsUpdate = event.data
-                                android.util.Log.d(
-                                    "AuthStateViewModel",
-                                    "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}"
-                                )
+//                                android.util.Log.d(
+//                                    "AuthStateViewModel",
+//                                    "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}"
+//                                )
                                 _patientLocations.update { currentMap ->
                                     val updated =
                                         currentMap + (gpsUpdate.patientId to gpsUpdate.coordinate)
-                                    android.util.Log.d(
-                                        "AuthStateViewModel",
-                                        "patientLocations 업데이트: ${updated.keys}"
-                                    )
+//                                    android.util.Log.d(
+//                                        "AuthStateViewModel",
+//                                        "patientLocations 업데이트: ${updated.keys}"
+//                                    )
                                     updated
                                 }
                             }

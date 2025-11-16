@@ -64,6 +64,7 @@ class LocationTrackingService : Service() {
     @Inject lateinit var gpsWebSocketManager: GpsWebSocketManager
     @Inject lateinit var favoriteRepository: kr.co.ongil.domain.repository.FavoriteRepository
     @Inject lateinit var findRouteUseCase: kr.co.ongil.domain.usecase.map.FindRouteUseCase
+    @Inject lateinit var safeZoneRepository: kr.co.ongil.domain.repository.SafeZoneRepository
 
     private lateinit var fusedClient: FusedLocationProviderClient
 
@@ -73,6 +74,9 @@ class LocationTrackingService : Service() {
 
     // [테스트용] 1초마다 위치 전송하는 타이머
     private var periodicSendJob: Job? = null
+
+    // 안전구역 설정 주기적 조회 (30초마다)
+    private var safeZoneSettingsPollingJob: Job? = null
 
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
@@ -127,11 +131,59 @@ class LocationTrackingService : Service() {
             }
         }
 
-        // 안전구역 설정 변경 구독
-        serviceScope.launch {
-            userDataStoreManager.observeSafeZoneSettings().collect { settings ->
-                Log.d(TAG, "안전구역 설정 변경 감지")
-                updateSafetyZoneMonitor(settings)
+        // 안전구역 설정 주기적 조회 (보호자가 변경한 설정을 API에서 가져오기)
+        safeZoneSettingsPollingJob = serviceScope.launch {
+            val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            if (patientId == null) {
+                Log.w(TAG, "환자 ID를 가져올 수 없어 안전구역 설정 폴링을 시작할 수 없습니다")
+                return@launch
+            }
+
+            while (isActive) {
+                try {
+                    Log.d(TAG, "🔄 안전구역 설정 API 조회 중... (환자 ID: $patientId)")
+                    safeZoneRepository.getSafeZone(patientId).collect { result ->
+                        result.onSuccess { data ->
+//                            Log.d(TAG, "✅ API에서 최신 안전구역 설정 조회 성공")
+//                            Log.d(TAG, "  - 1단계: ${data.boundaries.first.radius}m / ${data.boundaries.first.time}분")
+//                            Log.d(TAG, "  - 2단계: ${data.boundaries.second.radius}m / ${data.boundaries.second.time}분")
+//                            Log.d(TAG, "  - 3단계: ${data.boundaries.third.radius}m / ${data.boundaries.third.time}분")
+
+                            // DataStore에 저장
+                            userDataStoreManager.saveSafeZoneSettings(
+                                patientId = patientId,
+                                level1Distance = data.boundaries.first.radius.toInt(),
+                                level1Dwell = data.boundaries.first.time,
+                                level2Distance = data.boundaries.second.radius.toInt(),
+                                level2Dwell = data.boundaries.second.time,
+                                level3Distance = data.boundaries.third.radius.toInt(),
+                                level3Dwell = data.boundaries.third.time,
+                                pushEnabled = true,
+                                autoCallEnabled = false
+                            )
+
+                            // SafetyZoneMonitor 업데이트
+                            val settings = kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings(
+                                level1Distance = data.boundaries.first.radius.toInt(),
+                                level1Dwell = data.boundaries.first.time,
+                                level2Distance = data.boundaries.second.radius.toInt(),
+                                level2Dwell = data.boundaries.second.time,
+                                level3Distance = data.boundaries.third.radius.toInt(),
+                                level3Dwell = data.boundaries.third.time,
+                                pushEnabled = true,
+                                autoCallEnabled = false
+                            )
+                            updateSafetyZoneMonitor(settings)
+                        }.onFailure { error ->
+                            Log.e(TAG, "❌ API에서 안전구역 설정 조회 실패: ${error.message}")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ 안전구역 설정 폴링 중 오류", e)
+                }
+
+                // 30초 대기
+                delay(30000)
             }
         }
     }
@@ -187,7 +239,11 @@ class LocationTrackingService : Service() {
             Log.d(TAG, "✅ 기본 목적지 로드 완료: ${defaultPlace.displayName} (${defaultPlace.latitude}, ${defaultPlace.longitude})")
 
             // 기본 목적지 로드 후 SafetyZoneMonitor 재초기화
-            val settings = userDataStoreManager.getSafeZoneSettings()
+            val settings = userDataStoreManager.getSafeZoneSettings(patientId)
+//            Log.d(TAG, "📋 DataStore에서 로드한 안전구역 설정 (환자 ID: $patientId):")
+//            Log.d(TAG, "  - 1단계: ${settings.level1Distance}m / ${settings.level1Dwell}분")
+//            Log.d(TAG, "  - 2단계: ${settings.level2Distance}m / ${settings.level2Dwell}분")
+//            Log.d(TAG, "  - 3단계: ${settings.level3Distance}m / ${settings.level3Dwell}분")
             updateSafetyZoneMonitor(settings)
         } catch (e: Exception) {
             Log.e(TAG, "❌ 기본 목적지 조회 실패", e)
@@ -196,8 +252,6 @@ class LocationTrackingService : Service() {
 
     private fun updateSafetyZoneMonitor(settings: kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings) {
         try {
-            currentSafeZoneSettings = settings
-
             // 기본 목적지 좌표가 없으면 SafetyZoneMonitor 생성하지 않음
             val homeLat = defaultDestinationLatitude
             val homeLon = defaultDestinationLongitude
@@ -205,8 +259,28 @@ class LocationTrackingService : Service() {
             if (homeLat == null || homeLon == null) {
                 Log.w(TAG, "기본 목적지가 설정되지 않아 SafetyZoneMonitor를 생성하지 않습니다")
                 safetyZoneMonitor = null
+                currentSafeZoneSettings = null
                 return
             }
+
+            // 설정이 변경되었는지 확인
+            val currentSettings = currentSafeZoneSettings
+            val settingsChanged = currentSettings == null ||
+                currentSettings.level1Distance != settings.level1Distance ||
+                currentSettings.level1Dwell != settings.level1Dwell ||
+                currentSettings.level2Distance != settings.level2Distance ||
+                currentSettings.level2Dwell != settings.level2Dwell ||
+                currentSettings.level3Distance != settings.level3Distance ||
+                currentSettings.level3Dwell != settings.level3Dwell
+
+            if (!settingsChanged && safetyZoneMonitor != null) {
+                // 설정이 변경되지 않았고 모니터가 이미 존재하면 유지
+                Log.d(TAG, "안전구역 설정이 변경되지 않아 SafetyZoneMonitor 유지 (체류 시간 타이머 보존)")
+                return
+            }
+
+            // 설정 변경됨 - 새로 저장
+            currentSafeZoneSettings = settings
 
             // SafetyZoneMonitor 재생성 (기본 목적지를 기준점으로 사용)
             safetyZoneMonitor = SafetyZoneMonitor(
@@ -226,7 +300,7 @@ class LocationTrackingService : Service() {
                     }
                 }
             )
-            Log.d(TAG, "SafetyZoneMonitor 업데이트 완료 (기준점: ${homeLat}, ${homeLon}): L1=${settings.level1Distance}m/${settings.level1Dwell}분, L2=${settings.level2Distance}m/${settings.level2Dwell}분, L3=${settings.level3Distance}m/${settings.level3Dwell}분")
+            Log.d(TAG, "SafetyZoneMonitor 재생성 완료 (기준점: ${homeLat}, ${homeLon}): L1=${settings.level1Distance}m/${settings.level1Dwell}분, L2=${settings.level2Distance}m/${settings.level2Dwell}분, L3=${settings.level3Distance}m/${settings.level3Dwell}분")
         } catch (e: Exception) {
             Log.e(TAG, "SafetyZoneMonitor 업데이트 실패", e)
         }
@@ -242,6 +316,8 @@ class LocationTrackingService : Service() {
 
     override fun onDestroy() {
         stopTracking()
+        safeZoneSettingsPollingJob?.cancel()
+        safeZoneSettingsPollingJob = null
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -447,11 +523,36 @@ class LocationTrackingService : Service() {
                     // 안전 범위 모니터링 (환자일 때만)
                     val userType = userDataStoreManager.getUserType().first()
                     if (userType == "PATIENT") {
-                        safetyZoneMonitor?.updateLocation(
-                            point.latitude,
-                            point.longitude,
-                            point.timeMillis
-                        )
+                        val monitor = safetyZoneMonitor
+                        if (monitor != null) {
+                            // 거리 계산
+                            val distance = defaultDestinationLatitude?.let { lat ->
+                                defaultDestinationLongitude?.let { lon ->
+                                    SafetyZoneMonitor.calculateDistance(lat, lon, point.latitude, point.longitude)
+                                }
+                            }
+
+                            Log.d(TAG, "🔍 안전범위 체크: 기본 목적지로부터 ${distance?.let { String.format("%.1f", it) } ?: "알 수 없음"}m")
+
+                            monitor.updateLocation(
+                                point.latitude,
+                                point.longitude,
+                                point.timeMillis
+                            )
+
+                            // 현재 상태 조회
+                            val status = monitor.getCurrentStatus()
+                            if (status.stage1OutsideDurationMinutes != null ||
+                                status.stage2OutsideDurationMinutes != null ||
+                                status.stage3OutsideDurationMinutes != null) {
+                                Log.d(TAG, "⏱️ 안전범위 밖 체류 시간:")
+                                status.stage1OutsideDurationMinutes?.let { Log.d(TAG, "  - 1단계: ${it}분") }
+                                status.stage2OutsideDurationMinutes?.let { Log.d(TAG, "  - 2단계: ${it}분") }
+                                status.stage3OutsideDurationMinutes?.let { Log.d(TAG, "  - 3단계: ${it}분") }
+                            }
+                        } else {
+                            Log.w(TAG, "⚠️ SafetyZoneMonitor가 null입니다 - 안전범위 체크 불가")
+                        }
                     }
 
                     // [테스트용] 백엔드 전송은 1초 타이머에서 하므로 여기서는 주석 처리
@@ -756,7 +857,7 @@ class LocationTrackingService : Service() {
                 endLatitude = defaultPlace.latitude,
                 endLongitude = defaultPlace.longitude,
                 endName = defaultPlace.displayName,
-                initiatedBy = "SYSTEM"  // 시스템에 의한 자동 시작
+                initiatedBy = "PATIENT"  // 환자 앱에서 자동 시작
             ).onSuccess { result ->
                 Log.d(TAG, "✅ 자동 길찾기 경로 탐색 성공: navigationId=${result.navigationId}")
 

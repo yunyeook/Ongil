@@ -148,17 +148,24 @@ class SafeZoneSettingViewModel @Inject constructor(
                         Log.d(TAG, "  - 2단계: ${data.boundaries.second.radius}m, ${data.boundaries.second.time}분")
                         Log.d(TAG, "  - 3단계: ${data.boundaries.third.radius}m, ${data.boundaries.third.time}분")
 
-                        // DataStore에도 저장 (로컬 캐시)
-                        userDataStoreManager.saveSafeZoneSettings(
-                            level1Distance = state.level1.distanceMeters,
-                            level1Dwell = state.level1.dwellMinutes,
-                            level2Distance = state.level2.distanceMeters,
-                            level2Dwell = state.level2.dwellMinutes,
-                            level3Distance = state.level3.distanceMeters,
-                            level3Dwell = state.level3.dwellMinutes,
-                            pushEnabled = state.pushEnabled,
-                            autoCallEnabled = state.autoCallEnabled
-                        )
+                        // DataStore에도 저장 (로컬 캐시) - 환자별로 저장
+                        val currentPatientId = userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+                        if (currentPatientId != null) {
+                            userDataStoreManager.saveSafeZoneSettings(
+                                patientId = currentPatientId,
+                                level1Distance = state.level1.distanceMeters,
+                                level1Dwell = state.level1.dwellMinutes,
+                                level2Distance = state.level2.distanceMeters,
+                                level2Dwell = state.level2.dwellMinutes,
+                                level3Distance = state.level3.distanceMeters,
+                                level3Dwell = state.level3.dwellMinutes,
+                                pushEnabled = state.pushEnabled,
+                                autoCallEnabled = state.autoCallEnabled
+                            )
+                            Log.d(TAG, "✅ DataStore 저장 완료 (환자 ID: $currentPatientId)")
+                        } else {
+                            Log.w(TAG, "선택된 환자 ID가 없어 DataStore 저장을 건너뜀")
+                        }
 
                         _uiState.update {
                             it.copy(
@@ -231,7 +238,7 @@ class SafeZoneSettingViewModel @Inject constructor(
 
                         // API 실패 시 DataStore에서 fallback
                         try {
-                            val settings = userDataStoreManager.getSafeZoneSettings()
+                            val settings = userDataStoreManager.getSafeZoneSettings(patientId.toLong())
                             _uiState.update {
                                 it.copy(
                                     level1 = SafeZoneLevelConfig(
