@@ -117,6 +117,10 @@ class MapViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    // 기본 목적지 좌표 (안전범위 기준점)
+    private val _defaultDestination = MutableStateFlow<Pair<Double, Double>?>(null)
+    val defaultDestination: StateFlow<Pair<Double, Double>?> = _defaultDestination.asStateFlow()
+
     // 안전구역 설정값
     private val _safeZoneSettings = MutableStateFlow(SafeZoneSettings())
     val safeZoneSettings: StateFlow<SafeZoneSettings> = _safeZoneSettings.asStateFlow()
@@ -126,6 +130,22 @@ class MapViewModel @Inject constructor(
     val isSosActive: StateFlow<Boolean> = _isSosActive.asStateFlow()
 
     init {
+        // 기본 목적지 조회 (안전범위 기준점)
+        viewModelScope.launch {
+            loadDefaultDestination()
+        }
+
+        // 선택된 환자 ID 변경 감지 (보호자용 - 환자가 바뀌면 기본 목적지 다시 로드)
+        viewModelScope.launch {
+            userDataStoreManager.getSelectedPatientId().collect { selectedId ->
+                val userType = userDataStoreManager.getUserType().first()
+                if (userType == "GUARDIAN" && selectedId != null) {
+                    Log.d("MapViewModel", "선택된 환자 변경 감지: $selectedId - 기본 목적지 다시 로드")
+                    loadDefaultDestination()
+                }
+            }
+        }
+
         // 안전구역 설정값 구독
         viewModelScope.launch {
             userDataStoreManager.observeSafeZoneSettings().collect { settings ->
@@ -177,6 +197,51 @@ class MapViewModel @Inject constructor(
                     Log.d("MapViewModel", "길찾기 경로 제거")
                 }
             }
+        }
+    }
+
+    /**
+     * 기본 목적지 새로고침 (public - 화면 재진입 시 호출)
+     */
+    fun refreshDefaultDestination() {
+        viewModelScope.launch {
+            loadDefaultDestination()
+        }
+    }
+
+    /**
+     * 기본 목적지 조회 (안전범위 기준점)
+     */
+    private suspend fun loadDefaultDestination() {
+        try {
+            val userType = userDataStoreManager.getUserType().first()
+            val patientId = if (userType == "PATIENT") {
+                userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            } else {
+                // 보호자는 선택된 환자 ID 사용
+                userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+            }
+
+            if (patientId == null) {
+                Log.w("MapViewModel", "환자 ID를 가져올 수 없어 기본 목적지를 조회할 수 없습니다")
+                return
+            }
+
+            // 기본 목적지 조회
+            val favoritePlaces = favoriteRepository.getFavoritePlaces(patientId)
+            val defaultPlace = favoritePlaces.getOrNull()?.items?.firstOrNull { it.isDefault }
+
+            if (defaultPlace == null) {
+                Log.w("MapViewModel", "⚠️ 기본 목적지가 설정되어 있지 않습니다")
+                _defaultDestination.value = null
+                return
+            }
+
+            _defaultDestination.value = Pair(defaultPlace.latitude, defaultPlace.longitude)
+            Log.d("MapViewModel", "✅ 기본 목적지 로드 완료: ${defaultPlace.displayName} (${defaultPlace.latitude}, ${defaultPlace.longitude})")
+        } catch (e: Exception) {
+            Log.e("MapViewModel", "❌ 기본 목적지 조회 실패", e)
+            _defaultDestination.value = null
         }
     }
 

@@ -73,6 +73,7 @@ fun TMapComposable(
     level1Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS,
     level2Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS,
     level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS,
+    defaultDestinationCoordinate: Pair<Double, Double>? = null,  // 기본 목적지 좌표 (안전범위 기준점)
     placeLocationTrigger: Pair<Int, Pair<Double, Double>> = 0 to Pair(0.0, 0.0),  // 장소 위치로 이동 트리거
     disableFollowMode: Boolean = false,  // 팔로우 모드 강제 비활성화 (장소 상세 정보 표시 중)
     isHomeScreen: Boolean = false  // 홈 화면 여부
@@ -476,14 +477,23 @@ fun TMapComposable(
     }
 
     // 안전 범위 동심원 표시/숨김 (Polygon 사용 - 채워진 영역)
-    LaunchedEffect(mapView, isMapInitialized, showSafetyZones, level1Distance, level2Distance, level3Distance) {
-        Log.d("TMapComposable", "🔄 안전범위 LaunchedEffect 실행 - showSafetyZones=$showSafetyZones, isHomeScreen=$isHomeScreen")
+    LaunchedEffect(mapView, isMapInitialized, showSafetyZones, level1Distance, level2Distance, level3Distance, defaultDestinationCoordinate) {
+        Log.d("TMapComposable", "🔄 안전범위 LaunchedEffect 실행 - showSafetyZones=$showSafetyZones, isHomeScreen=$isHomeScreen, defaultDestination=$defaultDestinationCoordinate")
         if (!isMapInitialized) return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
         try {
             withContext(Dispatchers.Main) {
                 if (showSafetyZones) {
+                    // 기본 목적지가 설정되지 않은 경우 안전범위 표시 안함
+                    if (defaultDestinationCoordinate == null) {
+                        Log.w("TMapComposable", "⚠️ 기본 목적지가 설정되지 않아 안전범위를 표시할 수 없습니다")
+                        return@withContext
+                    }
+
+                    val (centerLat, centerLon) = defaultDestinationCoordinate
+                    Log.d("TMapComposable", "✅ 기본 목적지 기준 안전범위 표시: ($centerLat, $centerLon)")
+
                     // 기존 폴리곤 제거
                     safetyCircles.forEach { id ->
                         try {
@@ -498,14 +508,14 @@ fun TMapComposable(
                     // 각 영역을 겹치지 않는 링(donut) 형태로 생성
                     // 1단계 - 초록색 (level1Distance ~ level2Distance 사이의 링)
                     val outerPoints1 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        centerLat,
+                        centerLon,
                         level2Distance,
                         72
                     )
                     val innerPoints1 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        centerLat,
+                        centerLon,
                         level1Distance,
                         72
                     )
@@ -524,14 +534,14 @@ fun TMapComposable(
 
                     // 2단계 - 파란색 (level2Distance ~ level3Distance 사이의 링)
                     val outerPoints2 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        centerLat,
+                        centerLon,
                         level3Distance,
                         72
                     )
                     val innerPoints2 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        centerLat,
+                        centerLon,
                         level2Distance,
                         72
                     )
@@ -551,14 +561,14 @@ fun TMapComposable(
                     // 3단계 - 빨간색 (level3Distance ~ 50km 사이의 링)
                     val maxRadius = 50000 // 50km
                     val outerPoints3 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        centerLat,
+                        centerLon,
                         maxRadius,
                         721
                     )
                     val innerPoints3 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        centerLat,
+                        centerLon,
                         level3Distance,
                         72
                     )

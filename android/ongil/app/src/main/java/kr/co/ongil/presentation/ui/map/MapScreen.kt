@@ -31,6 +31,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,6 +79,23 @@ fun MapScreen(
     val showDestinationChangeDialog by viewModel.showDestinationChangeDialog.collectAsState()
     val isNavigationMode by viewModel.isNavigationMode.collectAsState()
     val isNavigationModalVisible by viewModel.isNavigationModalVisible.collectAsState()
+    val defaultDestination by viewModel.defaultDestination.collectAsState()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // 화면이 다시 보일 때마다 기본 목적지 새로고침 (즐겨찾기에서 기본 목적지 변경 시 반영)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                android.util.Log.d("MapScreen", "화면 재개 - 기본 목적지 새로고침")
+                viewModel.refreshDefaultDestination()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // 경로 변경 감지 로그
     LaunchedEffect(navigationRoute) {
@@ -379,6 +399,7 @@ fun MapScreen(
                     level1Distance = safeZoneSettings.level1Distance,
                     level2Distance = safeZoneSettings.level2Distance,
                     level3Distance = safeZoneSettings.level3Distance,
+                    defaultDestinationCoordinate = defaultDestination,  // 기본 목적지 좌표
                     placeLocationTrigger = placeLocationTrigger,
                     disableFollowMode = isShowingPlaceDetail || isSearchActive  // 장소 상세 정보 표시 중이거나 검색 중일 때 팔로우 모드 비활성화
                 )
