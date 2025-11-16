@@ -84,7 +84,8 @@ fun HomeScreen(
     selectedPatientId: String? = null,
     patientLocations: Map<Long, Coordinate> = emptyMap(),
     locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
-    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null,
+    navigationProgress: Float = 0f
 ) {
     val context = LocalContext.current
     val inPreview = LocalInspectionMode.current
@@ -128,6 +129,25 @@ fun HomeScreen(
             locationBus = locationBus,
             navigationRoute = navigationRoute
         )
+
+        Spacer(Modifier.height(12.dp))
+
+        // 길안내 진행 표시줄 (경로가 있을 때만, 지도 바로 아래)
+        if (navigationRoute != null) {
+            val timeText = if (navigationRoute.totalTimeMinutes > 0) {
+                "${navigationRoute.totalTimeMinutes}분"
+            } else {
+                "-"
+            }
+
+            NavigationProgressBar(
+                startLocation = navigationRoute.startLocationName,
+                endLocation = navigationRoute.endLocationName,
+                time = timeText,
+                progress = navigationProgress,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
 
@@ -190,7 +210,6 @@ fun HomeScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
-
     }
 }
 

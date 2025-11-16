@@ -1,5 +1,7 @@
 package kr.co.ongil.presentation.ui.map
 
+import android.content.Context
+import android.location.Geocoder
 import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.layout.size
@@ -7,6 +9,8 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +20,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kr.co.ongil.domain.model.SearchPlace
 import kr.co.ongil.domain.repository.MapRepository
 import kr.co.ongil.domain.usecase.map.SearchPlaceUseCase
@@ -24,6 +29,7 @@ import kr.co.ongil.domain.model.Route
 import kr.co.ongil.domain.usecase.map.FindRouteUseCase
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings
+import java.util.Locale
 import javax.inject.Inject
 import kr.co.ongil.BuildConfig
 import kr.co.ongil.common.location.NavigationRouteManager
@@ -36,6 +42,7 @@ import kr.co.ongil.domain.usecase.sosalert.StopSosAlertUseCase
  */
 @HiltViewModel
 class MapViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     val locationBus: LocationStreamBus,
     private val searchPlaceUseCase: SearchPlaceUseCase,
     private val mapRepository: MapRepository,
@@ -365,6 +372,90 @@ class MapViewModel @Inject constructor(
     }
 
     /**
+     * 좌표를 주소로 변환 (Reverse Geocoding)
+     * 도로명 주소만 반환 (예: "테헤란로 427")
+     */
+    private suspend fun getAddressFromCoordinates(latitude: Double, longitude: Double): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val geocoder = Geocoder(context, Locale.KOREA)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Android 13 이상: 비동기 API 사용
+                    var resultAddress = "내 위치"
+                    geocoder.getFromLocation(latitude, longitude, 1) { addresses ->
+                        if (addresses.isNotEmpty()) {
+                            val address = addresses[0]
+                            Log.d("MapViewModel", "주소 정보: thoroughfare=${address.thoroughfare}, subThoroughfare=${address.subThoroughfare}, featureName=${address.featureName}, addressLine=${address.getAddressLine(0)}")
+
+                            // 도로명 주소 추출
+                            resultAddress = when {
+                                // 1. thoroughfare + subThoroughfare (도로명 + 번지)
+                                address.thoroughfare != null -> {
+                                    if (address.subThoroughfare != null) {
+                                        "${address.thoroughfare} ${address.subThoroughfare}"
+                                    } else {
+                                        address.thoroughfare!!
+                                    }
+                                }
+                                // 2. getAddressLine에서 도로명 주소 부분만 추출
+                                else -> {
+                                    val fullAddress = address.getAddressLine(0) ?: ""
+                                    // "서울특별시 강남구 테헤란로 427" 형태에서 "테헤란로 427"만 추출
+                                    val parts = fullAddress.split(" ")
+                                    if (parts.size >= 4) {
+                                        "${parts[parts.size - 2]} ${parts[parts.size - 1]}"
+                                    } else {
+                                        "내 위치"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // 비동기 결과를 기다리는 간단한 방법
+                    kotlinx.coroutines.delay(500)
+                    resultAddress
+                } else {
+                    // Android 12 이하: 동기 API 사용
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+                    if (addresses != null && addresses.isNotEmpty()) {
+                        val address = addresses[0]
+                        Log.d("MapViewModel", "주소 정보: thoroughfare=${address.thoroughfare}, subThoroughfare=${address.subThoroughfare}, featureName=${address.featureName}, addressLine=${address.getAddressLine(0)}")
+
+                        // 도로명 주소 추출
+                        when {
+                            // 1. thoroughfare + subThoroughfare (도로명 + 번지)
+                            address.thoroughfare != null -> {
+                                if (address.subThoroughfare != null) {
+                                    "${address.thoroughfare} ${address.subThoroughfare}"
+                                } else {
+                                    address.thoroughfare!!
+                                }
+                            }
+                            // 2. getAddressLine에서 도로명 주소 부분만 추출
+                            else -> {
+                                val fullAddress = address.getAddressLine(0) ?: ""
+                                // "서울특별시 강남구 테헤란로 427" 형태에서 "테헤란로 427"만 추출
+                                val parts = fullAddress.split(" ")
+                                if (parts.size >= 4) {
+                                    "${parts[parts.size - 2]} ${parts[parts.size - 1]}"
+                                } else {
+                                    "내 위치"
+                                }
+                            }
+                        }
+                    } else {
+                        "내 위치"
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "주소 변환 실패: ${e.message}", e)
+                "내 위치"
+            }
+        }
+    }
+
+    /**
      * 통화 로그 기록
      */
     fun logCall(phoneNumber: String) {
@@ -432,11 +523,15 @@ class MapViewModel @Inject constructor(
             // 길안내 종료 시 사용하기 위해 저장
             currentPatientId = patientId
 
+            // 출발지 주소 가져오기
+            val startAddress = getAddressFromCoordinates(location.latitude, location.longitude)
+            Log.d("MapViewModel", "출발지 주소: $startAddress")
+
             findRouteUseCase(
                 patientId = patientId,
                 startLatitude = location.latitude,
                 startLongitude = location.longitude,
-                startName = "내 위치",
+                startName = startAddress,
                 endLatitude = endLatitude,
                 endLongitude = endLongitude,
                 endName = endName,
@@ -461,8 +556,15 @@ class MapViewModel @Inject constructor(
                         longitude = latLng.longitude
                     )
                 }
-                navigationRouteManager.setRoute(result.navigationId, routePath)
-                Log.d("MapViewModel", "경로 정보 저장 완료: ${routePath.size}개 포인트")
+                navigationRouteManager.setRoute(
+                    navigationId = result.navigationId,
+                    path = routePath,
+                    startLocationName = startAddress,
+                    endLocationName = endName,
+                    totalTimeMinutes = result.route.totalTimeMinutes,
+                    totalDistanceMeters = result.route.totalDistanceMeters
+                )
+                Log.d("MapViewModel", "경로 정보 저장 완료: ${routePath.size}개 포인트, 소요시간: ${result.route.totalTimeMinutes}분")
 
                 // 네비게이션 모드 활성화 (환자일 때만)
                 val userType = userDataStoreManager.getUserType().first()
