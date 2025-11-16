@@ -144,6 +144,29 @@ class MapViewModel @Inject constructor(
                     checkArrival(location.latitude, location.longitude)
                 }
         }
+
+        // 길찾기 경로 변경 감지 (화면 복귀 시 모달 자동 표시)
+        viewModelScope.launch {
+            navigationRouteManager.currentRoute.collect { route ->
+                if (route != null) {
+                    _navigationRoute.value = Route(
+                        path = route.path.map { latLng ->
+                            kr.co.ongil.domain.model.LatLng(
+                                latitude = latLng.latitude,
+                                longitude = latLng.longitude
+                            )
+                        },
+                        totalTimeMinutes = route.totalTimeMinutes,
+                        totalDistanceMeters = route.totalDistanceMeters
+                    )
+                    // 길찾기가 시작되면 모달 표시
+                    if (!_isNavigationModalVisible.value) {
+                        _isNavigationModalVisible.value = true
+                        Log.d("MapViewModel", "길찾기 경로 감지 - 모달 자동 표시")
+                    }
+                }
+            }
+        }
     }
 
     /**

@@ -201,6 +201,12 @@ fun MapScreen(
     // 뒤로가기 버튼 처리 (장소 상세 정보 표시 중일 때)
     val focusManager = LocalFocusManager.current
 
+    // 길찾기 모달 표시 중일 때 뒤로가기 -> 모달만 닫기 (길찾기는 계속 진행)
+    BackHandler(enabled = isNavigationModalVisible) {
+        viewModel.closeNavigationModal()
+        android.util.Log.d("MapScreen", "길찾기 모달 닫기 (뒤로가기)")
+    }
+
     // 검색 결과 표시 중일 때 뒤로가기 (키보드가 내려진 상태)
     BackHandler(enabled = isSearchActive && !isSearchFocused) {
         viewModel.clearSearchResults()
