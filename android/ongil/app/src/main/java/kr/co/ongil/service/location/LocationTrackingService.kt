@@ -68,6 +68,9 @@ class LocationTrackingService : Service() {
     private var locationJob: Job? = null
     private var isTrackingActive = false
 
+    // [테스트용] 1초마다 위치 전송하는 타이머
+    private var periodicSendJob: Job? = null
+
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
 
@@ -186,13 +189,27 @@ class LocationTrackingService : Service() {
         locationJob = serviceScope.launch {
             requestLocationUpdates()
         }
-        Log.d(TAG, "위치 추적 시작")
+
+        // [테스트용] 1초마다 필터링 통과한 마지막 위치를 백엔드로 전송
+        periodicSendJob = serviceScope.launch {
+            while (isTrackingActive) {
+                delay(1000L) // 1초 대기
+                lastEmittedLocation?.let { location ->
+//                    Log.d(TAG, "[타이머] 1초 주기 - 마지막 필터링 통과 위치 전송")
+                    sendLocationToBackend(location)
+                }
+            }
+        }
+
+        Log.d(TAG, "위치 추적 시작 (1초 주기 전송 타이머 활성화)")
     }
 
     private fun stopTracking() {
         isTrackingActive = false
         locationJob?.cancel()
         locationJob = null
+        periodicSendJob?.cancel()
+        periodicSendJob = null
 
         try {
             fusedClient.removeLocationUpdates(callback)
@@ -217,11 +234,12 @@ class LocationTrackingService : Service() {
         }
 
         try {
+            // [테스트용] 1초 간격, 거리 제한 없음
             val request = LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
-                2000L // 2초 간격
-            ).setMinUpdateDistanceMeters(3f)
-                .setWaitForAccurateLocation(true)
+                1000L // 1초 간격 (테스트용)
+            ).setMinUpdateDistanceMeters(0f) // 거리 제한 없음 (테스트용)
+                .setWaitForAccurateLocation(false) // 즉시 전송 (테스트용)
                 .build()
 
             fusedClient.requestLocationUpdates(
@@ -356,8 +374,8 @@ class LocationTrackingService : Service() {
                         )
                     }
 
-                    // 백엔드로 위치 전송 (환자일 때만, 5m 이상 이동 시)
-                    sendLocationToBackend(point)
+                    // [테스트용] 백엔드 전송은 1초 타이머에서 하므로 여기서는 주석 처리
+                    // sendLocationToBackend(point)
 
                     // 경로 이탈 모니터링 (길찾기 중일 때만)
                     if (gpsWebSocketManager.isConnected()) {
@@ -408,6 +426,8 @@ class LocationTrackingService : Service() {
     /**
      * 백엔드로 위치 전송 (환자일 때만, 1m 이상 이동 시)
      * 길찾기 중(WebSocket 연결 중)에는 WebSocket으로 전송하므로 API 호출 안 함
+     *
+     * [테스트용] 거리 필터링 주석 처리 - 무조건 전송
      */
     private suspend fun sendLocationToBackend(currentLocation: LocationPoint) {
         try {
@@ -423,21 +443,24 @@ class LocationTrackingService : Service() {
                 return
             }
 
-            // 2. 1m 이상 이동했는지 확인
-            val lastLocation = lastSentLocation
-            if (lastLocation != null) {
-                val distance = calculateDistance(
-                    lastLocation.latitude, lastLocation.longitude,
-                    currentLocation.latitude, currentLocation.longitude
-                )
-                if (distance < 1.0) {
-                    Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 전송 건너뜀")
-                    return
-                }
-                Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 백엔드로 전송")
-            } else {
-                Log.d(TAG, "첫 위치 - 백엔드로 전송")
-            }
+            // 2. 1m 이상 이동했는지 확인 [테스트용 주석 처리]
+//            val lastLocation = lastSentLocation
+//            if (lastLocation != null) {
+//                val distance = calculateDistance(
+//                    lastLocation.latitude, lastLocation.longitude,
+//                    currentLocation.latitude, currentLocation.longitude
+//                )
+//                if (distance < 1.0) {
+//                    Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 전송 건너뜀")
+//                    return
+//                }
+//                Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 백엔드로 전송")
+//            } else {
+//                Log.d(TAG, "첫 위치 - 백엔드로 전송")
+//            }
+
+            // [테스트용] 거리 체크 없이 무조건 전송
+//            Log.d(TAG, "[테스트] 거리 체크 없이 백엔드로 전송")
 
             // 3. 환자 ID 가져오기
             val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
@@ -453,7 +476,7 @@ class LocationTrackingService : Service() {
             )
 
             val response = mapApi.updatePatientLocation(patientId, request)
-            Log.d(TAG, "위치 전송 성공: ${response.message}")
+//            Log.d(TAG, "위치 전송 성공: ${response.message}")
 
             // 5. 마지막 전송 위치 업데이트
             lastSentLocation = currentLocation

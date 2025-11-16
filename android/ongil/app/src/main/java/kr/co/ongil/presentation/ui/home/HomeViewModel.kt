@@ -23,8 +23,12 @@ import kr.co.ongil.domain.usecase.dashboard.GetDashboardUseCase
 import kr.co.ongil.domain.usecase.patientinfo.GetPatientInfoUseCase
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
+import kr.co.ongil.common.location.LocationPoint
 import kr.co.ongil.presentation.ui.patientinfo.ActivityLog
 import kr.co.ongil.presentation.ui.patientinfo.FavoriteLocation
+import kr.co.ongil.common.location.LocationStreamBus
+import kr.co.ongil.common.location.NavigationRouteManager
+import kr.co.ongil.common.location.SafetyZoneStateManager
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,7 +38,10 @@ class HomeViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
     private val getDashboardUseCase: GetDashboardUseCase,
     private val healthConnectRepository: HealthConnectRepository,
-    private val getPatientInfoUseCase: GetPatientInfoUseCase
+    private val getPatientInfoUseCase: GetPatientInfoUseCase,
+    val locationBus: LocationStreamBus,
+    navigationRouteManager: NavigationRouteManager,
+    val safetyZoneStateManager: SafetyZoneStateManager
 ) : ViewModel() {
 
     companion object {
@@ -60,6 +67,27 @@ class HomeViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    // 길안내 경로 정보 (NavigationRouteManager에서 가져옴)
+    val navigationRoute: StateFlow<NavigationRouteManager.NavigationRoute?> =
+        navigationRouteManager.currentRoute
+
+    // 길안내 진행률 계산 (현재 위치 기반)
+    val navigationProgress: StateFlow<Float> = combine(
+        navigationRouteManager.currentRoute,
+        locationBus.updates
+    ) { route: NavigationRouteManager.NavigationRoute?,
+        currentLocation: LocationPoint? ->
+        if (route == null || route.path.isEmpty() || currentLocation == null) {
+            0f
+        } else {
+            calculateNavigationProgress(route, currentLocation)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0f
+    )
 
     init {
         loadHomeData()
@@ -266,5 +294,50 @@ class HomeViewModel @Inject constructor(
                 Log.e(TAG, "loadActivityLogData() - 예외 발생", e)
             }
         }
+    }
+
+    /**
+     * 경로상의 진행률 계산
+     * 현재 위치에서 가장 가까운 경로상의 점을 찾아 진행률 계산
+     */
+    private fun calculateNavigationProgress(
+        route: NavigationRouteManager.NavigationRoute,
+        currentLocation: LocationPoint
+    ): Float {
+        if (route.path.isEmpty()) return 0f
+
+        // 현재 위치에서 가장 가까운 경로상의 점 찾기
+        var minDistance = Double.MAX_VALUE
+        var closestIndex = 0
+
+        route.path.forEachIndexed { index, point ->
+            val distance = calculateDistance(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                point.latitude,
+                point.longitude
+            )
+            if (distance < minDistance) {
+                minDistance = distance
+                closestIndex = index
+            }
+        }
+
+        // 진행률 = 가장 가까운 점의 인덱스 / 전체 점의 개수
+        return (closestIndex.toFloat() / (route.path.size - 1).toFloat()).coerceIn(0f, 1f)
+    }
+
+    /**
+     * 두 지점 간의 거리 계산 (Haversine formula)
+     */
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371000.0 // 지구 반지름 (미터)
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return r * c
     }
 }

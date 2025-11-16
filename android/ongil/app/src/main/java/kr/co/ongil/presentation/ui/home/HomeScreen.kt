@@ -39,6 +39,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
 import kr.co.ongil.presentation.ui.patientinfo.ActivityLog
+import kr.co.ongil.data.model.location.Coordinate
+import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import android.Manifest
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import kr.co.ongil.service.location.LocationTrackingService
 
 
 private object HomeColors {
@@ -69,8 +79,37 @@ data class HomeUiState(
 fun HomeScreen(
     uiState: HomeUiState,
     modifier: Modifier = Modifier,
-    onMapClick: () -> Unit = {}
+    onMapClick: () -> Unit = {},
+    userType: String = "",
+    selectedPatientId: String? = null,
+    patientLocations: Map<Long, Coordinate> = emptyMap(),
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null,
+    navigationProgress: Float = 0f,
+    showSafetyZones: Boolean = false
 ) {
+    val context = LocalContext.current
+    val inPreview = LocalInspectionMode.current
+
+    // 위치 권한 확인
+    val hasLocationPermission = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    // 위치 추적 서비스 시작 (환자만, 권한이 있을 때)
+    LaunchedEffect(hasLocationPermission, userType) {
+        if (!inPreview && hasLocationPermission && userType == "PATIENT") {
+            android.util.Log.d("HomeScreen", "🚀 위치 추적 서비스 시작")
+            val intent = Intent(context, LocationTrackingService::class.java)
+                .setAction(LocationTrackingService.ACTION_START)
+            ContextCompat.startForegroundService(context, intent)
+        }
+    }
+
+    // 화면 종료 시 위치 추적 서비스는 중지하지 않음 (MapScreen에서도 사용하므로)
+    // MapScreen이 종료될 때 중지됨
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -84,8 +123,33 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp),
-            onClick = onMapClick
+            onClick = onMapClick,
+            userType = userType,
+            selectedPatientId = selectedPatientId,
+            patientLocations = patientLocations,
+            locationBus = locationBus,
+            navigationRoute = navigationRoute,
+            showSafetyZones = showSafetyZones
         )
+
+        Spacer(Modifier.height(12.dp))
+
+        // 길안내 진행 표시줄 (경로가 있을 때만, 지도 바로 아래)
+        if (navigationRoute != null) {
+            val timeText = if (navigationRoute.totalTimeMinutes > 0) {
+                "${navigationRoute.totalTimeMinutes}분"
+            } else {
+                "-"
+            }
+
+            NavigationProgressBar(
+                startLocation = navigationRoute.startLocationName,
+                endLocation = navigationRoute.endLocationName,
+                time = timeText,
+                progress = navigationProgress,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
 
@@ -148,24 +212,50 @@ fun HomeScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
-
     }
 }
 
 @Composable
 private fun MapSectionPreview(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    userType: String = "",
+    selectedPatientId: String? = null,
+    patientLocations: Map<Long, Coordinate> = emptyMap(),
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null,
+    showSafetyZones: Boolean = false
 ) {
+    // NavigationRouteManager.NavigationRoute를 Domain Route로 변환
+    val domainRoute = navigationRoute?.let { navRoute ->
+        kr.co.ongil.domain.model.Route(
+            totalTimeMinutes = 0,  // 홈 화면에서는 시간 정보 불필요
+            totalDistanceMeters = 0,  // 홈 화면에서는 거리 정보 불필요
+            path = navRoute.path.map { latLng ->
+                kr.co.ongil.domain.model.LatLng(
+                    latitude = latLng.latitude,
+                    longitude = latLng.longitude
+                )
+            }
+        )
+    }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
     ) {
-        // 실제 TMap 표시 (읽기 전용)
+        // 실제 TMap 표시 (환자는 본인 위치 추적, 보호자는 환자 위치 표시)
         kr.co.ongil.presentation.ui.map.TMapComposable(
             modifier = Modifier.fillMaxSize(),
-            enableTracking = false,
-            zoomLevel = 14
+            enableTracking = userType == "PATIENT",  // 환자만 위치 추적
+            locationBus = locationBus,
+            zoomLevel = 14,
+            userType = userType,
+            selectedPatientId = selectedPatientId,
+            patientLocations = patientLocations,
+            isHomeScreen = true,  // 홈 화면용 TMapView 사용
+            route = domainRoute,  // 길안내 경로 표시
+            showSafetyZones = showSafetyZones  // 안전범위 표시 상태
         )
 
         // 클릭 감지용 투명 레이어

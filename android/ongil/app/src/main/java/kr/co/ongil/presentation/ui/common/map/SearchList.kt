@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,69 +27,81 @@ fun SearchListItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(Color.White)
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-
         Row(
             modifier = Modifier
-                .weight(1f),
-            verticalAlignment = Alignment.Top
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 위치 핀 아이콘 영역
-            // 실제 디자인은 회색(#9CA3AF) 단색 아이콘. 지금은 기본 Place 아이콘을 tint로
-            Icon(
-                imageVector = Icons.Filled.Place,
-                contentDescription = "위치 아이콘", // 이거 스크린리더가 읽어야된대요
-                tint = Color(0xFF9CA3AF),
+
+            Row(
                 modifier = Modifier
-                    .padding(top = 2.dp)
-                    .size(20.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // 장소명 + 주소
-            Column(
-                modifier = Modifier.fillMaxWidth()
+                    .weight(1f),
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = placeName,
-                    fontSize = 20.sp,
-                    lineHeight = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F2937),
-                    maxLines = 1
+                // 위치 핀 아이콘 영역
+                // 실제 디자인은 회색(#9CA3AF) 단색 아이콘. 지금은 기본 Place 아이콘을 tint로
+                Icon(
+                    imageVector = Icons.Filled.Place,
+                    contentDescription = "위치 아이콘", // 이거 스크린리더가 읽어야된대요
+                    tint = Color(0xFF9CA3AF),
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .size(20.dp)
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                Text(
-                    text = address,
-                    fontSize = 18.sp,
-                    lineHeight = 20.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color(0xFF6B7280),
-                    maxLines = 1
-                )
+                // 장소명 + 주소
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = placeName,
+                        fontSize = 20.sp,
+                        lineHeight = 24.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF1F2937),
+                        maxLines = 1
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = address,
+                        fontSize = 18.sp,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xFF6B7280),
+                        maxLines = 1
+                    )
+                }
             }
+
+            Text(
+                text = etaText,
+                fontSize = 18.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF1F2937),
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .align(Alignment.Top)
+            )
         }
 
-        Text(
-            text = etaText,
-            fontSize = 18.sp,
-            lineHeight = 20.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF1F2937),
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .align(Alignment.Top)
+        // 구분선
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            thickness = 0.5.dp,
+            color = Color(0xFFE5E7EB)
         )
     }
 }
