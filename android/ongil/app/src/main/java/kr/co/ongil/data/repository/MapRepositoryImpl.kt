@@ -85,15 +85,13 @@ class MapRepositoryImpl @Inject constructor(
         try {
             Log.d("MapRepository", "통화 로그 생성: $receiverPhoneNumber")
 
+            // 시스템 전화는 위치 정보 없이 기록만 남김
             val request = CallLogRequest(
                 receiverPhoneNumber = receiverPhoneNumber,
                 callType = callType,
                 source = source,
                 patientState = patientState,
-                patientLocation = CallLocationDto(
-                    latitude = latitude,
-                    longitude = longitude
-                ),
+                patientLocation = null,  // 위치 정보 없이 기록
                 startedAt = startedAt
             )
 

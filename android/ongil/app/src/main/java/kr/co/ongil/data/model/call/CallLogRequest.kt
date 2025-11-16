@@ -24,7 +24,7 @@ data class CallLogRequest(
     val patientState: String,
 
     @SerialName("patientLocation")
-    val patientLocation: CallLocationDto,
+    val patientLocation: String? = null,  // 백엔드가 JSON 문자열로 받음 (선택사항)
 
     @SerialName("startedAt")
     val startedAt: String,

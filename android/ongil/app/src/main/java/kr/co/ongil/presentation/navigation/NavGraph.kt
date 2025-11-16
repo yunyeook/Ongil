@@ -47,7 +47,8 @@ fun AppNavGraph(
     modifier: Modifier = Modifier,
     paddingValues: PaddingValues = PaddingValues(),
     startDestination: String = Routes.Login.route,
-    authViewModel: kr.co.ongil.presentation.ui.auth.AuthStateViewModel? = null
+    authViewModel: kr.co.ongil.presentation.ui.auth.AuthStateViewModel? = null,
+    onMapShowBarsChange: (Boolean) -> Unit = {}
 ) {
     NavHost(
         navController = navController,
@@ -55,8 +56,9 @@ fun AppNavGraph(
         modifier = modifier.background(Color.White)
     ) {
         // 홈
-        homeGraph(navController)
+        homeGraph(navController, paddingValues)
 
+        // 위치 - 지도 화면
         composable(Routes.Location.route) { backStackEntry ->
             val previousEntry = navController.previousBackStackEntry
             val searchPlaceholder = remember {
@@ -74,6 +76,7 @@ fun AppNavGraph(
                 navController = navController,
                 paddingValues = paddingValues,
                 authViewModel = authViewModel ?: hiltViewModel(),
+                onShowBarsChange = onMapShowBarsChange,
                 searchPlaceholder = searchPlaceholder,
                 requestSearchFocus = requestSearchFocus
             )

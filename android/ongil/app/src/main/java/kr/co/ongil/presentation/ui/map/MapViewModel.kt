@@ -43,6 +43,7 @@ class MapViewModel @Inject constructor(
     private val findRouteUseCase: FindRouteUseCase,
     private val navigationRouteManager: NavigationRouteManager,
     private val gpsWebSocketManager: GpsWebSocketManager,
+    private val favoriteRepository: kr.co.ongil.domain.repository.FavoriteRepository,
     private val sendSosAlertUseCase: SendSosAlertUseCase,
     private val stopSosAlertUseCase: StopSosAlertUseCase
 ) : ViewModel() {
@@ -88,6 +89,10 @@ class MapViewModel @Inject constructor(
     // 네비게이션 모드 (1인칭 시점)
     private val _isNavigationMode = MutableStateFlow(false)
     val isNavigationMode: StateFlow<Boolean> = _isNavigationMode.asStateFlow()
+
+    // 길찾기 모달 표시 상태
+    private val _isNavigationModalVisible = MutableStateFlow(false)
+    val isNavigationModalVisible: StateFlow<Boolean> = _isNavigationModalVisible.asStateFlow()
 
     // 로딩 상태
     private val _isSearching = MutableStateFlow(false)
@@ -212,6 +217,25 @@ class MapViewModel @Inject constructor(
     }
 
     /**
+     * 실시간 검색 결과만 숨김 (검색어는 유지)
+     */
+    fun clearSearchResults() {
+        _searchResults.value = emptyList()
+    }
+
+    /**
+     * 현재 검색어로 검색 다시 실행
+     */
+    fun refreshSearch() {
+        viewModelScope.launch {
+            val query = _searchQuery.value
+            if (query.isNotBlank()) {
+                searchPlaces(query)
+            }
+        }
+    }
+
+    /**
      * 최종 검색 (백엔드 API 호출)
      * 검색 버튼을 눌렀을 때 호출
      */
@@ -224,6 +248,9 @@ class MapViewModel @Inject constructor(
                 Log.d("MapViewModel", "검색어가 비어있음")
                 return@launch
             }
+
+            // 실시간 검색 결과 숨김
+            _searchResults.value = emptyList()
 
             val location = locationBus.lastValue
             val latitude = location?.latitude
@@ -256,6 +283,13 @@ class MapViewModel @Inject constructor(
      */
     fun closeFinalSearchResults() {
         _finalSearchResults.value = null
+        // 실시간 검색 결과 다시 표시
+        viewModelScope.launch {
+            val query = _searchQuery.value
+            if (query.isNotBlank()) {
+                searchPlaces(query)
+            }
+        }
     }
 
     /**
@@ -274,10 +308,48 @@ class MapViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d("MapViewModel", "장소 상세 조회 시작: $poiId")
 
+            // 현재 환자 ID 가져오기
+            val userType = userDataStoreManager.getUserType().first()
+            val patientId = if (userType == "PATIENT") {
+                userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            } else {
+                userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+            }
+
+            // 장소 상세 정보 조회
             mapRepository.getPlaceDetail(poiId)
                 .onSuccess { placeDetail ->
-                    _selectedPlaceDetail.value = placeDetail
-                    Log.d("MapViewModel", "장소 상세 조회 성공: ${placeDetail.name}")
+                    // 즐겨찾기 목록 조회하여 현재 장소가 포함되어 있는지 확인
+                    if (patientId != null) {
+                        favoriteRepository.getFavoritePlaces(patientId)
+                            .onSuccess { favoritePlaces ->
+                                // 좌표로 즐겨찾기 목록에 있는지 확인 (위도/경도 비교)
+                                val matchedFavorite = favoritePlaces.items.find { favorite ->
+                                    val latDiff = kotlin.math.abs(favorite.latitude - placeDetail.latitude)
+                                    val lonDiff = kotlin.math.abs(favorite.longitude - placeDetail.longitude)
+                                    // 좌표 차이가 0.0001도 이내면 같은 장소로 간주 (약 11m)
+                                    latDiff < 0.0001 && lonDiff < 0.0001
+                                }
+                                val isFavorite = matchedFavorite != null
+
+                                // isFavorite 플래그 설정
+                                val updatedPlaceDetail = placeDetail.copy(
+                                    isFavorite = isFavorite,
+                                    favoriteId = matchedFavorite?.favoriteId
+                                )
+                                _selectedPlaceDetail.value = updatedPlaceDetail
+                                Log.d("MapViewModel", "장소 상세 조회 성공: ${placeDetail.name}, isFavorite: $isFavorite, favoriteId: ${matchedFavorite?.favoriteId}")
+                            }
+                            .onFailure { e ->
+                                Log.e("MapViewModel", "즐겨찾기 목록 조회 실패: ${e.message}", e)
+                                // 즐겨찾기 조회 실패 시에도 장소 상세 정보는 표시
+                                _selectedPlaceDetail.value = placeDetail
+                            }
+                    } else {
+                        // patientId가 없으면 즐겨찾기 확인 없이 표시
+                        _selectedPlaceDetail.value = placeDetail
+                        Log.d("MapViewModel", "장소 상세 조회 성공: ${placeDetail.name} (patientId 없음)")
+                    }
                 }
                 .onFailure { e ->
                     Log.e("MapViewModel", "장소 상세 조회 실패: ${e.message}", e)
@@ -305,14 +377,14 @@ class MapViewModel @Inject constructor(
 
             Log.d("MapViewModel", "통화 로그 기록 시작: $phoneNumber")
 
-            // ISO 8601 형식으로 현재 시간 포맷
-            val currentTime = java.time.ZonedDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            // 백엔드가 요구하는 형식: yyyy-MM-dd'T'HH:mm:ss (타임존 제외)
+            val currentTime = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
 
             mapRepository.createCallLog(
                 receiverPhoneNumber = phoneNumber,
-                callType = "OUTGOING",
-                source = "MAP",
+                callType = "NORMAL",  // 백엔드 CallType enum: NORMAL, EMERGENCY
+                source = "SYSTEM_DIALER",  // 백엔드 CallSource enum: APP, SYSTEM_DIALER
                 patientState = "NORMAL",
                 latitude = location.latitude,
                 longitude = location.longitude,
@@ -401,6 +473,10 @@ class MapViewModel @Inject constructor(
                     Log.d("MapViewModel", "보호자는 네비게이션 모드 비활성화")
                 }
 
+                // 길찾기 모달 표시
+                _isNavigationModalVisible.value = true
+                Log.d("MapViewModel", "길찾기 모달 표시")
+
             }.onFailure { e ->
                 Log.e("MapViewModel", "경로 탐색 실패: ${e.message}", e)
             }
@@ -475,6 +551,22 @@ class MapViewModel @Inject constructor(
     }
 
     /**
+     * 길찾기 모달 닫기 (다른 UI 표시)
+     */
+    fun closeNavigationModal() {
+        _isNavigationModalVisible.value = false
+        Log.d("MapViewModel", "길찾기 모달 닫기")
+    }
+
+    /**
+     * 길찾기 모달 다시 표시 (다른 UI 숨김)
+     */
+    fun showNavigationModal() {
+        _isNavigationModalVisible.value = true
+        Log.d("MapViewModel", "길찾기 모달 표시")
+    }
+
+    /**
      * 길안내 종료 API 호출 (공통)
      */
     private suspend fun endNavigationApi(navigationIdString: String, isSuccessful: Boolean) {
@@ -515,6 +607,10 @@ class MapViewModel @Inject constructor(
         _isNavigationMode.value = false
         Log.d("MapViewModel", "네비게이션 모드 비활성화")
 
+        // 길찾기 모달 닫기
+        _isNavigationModalVisible.value = false
+        Log.d("MapViewModel", "길찾기 모달 닫기")
+
         // 상태 초기화
         _navigationRoute.value = null
         currentNavigationId = null
@@ -543,6 +639,76 @@ class MapViewModel @Inject constructor(
                 _isSosActive.value = false
             }.onFailure { error ->
                 Log.e("MapViewModel", "SOS 알림 종료 실패: ${error.message}")
+            }
+        }
+    }
+
+    /**
+     * 즐겨찾기 토글 (추가/삭제)
+     */
+    fun toggleFavorite(onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val placeDetail = _selectedPlaceDetail.value
+            if (placeDetail == null) {
+                onError("장소 정보가 없습니다")
+                return@launch
+            }
+
+            // patientId 가져오기
+            val userType = userDataStoreManager.getUserType().first()
+            val patientId = if (userType == "PATIENT") {
+                userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            } else {
+                null
+            }
+
+            if (patientId == null) {
+                onError("환자 ID를 찾을 수 없습니다")
+                return@launch
+            }
+
+            if (placeDetail.isFavorite && placeDetail.favoriteId != null) {
+                // 즐겨찾기 삭제
+                Log.d("MapViewModel", "즐겨찾기 삭제 시작: favoriteId=${placeDetail.favoriteId}")
+                favoriteRepository.deleteFavoritePlace(patientId, placeDetail.favoriteId)
+                    .onSuccess { message ->
+                        Log.d("MapViewModel", "즐겨찾기 삭제 성공: $message")
+                        _selectedPlaceDetail.value = placeDetail.copy(
+                            isFavorite = false,
+                            favoriteId = null
+                        )
+                        onSuccess(message)
+                    }
+                    .onFailure { e ->
+                        Log.e("MapViewModel", "즐겨찾기 삭제 실패: ${e.message}", e)
+                        onError("즐겨찾기 삭제에 실패했습니다")
+                    }
+            } else {
+                // 즐겨찾기 추가
+                val address = placeDetail.roadAddress ?: placeDetail.jibunAddress ?: ""
+                Log.d("MapViewModel", "즐겨찾기 추가 시작: placeName=${placeDetail.name}")
+                favoriteRepository.addFavoritePlace(
+                    patientId = patientId,
+                    placeName = placeDetail.name,
+                    placeAlias = null,
+                    category = placeDetail.category,
+                    address = address,
+                    latitude = placeDetail.latitude,
+                    longitude = placeDetail.longitude,
+                    isDefault = false
+                )
+                    .onSuccess { favorite ->
+                        Log.d("MapViewModel", "즐겨찾기 추가 성공: favoriteId=${favorite.favoriteId}")
+                        _selectedPlaceDetail.value = placeDetail.copy(
+                            isFavorite = true,
+                            favoriteId = favorite.favoriteId
+                        )
+                        onSuccess("즐겨찾기에 추가되었습니다")
+                    }
+                    .onFailure { e ->
+                        Log.e("MapViewModel", "즐겨찾기 추가 실패: ${e.message}", e)
+                        onError("즐겨찾기 추가에 실패했습니다")
+                    }
             }
         }
     }

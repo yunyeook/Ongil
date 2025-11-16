@@ -4,8 +4,11 @@ import kr.co.ongil.data.model.favorite.PlaceDetailDto
 import kr.co.ongil.data.model.favorite.FavoritePlacesDto
 import kr.co.ongil.data.model.favorite.RelationshipsResponseDto
 import kr.co.ongil.data.model.favorite.RelationshipDetailDto
+import kr.co.ongil.data.model.favorite.AddFavoriteRequestDto
+import kr.co.ongil.data.model.favorite.DeleteFavoriteResponseDto
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Body
 import retrofit2.http.PATCH
@@ -18,6 +21,12 @@ interface FavoriteApi {
     suspend fun getFavoritePlaces(
         @Path("patientId") patientId: Long
     ): Response<FavoritePlacesDto>
+
+    @POST("/api/v1/patients/{patientId}/favorites")
+    suspend fun addFavoritePlace(
+        @Path("patientId") patientId: Long,
+        @Body body: AddFavoriteRequestDto
+    ): Response<PlaceDetailDto>
 
     @GET("/api/v1/patients/{patientId}/favorites/{favoriteId}")
     suspend fun getPlaceDetail(
@@ -36,7 +45,7 @@ interface FavoriteApi {
     suspend fun deleteFavoritePlace(
         @Path("patientId") patientId: Long,
         @Path("favoriteId") favoriteId: Long
-    ): Response<Unit>
+    ): Response<DeleteFavoriteResponseDto>
 
     // 사용자(환자/보호자) 관계 API
     @GET("/api/v1/relationships/me")

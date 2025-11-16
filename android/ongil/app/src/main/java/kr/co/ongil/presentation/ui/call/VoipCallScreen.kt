@@ -1,6 +1,9 @@
 
 package kr.co.ongil.presentation.ui.call
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,11 +20,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 
@@ -38,15 +43,57 @@ fun VoipCallScreen(
     viewModel: VoipCallViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
-    // 🔁 최초 진입 시 동작
+    // 🎤 마이크 권한 상태
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    // 🎤 권한 요청 launcher
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasAudioPermission = isGranted
+        if (isGranted) {
+            android.util.Log.d("VoipCallScreen", "✅ Audio permission granted, starting call")
+            // 권한 승인되면 통화 시작
+            if (isCaller && receiverId != null) {
+                viewModel.startVoipCall(receiverId = receiverId, userType = userType)
+            } else if (!isCaller && callId != null) {
+                viewModel.initIncomingCall(callId, null)
+            }
+        } else {
+            android.util.Log.e("VoipCallScreen", "❌ Audio permission denied")
+        }
+    }
+
+    // 🔁 최초 진입 시 권한 확인 및 통화 시작
     LaunchedEffect(Unit) {
-        if (isCaller && receiverId != null) {
-            // 발신자: 통화 세션 생성 + 위치 전송 + WebRTC 준비
-            viewModel.startVoipCall(receiverId = receiverId, userType = userType)
-        } else if (!isCaller && callId != null) {
-            // 수신자: 백에서 call 상세 조회
-            viewModel.loadIncomingCall(callId)
+        if (hasAudioPermission) {
+            // 이미 권한이 있으면 바로 통화 시작
+            android.util.Log.d("VoipCallScreen", "✅ Audio permission already granted")
+            if (isCaller && receiverId != null) {
+                viewModel.startVoipCall(receiverId = receiverId, userType = userType)
+            } else if (!isCaller && callId != null) {
+                viewModel.initIncomingCall(callId, null)
+            }
+        } else {
+            // 권한이 없으면 요청
+            android.util.Log.d("VoipCallScreen", "🎤 Requesting audio permission")
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    // 📞 상대방이 통화를 종료했을 때 화면 닫기
+    LaunchedEffect(uiState.shouldFinish) {
+        if (uiState.shouldFinish) {
+            onCallEnded()
         }
     }
 
@@ -122,13 +169,6 @@ fun VoipCallScreen(
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
-            )
-
-            // 번호
-            Text(
-                text = targetPhone,
-                color = Color(0xFF9FA9B8),
-                fontSize = 14.sp
             )
 
             Spacer(Modifier.height(24.dp))
@@ -346,13 +386,6 @@ private fun VoipCallScreenPreviewContent(
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
-            )
-
-            // 번호
-            Text(
-                text = targetPhone,
-                color = Color(0xFF9FA9B8),
-                fontSize = 14.sp
             )
 
             Spacer(Modifier.height(24.dp))

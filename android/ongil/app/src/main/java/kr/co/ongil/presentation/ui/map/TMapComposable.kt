@@ -71,7 +71,9 @@ fun TMapComposable(
     showSafetyZones: Boolean = false,  // 안전 범위 표시 여부
     level1Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS,
     level2Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS,
-    level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS
+    level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS,
+    placeLocationTrigger: Pair<Int, Pair<Double, Double>> = 0 to Pair(0.0, 0.0),  // 장소 위치로 이동 트리거
+    disableFollowMode: Boolean = false  // 팔로우 모드 강제 비활성화 (장소 상세 정보 표시 중)
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -87,6 +89,9 @@ fun TMapComposable(
 
     // 환자 마커 (보호자는 선택된 환자 1명만)
     var patientMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
+
+    // 장소 마커 (장소 상세 정보 표시 중)
+    var placeMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
 
     // 안전 범위 동심원
     var safetyCircles by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -190,39 +195,77 @@ fun TMapComposable(
     }
 
     // 펄스 애니메이션 루프 (환자용 - 자신의 위치)
-    LaunchedEffect(locationMarker) {
+    LaunchedEffect(locationMarker, mapView) {
         if (userType != "PATIENT") return@LaunchedEffect  // 환자만 자신의 위치 표시
         val marker = locationMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
-        while (true) {
+        while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
             currentPulseFrame = (currentPulseFrame + 1) % pulseFrames.size
 
+            // 마커와 맵이 유효한지 확인
+            if (locationMarker == null || mapView == null) {
+                Log.d("TMapComposable", "마커 또는 맵 제거됨 - 펄스 종료")
+                break
+            }
+
+            // 마커 ID 유효성 체크 - null이면 즉시 종료 (재시도 안 함)
+            if (marker.id == null) {
+                Log.d("TMapComposable", "마커 ID가 null - 펄스 종료")
+                break
+            }
+
             try {
+                // 아이콘만 변경하고 업데이트
                 marker.icon = pulseFrames[currentPulseFrame]
                 tmap.updateTMapMarkerItem(marker)
+            } catch (e: NullPointerException) {
+                // NPE 발생 시 즉시 종료 (마커 무효화)
+                Log.d("TMapComposable", "마커 무효화됨 (NPE) - 펄스 종료")
+                break
             } catch (e: Exception) {
-                Log.e("TMapComposable", "펄스 애니메이션 업데이트 실패", e)
+                // 기타 예외도 즉시 종료
+                Log.d("TMapComposable", "펄스 업데이트 실패 - 펄스 종료: ${e.message}")
+                break
             }
         }
     }
 
     // 펄스 애니메이션 루프 (보호자용 - 선택된 환자의 위치)
-    LaunchedEffect(patientMarker) {
+    LaunchedEffect(patientMarker, mapView) {
         if (userType != "GUARDIAN") return@LaunchedEffect  // 보호자만 환자 위치 표시
         val marker = patientMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
-        while (true) {
+        while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
             currentPulseFrame = (currentPulseFrame + 1) % pulseFrames.size
 
+            // 마커와 맵이 유효한지 확인
+            if (patientMarker == null || mapView == null) {
+                Log.d("TMapComposable", "환자 마커 또는 맵 제거됨 - 펄스 종료")
+                break
+            }
+
+            // 마커 ID 유효성 체크 - null이면 즉시 종료 (재시도 안 함)
+            if (marker.id == null) {
+                Log.d("TMapComposable", "환자 마커 ID가 null - 펄스 종료")
+                break
+            }
+
             try {
+                // 아이콘만 변경하고 업데이트
                 marker.icon = pulseFrames[currentPulseFrame]
                 tmap.updateTMapMarkerItem(marker)
+            } catch (e: NullPointerException) {
+                // NPE 발생 시 즉시 종료 (마커 무효화)
+                Log.d("TMapComposable", "환자 마커 무효화됨 (NPE) - 펄스 종료")
+                break
             } catch (e: Exception) {
-                Log.e("TMapComposable", "환자 마커 애니메이션 업데이트 실패", e)
+                // 기타 예외도 즉시 종료
+                Log.d("TMapComposable", "환자 마커 펄스 업데이트 실패 - 펄스 종료: ${e.message}")
+                break
             }
         }
     }
@@ -323,6 +366,80 @@ fun TMapComposable(
                     Log.e("TMapComposable", "❌ 북쪽 고정 실패", e)
                 }
             }
+        }
+    }
+
+    // 장소 위치로 지도 이동 및 마커 표시
+    LaunchedEffect(placeLocationTrigger.first) {
+        if (placeLocationTrigger.first > 0) {
+            val tmap = mapView
+            val (lat, lon) = placeLocationTrigger.second
+
+            if (tmap != null && lat != 0.0 && lon != 0.0) {
+                try {
+                    withContext(Dispatchers.Main) {
+                        // 기존 장소 마커 제거
+                        placeMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "기존 장소 마커 제거 실패", e)
+                            }
+                        }
+
+                        // 장소 마커 생성
+                        val marker = TMapMarkerItem().apply {
+                            id = "place_marker"
+                            tMapPoint = TMapPoint(lat, lon)
+                            icon = createMarkerBitmap(context, "장소", Color.parseColor("#FF9800"))
+                        }
+
+                        try {
+                            tmap.addTMapMarkerItem(marker)
+                            placeMarker = marker
+                            Log.d("TMapComposable", "✅ 장소 마커 추가 성공: lat=$lat, lon=$lon")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "❌ 장소 마커 추가 실패", e)
+                        }
+
+                        // 지도 이동
+                        tmap.setCenterPoint(lat, lon)
+                        tmap.setZoomLevel(17)
+                        Log.d("TMapComposable", "📍 장소 위치로 이동: lat=$lat, lon=$lon")
+                    }
+                } catch (e: Exception) {
+                    Log.e("TMapComposable", "❌ 장소 위치 이동 실패", e)
+                }
+            } else if (tmap != null && lat == 0.0 && lon == 0.0) {
+                // 장소 상세 정보가 닫혔을 때 마커 제거
+                try {
+                    withContext(Dispatchers.Main) {
+                        placeMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                                placeMarker = null
+                                Log.d("TMapComposable", "🗑️ 장소 마커 제거")
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "장소 마커 제거 실패", e)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("TMapComposable", "❌ 장소 마커 제거 실패", e)
+                }
+            }
+        }
+    }
+
+    // disableFollowMode 변경 감지
+    LaunchedEffect(disableFollowMode) {
+        if (disableFollowMode) {
+            isFollowMode = false
+            Log.d("TMapComposable", "🚫 팔로우 모드 비활성화 (장소 상세 정보 표시 중)")
+        } else {
+            // disableFollowMode가 false로 변경되면 팔로우 모드 활성화
+            isFollowMode = true
+            Log.d("TMapComposable", "✅ 팔로우 모드 활성화 (장소 상세 정보 닫힘)")
         }
     }
 
@@ -506,23 +623,77 @@ fun TMapComposable(
         Log.d("TMapComposable", "📡 위치 업데이트 수신 시작 (환자)")
         bus.updates.collectLatest { point ->
             try {
-                // 정확도 필터링
-                if ((point.accuracyMeters ?: 999f) > 50f) {
-                    Log.w("TMapComposable", "⚠️ 정확도 낮음 (${point.accuracyMeters}m)")
+                val accuracy = point.accuracyMeters ?: 999f
+                val speed = point.speedMps ?: 0f
+
+                // 정확도 필터링 (40m 초과는 무시)
+                if (accuracy > 40f) {
+                    Log.w("TMapComposable", "⚠️ 정확도 낮음 (${accuracy}m) - 무시")
                     return@collectLatest
                 }
 
-                // 거리 필터링
+                // 거리 및 속도 기반 필터링
                 val prevPoint = lastPoint
                 if (prevPoint != null) {
                     val distance = calculateDistance(
                         prevPoint.latitude, prevPoint.longitude,
                         point.latitude, point.longitude
                     )
-                    if (distance < 2.0) {
+
+                    // 시간 차이 계산 (초 단위)
+                    val timeDiffSeconds = (point.timeMillis - prevPoint.timeMillis) / 1000.0
+
+                    // 속도와 거리 일관성 체크
+                    if (speed > 1.0f && timeDiffSeconds > 0) {
+                        // 예상 이동 거리 (속도 * 시간)
+                        val expectedDistance = speed * timeDiffSeconds
+                        // 실제 이동 거리와 예상 이동 거리의 차이
+                        val distanceDiff = Math.abs(expectedDistance - distance)
+
+                        // 차이가 너무 크면 GPS 오류로 판단 (예상의 80% 이상 차이) - 기준 완화
+                        if (distanceDiff > expectedDistance * 0.8) {
+                            Log.w("TMapComposable", "⚠️ 속도-거리 불일치 감지 (속도: ${String.format("%.1f", speed)}m/s, 실제: ${String.format("%.1f", distance)}m, 예상: ${String.format("%.1f", expectedDistance)}m) - 무시")
+                            return@collectLatest
+                        }
+                    }
+
+                    // 속도 기반 필터링 (정지/저속 상태에서 GPS 드리프트 방지) - 기준 완화
+                    when {
+                        speed < 0.5f -> {
+                            // 거의 정지 상태 (0.5m/s = 1.8km/h 미만) - 5m로 완화
+                            if (distance > 5.0) {
+                                Log.w("TMapComposable", "⚠️ 정지 상태 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+                                return@collectLatest
+                            }
+                        }
+                        speed < 1.5f -> {
+                            // 느린 보행 (0.5-1.5m/s, 1.8-5.4km/h) - 기준 완화
+                            val maxJump = when {
+                                accuracy < 20f -> 30.0   // 8.0 → 30.0
+                                accuracy < 30f -> 50.0   // 10.0 → 50.0
+                                else -> 60.0             // 12.0 → 60.0
+                            }
+                            if (distance > maxJump) {
+                                Log.w("TMapComposable", "⚠️ 저속 이동 중 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+                                return@collectLatest
+                            }
+                        }
+                        // speed >= 1.5m/s (5.4km/h+): 정상 이동으로 간주, 점프 체크 안 함
+                    }
+
+                    // 정확도에 따른 최소 이동 거리 (동적 임계값)
+                    val minDistance = when {
+                        accuracy < 15f -> 2.0   // 정확도 좋음 (15m 미만): 2m
+                        accuracy < 25f -> 5.0   // 정확도 보통 (15-25m): 5m
+                        else -> 10.0            // 정확도 나쁨 (25-40m): 10m
+                    }
+
+                    // 최소 이동 거리 체크
+                    if (distance < minDistance) {
                         return@collectLatest
                     }
-                    Log.d("TMapComposable", "📍 이동 거리: ${String.format("%.1f", distance)}m")
+
+                    Log.d("TMapComposable", "📍 위치 업데이트: ${String.format("%.1f", distance)}m 이동, 속도: ${String.format("%.1f", speed)}m/s, 정확도: ${String.format("%.0f", accuracy)}m")
                 }
 
                 lastPoint = point
@@ -662,12 +833,25 @@ fun TMapComposable(
 
                     Log.d("TMapComposable", "✅ 경로 그리기 완료")
                 } else {
-                    // 경로가 null이면 마커도 제거
+                    // 경로가 null이면 PolyLine과 마커 모두 제거
+                    routePolyLine?.let { oldPolyLine ->
+                        try {
+                            tmap.removeTMapPolyLine(oldPolyLine.id)
+                            Log.d("TMapComposable", "✅ 기존 PolyLine 제거 성공")
+                        } catch (e: Exception) {
+                            Log.w("TMapComposable", "기존 PolyLine 제거 실패", e)
+                        }
+                    }
                     routePolyLine = null
                     routeBearing = 0f  // 경로 방향 리셋
-                    tmap.removeTMapMarkerItem("start_marker")
-                    tmap.removeTMapMarkerItem("end_marker")
-                    Log.d("TMapComposable", "🗑️ 경로 제거")
+
+                    try {
+                        tmap.removeTMapMarkerItem("start_marker")
+                        tmap.removeTMapMarkerItem("end_marker")
+                    } catch (e: Exception) {
+                        Log.w("TMapComposable", "마커 제거 실패", e)
+                    }
+                    Log.d("TMapComposable", "🗑️ 경로 제거 완료")
                 }
             } catch (e: Exception) {
                 Log.e("TMapComposable", "❌ 경로 그리기 실패", e)
@@ -692,14 +876,9 @@ fun TMapComposable(
 
     DisposableEffect(Unit) {
         onDispose {
-            try {
-                mapView?.onDestroy()
-                Log.d("TMapComposable", "🗑️ TMapView destroyed")
-            } catch (e: Exception) {
-                Log.e("TMapComposable", "❌ TMapView destroy 실패", e)
-            } finally {
-                mapView = null
-            }
+            // TMapView를 캐싱하여 재사용하므로 destroy하지 않음
+            // 부모에서만 제거하고 TMapView 인스턴스는 유지
+            Log.d("TMapComposable", "🔄 TMapComposable dispose (TMapView는 캐시에 유지)")
         }
     }
 }
