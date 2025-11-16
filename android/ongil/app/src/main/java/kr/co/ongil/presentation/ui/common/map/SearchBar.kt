@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 
 // 지도 화면 상단 검색바 컴포넌트
 @Composable
@@ -39,7 +40,8 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     placeholder: String = "장소를 검색해주세요",
     requestFocus: Boolean = false,
-    onSearch: () -> Unit = {}
+    onSearch: () -> Unit = {},
+    onFocusChanged: (Boolean) -> Unit = {}
 ) {
     val borderColor = Color(0xFFD9D9D9)
     val placeholderColor = Color(0xFF9CA3AF)
@@ -62,7 +64,10 @@ fun SearchBar(
                 width = 1.dp,
                 color = borderColor,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
-            ),
+            )
+            .onFocusChanged { focusState ->
+                onFocusChanged(focusState.isFocused)
+            },
         placeholder = {
             Text(
                 text = placeholder,

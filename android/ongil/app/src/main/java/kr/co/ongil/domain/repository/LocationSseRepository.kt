@@ -1,14 +1,14 @@
 package kr.co.ongil.domain.repository
 
 import kotlinx.coroutines.flow.Flow
-import kr.co.ongil.data.model.location.GpsUpdateEvent
+import kr.co.ongil.data.model.location.SseEvent
 
 /**
  * 환자 위치 SSE Repository
  */
 interface LocationSseRepository {
     /**
-     * 환자들의 실시간 위치 스트림 구독
+     * SSE 이벤트 스트림 구독 (GPS 업데이트 + 길찾기 업데이트)
      */
-    fun subscribePatientLocations(): Flow<GpsUpdateEvent>
+    fun subscribeSseEvents(): Flow<SseEvent>
 }

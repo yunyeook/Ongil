@@ -26,7 +26,7 @@ class VoipSignalingService @Inject constructor(
         private fun destCallSignal(callId: Long) = "/app/calls/$callId/signal"
     }
 
-    private val callSubscriptions = mutableMapOf<Long, Disposable>()
+    private val callSubscriptions = mutableMapOf<Long, MutableList<Disposable>>()
 
     private val _signalingMessages = MutableSharedFlow<SignalMessage>()
     val signalingMessages: SharedFlow<SignalMessage> = _signalingMessages.asSharedFlow()
@@ -47,22 +47,36 @@ class VoipSignalingService @Inject constructor(
             return true
         }
 
-        val disposable = webSocketManager.subscribe(USER_QUEUE_CALLS) { message ->
+        val disposables = mutableListOf<Disposable>()
+
+        // 1. 개인 메시지 구독
+        webSocketManager.subscribe(USER_QUEUE_CALLS) { message ->
             handleSignalMessage(message)
+        }?.let {
+            disposables.add(it)
+            Log.d(TAG, "✓ Subscribed to $USER_QUEUE_CALLS")
+        } ?: run {
+            Log.e(TAG, "✗ Failed to subscribe to $USER_QUEUE_CALLS")
+            return false
         }
 
-        return if (disposable != null) {
-            callSubscriptions[callId] = disposable
-            Log.d(TAG, "✓ Subscribed to $USER_QUEUE_CALLS for call $callId")
-            true
-        } else {
-            Log.e(TAG, "✗ Failed to subscribe to $USER_QUEUE_CALLS")
-            false
+        // 2. 통화방 토픽 구독 (점으로 구분)
+        val topicPath = "/topic/calls.$callId"  // ✅ 슬래시 대신 점
+        webSocketManager.subscribe(topicPath) { message ->
+            handleSignalMessage(message)
+        }?.let {
+            disposables.add(it)
+            Log.d(TAG, "✓ Subscribed to $topicPath")
+        } ?: run {
+            Log.w(TAG, "⚠️ Failed to subscribe to $topicPath")
         }
+
+        callSubscriptions[callId] = disposables
+        return true
     }
 
     fun unsubscribeFromCall(callId: Long) {
-        callSubscriptions[callId]?.dispose()
+        callSubscriptions[callId]?.forEach { it.dispose() }
         callSubscriptions.remove(callId)
         Log.d(TAG, "Unsubscribed from call $callId")
     }
@@ -127,6 +141,40 @@ class VoipSignalingService @Inject constructor(
         sendSignal(callId, msg, "ICE")
     }
 
+    fun sendAccept(
+        callId: Long,
+        sessionId: String?,
+        fromUserId: Long,
+        toUserId: Long
+    ) {
+        val msg = SignalMessage(
+            type = SignalingType.ACCEPT.name,
+            callId = callId,
+            sessionId = sessionId,
+            senderId = fromUserId,
+            receiverId = toUserId
+        )
+        sendSignal(callId, msg, "ACCEPT")
+    }
+
+    fun sendReject(
+        callId: Long,
+        sessionId: String?,
+        fromUserId: Long,
+        toUserId: Long,
+        reason: String? = null
+    ) {
+        val msg = SignalMessage(
+            type = SignalingType.REJECT.name,
+            callId = callId,
+            sessionId = sessionId,
+            senderId = fromUserId,
+            receiverId = toUserId,
+            reason = reason
+        )
+        sendSignal(callId, msg, "REJECT")
+    }
+
     fun sendHangup(
         callId: Long,
         sessionId: String?,
@@ -186,7 +234,9 @@ class VoipSignalingService @Inject constructor(
     }
 
     fun disconnect() {
-        callSubscriptions.values.forEach { it.dispose() }
+        callSubscriptions.values.forEach { disposables ->
+            disposables.forEach { it.dispose() }
+        }
         callSubscriptions.clear()
         webSocketManager.disconnect()
         Log.d(TAG, "VoipSignalingService disconnected")

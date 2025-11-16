@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 fun PatientCard(
     patientName: String,
     phoneNumber: String,
+    isDefault: Boolean,
+    userType: String,  // 추가: 로그인한 사용자 타입
     onClickCard: () -> Unit,
     onClickCall: () -> Unit,
     modifier: Modifier = Modifier
@@ -37,7 +39,7 @@ fun PatientCard(
             .clickable { onClickCard() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = if (isDefault) Color(0xFFDFF5E1) else Color.White
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp
@@ -52,6 +54,15 @@ fun PatientCard(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
+                if (isDefault) {
+                    Text(
+                        text = if (userType == "PATIENT") "기본 보호자" else "기본 환자",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF2E7D32),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
                 Text(
                     text = patientName,
                     fontSize = 18.sp,
@@ -102,6 +113,8 @@ fun PatientCardPreview() {
         PatientCard(
             patientName = "김철수 할아버지",
             phoneNumber = "010-1234-5678",
+            isDefault = true,
+            userType = "GUARDIAN",
             onClickCard = {},
             onClickCall = {},
             modifier = Modifier

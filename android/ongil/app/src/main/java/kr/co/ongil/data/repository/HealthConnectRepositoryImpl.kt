@@ -13,7 +13,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kr.co.ongil.data.model.health.HealthData
+import kr.co.ongil.data.model.health.LocalHealthData
 import kr.co.ongil.data.model.health.HeartRateData
 import kr.co.ongil.data.model.health.OxygenSaturationData
 import kr.co.ongil.data.model.health.SleepData
@@ -74,7 +74,7 @@ class HealthConnectRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getHealthData(): Flow<Result<HealthData>> = flow {
+    override fun getHealthData(): Flow<Result<LocalHealthData>> = flow {
         try {
             Log.d(TAG, "getHealthData() - 건강 데이터 조회 시작")
 
@@ -91,7 +91,7 @@ class HealthConnectRepositoryImpl @Inject constructor(
             val sleepData = getSleepData(timeRange)
             val stepsData = getStepsData(timeRange)
 
-            val healthData = HealthData(
+            val healthData = LocalHealthData(
                 heartRate = heartRateData,
                 oxygenSaturation = oxygenData,
                 sleep = sleepData,
