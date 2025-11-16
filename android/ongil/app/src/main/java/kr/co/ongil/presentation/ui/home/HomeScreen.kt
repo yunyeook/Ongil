@@ -83,7 +83,8 @@ fun HomeScreen(
     userType: String = "",
     selectedPatientId: String? = null,
     patientLocations: Map<Long, Coordinate> = emptyMap(),
-    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null
 ) {
     val context = LocalContext.current
     val inPreview = LocalInspectionMode.current
@@ -124,7 +125,8 @@ fun HomeScreen(
             userType = userType,
             selectedPatientId = selectedPatientId,
             patientLocations = patientLocations,
-            locationBus = locationBus
+            locationBus = locationBus,
+            navigationRoute = navigationRoute
         )
 
         Spacer(Modifier.height(24.dp))
@@ -199,8 +201,23 @@ private fun MapSectionPreview(
     userType: String = "",
     selectedPatientId: String? = null,
     patientLocations: Map<Long, Coordinate> = emptyMap(),
-    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null
 ) {
+    // NavigationRouteManager.NavigationRoute를 Domain Route로 변환
+    val domainRoute = navigationRoute?.let { navRoute ->
+        kr.co.ongil.domain.model.Route(
+            totalTimeMinutes = 0,  // 홈 화면에서는 시간 정보 불필요
+            totalDistanceMeters = 0,  // 홈 화면에서는 거리 정보 불필요
+            path = navRoute.path.map { latLng ->
+                kr.co.ongil.domain.model.LatLng(
+                    latitude = latLng.latitude,
+                    longitude = latLng.longitude
+                )
+            }
+        )
+    }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
@@ -214,7 +231,8 @@ private fun MapSectionPreview(
             userType = userType,
             selectedPatientId = selectedPatientId,
             patientLocations = patientLocations,
-            isHomeScreen = true  // 홈 화면용 TMapView 사용
+            isHomeScreen = true,  // 홈 화면용 TMapView 사용
+            route = domainRoute  // 길안내 경로 표시
         )
 
         // 클릭 감지용 투명 레이어

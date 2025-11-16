@@ -202,9 +202,6 @@ fun TMapComposable(
         val marker = locationMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
-        // 마커가 완전히 지도에 추가될 때까지 대기
-        delay(200)
-
         Log.d("TMapComposable", "🎬 펄스 애니메이션 시작 (환자) - marker: ${marker.id}")
 
         while (isActive) {  // isActive 체크 추가
@@ -245,9 +242,6 @@ fun TMapComposable(
         if (!isMapInitialized) return@LaunchedEffect  // 지도 초기화 완료 후 시작
         val marker = patientMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
-
-        // 마커가 완전히 지도에 추가될 때까지 대기
-        delay(200)
 
         Log.d("TMapComposable", "🎬 펄스 애니메이션 시작 (보호자)")
 
@@ -657,9 +651,6 @@ fun TMapComposable(
         val tmap = mapView ?: return@LaunchedEffect
         val bus = locationBus ?: return@LaunchedEffect
 
-        // TMapViewFactory의 removeAllTMapMarkerItem()이 완료될 때까지 충분히 대기
-        delay(450)
-
         Log.d("TMapComposable", "📡 위치 업데이트 수신 시작 (환자)")
         bus.updates.collectLatest { point ->
             try {
@@ -768,7 +759,10 @@ fun TMapComposable(
 
                         // 첫 위치로 지도 이동
                         tmap.setCenterPoint(point.latitude, point.longitude)
-                        tmap.setZoomLevel(17)
+                        // 홈 화면이 아닐 때만 줌 레벨 변경
+                        if (!isHomeScreen) {
+                            tmap.setZoomLevel(17)
+                        }
                     } catch (e: Exception) {
                         Log.e("TMapComposable", "마커 추가 실패", e)
                         locationMarker = null
@@ -889,6 +883,47 @@ fun TMapComposable(
                         routeBearing = 0f
                     }
 
+                    // 홈 화면에서 경로 전체가 보이도록 자동 줌 조정
+                    if (isHomeScreen && route.path.isNotEmpty()) {
+                        try {
+                            // 경로의 최소/최대 위경도 계산
+                            val minLat = route.path.minOf { it.latitude }
+                            val maxLat = route.path.maxOf { it.latitude }
+                            val minLon = route.path.minOf { it.longitude }
+                            val maxLon = route.path.maxOf { it.longitude }
+
+                            // 경로 중심으로 이동
+                            tmap.setCenterPoint(
+                                (minLat + maxLat) / 2,
+                                (minLon + maxLon) / 2
+                            )
+
+                            // 경로 범위에 맞는 줌 레벨 계산 (여유를 위해 1.8배 확장)
+                            val latDiff = (maxLat - minLat) * 1.8
+                            val lonDiff = (maxLon - minLon) * 1.8
+                            val maxDiff = maxOf(latDiff, lonDiff)
+
+                            // 줌 레벨 계산
+                            val autoZoomLevel = when {
+//                                maxDiff > 0.4 -> 10      // 매우 매우 넓은 범위 (40km+)
+                                maxDiff > 0.2 -> 10      // 매우 넓은 범위 (20-40km)
+                                maxDiff > 0.1 -> 11      // 넓은 범위 (10-20km)
+                                maxDiff > 0.05 -> 12     // 중간 범위 (5-10km)
+                                maxDiff > 0.025 -> 13    // 좁은 범위 (2.5-5km)
+                                maxDiff > 0.012 -> 14    // 매우 좁은 범위 (1.2-2.5km)
+                                maxDiff > 0.006 -> 15    // 아주 좁은 범위 (600m-1.2km)
+                                maxDiff > 0.003 -> 16    // 초근접 (300-600m)
+                                maxDiff > 0.0015 -> 17   // 극근접 (150-300m)
+                                else -> 18               // 최대 확대 (150m 미만)
+                            }
+
+                            tmap.zoomLevel = autoZoomLevel
+                            Log.d("TMapComposable", "🔍 홈 화면 자동 줌 조정: $autoZoomLevel (범위: ${String.format("%.4f", maxDiff)}, 약 ${String.format("%.1f", maxDiff * 111)}km)")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "자동 줌 조정 실패", e)
+                        }
+                    }
+
                     Log.d("TMapComposable", "✅ 경로 그리기 완료")
                 } else {
                     // 경로가 null이면 PolyLine과 마커 모두 제거
@@ -909,6 +944,17 @@ fun TMapComposable(
                     } catch (e: Exception) {
                         Log.w("TMapComposable", "마커 제거 실패", e)
                     }
+
+                    // 홈 화면에서 경로 제거 시 기본 줌 레벨로 복원
+                    if (isHomeScreen) {
+                        try {
+                            tmap.zoomLevel = zoomLevel
+                            Log.d("TMapComposable", "🔍 홈 화면 기본 줌 복원: $zoomLevel")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "기본 줌 복원 실패", e)
+                        }
+                    }
+
                     Log.d("TMapComposable", "🗑️ 경로 제거 완료")
                 }
             } catch (e: Exception) {

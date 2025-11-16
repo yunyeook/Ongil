@@ -68,6 +68,14 @@ object TMapViewFactory {
                 Log.w("TMapManager", "OnMapReadyListener 제거 실패", e)
             }
 
+            // 줌 레벨 재설정 (캐싱된 뷰도 일관된 줌 레벨 유지)
+            try {
+                existingView.setZoomLevel(zoomLevel)
+                Log.d("TMapManager", "✅ 줌 레벨 재설정: $zoomLevel")
+            } catch (e: Exception) {
+                Log.e("TMapManager", "❌ 줌 레벨 설정 실패", e)
+            }
+
             Log.d("TMapManager", "✅ 캐싱된 TMapView 준비 완료")
 
             return@withContext Pair(existingView, true)  // 캐싱된 뷰
@@ -93,9 +101,9 @@ object TMapViewFactory {
                 null
             }
 
-            // 위치를 가져오지 못하면 기본 위치(서울 시청) 사용
-            val latitude = loc?.latitude ?: 37.5665
-            val longitude = loc?.longitude ?: 126.9780
+            // 위치를 가져오지 못하면 기본 위치 사용
+            val latitude = loc?.latitude ?: 37.50175822768635
+            val longitude = loc?.longitude ?: 127.03958229478599
 
             if (loc == null) {
                 Log.w("TMapManager", "현재 위치 없음 - 기본 위치 사용: ($latitude, $longitude)")

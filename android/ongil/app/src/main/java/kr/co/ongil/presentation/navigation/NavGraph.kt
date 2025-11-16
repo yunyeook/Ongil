@@ -1,5 +1,7 @@
 package kr.co.ongil.presentation.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -53,7 +55,11 @@ fun AppNavGraph(
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier.background(Color.White)
+        modifier = modifier.background(Color.White),
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
         // 홈
         homeGraph(navController, paddingValues, authViewModel)

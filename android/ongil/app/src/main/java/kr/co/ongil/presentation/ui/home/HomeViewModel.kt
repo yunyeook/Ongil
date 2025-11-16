@@ -36,7 +36,8 @@ class HomeViewModel @Inject constructor(
     private val getDashboardUseCase: GetDashboardUseCase,
     private val healthConnectRepository: HealthConnectRepository,
     private val getPatientInfoUseCase: GetPatientInfoUseCase,
-    val locationBus: LocationStreamBus
+    val locationBus: LocationStreamBus,
+    private val navigationRouteManager: kr.co.ongil.common.location.NavigationRouteManager
 ) : ViewModel() {
 
     companion object {
@@ -62,6 +63,10 @@ class HomeViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    // 길안내 경로 정보 (NavigationRouteManager에서 가져옴)
+    val navigationRoute: StateFlow<kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute?> =
+        navigationRouteManager.currentRoute
 
     init {
         loadHomeData()
