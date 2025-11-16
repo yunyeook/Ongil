@@ -121,8 +121,8 @@ fun MapScreen(
         isSosEnabled = isSosActiveFromViewModel
     }
 
-    // 안전범위 표시 토글 상태
-    var showSafetyZones by remember { mutableStateOf(false) }
+    // 안전범위 표시 토글 상태 (전역 상태 사용)
+    val showSafetyZones by viewModel.safetyZoneStateManager.showSafetyZones.collectAsState()
 
     // 장소 상세 정보 표시 중 (검색창, 플로팅 버튼 숨김)
     // 길찾기 중이더라도 선택한 장소가 현재 목적지와 다르면 장소 상세 표시
@@ -523,7 +523,7 @@ fun MapScreen(
                         icon = Icons.Default.RadioButtonChecked,
                         isToggled = showSafetyZones,
                         onClick = {
-                            showSafetyZones = !showSafetyZones
+                            viewModel.safetyZoneStateManager.toggleSafetyZones()
                         }
                     )
 

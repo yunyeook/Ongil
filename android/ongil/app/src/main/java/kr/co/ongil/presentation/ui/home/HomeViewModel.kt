@@ -28,6 +28,7 @@ import kr.co.ongil.presentation.ui.patientinfo.ActivityLog
 import kr.co.ongil.presentation.ui.patientinfo.FavoriteLocation
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.common.location.NavigationRouteManager
+import kr.co.ongil.common.location.SafetyZoneStateManager
 import javax.inject.Inject
 
 @HiltViewModel
@@ -39,7 +40,8 @@ class HomeViewModel @Inject constructor(
     private val healthConnectRepository: HealthConnectRepository,
     private val getPatientInfoUseCase: GetPatientInfoUseCase,
     val locationBus: LocationStreamBus,
-    navigationRouteManager: NavigationRouteManager
+    navigationRouteManager: NavigationRouteManager,
+    val safetyZoneStateManager: SafetyZoneStateManager
 ) : ViewModel() {
 
     companion object {

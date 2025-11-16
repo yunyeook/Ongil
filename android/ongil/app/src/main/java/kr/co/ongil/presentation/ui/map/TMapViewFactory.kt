@@ -55,6 +55,7 @@ object TMapViewFactory {
                 existingView.removeAllTMapMarkerItem()
                 existingView.removeAllTMapPolyLine()
                 existingView.removeAllTMapCircle()
+                existingView.removeAllTMapPolygon()
                 Log.d("TMapManager", "✅ 기존 마커/오버레이 모두 제거 완료")
             } catch (e: Exception) {
                 Log.e("TMapManager", "❌ 마커/오버레이 제거 실패", e)

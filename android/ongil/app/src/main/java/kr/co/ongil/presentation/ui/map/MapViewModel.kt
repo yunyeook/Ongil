@@ -36,6 +36,7 @@ import kr.co.ongil.common.location.NavigationRouteManager
 import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.domain.usecase.sosalert.SendSosAlertUseCase
 import kr.co.ongil.domain.usecase.sosalert.StopSosAlertUseCase
+import kr.co.ongil.common.location.SafetyZoneStateManager
 
 /**
  * 지도 화면 ViewModel
@@ -52,7 +53,8 @@ class MapViewModel @Inject constructor(
     private val gpsWebSocketManager: GpsWebSocketManager,
     private val favoriteRepository: kr.co.ongil.domain.repository.FavoriteRepository,
     private val sendSosAlertUseCase: SendSosAlertUseCase,
-    private val stopSosAlertUseCase: StopSosAlertUseCase
+    private val stopSosAlertUseCase: StopSosAlertUseCase,
+    val safetyZoneStateManager: SafetyZoneStateManager
 ) : ViewModel() {
 
     companion object {

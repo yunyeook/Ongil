@@ -23,6 +23,7 @@ fun NavGraphBuilder.homeGraph(
         val uiState by viewModel.uiState.collectAsState()
         val navigationRoute by viewModel.navigationRoute.collectAsState()
         val navigationProgress by viewModel.navigationProgress.collectAsState()
+        val showSafetyZones by viewModel.safetyZoneStateManager.showSafetyZones.collectAsState()
 
         // AuthStateViewModel에서 사용자 정보 및 환자 위치 가져오기
         val currentUserInfo by (authViewModel?.currentUserInfo ?: kotlinx.coroutines.flow.flowOf(null)).collectAsState(initial = null)
@@ -46,7 +47,8 @@ fun NavGraphBuilder.homeGraph(
             patientLocations = patientLocations,
             locationBus = viewModel.locationBus,
             navigationRoute = navigationRoute,
-            navigationProgress = navigationProgress
+            navigationProgress = navigationProgress,
+            showSafetyZones = showSafetyZones
         )
     }
 }

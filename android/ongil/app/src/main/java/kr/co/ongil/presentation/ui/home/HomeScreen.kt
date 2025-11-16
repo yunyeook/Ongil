@@ -85,7 +85,8 @@ fun HomeScreen(
     patientLocations: Map<Long, Coordinate> = emptyMap(),
     locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
     navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null,
-    navigationProgress: Float = 0f
+    navigationProgress: Float = 0f,
+    showSafetyZones: Boolean = false
 ) {
     val context = LocalContext.current
     val inPreview = LocalInspectionMode.current
@@ -127,7 +128,8 @@ fun HomeScreen(
             selectedPatientId = selectedPatientId,
             patientLocations = patientLocations,
             locationBus = locationBus,
-            navigationRoute = navigationRoute
+            navigationRoute = navigationRoute,
+            showSafetyZones = showSafetyZones
         )
 
         Spacer(Modifier.height(12.dp))
@@ -221,7 +223,8 @@ private fun MapSectionPreview(
     selectedPatientId: String? = null,
     patientLocations: Map<Long, Coordinate> = emptyMap(),
     locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
-    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null,
+    showSafetyZones: Boolean = false
 ) {
     // NavigationRouteManager.NavigationRoute를 Domain Route로 변환
     val domainRoute = navigationRoute?.let { navRoute ->
@@ -251,7 +254,8 @@ private fun MapSectionPreview(
             selectedPatientId = selectedPatientId,
             patientLocations = patientLocations,
             isHomeScreen = true,  // 홈 화면용 TMapView 사용
-            route = domainRoute  // 길안내 경로 표시
+            route = domainRoute,  // 길안내 경로 표시
+            showSafetyZones = showSafetyZones  // 안전범위 표시 상태
         )
 
         // 클릭 감지용 투명 레이어

@@ -25,6 +25,7 @@ import com.skt.tmap.TMapView
 import com.skt.tmap.overlay.TMapCircle
 import com.skt.tmap.overlay.TMapMarkerItem
 import com.skt.tmap.overlay.TMapPolyLine
+import com.skt.tmap.overlay.TMapPolygon
 import kr.co.ongil.common.location.LocationPoint
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.domain.model.Route
@@ -474,90 +475,142 @@ fun TMapComposable(
         }
     }
 
-    // 안전 범위 동심원 표시/숨김 (PolyLine 사용)
+    // 안전 범위 동심원 표시/숨김 (Polygon 사용 - 채워진 영역)
     LaunchedEffect(mapView, isMapInitialized, showSafetyZones, level1Distance, level2Distance, level3Distance) {
+        Log.d("TMapComposable", "🔄 안전범위 LaunchedEffect 실행 - showSafetyZones=$showSafetyZones, isHomeScreen=$isHomeScreen")
         if (!isMapInitialized) return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
         try {
             withContext(Dispatchers.Main) {
                 if (showSafetyZones) {
-                    // 기존 폴리라인 제거
+                    // 기존 폴리곤 제거
                     safetyCircles.forEach { id ->
                         try {
-                            tmap.removeTMapPolyLine(id)
+                            tmap.removeTMapPolygon(id)
                         } catch (e: Exception) {
-                            Log.e("TMapComposable", "폴리라인 제거 실패: $id", e)
+                            Log.e("TMapComposable", "폴리곤 제거 실패: $id", e)
                         }
                     }
 
-                    // 홈 위치로 지도 이동 (동심원이 보이도록)
-                    tmap.setCenterPoint(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE
-                    )
-                    tmap.setZoomLevel(14)
-                    Log.d("TMapComposable", "🏠 홈 위치로 이동: ${SafetyZoneConfig.HomeLocation.LATITUDE}, ${SafetyZoneConfig.HomeLocation.LONGITUDE}")
+                    val polygons = mutableListOf<String>()
 
-                    val circles = mutableListOf<String>()
-
-                    // 3단계 - 빨간색
-                    val points3 = createCirclePoints(
+                    // 각 영역을 겹치지 않는 링(donut) 형태로 생성
+                    // 1단계 - 초록색 (level1Distance ~ level2Distance 사이의 링)
+                    val outerPoints1 = createCirclePoints(
                         SafetyZoneConfig.HomeLocation.LATITUDE,
                         SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        level3Distance
+                        level2Distance,
+                        72
                     )
-                    val poly3 = TMapPolyLine("safety_zone_stage3", points3)
-                    poly3.setLineColor(CircleColors.stage3StrokeColor.toArgb())
-                    poly3.setLineWidth(0.5f)
-                    poly3.setOutLineColor(0xFFD40806.toInt())  // 빨간색 외곽선
-                    tmap.addTMapPolyLine(poly3)
-                    circles.add("safety_zone_stage3")
-                    Log.d("TMapComposable", "✅ 3단계 동심원 추가 (${level3Distance}m, ${points3.size}개 점)")
-
-                    // 2단계 - 주황색
-                    val points2 = createCirclePoints(
+                    val innerPoints1 = createCirclePoints(
                         SafetyZoneConfig.HomeLocation.LATITUDE,
                         SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        level2Distance
+                        level1Distance,
+                        72
                     )
-                    val poly2 = TMapPolyLine("safety_zone_stage2", points2)
-                    poly2.setLineColor(CircleColors.stage2StrokeColor.toArgb())
-                    poly2.setLineWidth(0.5f)
-                    poly2.setOutLineColor(0xFF007BFF.toInt())  // 파란색 외곽선
-                    tmap.addTMapPolyLine(poly2)
-                    circles.add("safety_zone_stage2")
-                    Log.d("TMapComposable", "✅ 2단계 동심원 추가 (${level2Distance}m, ${points2.size}개 점)")
+                    val pointList1 = ArrayList<TMapPoint>().apply {
+                        addAll(outerPoints1)
+                        addAll(innerPoints1.reversed())
+                    }
+                    val polygon1 = TMapPolygon("safety_zone_stage1", pointList1)
+                    polygon1.setAreaColor(Color.rgb(16, 192, 10))  // 초록색
+                    polygon1.setAreaAlpha(32)
+                    polygon1.setLineColor(Color.TRANSPARENT)
+                    polygon1.setPolygonWidth(0f)
+                    tmap.addTMapPolygon(polygon1)
+                    polygons.add("safety_zone_stage1")
+                    Log.d("TMapComposable", "✅ 1단계 안전 범위 추가 (${level1Distance}m ~ ${level2Distance}m)")
 
-                    // 1단계 - 초록색
-                    val points1 = createCirclePoints(
+                    // 2단계 - 파란색 (level2Distance ~ level3Distance 사이의 링)
+                    val outerPoints2 = createCirclePoints(
                         SafetyZoneConfig.HomeLocation.LATITUDE,
                         SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        level1Distance
+                        level3Distance,
+                        72
                     )
-                    val poly1 = TMapPolyLine("safety_zone_stage1", points1)
-                    poly1.setLineColor(CircleColors.stage1StrokeColor.toArgb())
-                    poly1.setLineWidth(0.5f)
-                    poly1.setOutLineColor(0xFF10C00A.toInt())  // 초록색 외곽선
-                    tmap.addTMapPolyLine(poly1)
-                    circles.add("safety_zone_stage1")
-                    Log.d("TMapComposable", "✅ 1단계 동심원 추가 (${level1Distance}m, ${points1.size}개 점)")
+                    val innerPoints2 = createCirclePoints(
+                        SafetyZoneConfig.HomeLocation.LATITUDE,
+                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        level2Distance,
+                        72
+                    )
+                    val pointList2 = ArrayList<TMapPoint>().apply {
+                        addAll(outerPoints2)
+                        addAll(innerPoints2.reversed())
+                    }
+                    val polygon2 = TMapPolygon("safety_zone_stage2", pointList2)
+                    polygon2.setAreaColor(Color.rgb(0, 123, 255))  // 파란색
+                    polygon2.setAreaAlpha(32)
+                    polygon2.setLineColor(Color.TRANSPARENT)
+                    polygon2.setPolygonWidth(0f)
+                    tmap.addTMapPolygon(polygon2)
+                    polygons.add("safety_zone_stage2")
+                    Log.d("TMapComposable", "✅ 2단계 안전 범위 추가 (${level2Distance}m ~ ${level3Distance}m)")
 
+                    // 3단계 - 빨간색 (level3Distance ~ 50km 사이의 링)
+                    val maxRadius = 50000 // 50km
+                    val outerPoints3 = createCirclePoints(
+                        SafetyZoneConfig.HomeLocation.LATITUDE,
+                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        maxRadius,
+                        721
+                    )
+                    val innerPoints3 = createCirclePoints(
+                        SafetyZoneConfig.HomeLocation.LATITUDE,
+                        SafetyZoneConfig.HomeLocation.LONGITUDE,
+                        level3Distance,
+                        72
+                    )
+                    val pointList3 = ArrayList<TMapPoint>().apply {
+                        addAll(outerPoints3)
+                        addAll(innerPoints3.reversed())
+                    }
+                    val polygon3 = TMapPolygon("safety_zone_stage3", pointList3)
+                    polygon3.setAreaColor(Color.rgb(212, 8, 6))  // 빨간색
+                    polygon3.setAreaAlpha(32)
+                    polygon3.setLineColor(Color.TRANSPARENT)
+                    polygon3.setPolygonWidth(0f)
+                    tmap.addTMapPolygon(polygon3)
+                    polygons.add("safety_zone_stage3")
+                    Log.d("TMapComposable", "✅ 3단계 안전 범위 추가 (${level3Distance}m ~ ${maxRadius}m)")
 
+                    safetyCircles = polygons
 
-                    safetyCircles = circles
-                    Log.d("TMapComposable", "✅ 안전 범위 동심원 표시 완료 (총 ${circles.size}개)")
+                    Log.d("TMapComposable", "✅ 안전 범위 동심원 표시 완료 (총 ${polygons.size}개)")
+
+                    // 안전 범위 추가 후 마커를 폴리곤 위로 재추가
+                    if (userType == "PATIENT") {
+                        locationMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                                tmap.addTMapMarkerItem(marker)
+                                Log.d("TMapComposable", "✅ 현재위치 마커 재추가 (폴리곤 위)")
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "현재위치 마커 재추가 실패", e)
+                            }
+                        }
+                    } else if (userType == "GUARDIAN") {
+                        patientMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                                tmap.addTMapMarkerItem(marker)
+                                Log.d("TMapComposable", "✅ 환자 마커 재추가 (폴리곤 위)")
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "환자 마커 재추가 실패", e)
+                            }
+                        }
+                    }
                 } else {
-                    // 폴리라인 숨김
+                    // 폴리곤 숨김
                     safetyCircles.forEach { id ->
                         try {
-                            tmap.removeTMapPolyLine(id)
+                            tmap.removeTMapPolygon(id)
                         } catch (e: Exception) {
-                            Log.e("TMapComposable", "폴리라인 제거 실패: $id", e)
+                            Log.e("TMapComposable", "폴리곤 제거 실패: $id", e)
                         }
                     }
                     safetyCircles = emptyList()
-
 
                     Log.d("TMapComposable", "🗑️ 안전 범위 동심원 숨김 완료")
                 }
