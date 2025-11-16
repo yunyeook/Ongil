@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
@@ -185,7 +187,11 @@ private fun PlaceDetailContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 장소명, 주소
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 6.dp)
+        ) {
             Text(
                 text = placeDetail.name,
                 color = Color.White,
@@ -247,20 +253,23 @@ private fun NavigatingContent(
     onDismiss: () -> Unit,
     onStopNavigationClick: () -> Unit
 ) {
+    // 상단: 목적지 아이콘 + 목적지까지 텍스트 + 닫기 버튼 + 안내중지 버튼
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // X 아이콘 버튼
-        IconButton(onClick = onDismiss) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "닫기",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        // 목적지 아이콘 (Navigation - 45도 회전된 화살표)
+        Icon(
+            imageVector = Icons.Default.Navigation,
+            contentDescription = "목적지",
+            tint = Color.White,
+            modifier = Modifier
+                .size(28.dp)
+                .padding(start = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Text(
             text = "목적지까지",
             color = Color.White,
@@ -269,13 +278,25 @@ private fun NavigatingContent(
             modifier = Modifier.weight(1f)
         )
 
+        // 닫기 버튼
+        SmallFloatingButton(text = "닫기", onClick = onDismiss)
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         // 안내중지 버튼
         SmallFloatingButton(text = "안내중지", onClick = onStopNavigationClick)
     }
-    Spacer(modifier = Modifier.height(12.dp))
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // 하단: 경로 정보 (시간, 거리, 최단경로) - 왼쪽 정렬
     Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 시간
         Icon(imageVector = Icons.Default.Schedule, contentDescription = "시간", tint = Color.White)
         Spacer(modifier = Modifier.width(4.dp))
         Text(
@@ -283,7 +304,10 @@ private fun NavigatingContent(
             color = Color.White,
             fontSize = 14.sp
         )
+
         Spacer(modifier = Modifier.width(16.dp))
+
+        // 거리
         Icon(imageVector = Icons.Default.DirectionsWalk, contentDescription = "거리", tint = Color.White)
         Spacer(modifier = Modifier.width(4.dp))
         Text(
@@ -291,8 +315,11 @@ private fun NavigatingContent(
             color = Color.White,
             fontSize = 14.sp
         )
+
         Spacer(modifier = Modifier.width(16.dp))
-        Icon(imageVector = Icons.Default.Send, contentDescription = "경로", tint = Color.White)
+
+        // 최단경로 (LocationOn 아이콘으로 변경)
+        Icon(imageVector = Icons.Default.LocationOn, contentDescription = "경로", tint = Color.White)
         Spacer(modifier = Modifier.width(4.dp))
         Text(text = "최단경로", color = Color.White, fontSize = 14.sp)
     }
@@ -320,7 +347,8 @@ private fun ConfirmationDialog(
                     text = "해당 목적지로\n길찾기를 시작하시겠습니까?",
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
-                    color = Color.Black
+                    color = Color.Black,
+                    fontWeight = FontWeight.Medium
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -332,10 +360,10 @@ private fun ConfirmationDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.surfaceVariant
+                            contentColor = Color.Black
                         )
                     ) {
-                        Text("취소")
+                        Text("취소", fontSize = 18.sp)
                     }
                     Button(
                         onClick = onConfirm,
@@ -346,7 +374,7 @@ private fun ConfirmationDialog(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("확인")
+                        Text("확인", fontSize = 18.sp)
                     }
                 }
             }
@@ -428,16 +456,21 @@ private fun FloatingButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Black.copy(alpha = 0.2f),
             contentColor = Color.White
-        )
+        ),
+        contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
                 contentDescription = text,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = text, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp
+            )
         }
     }
 }

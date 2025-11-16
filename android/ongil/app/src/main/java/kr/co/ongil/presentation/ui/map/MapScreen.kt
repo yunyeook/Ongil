@@ -384,7 +384,7 @@ fun MapScreen(
                 )
             }
 
-            // 검색 중일 때 바깥 클릭 감지용 투명 레이어
+            // 검색 중일 때 바깥 클릭 감지용 레이어 (포커스 또는 검색어 있을 때 반투명)
             if (isSearchActive) {
                 Box(
                     modifier = Modifier
@@ -392,6 +392,9 @@ fun MapScreen(
                         .padding(
                             top = paddingValues.calculateTopPadding(),
                             bottom = 0.dp
+                        )
+                        .background(
+                            if (isSearchFocused || searchQuery.isNotEmpty()) Color.Black.copy(alpha = 0.2f) else Color.Transparent
                         )
                         .clickable(
                             onClick = {
