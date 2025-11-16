@@ -122,9 +122,21 @@ fun MapScreen(
         navigationRoute
     }
 
-    // 환자 위치 변경 모니터링
-    LaunchedEffect(patientLocations) {
+    // 환자 위치 변경 모니터링 및 ViewModel 업데이트 (보호자용 검색)
+    LaunchedEffect(patientLocations, selectedPatientId, userType) {
         android.util.Log.d("MapScreen", "patientLocations 변경: ${patientLocations.keys}, userType: $userType, selectedPatientId: $selectedPatientId")
+
+        // 보호자인 경우 선택된 환자의 위치를 ViewModel에 전달
+        if (userType == "GUARDIAN") {
+            selectedPatientId?.toLongOrNull()?.let { patientId ->
+                val patientLocation = patientLocations[patientId]
+                android.util.Log.d("MapScreen", "보호자 검색용 환자 위치 업데이트: patientId=$patientId, location=$patientLocation")
+                viewModel.updatePatientLocation(patientLocation)
+            } ?: run {
+                android.util.Log.d("MapScreen", "선택된 환자 없음 - 환자 위치 null로 설정")
+                viewModel.updatePatientLocation(null)
+            }
+        }
     }
 
     // 환자 경로 변경 모니터링
