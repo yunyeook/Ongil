@@ -632,7 +632,7 @@ fun TMapComposable(
 
     // 환자 위치 업데이트 (보호자용 - 선택된 환자만)
     LaunchedEffect(mapView, isMapInitialized, patientLocations, selectedPatientId, userType) {
-        Log.d("TMapComposable", "환자 위치 업데이트 LaunchedEffect 실행: isMapInitialized=$isMapInitialized, userType=$userType, selectedPatientId=$selectedPatientId, patientLocations=${patientLocations.keys}")
+//        Log.d("TMapComposable", "환자 위치 업데이트 LaunchedEffect 실행: isMapInitialized=$isMapInitialized, userType=$userType, selectedPatientId=$selectedPatientId, patientLocations=${patientLocations.keys}")
 
         if (!isMapInitialized) {
             Log.d("TMapComposable", "지도 초기화 안됨")

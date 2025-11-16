@@ -2,7 +2,9 @@ package kr.co.ongil.data.datasource.local.preferences
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -145,6 +147,7 @@ class UserDataStoreManagerImpl @Inject constructor(
     }
 
     override suspend fun saveSafeZoneSettings(
+        patientId: Long,
         level1Distance: Int,
         level1Dwell: Int,
         level2Distance: Int,
@@ -155,43 +158,44 @@ class UserDataStoreManagerImpl @Inject constructor(
         autoCallEnabled: Boolean
     ) {
         dataStore.edit { preferences ->
-            preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DISTANCE] = level1Distance
-            preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DWELL] = level1Dwell
-            preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DISTANCE] = level2Distance
-            preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DWELL] = level2Dwell
-            preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DISTANCE] = level3Distance
-            preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DWELL] = level3Dwell
-            preferences[DataStoreKeys.SAFE_ZONE_PUSH_ENABLED] = pushEnabled
-            preferences[DataStoreKeys.SAFE_ZONE_AUTO_CALL_ENABLED] = autoCallEnabled
+            // 환자별로 키를 구분하여 저장
+            preferences[intPreferencesKey("safe_zone_level1_distance_$patientId")] = level1Distance
+            preferences[intPreferencesKey("safe_zone_level1_dwell_$patientId")] = level1Dwell
+            preferences[intPreferencesKey("safe_zone_level2_distance_$patientId")] = level2Distance
+            preferences[intPreferencesKey("safe_zone_level2_dwell_$patientId")] = level2Dwell
+            preferences[intPreferencesKey("safe_zone_level3_distance_$patientId")] = level3Distance
+            preferences[intPreferencesKey("safe_zone_level3_dwell_$patientId")] = level3Dwell
+            preferences[booleanPreferencesKey("safe_zone_push_enabled_$patientId")] = pushEnabled
+            preferences[booleanPreferencesKey("safe_zone_auto_call_enabled_$patientId")] = autoCallEnabled
         }
     }
 
-    override suspend fun getSafeZoneSettings(): kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings {
+    override suspend fun getSafeZoneSettings(patientId: Long): kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings {
         return dataStore.data.map { preferences ->
             kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings(
-                level1Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DISTANCE] ?: 100,
-                level1Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DWELL] ?: 60,
-                level2Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DISTANCE] ?: 350,
-                level2Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DWELL] ?: 30,
-                level3Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DISTANCE] ?: 700,
-                level3Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DWELL] ?: 15,
-                pushEnabled = preferences[DataStoreKeys.SAFE_ZONE_PUSH_ENABLED] ?: true,
-                autoCallEnabled = preferences[DataStoreKeys.SAFE_ZONE_AUTO_CALL_ENABLED] ?: false
+                level1Distance = preferences[intPreferencesKey("safe_zone_level1_distance_$patientId")] ?: 100,
+                level1Dwell = preferences[intPreferencesKey("safe_zone_level1_dwell_$patientId")] ?: 60,
+                level2Distance = preferences[intPreferencesKey("safe_zone_level2_distance_$patientId")] ?: 350,
+                level2Dwell = preferences[intPreferencesKey("safe_zone_level2_dwell_$patientId")] ?: 30,
+                level3Distance = preferences[intPreferencesKey("safe_zone_level3_distance_$patientId")] ?: 700,
+                level3Dwell = preferences[intPreferencesKey("safe_zone_level3_dwell_$patientId")] ?: 15,
+                pushEnabled = preferences[booleanPreferencesKey("safe_zone_push_enabled_$patientId")] ?: true,
+                autoCallEnabled = preferences[booleanPreferencesKey("safe_zone_auto_call_enabled_$patientId")] ?: false
             )
         }.first() // Flow를 값으로 변환
     }
 
-    override fun observeSafeZoneSettings(): Flow<kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings> {
+    override fun observeSafeZoneSettings(patientId: Long): Flow<kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings> {
         return dataStore.data.map { preferences ->
             kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings(
-                level1Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DISTANCE] ?: 100,
-                level1Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL1_DWELL] ?: 60,
-                level2Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DISTANCE] ?: 350,
-                level2Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL2_DWELL] ?: 30,
-                level3Distance = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DISTANCE] ?: 700,
-                level3Dwell = preferences[DataStoreKeys.SAFE_ZONE_LEVEL3_DWELL] ?: 15,
-                pushEnabled = preferences[DataStoreKeys.SAFE_ZONE_PUSH_ENABLED] ?: true,
-                autoCallEnabled = preferences[DataStoreKeys.SAFE_ZONE_AUTO_CALL_ENABLED] ?: false
+                level1Distance = preferences[intPreferencesKey("safe_zone_level1_distance_$patientId")] ?: 100,
+                level1Dwell = preferences[intPreferencesKey("safe_zone_level1_dwell_$patientId")] ?: 60,
+                level2Distance = preferences[intPreferencesKey("safe_zone_level2_distance_$patientId")] ?: 350,
+                level2Dwell = preferences[intPreferencesKey("safe_zone_level2_dwell_$patientId")] ?: 30,
+                level3Distance = preferences[intPreferencesKey("safe_zone_level3_distance_$patientId")] ?: 700,
+                level3Dwell = preferences[intPreferencesKey("safe_zone_level3_dwell_$patientId")] ?: 15,
+                pushEnabled = preferences[booleanPreferencesKey("safe_zone_push_enabled_$patientId")] ?: true,
+                autoCallEnabled = preferences[booleanPreferencesKey("safe_zone_auto_call_enabled_$patientId")] ?: false
             )
         }
     }

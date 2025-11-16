@@ -146,10 +146,20 @@ class MapViewModel @Inject constructor(
             }
         }
 
-        // 안전구역 설정값 구독
+        // 안전구역 설정값 구독 (선택된 환자 기준)
         viewModelScope.launch {
-            userDataStoreManager.observeSafeZoneSettings().collect { settings ->
-                _safeZoneSettings.value = settings
+            // 먼저 사용자 타입과 환자 ID를 확인
+            val userType = userDataStoreManager.getUserType().first()
+            val patientId = if (userType == "PATIENT") {
+                userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            } else {
+                userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+            }
+
+            if (patientId != null) {
+                userDataStoreManager.observeSafeZoneSettings(patientId).collect { settings ->
+                    _safeZoneSettings.value = settings
+                }
             }
         }
         // 검색어 변경 시 debounce 적용하여 자동 검색

@@ -14,6 +14,8 @@ object FcmPayloadMapper {
                 "NAVIGATION_START" -> MessageType.NAVIGATION_START
                 "NAVIGATION_END" -> MessageType.NAVIGATION_END
                 "ABNORMAL_DETECTED" -> MessageType.ABNORMAL_DETECTED
+                "WANDER" -> MessageType.ABNORMAL_DETECTED // 배회 감지
+                "DEVIATE_FROM_THE_PATH" -> MessageType.ABNORMAL_DETECTED // 경로 이탈
                 "CALL_REQUEST" -> MessageType.CALL_REQUEST
                 "SOS", "SOS_REQUEST" -> MessageType.SOS
                 "SOS_STOP", "SOS_END" -> MessageType.SOS_STOP

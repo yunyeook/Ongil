@@ -85,6 +85,7 @@ interface UserDataStoreManager {
      * 안전구역 설정 저장
      */
     suspend fun saveSafeZoneSettings(
+        patientId: Long,
         level1Distance: Int,
         level1Dwell: Int,
         level2Distance: Int,
@@ -98,10 +99,10 @@ interface UserDataStoreManager {
     /**
      * 안전구역 설정 불러오기
      */
-    suspend fun getSafeZoneSettings(): kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings
+    suspend fun getSafeZoneSettings(patientId: Long): kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings
 
     /**
      * 안전구역 설정 변경 구독
      */
-    fun observeSafeZoneSettings(): Flow<kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings>
+    fun observeSafeZoneSettings(patientId: Long): Flow<kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings>
 }
