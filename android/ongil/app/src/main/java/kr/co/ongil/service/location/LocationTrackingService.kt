@@ -29,6 +29,7 @@ import kr.co.ongil.common.location.NavigationRouteManager
 import kr.co.ongil.common.location.RouteDeviationMonitor
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.MapApi
+import kr.co.ongil.data.datasource.wear.WearDataClient
 import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.data.websocket.GpsWebSocketManager
@@ -61,6 +62,8 @@ class LocationTrackingService : Service() {
     @Inject lateinit var navigationRouteManager: NavigationRouteManager
     @Inject lateinit var userDataStoreManager: UserDataStoreManager
     @Inject lateinit var gpsWebSocketManager: GpsWebSocketManager
+
+    @Inject lateinit var wearDataClient: WearDataClient
 
     private lateinit var fusedClient: FusedLocationProviderClient
 
@@ -345,6 +348,15 @@ class LocationTrackingService : Service() {
                     lastEmittedLocation = point
                     locationBus.emit(point)
                     Log.d(TAG, "LocationBus에 위치 전송 완료")
+
+                    // 워치로 위치 전송 (백그라운드로 실행, 실패해도 무시)
+                    serviceScope.launch {
+                        try {
+                            wearDataClient.syncLocation(point.latitude, point.longitude)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "워치 위치 동기화 실패 (무시)", e)
+                        }
+                    }
 
                     // 안전 범위 모니터링 (환자일 때만)
                     val userType = userDataStoreManager.getUserType().first()
