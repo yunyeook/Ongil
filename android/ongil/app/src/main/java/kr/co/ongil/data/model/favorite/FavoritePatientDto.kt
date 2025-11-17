@@ -20,7 +20,7 @@ data class RelationshipDto(
     @SerialName("counterpartUserId")
     val counterpartUserId: Long,
     @SerialName("relationshipName")
-    val relationshipName: String,
+    val relationshipName: String?,
     @SerialName("relationshipType")
     val relationshipType: String,
     @SerialName("isDefault")

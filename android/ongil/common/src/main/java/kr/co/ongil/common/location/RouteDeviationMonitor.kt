@@ -9,15 +9,21 @@ import kotlin.math.sqrt
 /**
  * 길찾기 경로 이탈 모니터
  * 현재 위치가 경로로부터 50m 이상 벗어나면 이상상황으로 판정
+ * 5분 이상 이탈 상태 지속 시 응급상황으로 간주
  */
 class RouteDeviationMonitor(
     private val routePath: List<NavigationRouteManager.LatLng>,
     private val deviationThresholdMeters: Double = DEFAULT_DEVIATION_THRESHOLD,
-    private val onRouteDeviation: (distanceFromRoute: Double) -> Unit
+    private val emergencyTimeoutMillis: Long = DEFAULT_EMERGENCY_TIMEOUT,
+    private val onRouteDeviation: (distanceFromRoute: Double) -> Unit,
+    private val onEmergencyTimeout: () -> Unit = {}
 ) {
     companion object {
         // 기본 경로 이탈 판정 거리 (미터)
         const val DEFAULT_DEVIATION_THRESHOLD = 50.0
+
+        // 응급상황 판정 시간 (5분 = 300000ms)
+        const val DEFAULT_EMERGENCY_TIMEOUT = 300000L
 
         /**
          * 두 지점 간 거리 계산 (Haversine formula, 미터 단위)
@@ -114,6 +120,12 @@ class RouteDeviationMonitor(
     // 경로 이탈 알림 여부 (한 번만 알림)
     private var deviationAlerted = false
 
+    // 경로 이탈 시작 시간 (밀리초)
+    private var deviationStartTime: Long? = null
+
+    // 응급상황 알림 여부 (한 번만 알림)
+    private var emergencyAlerted = false
+
     /**
      * 위치 업데이트 처리
      */
@@ -122,16 +134,28 @@ class RouteDeviationMonitor(
 
         // 현재 위치에서 경로까지의 최단 거리 계산
         val distanceFromRoute = calculateDistanceToPath(latitude, longitude, routePath)
+        val currentTime = System.currentTimeMillis()
 
         // 경로 이탈 판정
         if (distanceFromRoute > deviationThresholdMeters) {
             if (!deviationAlerted) {
+                // 처음 이탈 감지
                 deviationAlerted = true
+                deviationStartTime = currentTime
                 onRouteDeviation(distanceFromRoute)
+            } else {
+                // 이미 이탈 중 - 5분 경과 체크
+                val elapsedTime = deviationStartTime?.let { currentTime - it } ?: 0L
+                if (!emergencyAlerted && elapsedTime >= emergencyTimeoutMillis) {
+                    emergencyAlerted = true
+                    onEmergencyTimeout()
+                }
             }
         } else {
             // 경로로 복귀하면 알림 상태 리셋
             deviationAlerted = false
+            deviationStartTime = null
+            emergencyAlerted = false
         }
     }
 
@@ -140,6 +164,8 @@ class RouteDeviationMonitor(
      */
     fun reset() {
         deviationAlerted = false
+        deviationStartTime = null
+        emergencyAlerted = false
     }
 
     /**
