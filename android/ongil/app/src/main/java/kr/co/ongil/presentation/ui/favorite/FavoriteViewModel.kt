@@ -129,9 +129,12 @@ class FavoriteViewModel @Inject constructor(
                         )
                     }
 
+                    // 기본 보호자/환자를 맨 위로 정렬
+                    val sortedRelationships = relationships.sortedByDescending { it.isDefault }
+
                     _uiState.update {
                         it.copy(
-                            patients = relationships,
+                            patients = sortedRelationships,
                             isLoading = false
                         )
                     }
@@ -165,10 +168,13 @@ class FavoriteViewModel @Inject constructor(
             val result = favoriteRepository.getFavoritePlaces(patientId)
             result.fold(
                 onSuccess = { placesDomain ->
+                    // 기본 목적지를 맨 위로 정렬
+                    val sortedPlaces = placesDomain.items.sortedByDescending { it.isDefault }
+
                     _uiState.update {
                         it.copy(
                             patients = currentPatients,
-                            places = placesDomain.items,
+                            places = sortedPlaces,
                             currentPatientId = patientId,
                             isLoading = false,
                             error = null
@@ -242,7 +248,7 @@ class FavoriteViewModel @Inject constructor(
                         place
                     }
                 }
-            }
+            }.sortedByDescending { it.isDefault } // 기본 목적지를 맨 위로 정렬
             Log.d("FavoriteViewModel", "로컬 업데이트 완료 - 총 ${updatedPlaces.size}개 장소")
             state.copy(places = updatedPlaces)
         }

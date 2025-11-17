@@ -49,6 +49,7 @@ import kr.co.ongil.presentation.ui.common.map.SearchListItem
 import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettingRoutes
 import kr.co.ongil.service.location.LocationTrackingService
 import kr.co.ongil.presentation.theme.ongilColors
+import androidx.compose.foundation.border
 
 
 /**
@@ -530,10 +531,17 @@ fun MapScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(77.dp * visibleItemCount)  // 동적 높이
-                                .background(
-                                    Color.White,
+                                .border(
+                                        width = 1.dp,
+                                        color = Color(0xFFE5E7EB),              // 또는 ongilColors.borderLight
+                                        shape = RoundedCornerShape(23.dp)        // radius 값
+                                        )
+                                        .clip(RoundedCornerShape(23.dp))
+                               .background(
+                                   Color.White,
                                     RoundedCornerShape(8.dp)
-                                ),
+                                )
+                                ,
                             userScrollEnabled = searchResults.size > maxVisibleItems
                         ) {
                             items(searchResults) { place ->

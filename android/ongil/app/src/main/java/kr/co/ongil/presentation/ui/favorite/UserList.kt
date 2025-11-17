@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.favorite.PatientCard
+import kr.co.ongil.presentation.theme.ongilColors
 
 @Composable
 fun PatientList(
@@ -22,11 +23,14 @@ fun PatientList(
     onGoSearchUserClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = ongilColors
+
     Column(modifier = modifier) {
 
         GreenButton(
             text = "+ 새로운 사용자 등록",
             onClick = onGoSearchUserClick,
+            containerColor = colors.accent,
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 18.dp)
                 .fillMaxWidth()

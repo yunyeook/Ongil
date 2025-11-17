@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import kr.co.ongil.domain.model.FavoritePlace
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.favorite.PlaceCard
+import kr.co.ongil.presentation.theme.ongilColors
 
 @Composable
 fun PlaceList(
@@ -27,10 +28,13 @@ fun PlaceList(
     onGoSearchPlaceClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = ongilColors
+
     Column(modifier = modifier) {
         GreenButton(
             text = "+ 새로운 장소 등록",
             onClick = onGoSearchPlaceClick,
+            containerColor = colors.accent,
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 18.dp)
                 .fillMaxWidth()
