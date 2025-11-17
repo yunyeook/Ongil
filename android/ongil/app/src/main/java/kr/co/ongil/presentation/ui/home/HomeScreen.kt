@@ -460,10 +460,13 @@ private fun RiskGaugeCard(
     // 위험도 계산 (100점 만점에서 감점 방식)
     val riskScore = (100 - (totalIncidents * 5).coerceAtMost(100)).toInt()
 
-    val riskLevel = when {
-        riskScore >= 80 -> "양호" to Color(0xFF4CAF50)
-        riskScore >= 60 -> "주의" to Color(0xFFFFA726)
-        else -> "위험" to Color(0xFFEF5350)
+    // 🆕 5단계 건강검진 스타일 레벨 (치매 어르신 친화적)
+    val (riskLabel, riskColor, riskDescription) = when {
+        riskScore >= 85 -> Triple("우수", Color(0xFF4CAF50), "매우 안정적")
+        riskScore >= 70 -> Triple("양호", Color(0xFF66BB6A), "안정적")
+        riskScore >= 50 -> Triple("보통", Color(0xFFFFA726), "보통")
+        riskScore >= 30 -> Triple("주의", Color(0xFFFF7043), "관찰 필요")
+        else -> Triple("위험", Color(0xFFEF5350), "긴급 조치")
     }
 
     val previousTotal = (activityLog.routeLost - activityLog.routeLostDiff) +
@@ -497,11 +500,11 @@ private fun RiskGaugeCard(
             ) {
                 CircularGauge(
                     score = riskScore,
-                    color = riskLevel.second
+                    color = riskColor
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "${riskScore}점",
+                        text = riskLabel,
                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
                         color = HomeColors.TextPrimary
                     )
@@ -521,9 +524,9 @@ private fun RiskGaugeCard(
 
             // 하단 텍스트 (행동패턴 분석과 동일한 위치에 배치)
             Text(
-                text = "${riskLevel.first} (${riskScore}점 이상)",
-                style = MaterialTheme.typography.bodySmall,
-                color = riskLevel.second,
+                text = riskDescription,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                color = riskColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
