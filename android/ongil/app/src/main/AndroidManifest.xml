@@ -75,6 +75,7 @@
             android:foregroundServiceType="location" />
 
         <activity
+
             android:windowSoftInputMode="adjustResize"
             android:name="kr.co.ongil.presentation.MainActivity"
             android:showWhenLocked="true"
@@ -90,6 +91,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
+        <activity
+            android:name="kr.co.ongil.presentation.ui.call.IncomingCallActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
 
         <!-- Health Connect 연동을 위한 Activity Alias -->
         <activity-alias

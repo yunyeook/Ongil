@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -197,6 +198,22 @@ class UserDataStoreManagerImpl @Inject constructor(
                 pushEnabled = preferences[booleanPreferencesKey("safe_zone_push_enabled_$patientId")] ?: true,
                 autoCallEnabled = preferences[booleanPreferencesKey("safe_zone_auto_call_enabled_$patientId")] ?: false
             )
+        }
+    }
+
+    override suspend fun saveProfileImage(userId: String, profileImageUrl: String?) {
+        dataStore.edit { preferences ->
+            if (profileImageUrl != null) {
+                preferences[stringPreferencesKey("profile_image_$userId")] = profileImageUrl
+            } else {
+                preferences.remove(stringPreferencesKey("profile_image_$userId"))
+            }
+        }
+    }
+
+    override fun getProfileImage(userId: String): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[stringPreferencesKey("profile_image_$userId")]
         }
     }
 }

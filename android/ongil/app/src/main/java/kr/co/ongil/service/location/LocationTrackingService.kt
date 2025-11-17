@@ -20,7 +20,6 @@ import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.common.location.LocationPoint
@@ -33,7 +32,6 @@ import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.presentation.MainActivity
-import kr.co.ongil.BuildConfig
 import java.time.Instant
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -242,7 +240,7 @@ class LocationTrackingService : Service() {
                     }
                 }
             )
-            Log.d(TAG, "SafetyZoneMonitor 재생성 완료 (기준점: ${homeLat}, ${homeLon}): L1=${settings.level1Distance}m/${settings.level1Dwell}분, L2=${settings.level2Distance}m/${settings.level2Dwell}분, L3=${settings.level3Distance}m/${settings.level3Dwell}분")
+            Log.d(TAG, "SafetyZoneMonitor 업데이트 완료: L1=${settings.level1Distance}m/${settings.level1Dwell}분, L2=${settings.level2Distance}m/${settings.level2Dwell}분, L3=${settings.level3Dwell}m/${settings.level3Dwell}분")
         } catch (e: Exception) {
             Log.e(TAG, "SafetyZoneMonitor 업데이트 실패", e)
         }
@@ -270,12 +268,9 @@ class LocationTrackingService : Service() {
             return
         }
 
-        // Foreground Service는 시작 후 5초 내에 startForeground()를 호출해야 함
-        // 권한 체크보다 먼저 호출해야 크래시를 방지할 수 있음
         val notification = buildNotification()
         startForeground(NOTI_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
 
-        // 위치 권한 체크
         if (!hasLocationPermission()) {
             Log.w(TAG, "위치 권한이 없습니다. 알림만 표시하고 위치 추적은 하지 않습니다.")
             return
@@ -285,27 +280,13 @@ class LocationTrackingService : Service() {
         locationJob = serviceScope.launch {
             requestLocationUpdates()
         }
-
-        // [테스트용] 1초마다 필터링 통과한 마지막 위치를 백엔드로 전송
-        periodicSendJob = serviceScope.launch {
-            while (isTrackingActive) {
-                delay(1000L) // 1초 대기
-                lastEmittedLocation?.let { location ->
-//                    Log.d(TAG, "[타이머] 1초 주기 - 마지막 필터링 통과 위치 전송")
-                    sendLocationToBackend(location)
-                }
-            }
-        }
-
-        Log.d(TAG, "위치 추적 시작 (1초 주기 전송 타이머 활성화)")
+        Log.d(TAG, "위치 추적 시작")
     }
 
     private fun stopTracking() {
         isTrackingActive = false
         locationJob?.cancel()
         locationJob = null
-        periodicSendJob?.cancel()
-        periodicSendJob = null
 
         try {
             fusedClient.removeLocationUpdates(callback)
@@ -330,13 +311,13 @@ class LocationTrackingService : Service() {
         }
 
         try {
-            // [테스트용] 1초 간격, 거리 제한 없음
             val request = LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
-                1000L // 1초 간격 (테스트용)
-            ).setMinUpdateDistanceMeters(0f) // 거리 제한 없음 (테스트용)
-                .setWaitForAccurateLocation(false) // 즉시 전송 (테스트용)
-                .build()
+                10000L // 10초 간격
+            ).setMinUpdateIntervalMillis(5000L) // 최소 5초 간격
+             .setMinUpdateDistanceMeters(10f) // 10미터 이상 이동 시
+             .setWaitForAccurateLocation(true)
+             .build()
 
             fusedClient.requestLocationUpdates(
                 request,
@@ -369,6 +350,13 @@ class LocationTrackingService : Service() {
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             result.lastLocation?.let { loc ->
+                // 정확도 20m 초과하는 위치 무시
+                if (loc.accuracy > 20.0f) {
+                    Log.w(TAG, " 부정확한 위치 수신 (정확도: ${loc.accuracy}m) - 무시")
+                    return
+                }
+
+                Log.d(TAG, "위치 수신됨: lat=${loc.latitude}, lon=${loc.longitude}, accuracy=${loc.accuracy}m")
                 serviceScope.launch {
                     val point = LocationPoint(
                         latitude = loc.latitude,
@@ -460,43 +448,16 @@ class LocationTrackingService : Service() {
                     locationBus.emit(point)
                     Log.d(TAG, "LocationBus에 위치 전송 완료")
 
-                    // 안전 범위 모니터링 (환자일 때만)
                     val userType = userDataStoreManager.getUserType().first()
                     if (userType == "PATIENT") {
-                        val monitor = safetyZoneMonitor
-                        if (monitor != null) {
-                            // 거리 계산
-                            val distance = defaultDestinationLatitude?.let { lat ->
-                                defaultDestinationLongitude?.let { lon ->
-                                    SafetyZoneMonitor.calculateDistance(lat, lon, point.latitude, point.longitude)
-                                }
-                            }
-
-                            Log.d(TAG, "🔍 안전범위 체크: 기본 목적지로부터 ${distance?.let { String.format("%.1f", it) } ?: "알 수 없음"}m")
-
-                            monitor.updateLocation(
-                                point.latitude,
-                                point.longitude,
-                                point.timeMillis
-                            )
-
-                            // 현재 상태 조회
-                            val status = monitor.getCurrentStatus()
-                            if (status.stage1OutsideDurationMinutes != null ||
-                                status.stage2OutsideDurationMinutes != null ||
-                                status.stage3OutsideDurationMinutes != null) {
-                                Log.d(TAG, "⏱️ 안전범위 밖 체류 시간:")
-                                status.stage1OutsideDurationMinutes?.let { Log.d(TAG, "  - 1단계: ${it}분") }
-                                status.stage2OutsideDurationMinutes?.let { Log.d(TAG, "  - 2단계: ${it}분") }
-                                status.stage3OutsideDurationMinutes?.let { Log.d(TAG, "  - 3단계: ${it}분") }
-                            }
-                        } else {
-                            Log.w(TAG, "⚠️ SafetyZoneMonitor가 null입니다 - 안전범위 체크 불가")
-                        }
+                        safetyZoneMonitor?.updateLocation(
+                            point.latitude,
+                            point.longitude,
+                            point.timeMillis
+                        )
                     }
 
-                    // [테스트용] 백엔드 전송은 1초 타이머에서 하므로 여기서는 주석 처리
-                    // sendLocationToBackend(point)
+                    sendLocationToBackend(point)
 
                     // 경로 이탈 모니터링 (길찾기 중일 때만)
                     if (gpsWebSocketManager.isConnected()) {
@@ -544,62 +505,41 @@ class LocationTrackingService : Service() {
         nm.createNotificationChannel(channel)
     }
 
-    /**
-     * 백엔드로 위치 전송 (환자일 때만, 1m 이상 이동 시)
-     * 길찾기 중(WebSocket 연결 중)에는 WebSocket으로 전송하므로 API 호출 안 함
-     *
-     * [테스트용] 거리 필터링 주석 처리 - 무조건 전송
-     */
     private suspend fun sendLocationToBackend(currentLocation: LocationPoint) {
         try {
-            // 0. 길찾기 중이면 WebSocket으로 전송하므로 API 호출 스킵
             if (gpsWebSocketManager.isConnected()) {
-                Log.d(TAG, "WebSocket 연결 중 - API 전송 건너뜀")
                 return
             }
 
-            // 1. 사용자 타입 확인 (환자만 전송)
             val userType = userDataStoreManager.getUserType().first()
             if (userType != "PATIENT") {
                 return
             }
 
-            // 2. 1m 이상 이동했는지 확인 [테스트용 주석 처리]
-//            val lastLocation = lastSentLocation
-//            if (lastLocation != null) {
-//                val distance = calculateDistance(
-//                    lastLocation.latitude, lastLocation.longitude,
-//                    currentLocation.latitude, currentLocation.longitude
-//                )
-//                if (distance < 1.0) {
-//                    Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 전송 건너뜀")
-//                    return
-//                }
-//                Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m - 백엔드로 전송")
-//            } else {
-//                Log.d(TAG, "첫 위치 - 백엔드로 전송")
-//            }
+            val lastLocation = lastSentLocation
+            if (lastLocation != null) {
+                val distance = calculateDistance(
+                    lastLocation.latitude, lastLocation.longitude,
+                    currentLocation.latitude, currentLocation.longitude
+                )
+                if (distance < 10.0) { // 10미터 이상 이동 시에만 전송
+                    return
+                }
+            }
 
-            // [테스트용] 거리 체크 없이 무조건 전송
-//            Log.d(TAG, "[테스트] 거리 체크 없이 백엔드로 전송")
-
-            // 3. 환자 ID 가져오기
             val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
             if (patientId == null) {
                 Log.w(TAG, "patientId를 가져올 수 없습니다")
                 return
             }
 
-            // 4. 백엔드로 전송
             val request = UpdateLocationRequest(
                 latitude = currentLocation.latitude,
                 longitude = currentLocation.longitude
             )
 
-            val response = mapApi.updatePatientLocation(patientId, request)
-//            Log.d(TAG, "위치 전송 성공: ${response.message}")
+            mapApi.updatePatientLocation(patientId, request)
 
-            // 5. 마지막 전송 위치 업데이트
             lastSentLocation = currentLocation
 
         } catch (e: Exception) {
@@ -607,9 +547,6 @@ class LocationTrackingService : Service() {
         }
     }
 
-    /**
-     * 두 지점 간 거리 계산 (Haversine formula, 미터 단위)
-     */
     private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val earthRadius = 6371000.0
         val dLat = Math.toRadians(lat2 - lat1)
@@ -623,12 +560,6 @@ class LocationTrackingService : Service() {
         return earthRadius * c
     }
 
-    /**
-     * 이상 상황 감지 시 처리
-     * - 백엔드 API로 알림 전송
-     * - DataStore에 상태 저장
-     * - 기본 목적지로 자동 길찾기 시작
-     */
     private suspend fun handleAbnormalDetection(stage: Int, durationMinutes: Long) {
         try {
             val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
@@ -637,29 +568,20 @@ class LocationTrackingService : Service() {
                 return
             }
 
-            // 현재 위치 가져오기
             val currentLocation = locationBus.lastValue
             if (currentLocation == null) {
                 Log.w(TAG, "현재 위치를 가져올 수 없습니다")
                 return
             }
 
-            // 기본 목적지 좌표 (SafetyZoneMonitor와 동일한 값 사용)
-            val homeLatitude = defaultDestinationLatitude
-            val homeLongitude = defaultDestinationLongitude
+            val homeLatitude = defaultDestinationLatitude ?: return
+            val homeLongitude = defaultDestinationLongitude ?: return
 
-            if (homeLatitude == null || homeLongitude == null) {
-                Log.w(TAG, "기본 목적지가 설정되지 않아 이상 상황을 처리할 수 없습니다")
-                return
-            }
-
-            // 거리 계산
             val distance = calculateDistance(
                 homeLatitude, homeLongitude,
                 currentLocation.latitude, currentLocation.longitude
             )
 
-            // 단계별 정보 (currentSafeZoneSettings 사용, 없으면 기본값 사용)
             val settings = currentSafeZoneSettings
             val (safeZoneLevel, boundaryRadius, thresholdMinutes) = when (stage) {
                 1 -> Triple("FIRST", (settings?.level1Distance ?: SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS).toDouble(), settings?.level1Dwell ?: SafetyZoneMonitor.DEFAULT_STAGE_1_THRESHOLD_MINUTES)
@@ -671,7 +593,6 @@ class LocationTrackingService : Service() {
                 }
             }
 
-            // API Request 생성
             val request = ReportAbnormalRequest(
                 abnormalType = "WANDER", // 배회 감지
                 latitude = currentLocation.latitude,
@@ -694,28 +615,19 @@ class LocationTrackingService : Service() {
                 - 중심으로부터 거리: ${String.format("%.1f", distance)}m
             """.trimIndent())
 
-            // 백엔드 API 호출
-            val response = mapApi.reportAbnormal(patientId, request)
-            Log.i(TAG, "✅ 이상 상황 알림 전송 성공: ${response.message}")
+            mapApi.reportAbnormal(patientId, request)
 
-            // DataStore에 상태 저장
             userDataStoreManager.saveAbnormalDetection(
                 isDetected = true,
                 stage = stage.toString(),
                 detectedTime = Instant.now().toString()
             )
 
-            // 🚨 자동 길찾기 시작 (기본 목적지로)
-            startAutoNavigationToDefaultDestination(patientId)
-
         } catch (e: Exception) {
             Log.e(TAG, "❌ 이상 상황 처리 실패", e)
         }
     }
 
-    /**
-     * 경로 이탈 이상상황 처리
-     */
     private suspend fun handleRouteDeviation(distanceFromRoute: Double) {
         try {
             val userType = userDataStoreManager.getUserType().first()
@@ -733,92 +645,23 @@ class LocationTrackingService : Service() {
                 return
             }
 
-            // 백엔드로 이상상황 알림
             val request = ReportAbnormalRequest(
                 abnormalType = "DEVIATE_FROM_THE_PATH", // 경로 이탈
                 latitude = currentLocation.latitude,
                 longitude = currentLocation.longitude,
-                safeZoneLevel = "FIRST",    // 임시 테스트용 TODO: 백엔드 수정되면 삭제
-                centerLatitude = 0.0,       // 임시 테스트용 TODO: 백엔드 수정되면 삭제
-                centerLongitude = 0.0,      // 임시 테스트용 TODO: 백엔드 수정되면 삭제
+                safeZoneLevel = "FIRST",
+                centerLatitude = 0.0,
+                centerLongitude = 0.0,
                 distanceFromCenter = distanceFromRoute,
                 boundaryRadius = 50.0,
-                elapsedTime = 0,            // 임시 테스트용 TODO: 백엔드 수정되면 삭제
-                thresholdTime = 0           // 임시 테스트용 TODO: 백엔드 수정되면 삭제
+                elapsedTime = 0,
+                thresholdTime = 0
             )
 
             mapApi.reportAbnormal(patientId, request)
             Log.d(TAG, "경로 이탈 알림 전송 성공: ${String.format("%.1f", distanceFromRoute)}m")
-
-            // 🚨 자동 길찾기 시작 (기본 목적지로)
-            startAutoNavigationToDefaultDestination(patientId)
         } catch (e: Exception) {
             Log.e(TAG, "경로 이탈 알림 전송 실패", e)
-        }
-    }
-
-    /**
-     * 기본 목적지로 자동 길찾기 시작
-     */
-    private suspend fun startAutoNavigationToDefaultDestination(patientId: Long) {
-        try {
-            // 1. 이미 길찾기 중이면 스킵
-            if (navigationRouteManager.getCurrentRoute() != null) {
-                Log.d(TAG, "이미 길찾기 중이므로 자동 길찾기 스킵")
-                return
-            }
-
-            // 2. 기본 목적지 조회
-            val favoritePlaces = favoriteRepository.getFavoritePlaces(patientId)
-            val defaultPlace = favoritePlaces.getOrNull()?.items?.firstOrNull { it.isDefault }
-
-            if (defaultPlace == null) {
-                Log.w(TAG, "기본 목적지가 설정되어 있지 않아 자동 길찾기를 시작할 수 없습니다")
-                return
-            }
-
-            Log.d(TAG, "기본 목적지 발견: ${defaultPlace.displayName} (${defaultPlace.latitude}, ${defaultPlace.longitude})")
-
-            // 3. 현재 위치 확인
-            val currentLocation = locationBus.lastValue
-            if (currentLocation == null) {
-                Log.w(TAG, "현재 위치를 가져올 수 없어 자동 길찾기를 시작할 수 없습니다")
-                return
-            }
-
-            // 4. 길찾기 시작
-            Log.d(TAG, "🚨 자동 길찾기 시작: ${defaultPlace.displayName}로 안내")
-
-            findRouteUseCase(
-                patientId = patientId,
-                startLatitude = currentLocation.latitude,
-                startLongitude = currentLocation.longitude,
-                startName = "현재 위치",
-                endLatitude = defaultPlace.latitude,
-                endLongitude = defaultPlace.longitude,
-                endName = defaultPlace.displayName,
-                initiatedBy = "PATIENT"  // 환자 앱에서 자동 시작
-            ).onSuccess { result ->
-                Log.d(TAG, "✅ 자동 길찾기 경로 탐색 성공: navigationId=${result.navigationId}")
-
-                // 5. 경로 설정 (RouteDeviationMonitor 자동 활성화됨)
-                navigationRouteManager.setRoute(
-                    navigationId = result.navigationId,
-                    path = result.route.path.map {
-                        NavigationRouteManager.LatLng(it.latitude, it.longitude)
-                    }
-                )
-
-                // 6. GPS WebSocket 연결
-                gpsWebSocketManager.connect(BuildConfig.BASE_URL)
-
-                Log.d(TAG, "✅ 자동 길찾기 시작 완료")
-            }.onFailure { e ->
-                Log.e(TAG, "❌ 자동 길찾기 경로 탐색 실패: ${e.message}", e)
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 자동 길찾기 시작 실패", e)
         }
     }
 }
