@@ -126,6 +126,7 @@ logging:
     root: INFO
     org.hibernate.SQL: WARN
     p6spy: info
+    org.redisson: WARN
 
 jwt:
   secret: ${JWT_SECRET}
