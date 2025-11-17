@@ -101,6 +101,10 @@ class HealthConnectRepositoryImpl @Inject constructor(
             Log.d(TAG, "getHealthData() - 건강 데이터 조회 성공: $healthData")
             emit(Result.success(healthData))
         } catch (e: Exception) {
+            // CancellationException은 Flow가 정상적으로 취소된 것이므로 다시 던져야 함
+            if (e is kotlinx.coroutines.CancellationException) {
+                throw e
+            }
             Log.e(TAG, "getHealthData() - 건강 데이터 조회 실패", e)
             emit(Result.failure(e))
         }
@@ -112,11 +116,14 @@ class HealthConnectRepositoryImpl @Inject constructor(
                 recordType = HeartRateRecord::class,
                 timeRangeFilter = timeRange
             )
+            Log.d(TAG, "getHeartRateData() - 요청: recordType=${HeartRateRecord::class.simpleName}, timeRange=$timeRange")
             val response = healthConnectClient.readRecords(request)
 
             Log.d(TAG, "getHeartRateData() - 조회된 레코드 수: ${response.records.size}")
-            if (response.records.isEmpty()) {
-                Log.d(TAG, "getHeartRateData() - 레코드가 없습니다")
+            if (response.records.isNotEmpty()) {
+                Log.d(TAG, "getHeartRateData() - 첫 번째 레코드 시간: ${response.records.first().startTime} ~ ${response.records.first().endTime}")
+            } else {
+                Log.d(TAG, "getHeartRateData() - 레코드가 없습니다. Health Connect에 Samsung Health 데이터가 동기화되었는지 확인하세요.")
                 return null
             }
 
