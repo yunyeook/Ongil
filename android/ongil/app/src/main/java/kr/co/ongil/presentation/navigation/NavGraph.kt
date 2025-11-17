@@ -84,7 +84,20 @@ fun AppNavGraph(
                 authViewModel = authViewModel ?: hiltViewModel(),
                 onShowBarsChange = onMapShowBarsChange,
                 searchPlaceholder = searchPlaceholder,
-                requestSearchFocus = requestSearchFocus
+                requestSearchFocus = requestSearchFocus,
+                onNavigateToCall = { targetName, targetPhone, targetId, userType ->
+                    // VoipCall 화면으로 이동
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = targetName,
+                            targetPhone = targetPhone,
+                            isCaller = true,
+                            userType = userType,
+                            callId = 0L,
+                            receiverId = targetId
+                        )
+                    )
+                }
             )
         }
 
