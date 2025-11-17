@@ -76,7 +76,7 @@ object NetworkModule {
     @WebSocketOkHttpClient
     fun provideWebSocketOkHttpClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.NONE
         }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
@@ -91,7 +91,7 @@ object NetworkModule {
         @ForInterceptor authApi: AuthApi
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.NONE
         }
         val authInterceptor = AuthInterceptor(tokenManager, authApi)
 

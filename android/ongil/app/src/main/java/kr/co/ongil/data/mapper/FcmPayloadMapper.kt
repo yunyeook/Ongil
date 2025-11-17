@@ -11,6 +11,7 @@ object FcmPayloadMapper {
             type = when (dto.type) {
                 "RELATIONSHIP_REGIST" -> MessageType.RELATIONSHIP_REGIST
                 "SAFEZONE_EXIT" -> MessageType.SAFEZONE_EXIT
+                "SAFEZONE_UPDATE" -> MessageType.SAFEZONE_UPDATE
                 "NAVIGATION_START" -> MessageType.NAVIGATION_START
                 "NAVIGATION_END" -> MessageType.NAVIGATION_END
                 "ABNORMAL_DETECTED" -> MessageType.ABNORMAL_DETECTED

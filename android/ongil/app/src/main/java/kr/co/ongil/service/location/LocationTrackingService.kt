@@ -20,7 +20,6 @@ import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.common.location.LocationPoint
@@ -33,7 +32,6 @@ import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.presentation.MainActivity
-import kr.co.ongil.BuildConfig
 import java.time.Instant
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -74,6 +72,7 @@ class LocationTrackingService : Service() {
 
     // [테스트용] 1초마다 위치 전송하는 타이머
     private var periodicSendJob: Job? = null
+
 
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
@@ -356,7 +355,7 @@ class LocationTrackingService : Service() {
                     Log.w(TAG, " 부정확한 위치 수신 (정확도: ${loc.accuracy}m) - 무시")
                     return
                 }
-                
+
                 Log.d(TAG, "위치 수신됨: lat=${loc.latitude}, lon=${loc.longitude}, accuracy=${loc.accuracy}m")
                 serviceScope.launch {
                     val point = LocationPoint(
@@ -368,6 +367,84 @@ class LocationTrackingService : Service() {
                         timeMillis = loc.time
                     )
 
+                    val accuracy = loc.accuracy
+                    val speed = loc.speed
+
+                    // 1. 정확도 필터링 (40m 초과는 무시)
+                    if (accuracy > 40f) {
+                        Log.w(TAG, "⚠️ 정확도 낮음 (${accuracy}m) - 위치 무시")
+                        return@launch
+                    }
+
+                    // 2. 거리 및 속도 기반 필터링
+                    val lastEmitted = lastEmittedLocation
+                    if (lastEmitted != null) {
+                        val distance = calculateDistance(
+                            lastEmitted.latitude, lastEmitted.longitude,
+                            point.latitude, point.longitude
+                        )
+
+                        // 시간 차이 계산 (초 단위)
+                        val timeDiffSeconds = (point.timeMillis - lastEmitted.timeMillis) / 1000.0
+
+                        // 속도와 거리 일관성 체크
+                        if (speed > 1.0f && timeDiffSeconds > 0) {
+                            // 예상 이동 거리 (속도 * 시간)
+                            val expectedDistance = speed * timeDiffSeconds
+                            // 실제 이동 거리와 예상 이동 거리의 차이
+                            val distanceDiff = Math.abs(expectedDistance - distance)
+
+                            // 차이가 너무 크면 GPS 오류로 판단 (예상의 80% 이상 차이) - 기준 완화
+                            if (distanceDiff > expectedDistance * 0.8) {
+                                Log.w(TAG, "⚠️ 속도-거리 불일치 감지 (속도: ${String.format("%.1f", speed)}m/s, 실제: ${String.format("%.1f", distance)}m, 예상: ${String.format("%.1f", expectedDistance)}m) - 무시")
+                                return@launch
+                            }
+                        }
+
+                        // 속도 기반 필터링 (정지/저속 상태에서 GPS 드리프트 방지) - 기준 완화
+                        when {
+                            speed < 0.5f -> {
+                                // 거의 정지 상태 (0.5m/s = 1.8km/h 미만) - 5m로 완화
+                                if (distance > 5.0) {
+//                                    Log.w(TAG, "⚠️ 정지 상태 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+                                    return@launch
+                                }
+                            }
+                            speed < 1.5f -> {
+                                // 느린 보행 (0.5-1.5m/s, 1.8-5.4km/h) - 기준 완화
+                                val maxJump = when {
+                                    accuracy < 20f -> 30.0   // 8.0 → 30.0
+                                    accuracy < 30f -> 50.0   // 10.0 → 50.0
+                                    else -> 60.0             // 15.0 → 60.0
+                                }
+                                if (distance > maxJump) {
+//                                    Log.w(TAG, "⚠️ 저속 이동 중 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+                                    return@launch
+                                }
+                            }
+
+                        }
+
+                        // 정확도에 따른 최소 이동 거리 (동적 임계값)
+                        val minDistance = when {
+                            accuracy < 15f -> 2.0   // 정확도 좋음 (15m 미만): 2m
+                            accuracy < 25f -> 5.0   // 정확도 보통 (15-25m): 5m
+                            else -> 10.0            // 정확도 나쁨 (25-40m): 10m
+                        }
+
+                        // 최소 이동 거리 체크
+                        if (distance < minDistance) {
+                            Log.d(TAG, "이동 거리 ${String.format("%.1f", distance)}m < ${minDistance}m - 무시")
+                            return@launch
+                        }
+
+                        Log.d(TAG, "✅ 위치 수신: ${String.format("%.1f", distance)}m 이동, 속도: ${String.format("%.1f", speed)}m/s, 정확도: ${String.format("%.0f", accuracy)}m")
+                    } else {
+                        Log.d(TAG, "✅ 첫 위치 수신: lat=${loc.latitude}, lon=${loc.longitude}, accuracy=${accuracy}m")
+                    }
+
+                    // 필터링 통과 - LocationBus에 위치 전송
+                    lastEmittedLocation = point
                     locationBus.emit(point)
                     Log.d(TAG, "LocationBus에 위치 전송 완료")
 
@@ -382,6 +459,7 @@ class LocationTrackingService : Service() {
 
                     sendLocationToBackend(point)
 
+                    // 경로 이탈 모니터링 (길찾기 중일 때만)
                     if (gpsWebSocketManager.isConnected()) {
                         routeDeviationMonitor?.updateLocation(
                             point.latitude,
