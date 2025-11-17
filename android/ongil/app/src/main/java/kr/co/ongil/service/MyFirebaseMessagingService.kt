@@ -17,6 +17,12 @@ import com.google.firebase.messaging.RemoteMessage
 import kr.co.ongil.data.model.fcm.FcmPayloadDto
 import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kr.co.ongil.BuildConfig
 import kr.co.ongil.data.mapper.FcmPayloadMapper
 import kr.co.ongil.domain.model.FcmMessage
 import kr.co.ongil.domain.model.MessageType
@@ -33,6 +39,11 @@ import kr.co.ongil.domain.helper.NotificationHelper
 import kr.co.ongil.domain.usecase.fcm.HandleSafezoneUpdateUseCase
 import kr.co.ongil.presentation.MainActivity
 import kr.co.ongil.presentation.ui.call.IncomingCallActivity
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import javax.inject.Inject
 
 
@@ -76,6 +87,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     // ✅ Wake Lock 관리
     private var wakeLock: PowerManager.WakeLock? = null
 
+    @Inject
+    lateinit var userDataStoreManager: kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+
     override fun onCreate() {
         super.onCreate()
         // 알림 채널 생성
@@ -85,8 +99,52 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d("FCM", "🔄 FCM 토큰 갱신됨: $token")
-        // 토큰은 로그인 시 서버로 전송됨 (LoginViewModel에서 처리)
-        // 필요시 로컬에 저장하여 다음 로그인 때 사용 가능
+
+        // ✅ 이 부분을 추가
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val accessToken = userDataStoreManager.getAccessToken().firstOrNull()
+                if (accessToken != null) {
+                    // 로그인 상태라면 서버로 전송
+                    sendTokenToServer(token, accessToken)
+                } else {
+                    // 로그인 안 됐으면 로컬에만 저장
+                    userDataStoreManager.saveFcmToken(token)
+                    Log.d("FCM", "📝 로그인 전이므로 로컬에만 저장")
+                }
+            } catch (e: Exception) {
+                Log.e("FCM", "토큰 갱신 처리 실패", e)
+            }
+        }
+    }
+
+    // ✅ 이 메서드 추가
+    private suspend fun sendTokenToServer(fcmToken: String, accessToken: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val json = JSONObject().apply { put("token", fcmToken) }
+                val body = json.toString()
+                    .toRequestBody("application/json; charset=utf-8".toMediaType())
+
+                val request = Request.Builder()
+                    .url("${BuildConfig.BASE_URL}api/v1/fcm/register")
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .post(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        userDataStoreManager.saveFcmToken(fcmToken)
+                        Log.d("FCM", "✅ 토큰 서버 전송 성공")
+                    } else {
+                        Log.e("FCM", "❌ 토큰 서버 전송 실패: ${response.code}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FCM", "토큰 전송 중 오류", e)
+            }
+        }
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
