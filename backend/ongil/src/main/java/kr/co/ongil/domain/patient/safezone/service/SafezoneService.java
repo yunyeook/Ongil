@@ -180,7 +180,7 @@ public class SafezoneService {
             NotificationRequest notificationRequest = NotificationRequest.of(
                 NotificationType.SAFEZONE_UPDATE.getDescription(),
                 sender.getName() + "님이 안전범위를 변경하였습니다.",
-                NotificationType.SOS_REQUEST,
+                NotificationType.SAFEZONE_UPDATE,
                 sender.getId(),
                 receiver.getId()
             );
