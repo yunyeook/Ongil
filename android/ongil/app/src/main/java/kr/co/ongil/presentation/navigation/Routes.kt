@@ -69,14 +69,15 @@ sealed class Routes(val route: String) {
 
     // 장소 상세
     // MOVED: PlaceDetailRoutes.kt 참조
-    object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}") {
-        fun createRoute(patientId: Long, favoriteId: Long): String {
-            return "place_detail/$patientId/$favoriteId"
+    object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}/{userType}") {
+        fun createRoute(patientId: Long, favoriteId: Long, userType: String = "GUARDIAN"): String {
+            return "place_detail/$patientId/$favoriteId/$userType"
         }
 
         val arguments = listOf(
             navArgument("patientId") { type = NavType.LongType },
-            navArgument("favoriteId") { type = NavType.LongType }
+            navArgument("favoriteId") { type = NavType.LongType },
+            navArgument("userType") { type = NavType.StringType; defaultValue = "GUARDIAN" }
         )
     }
 

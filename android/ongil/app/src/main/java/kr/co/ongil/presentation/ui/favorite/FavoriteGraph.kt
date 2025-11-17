@@ -29,18 +29,20 @@ fun NavGraphBuilder.favoriteGraph(
             FavoriteScreen(
                 navController = navController,
                 modifier = Modifier.padding(paddingValues),
-                onNavigateToPlaceDetail = { patientId, favoriteId ->
+                onNavigateToPlaceDetail = { patientId, favoriteId, userType ->
                     navController.navigate(
                         Routes.PlaceDetail.createRoute(
                             patientId = patientId,
-                            favoriteId = favoriteId
+                            favoriteId = favoriteId,
+                            userType = userType
                         )
                     )
                 },
-                onNavigateToPatientDetail = { relationshipId ->
+                onNavigateToPatientDetail = { relationshipId, userType ->
                     navController.navigate(
                         kr.co.ongil.presentation.ui.userdetail.UserDetailRoutes.Detail.createRoute(
-                            relationshipId = relationshipId
+                            relationshipId = relationshipId,
+                            userType = userType
                         )
                     )
                 },

@@ -33,16 +33,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.MaterialTheme
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
+import kr.co.ongil.presentation.theme.OngilThemeProvider
 
 @Composable
 fun FavoriteScreen(
     navController: NavController,
-    onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long) -> Unit,
-    onNavigateToPatientDetail: (relationshipId: Long) -> Unit,
+    onNavigateToPlaceDetail: (patientId: Long, favoriteId: Long, userType: String) -> Unit,
+    onNavigateToPatientDetail: (relationshipId: Long, userType: String) -> Unit,
     onGoSearchUserClick: () -> Unit,
     onGoSearchPlaceClick: () -> Unit,
     onNavigateToCall: (targetName: String, targetPhone: String, targetId: Long, userType: String) -> Unit = { _, _, _, _ -> },
@@ -114,18 +116,19 @@ fun FavoriteScreen(
         }
     }
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = Color(0xFFFFFFFF)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
+    OngilThemeProvider(userType = uiState.userType) {
+        Surface(
+            modifier = modifier.fillMaxSize(),
+            color = Color(0xFFFFFFFF)
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
 
                 // 타이틀 / 설명 영역
                 FavoriteTitleSection(
@@ -165,7 +168,7 @@ fun FavoriteScreen(
                                 }
                             },
                             onPatientCardClick = { relationshipId ->
-                                onNavigateToPatientDetail(relationshipId)
+                                onNavigateToPatientDetail(relationshipId, uiState.userType)
                             },
                             onGoSearchUserClick = {
                                 onGoSearchUserClick()
@@ -228,7 +231,7 @@ fun FavoriteScreen(
                             },
                             onClickPlaceCardWithPatient = { _, favoriteId ->
                                 // place.patientId 대신 실제 조회에 사용한 currentPatientId 사용 (403 방지)
-                                onNavigateToPlaceDetail(uiState.currentPatientId, favoriteId)
+                                onNavigateToPlaceDetail(uiState.currentPatientId, favoriteId, uiState.userType)
                             },
                             onGoSearchPlaceClick = onGoSearchPlaceClick
                         )
@@ -242,6 +245,7 @@ fun FavoriteScreen(
             )
         }
     }
+    }
 }
 
 
@@ -253,10 +257,8 @@ private fun FavoriteTitleSection(
     Column(modifier = modifier) {
         Text(
             text = if (userName.isNotEmpty()) "${userName}님의 즐겨찾기" else "사용자님의 즐겨찾기",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827),
-            lineHeight = 24.sp
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF111827)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
