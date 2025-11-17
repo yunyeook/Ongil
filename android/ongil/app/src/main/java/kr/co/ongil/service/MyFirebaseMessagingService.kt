@@ -143,6 +143,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         return payloadDto
     }
 
+    val ringoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
     private fun showIncomingCallNotification(
         callId: Long,
         sessionId: String?,
@@ -152,6 +153,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     ) {
         val notificationManager = getSystemService(NotificationManager::class.java)
 
+        val ringtonUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         // 채널 생성
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -160,6 +162,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+
+                setSound(
+                    ringtonUri,
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+
+                enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -190,7 +202,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setFullScreenIntent(fullScreenPendingIntent, true) // ✅ 핵심!
             .setAutoCancel(true)
+            .setSound(ringtonUri)
             .build()
+
 
         notificationManager.notify(callId.toInt(), notification)
     }
