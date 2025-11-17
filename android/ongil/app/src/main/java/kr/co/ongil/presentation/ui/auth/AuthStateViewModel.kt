@@ -175,7 +175,10 @@ class AuthStateViewModel @Inject constructor(
                                                         latitude = coord.latitude,
                                                         longitude = coord.longitude
                                                     )
-                                                }
+                                                },
+                                                navigationId = sseRoute.navigationId,
+                                                startLocationName = sseRoute.startLocation.name,
+                                                endLocationName = sseRoute.endLocation.name
                                             )
 
                                             _patientNavigationRoutes.update { currentMap ->
@@ -183,7 +186,7 @@ class AuthStateViewModel @Inject constructor(
                                             }
                                             android.util.Log.d(
                                                 "AuthStateViewModel",
-                                                "환자 ${navUpdate.patientId} 길찾기 시작: ${sseRoute.path.size}개 포인트"
+                                                "환자 ${navUpdate.patientId} 길찾기 시작: ${sseRoute.startLocation.name} → ${sseRoute.endLocation.name} (${sseRoute.path.size}개 포인트)"
                                             )
                                         }
                                     }
@@ -223,13 +226,13 @@ class AuthStateViewModel @Inject constructor(
     }
 
     init {
-        // 사용자 타입에 따라 SSE 연결 (보호자일 때만)
+        // 사용자 타입에 따라 SSE 연결 (보호자와 환자 모두)
         viewModelScope.launch {
             currentUserInfo.collect { userInfoResult ->
                 val userType = userInfoResult?.getOrNull()?.userType
                 android.util.Log.d("AuthStateViewModel", "사용자 타입: $userType")
-                if (userType == "GUARDIAN") {
-                    android.util.Log.d("AuthStateViewModel", "보호자 로그인 감지 - SSE 연결 시작")
+                if (userType == "GUARDIAN" || userType == "PATIENT") {
+                    android.util.Log.d("AuthStateViewModel", "$userType 로그인 감지 - SSE 연결 시작")
                     startSseConnection()
                 }
             }

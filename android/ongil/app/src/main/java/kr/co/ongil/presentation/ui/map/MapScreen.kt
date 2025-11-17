@@ -113,12 +113,14 @@ fun MapScreen(
     // 환자 길찾기 경로 (보호자용 - SSE로 받음)
     val patientNavigationRoutes by authViewModel.patientNavigationRoutes.collectAsState()
 
-    // 실제 표시할 경로 (환자: 본인 경로, 보호자: 선택된 환자 경로)
+    // 실제 표시할 경로 (환자: 본인 경로, 보호자: 선택된 환자 경로 또는 본인이 시작한 경로)
     val displayRoute = if (userType == "GUARDIAN") {
+        // 보호자: SSE로 받은 환자 경로가 우선, 없으면 보호자가 직접 시작한 경로 표시
         selectedPatientId?.toLongOrNull()?.let { id ->
             patientNavigationRoutes[id]
-        }
+        } ?: navigationRoute
     } else {
+        // 환자: 본인 경로
         navigationRoute
     }
 
@@ -139,9 +141,28 @@ fun MapScreen(
         }
     }
 
-    // 환자 경로 변경 모니터링
-    LaunchedEffect(patientNavigationRoutes, selectedPatientId) {
-        android.util.Log.d("MapScreen", "patientNavigationRoutes 변경: ${patientNavigationRoutes.keys}, selectedPatientId: $selectedPatientId")
+    // 환자 경로 변경 모니터링 및 NavigationRouteManager 동기화
+    LaunchedEffect(patientNavigationRoutes, userType, currentUserInfo) {
+        android.util.Log.d("MapScreen", "patientNavigationRoutes 변경: ${patientNavigationRoutes.keys}, userType: $userType")
+
+        // 환자인 경우, SSE로 받은 자신의 경로를 NavigationRouteManager에 동기화
+        if (userType == "PATIENT") {
+            val myPatientId = currentUserInfo?.getOrNull()?.id?.toLong()
+            if (myPatientId != null) {
+                val myRoute = patientNavigationRoutes[myPatientId]
+                android.util.Log.d("MapScreen", "환자 본인 경로 업데이트: patientId=$myPatientId, route=${myRoute != null}")
+
+                if (myRoute != null) {
+                    // SSE로 받은 경로를 NavigationRouteManager에 저장
+                    // TODO: navigationId, 출발/도착지 이름을 SSE 데이터에 포함시켜야 함
+                    // 현재는 임시로 빈 값 사용
+                    viewModel.syncNavigationFromSse(myRoute)
+                } else {
+                    // 경로가 null이면 길찾기 종료된 것
+                    viewModel.clearNavigationFromSse()
+                }
+            }
+        }
     }
 
     // SOS 상태 (ViewModel과 동기화)
