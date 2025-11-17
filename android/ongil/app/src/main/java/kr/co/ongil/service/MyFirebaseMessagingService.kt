@@ -34,6 +34,8 @@ import kr.co.ongil.presentation.MainActivity
 import kr.co.ongil.presentation.ui.call.IncomingCallActivity
 import javax.inject.Inject
 
+
+
 @AndroidEntryPoint
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -225,20 +227,40 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         Log.d("FCM", "callId: $callId, sessionId: $sessionId, caller: $callerName")
 
-        // ✅ Full-Screen Intent로 알림 생성
-        showIncomingCallNotification(callId, sessionId, callerName, callerPhone, userType)
-    }
+        // ✅ 현재 화면/잠금 상태 확인
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val keyguardManager = getSystemService(android.app.KeyguardManager::class.java)
 
-    // ✅ 이것만 추가
-    override fun onDestroy() {
-        super.onDestroy()
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-                Log.d("FCM", "✅ Wake Lock released")
+        // 화면 켜져 있는지
+        val isScreenOn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+            powerManager.isInteractive
+        } else {
+            @Suppress("DEPRECATION")
+            powerManager.isScreenOn
+        }
+
+        // 잠금 상태인지
+        val isLocked = keyguardManager.isKeyguardLocked
+
+        Log.d("FCM", "📱 screenOn=$isScreenOn, locked=$isLocked")
+
+        if (isScreenOn && !isLocked) {
+            // 🔵 화면 켜져 있고 잠금도 풀려있으면 → 바로 수락 화면 띄우기 (알림 X)
+            val intent = Intent(this, IncomingCallActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("callId", callId)
+                putExtra("sessionId", sessionId)
+                putExtra("callerName", callerName)
+                putExtra("callerPhone", callerPhone)
+                putExtra("userType", userType)
             }
+            startActivity(intent)
+        } else {
+            // 🔒 화면 꺼져 있거나 잠금 상태면 → 풀스크린 알림으로 깨우기
+            showIncomingCallNotification(callId, sessionId, callerName, callerPhone, userType)
         }
     }
+
 
     /**
      * 알림을 처리하고 타겟에 따라 분기
