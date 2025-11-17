@@ -22,12 +22,7 @@ class UpdateAndSaveSafeZoneUseCase @Inject constructor(
         autoCallEnabled: Boolean
     ): Result<Unit> {
         return try {
-            Log.e("UpdateAndSaveSafeZone", "🔵 안전범위 업데이트 시작 - patientId: $patientId")
-            Log.e("UpdateAndSaveSafeZone", "  - 1단계: ${level1Distance}m, ${level1Dwell}분")
-            Log.e("UpdateAndSaveSafeZone", "  - 2단계: ${level2Distance}m, ${level2Dwell}분")
-            Log.e("UpdateAndSaveSafeZone", "  - 3단계: ${level3Distance}m, ${level3Dwell}분")
 
-            // first() 사용 - firstOrNull() 대신
             val result = safeZoneRepository.updateSafeZone(
                 patientId = patientId,
                 firstBoundary = level1Distance.toDouble(),
