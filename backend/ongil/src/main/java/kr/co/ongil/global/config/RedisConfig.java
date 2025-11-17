@@ -27,7 +27,7 @@ public class RedisConfig {
     @Value("${spring.data.redis.port:6379}")
     private int redisPort;
 
-    @Value("${spring.data.redis.password:redis}")
+    @Value("${spring.data.redis.password:}")
     private String redisPassword;
 
     @Value("${REDIS_SSL_ENABLED:false}")
@@ -42,7 +42,7 @@ public class RedisConfig {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(redisHost);
         config.setPort(redisPort);
-        if (redisPassword != null && !redisPassword.isEmpty()) {
+        if (redisPassword != null && !redisPassword.trim().isEmpty()) {
             config.setPassword(redisPassword);
         }
 
