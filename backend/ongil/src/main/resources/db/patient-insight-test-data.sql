@@ -192,7 +192,7 @@ VALUES
      50.0, 100.0,
      NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days');
 
--- 주의 환자: 이상행동 증가
+-- 주의 환자: 이상행동 증가 (시간대별 분산 - 주로 12-18시, 18-24시)
 INSERT INTO abnormal_logs (
     patient_id, abnormal_type, safe_zone_level,
     latitude, longitude, center_latitude, center_longitude,
@@ -201,36 +201,48 @@ INSERT INTO abnormal_logs (
     created_at, updated_at
 )
 VALUES
-    -- 안전구역 이탈 (2단계) - 경과시간 없음 → NULL
+    -- 최근 7일간, 다양한 시간대
+    -- 1일 전: 오후~저녁 (14시, 19시)
     (patient_warning_id, 'SAFEZONE_EXIT', 'SECOND',
      37.5025, 127.0420, 37.5010, 127.0395,
      250.0, 200.0,
      NULL, NULL,
-     NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-    (patient_warning_id, 'SAFEZONE_EXIT', 'SECOND',
-     37.5028, 127.0425, 37.5010, 127.0395,
-     280.0, 200.0,
-     NULL, NULL,
-     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-    -- 배회 (경과시간/기준시간 포함)
-    (patient_warning_id, 'WANDER', 'FIRST',
-     37.5015, 127.0400, 37.5010, 127.0395,
-     80.0, 100.0,
-     720, 600,
-     NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-    -- 길 잃음 (경과시간 없음 → NULL)
-    (patient_warning_id, 'DEVIATE_FROM_THE_PATH', NULL,
-     37.5035, 127.0430, NULL, NULL,
-     NULL, NULL,
-     NULL, NULL,
-     NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+     NOW() - INTERVAL '1 day' + INTERVAL '14 hours', NOW() - INTERVAL '1 day' + INTERVAL '14 hours'),
     (patient_warning_id, 'DEVIATE_FROM_THE_PATH', NULL,
      37.5040, 127.0440, NULL, NULL,
      NULL, NULL,
      NULL, NULL,
-     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day');
+     NOW() - INTERVAL '1 day' + INTERVAL '19 hours', NOW() - INTERVAL '1 day' + INTERVAL '19 hours'),
 
--- 위험 환자: 이상행동 매우 많음
+    -- 2일 전: 오후 (15시)
+    (patient_warning_id, 'SAFEZONE_EXIT', 'SECOND',
+     37.5028, 127.0425, 37.5010, 127.0395,
+     280.0, 200.0,
+     NULL, NULL,
+     NOW() - INTERVAL '2 days' + INTERVAL '15 hours', NOW() - INTERVAL '2 days' + INTERVAL '15 hours'),
+
+    -- 3일 전: 오후 (13시)
+    (patient_warning_id, 'DEVIATE_FROM_THE_PATH', NULL,
+     37.5035, 127.0430, NULL, NULL,
+     NULL, NULL,
+     NULL, NULL,
+     NOW() - INTERVAL '3 days' + INTERVAL '13 hours', NOW() - INTERVAL '3 days' + INTERVAL '13 hours'),
+
+    -- 4일 전: 아침 (10시)
+    (patient_warning_id, 'WANDER', 'FIRST',
+     37.5015, 127.0400, 37.5010, 127.0395,
+     80.0, 100.0,
+     720, 600,
+     NOW() - INTERVAL '4 days' + INTERVAL '10 hours', NOW() - INTERVAL '4 days' + INTERVAL '10 hours'),
+
+    -- 5일 전: 저녁 (20시)
+    (patient_warning_id, 'SAFEZONE_EXIT', 'FIRST',
+     37.5020, 127.0410, 37.5010, 127.0395,
+     150.0, 200.0,
+     NULL, NULL,
+     NOW() - INTERVAL '5 days' + INTERVAL '20 hours', NOW() - INTERVAL '5 days' + INTERVAL '20 hours');
+
+-- 위험 환자: 이상행동 매우 많음 (모든 시간대 골고루, 야간 집중)
 INSERT INTO abnormal_logs (
     patient_id, abnormal_type, safe_zone_level,
     latitude, longitude, center_latitude, center_longitude,
@@ -239,71 +251,103 @@ INSERT INTO abnormal_logs (
     created_at, updated_at
 )
 VALUES
-    -- 안전구역 이탈 (3단계까지) - 경과시간 없음 → NULL
-    (patient_danger_id, 'SAFEZONE_EXIT', 'THIRD',
-     37.5050, 127.0500, 37.5010, 127.0395,
-     650.0, 500.0,
-     NULL, NULL,
-     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-    (patient_danger_id, 'SAFEZONE_EXIT', 'THIRD',
-     37.5055, 127.0510, 37.5010, 127.0395,
-     700.0, 500.0,
-     NULL, NULL,
-     NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-    (patient_danger_id, 'SAFEZONE_EXIT', 'SECOND',
-     37.5030, 127.0430, 37.5010, 127.0395,
-     300.0, 200.0,
-     NULL, NULL,
-     NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
-    (patient_danger_id, 'SAFEZONE_EXIT', 'SECOND',
-     37.5035, 127.0440, 37.5010, 127.0395,
-     350.0, 200.0,
-     NULL, NULL,
-     NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-    -- 배회 (야간 포함) - 경과시간/기준시간 있음
-    (patient_danger_id, 'WANDER', 'FIRST',
-     37.5018, 127.0405, 37.5010, 127.0395,
-     120.0, 100.0,
-     900, 600,
-     NOW() - INTERVAL '2 days' + INTERVAL '23 hours',
-     NOW() - INTERVAL '2 days' + INTERVAL '23 hours'),
+    -- 최근 7일간, 다양한 시간대 (야간 집중)
+    -- 1일 전: 새벽~밤 (2시, 13시, 21시, 23시)
     (patient_danger_id, 'WANDER', 'FIRST',
      37.5020, 127.0410, 37.5010, 127.0395,
      150.0, 100.0,
      1200, 600,
-     NOW() - INTERVAL '1 day' + INTERVAL '1 hour',
-     NOW() - INTERVAL '1 day' + INTERVAL '1 hour'),
-    (patient_danger_id, 'WANDER', 'FIRST',
-     37.5022, 127.0412, 37.5010, 127.0395,
-     180.0, 100.0,
-     850, 600,
-     NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-    -- 길 잃음 (경과시간 없음 → NULL)
+     NOW() - INTERVAL '1 day' + INTERVAL '2 hours',
+     NOW() - INTERVAL '1 day' + INTERVAL '2 hours'),
     (patient_danger_id, 'DEVIATE_FROM_THE_PATH', NULL,
      37.5060, 127.0520, NULL, NULL,
      NULL, NULL,
      NULL, NULL,
-     NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+     NOW() - INTERVAL '1 day' + INTERVAL '13 hours', NOW() - INTERVAL '1 day' + INTERVAL '13 hours'),
+    (patient_danger_id, 'SAFEZONE_EXIT', 'THIRD',
+     37.5050, 127.0500, 37.5010, 127.0395,
+     650.0, 500.0,
+     NULL, NULL,
+     NOW() - INTERVAL '1 day' + INTERVAL '21 hours', NOW() - INTERVAL '1 day' + INTERVAL '21 hours'),
+    (patient_danger_id, 'WANDER', 'SECOND',
+     37.5025, 127.0415, 37.5010, 127.0395,
+     200.0, 150.0,
+     1500, 600,
+     NOW() - INTERVAL '1 day' + INTERVAL '23 hours',
+     NOW() - INTERVAL '1 day' + INTERVAL '23 hours'),
+
+    -- 2일 전: 새벽~밤 (1시, 15시, 22시)
+    (patient_danger_id, 'WANDER', 'FIRST',
+     37.5018, 127.0405, 37.5010, 127.0395,
+     120.0, 100.0,
+     900, 600,
+     NOW() - INTERVAL '2 days' + INTERVAL '1 hour',
+     NOW() - INTERVAL '2 days' + INTERVAL '1 hour'),
     (patient_danger_id, 'DEVIATE_FROM_THE_PATH', NULL,
      37.5065, 127.0530, NULL, NULL,
      NULL, NULL,
      NULL, NULL,
-     NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+     NOW() - INTERVAL '2 days' + INTERVAL '15 hours', NOW() - INTERVAL '2 days' + INTERVAL '15 hours'),
+    (patient_danger_id, 'SAFEZONE_EXIT', 'THIRD',
+     37.5055, 127.0510, 37.5010, 127.0395,
+     700.0, 500.0,
+     NULL, NULL,
+     NOW() - INTERVAL '2 days' + INTERVAL '22 hours', NOW() - INTERVAL '2 days' + INTERVAL '22 hours'),
+
+    -- 3일 전: 오후~밤 (14시, 20시)
     (patient_danger_id, 'DEVIATE_FROM_THE_PATH', NULL,
      37.5070, 127.0540, NULL, NULL,
      NULL, NULL,
      NULL, NULL,
-     NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+     NOW() - INTERVAL '3 days' + INTERVAL '14 hours', NOW() - INTERVAL '3 days' + INTERVAL '14 hours'),
+    (patient_danger_id, 'SAFEZONE_EXIT', 'SECOND',
+     37.5030, 127.0430, 37.5010, 127.0395,
+     300.0, 200.0,
+     NULL, NULL,
+     NOW() - INTERVAL '3 days' + INTERVAL '20 hours', NOW() - INTERVAL '3 days' + INTERVAL '20 hours'),
+
+    -- 4일 전: 아침~밤 (8시, 16시, 23시)
+    (patient_danger_id, 'SAFEZONE_EXIT', 'FIRST',
+     37.5025, 127.0420, 37.5010, 127.0395,
+     180.0, 200.0,
+     NULL, NULL,
+     NOW() - INTERVAL '4 days' + INTERVAL '8 hours', NOW() - INTERVAL '4 days' + INTERVAL '8 hours'),
     (patient_danger_id, 'DEVIATE_FROM_THE_PATH', NULL,
      37.5075, 127.0550, NULL, NULL,
      NULL, NULL,
      NULL, NULL,
-     NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
+     NOW() - INTERVAL '4 days' + INTERVAL '16 hours', NOW() - INTERVAL '4 days' + INTERVAL '16 hours'),
+    (patient_danger_id, 'WANDER', 'FIRST',
+     37.5022, 127.0412, 37.5010, 127.0395,
+     180.0, 100.0,
+     850, 600,
+     NOW() - INTERVAL '4 days' + INTERVAL '23 hours', NOW() - INTERVAL '4 days' + INTERVAL '23 hours'),
+
+    -- 5일 전: 밤~새벽 (3시, 19시)
+    (patient_danger_id, 'WANDER', 'FIRST',
+     37.5019, 127.0407, 37.5010, 127.0395,
+     140.0, 100.0,
+     1000, 600,
+     NOW() - INTERVAL '5 days' + INTERVAL '3 hours',
+     NOW() - INTERVAL '5 days' + INTERVAL '3 hours'),
     (patient_danger_id, 'DEVIATE_FROM_THE_PATH', NULL,
      37.5080, 127.0560, NULL, NULL,
      NULL, NULL,
      NULL, NULL,
-     NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days');
+     NOW() - INTERVAL '5 days' + INTERVAL '19 hours', NOW() - INTERVAL '5 days' + INTERVAL '19 hours'),
+
+    -- 6일 전: 오전~저녁 (7시, 17시)
+    (patient_danger_id, 'SAFEZONE_EXIT', 'SECOND',
+     37.5032, 127.0432, 37.5010, 127.0395,
+     320.0, 200.0,
+     NULL, NULL,
+     NOW() - INTERVAL '6 days' + INTERVAL '7 hours', NOW() - INTERVAL '6 days' + INTERVAL '7 hours'),
+    (patient_danger_id, 'WANDER', 'FIRST',
+     37.5021, 127.0411, 37.5010, 127.0395,
+     160.0, 100.0,
+     950, 600,
+     NOW() - INTERVAL '6 days' + INTERVAL '17 hours',
+     NOW() - INTERVAL '6 days' + INTERVAL '17 hours');
 
 -- ==========================================
 -- 4. SOS 데이터 (긴급 요청)

@@ -42,6 +42,13 @@ public class DashboardService {
     public DashboardResponseDto getDashboardResponseDto(Integer patientId) {
         List<DashboardCalc> dashboardCalcs=dashboardRepository.findTop2ByPatientIdOrderByCreatedAtDesc(patientId);
         if(dashboardCalcs.isEmpty()) throw new BusinessException(ErrorCode.DASHBOARD_NOT_FOUND);
+
+        // 🆕 시간대별 위험도 계산
+        List<DashboardResponseDto.TimeSlotRisk> timeSlotRisks = calculateTimeSlotRisks(patientId);
+
+        // 🆕 일별 위험 행동 누적 계산
+        List<DashboardResponseDto.DailyRiskCount> dailyRiskCounts = calculateDailyRiskCounts(patientId);
+
         if(dashboardCalcs.size()==1) {
             return DashboardResponseDto.builder()
                     .favorite(dashboardCalcs.get(0).getFavorite())
@@ -50,6 +57,8 @@ public class DashboardService {
                     .safezoneEmer(dashboardCalcs.get(0).getSafezoneEmer())
                     .sosSign(dashboardCalcs.get(0).getSosSign())
                     .emerCall(dashboardCalcs.get(0).getEmerCall())
+                    .timeSlotRisks(timeSlotRisks)
+                    .dailyRiskCounts(dailyRiskCounts)
                     .build();
         }
         else {
@@ -89,6 +98,8 @@ public class DashboardService {
                                             DashboardEnum.DECREASE :
                                             DashboardEnum.SAME)
                     )
+                    .timeSlotRisks(timeSlotRisks)
+                    .dailyRiskCounts(dailyRiskCounts)
                     .build();
         }
     }
@@ -185,5 +196,79 @@ public class DashboardService {
         dashboardRepository.saveAll(dashboards);
 
         dashboardRepository.deleteByCreatedAtBefore(LocalDate.now().minusWeeks(4).with(DayOfWeek.MONDAY).atStartOfDay());
+    }
+
+    // 🆕 시간대별 위험도 계산 (최근 7일간 데이터 기반)
+    private List<DashboardResponseDto.TimeSlotRisk> calculateTimeSlotRisks(Integer patientId) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(7);
+
+        // 4개 시간대별로 이상탐지 횟수 조회
+        List<Object[]> results = abnormalRepository.findCountByTimeSlots(patientId, startDate);
+
+        // Map으로 변환
+        Map<String, Long> timeSlotCounts = new HashMap<>();
+        for (Object[] result : results) {
+            String timeSlot = (String) result[0];
+            Long count = ((Number) result[1]).longValue();
+            timeSlotCounts.put(timeSlot, count);
+        }
+
+        // 최대값 기준으로 정규화 (0.0 ~ 1.0)
+        long maxCount = timeSlotCounts.values().stream()
+                .max(Long::compare)
+                .orElse(1L);
+
+        // maxCount가 0이면 1로 설정하여 나누기 오류 방지
+        if (maxCount == 0) {
+            maxCount = 1L;
+        }
+
+        // 4개 시간대 결과 생성
+        List<DashboardResponseDto.TimeSlotRisk> timeSlotRisks = new ArrayList<>();
+        timeSlotRisks.add(new DashboardResponseDto.TimeSlotRisk(
+                "00-06시",
+                timeSlotCounts.getOrDefault("00-06", 0L).floatValue() / maxCount
+        ));
+        timeSlotRisks.add(new DashboardResponseDto.TimeSlotRisk(
+                "06-12시",
+                timeSlotCounts.getOrDefault("06-12", 0L).floatValue() / maxCount
+        ));
+        timeSlotRisks.add(new DashboardResponseDto.TimeSlotRisk(
+                "12-18시",
+                timeSlotCounts.getOrDefault("12-18", 0L).floatValue() / maxCount
+        ));
+        timeSlotRisks.add(new DashboardResponseDto.TimeSlotRisk(
+                "18-24시",
+                timeSlotCounts.getOrDefault("18-24", 0L).floatValue() / maxCount
+        ));
+
+        return timeSlotRisks;
+    }
+
+    // 🆕 일별 위험 행동 누적 계산 (최근 7일)
+    private List<DashboardResponseDto.DailyRiskCount> calculateDailyRiskCounts(Integer patientId) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(6); // 오늘 포함 7일
+
+        // 일별 이상탐지 횟수 조회
+        List<Object[]> results = abnormalRepository.findCountByDay(patientId, startDate, endDate);
+
+        // Map으로 변환
+        Map<LocalDate, Long> countMap = new HashMap<>();
+        for (Object[] result : results) {
+            LocalDate date = ((java.sql.Date) result[0]).toLocalDate();
+            Long count = ((Number) result[1]).longValue();
+            countMap.put(date, count);
+        }
+
+        // 7일간 데이터 채우기 (데이터 없는 날은 0으로)
+        List<DashboardResponseDto.DailyRiskCount> dailyRiskCounts = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate date = startDate.plusDays(i);
+            Long count = countMap.getOrDefault(date, 0L);
+            dailyRiskCounts.add(new DashboardResponseDto.DailyRiskCount(date, count));
+        }
+
+        return dailyRiskCounts;
     }
 }

@@ -9,6 +9,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDate;
+import java.util.List;
+
 @Schema(description = "환자 대쉬보드 정보")
 @Getter
 @Builder
@@ -43,5 +46,31 @@ public class DashboardResponseDto {
     @Builder.Default
     private DashboardEnum emerCallTransition=DashboardEnum.SAME;
 
+    // 🆕 시간대별 위험도 데이터
+    @Schema(description = "시간대별 위험도 (0-1 사이 값, 4개 시간대)")
+    private List<TimeSlotRisk> timeSlotRisks;
 
+    // 🆕 일별 위험 행동 누적 데이터 (7일간)
+    @Schema(description = "일별 위험 행동 횟수 (최근 7일)")
+    private List<DailyRiskCount> dailyRiskCounts;
+
+    @Getter
+    @AllArgsConstructor
+    public static class TimeSlotRisk {
+        @Schema(description = "시간대 범위", example = "00-06시")
+        private String timeRange;
+
+        @Schema(description = "위험도 (0.0 ~ 1.0)", example = "0.3")
+        private Float intensity;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class DailyRiskCount {
+        @Schema(description = "날짜", example = "2025-11-10")
+        private LocalDate date;
+
+        @Schema(description = "총 위험 행동 횟수", example = "5")
+        private Long totalCount;
+    }
 }
