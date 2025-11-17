@@ -40,7 +40,7 @@ class HomeViewModel @Inject constructor(
     private val healthConnectRepository: HealthConnectRepository,
     private val getPatientInfoUseCase: GetPatientInfoUseCase,
     val locationBus: LocationStreamBus,
-    navigationRouteManager: NavigationRouteManager,
+    private val navigationRouteManager: NavigationRouteManager,
     val safetyZoneStateManager: SafetyZoneStateManager
 ) : ViewModel() {
 
@@ -339,5 +339,45 @@ class HomeViewModel @Inject constructor(
                 Math.sin(dLon / 2) * Math.sin(dLon / 2)
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         return r * c
+    }
+
+    /**
+     * SSE로 받은 길찾기 정보를 NavigationRouteManager에 동기화 (환자용)
+     */
+    fun syncNavigationFromSse(route: kr.co.ongil.domain.model.Route) {
+        viewModelScope.launch {
+            // SSE 데이터의 실제 navigationId 사용 (없으면 임시 ID)
+            val navigationId = route.navigationId ?: "sse_${System.currentTimeMillis()}"
+
+            // NavigationRouteManager에 경로 저장
+            val routePath = route.path.map { latLng ->
+                NavigationRouteManager.LatLng(
+                    latitude = latLng.latitude,
+                    longitude = latLng.longitude
+                )
+            }
+            navigationRouteManager.setRoute(
+                navigationId = navigationId,
+                path = routePath,
+                startLocationName = route.startLocationName ?: "출발지",
+                endLocationName = route.endLocationName ?: "목적지",
+                totalTimeMinutes = route.totalTimeMinutes,
+                totalDistanceMeters = route.totalDistanceMeters
+            )
+
+            Log.d(TAG, "SSE로 길찾기 시작됨 (보호자가 시작함): ${route.startLocationName} → ${route.endLocationName}")
+        }
+    }
+
+    /**
+     * SSE로 받은 길찾기 종료 정보를 반영 (환자용)
+     */
+    fun clearNavigationFromSse() {
+        viewModelScope.launch {
+            // 경로 정보 초기화
+            navigationRouteManager.clearRoute()
+
+            Log.d(TAG, "SSE로 길찾기 종료됨 (보호자가 종료함)")
+        }
     }
 }

@@ -31,6 +31,28 @@ fun NavGraphBuilder.homeGraph(
         val selectedPatientId by (authViewModel?.selectedPatientId ?: kotlinx.coroutines.flow.flowOf(null)).collectAsState(initial = null)
         val patientLocations by (authViewModel?.patientLocations ?: kotlinx.coroutines.flow.flowOf(emptyMap())).collectAsState(initial = emptyMap())
 
+        // 환자 경로 변경 모니터링 및 NavigationRouteManager 동기화 (환자용)
+        val patientNavigationRoutes by (authViewModel?.patientNavigationRoutes ?: kotlinx.coroutines.flow.flowOf(emptyMap())).collectAsState(initial = emptyMap())
+
+        androidx.compose.runtime.LaunchedEffect(patientNavigationRoutes, userType, currentUserInfo) {
+            // 환자인 경우, SSE로 받은 자신의 경로를 NavigationRouteManager에 동기화
+            if (userType == "PATIENT") {
+                val myPatientId = currentUserInfo?.getOrNull()?.id?.toLong()
+                if (myPatientId != null) {
+                    val myRoute = patientNavigationRoutes[myPatientId]
+                    android.util.Log.d("HomeGraph", "환자 본인 경로 업데이트: patientId=$myPatientId, route=${myRoute != null}")
+
+                    if (myRoute != null) {
+                        // SSE로 받은 경로를 HomeViewModel을 통해 NavigationRouteManager에 저장
+                        viewModel.syncNavigationFromSse(myRoute)
+                    } else {
+                        // 경로가 null이면 길찾기 종료된 것
+                        viewModel.clearNavigationFromSse()
+                    }
+                }
+            }
+        }
+
         HomeScreen(
             uiState = uiState,
             modifier = Modifier.padding(paddingValues),
