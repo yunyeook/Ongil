@@ -24,7 +24,7 @@ public class NavigationEventListener {
 
         redisPublisher.publishNavigationEvent(event);
 
-        log.info("길안내 이벤트 Redis 발행 완료: patientId={}, initiatorId={}, status={}",
+        log.debug("길안내 이벤트 Redis 발행 완료: patientId={}, initiatorId={}, status={}",
             event.patientId(),
             event.initiatorId(),
             event.status()

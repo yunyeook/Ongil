@@ -25,7 +25,7 @@ public class LocationEventListener {
 
         redisPublisher.publishLocationUpdate(event);
 
-        log.info("위치 업데이트 Redis 발행 완료: patientId={}",
+        log.debug("위치 업데이트 Redis 발행 완료: patientId={}",
             event.patientId()
         );
     }

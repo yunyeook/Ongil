@@ -22,7 +22,7 @@ public class LocationRedisMessagePublisher {
                 event
             );
 
-            log.info("Location Redis Pub/Sub 발행 완료: patientId={}, channel={}",
+            log.debug("Location Redis Pub/Sub 발행 완료: patientId={}, channel={}",
                 event.patientId(),
                 locationUpdateTopic.getTopic()
             );
