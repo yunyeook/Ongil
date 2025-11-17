@@ -31,6 +31,7 @@ import kr.co.ongil.domain.usecase.fcm.HandleAbnormalDetectedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleCallRequestUseCase
 import kr.co.ongil.domain.helper.NotificationHelper
 import kr.co.ongil.presentation.MainActivity
+import kr.co.ongil.presentation.ui.call.IncomingCallActivity
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -163,10 +164,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Full-Screen Intent
-        val fullScreenIntent = Intent(this, MainActivity::class.java).apply {
+        // ✅ MainActivity → IncomingCallActivity 로 변경
+        val fullScreenIntent = Intent(this, IncomingCallActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("type", "INCOMING_CALL")
             putExtra("callId", callId)
             putExtra("sessionId", sessionId)
             putExtra("callerName", callerName)
