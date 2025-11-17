@@ -71,28 +71,33 @@ class VoipCallViewModel @Inject constructor(
         Log.d(TAG, "=== [CALLER] startVoipCall: to=$receiverId")
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, message = null, error = null) }
+            _uiState.update { it.copy(isLoading = true, message = "연결 준비 중...", error = null) }
 
             try {
-                // 1. 통화 생성
+                // 1. 통화 생성 (상태: CREATED, FCM 발송 안 됨)
                 val call = callRepository.createVoipCall(receiverId, callType).getOrThrow()
                 currentCall = call
+                Log.d(TAG, "✓ Call created: id=${call.id}, status=CREATED")
 
                 // 2. WebSocket 연결 & 구독
                 val token = userDataStoreManager.getAccessToken().first()
                 voipSignalingService.connectAndWait(token!!)
                 voipSignalingService.subscribeToCall(call.id)
+                Log.d(TAG, "✓ WebSocket connected and subscribed")
 
-                delay(1000) // 구독 안정화 대기
-
-                // 3. TURN 조회 (미리 준비만)
+                // 3. TURN 조회 & WebRTC 초기화
                 val turn = callRepository.getTurnCredentials().getOrThrow()
                 val iceServers = turn.toIceServers()
 
-                // ✅ WebRTC 초기화는 하되, Offer는 생성하지 않음
                 webRtcCallClient.init(iceServers)
                 setupPeerConnectionStateMonitoring()
                 setupIceCandidateListener(call.id, call.sessionId, currentUserId!!, receiverId)
+                isWebRtcInitialized = true
+                Log.d(TAG, "✓ WebRTC initialized")
+
+                // ✅ 4. 발신자 준비 완료 알림 → 이제 FCM 발송됨!
+                callRepository.notifyCallerReady(call.id).getOrThrow()
+                Log.d(TAG, "✅ Caller ready notification sent - FCM will be sent now")
 
                 _uiState.update {
                     it.copy(
@@ -101,9 +106,6 @@ class VoipCallViewModel @Inject constructor(
                         message = "상대방 응답 대기 중..."
                     )
                 }
-
-                Log.d(TAG, "✅ Waiting for callee to accept...")
-                // ⚠️ Offer는 ACCEPT 시그널 받은 후에 생성!
 
             } catch (e: Exception) {
                 Log.e(TAG, "startVoipCall failed: ${e.message}", e)
