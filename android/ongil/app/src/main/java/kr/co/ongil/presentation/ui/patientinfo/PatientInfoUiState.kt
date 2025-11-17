@@ -33,7 +33,23 @@ data class ActivityLog(
     val sosSignTransition: String,
     val emerCall: Long,
     val emerCallDiff: Long,
-    val emerCallTransition: String
+    val emerCallTransition: String,
+    // 🆕 시간대별 위험도 데이터
+    val timeSlotRisks: List<TimeSlotRisk> = emptyList(),
+    // 🆕 일별 위험 행동 누적 데이터
+    val dailyRiskCounts: List<DailyRiskCount> = emptyList()
+)
+
+// 🆕 시간대별 위험도
+data class TimeSlotRisk(
+    val timeRange: String,      // "00-06시"
+    val intensity: Float         // 0.0 ~ 1.0
+)
+
+// 🆕 일별 위험 행동 횟수
+data class DailyRiskCount(
+    val date: String,            // "2025-11-10"
+    val totalCount: Long         // 위험 행동 횟수
 )
 
 // 가장 많이 찾은 목적지

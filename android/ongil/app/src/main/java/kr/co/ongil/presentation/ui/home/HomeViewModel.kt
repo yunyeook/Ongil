@@ -291,7 +291,21 @@ class HomeViewModel @Inject constructor(
                                 sosSignTransition = patientInfoDto.sosSignTransition,
                                 emerCall = patientInfoDto.emerCall,
                                 emerCallDiff = patientInfoDto.emerCallDiff,
-                                emerCallTransition = patientInfoDto.emerCallTransition
+                                emerCallTransition = patientInfoDto.emerCallTransition,
+                                // 🆕 시간대별 위험도 데이터 매핑
+                                timeSlotRisks = patientInfoDto.timeSlotRisks.map {
+                                    kr.co.ongil.presentation.ui.patientinfo.TimeSlotRisk(
+                                        timeRange = it.timeRange,
+                                        intensity = it.intensity
+                                    )
+                                },
+                                // 🆕 일별 위험 행동 누적 데이터 매핑
+                                dailyRiskCounts = patientInfoDto.dailyRiskCounts.map {
+                                    kr.co.ongil.presentation.ui.patientinfo.DailyRiskCount(
+                                        date = it.date,
+                                        totalCount = it.totalCount
+                                    )
+                                }
                             )
 
                             _uiState.value = _uiState.value.copy(activityLog = activityLog)
