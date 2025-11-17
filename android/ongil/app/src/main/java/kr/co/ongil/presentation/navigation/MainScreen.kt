@@ -46,7 +46,7 @@ fun MainScreen(
     val selectedPatientProfileImage by authViewModel.selectedPatientProfileImage.collectAsState()
     val patientProfileImages by authViewModel.patientProfileImages.collectAsState()
 
-    val userType = currentUserInfo?.getOrNull()?.userType ?: ""
+    val userType = currentUserInfo?.getOrNull()?.userType ?: "GUARDIAN"
 
     // 로그인 상태 확인 중이면 로딩만 보여주고 NavHost 생성 안 함
     if (isLoggedIn == null) {

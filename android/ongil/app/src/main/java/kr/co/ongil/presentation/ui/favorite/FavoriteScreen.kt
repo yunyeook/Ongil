@@ -116,134 +116,132 @@ fun FavoriteScreen(
         }
     }
 
-    OngilThemeProvider(userType = uiState.userType) {
-        Surface(
-            modifier = modifier.fillMaxSize(),
-            color = Color(0xFFFFFFFF)
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = Color(0xFFFFFFFF)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) {
 
-                // 타이틀 / 설명 영역
-                FavoriteTitleSection(
-                    userName = uiState.userName,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 32.dp)
-                )
+            // 타이틀 / 설명 영역
+            FavoriteTitleSection(
+                userName = uiState.userName,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 32.dp)
+            )
 
-                Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-                // 탭 바 (환자 목록 / 장소 목록)
-                FavoriteTabBar(
-                    selectedTab = uiState.selectedTab,
-                    userType = uiState.userType,
-                    onTabSelected = { tab ->
-                        viewModel.onEvent(FavoriteUiEvent.OnTabSelected(tab))
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                )
+            // 탭 바 (환자 목록 / 장소 목록)
+            FavoriteTabBar(
+                selectedTab = uiState.selectedTab,
+                userType = uiState.userType,
+                onTabSelected = { tab ->
+                    viewModel.onEvent(FavoriteUiEvent.OnTabSelected(tab))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                // 탭 컨텐츠
-                when (uiState.selectedTab) {
-                    FavoriteTab.PATIENTS -> {
-                        PatientList(
-                            patients = uiState.patients,
-                            userType = uiState.userType,
-                            onCallClick = { id ->
-                                // 환자 정보 찾아서 전화 화면으로 이동
-                                val patient = uiState.patients.find { it.id == id }
-                                if (patient != null) {
-                                    onNavigateToCall(patient.name, patient.phoneNumber, patient.id, uiState.userType)
-                                }
-                            },
-                            onPatientCardClick = { relationshipId ->
-                                onNavigateToPatientDetail(relationshipId, uiState.userType)
-                            },
-                            onGoSearchUserClick = {
-                                onGoSearchUserClick()
+            // 탭 컨텐츠
+            when (uiState.selectedTab) {
+                FavoriteTab.PATIENTS -> {
+                    PatientList(
+                        patients = uiState.patients,
+                        userType = uiState.userType,
+                        onCallClick = { id ->
+                            // 환자 정보 찾아서 전화 화면으로 이동
+                            val patient = uiState.patients.find { it.id == id }
+                            if (patient != null) {
+                                onNavigateToCall(patient.name, patient.phoneNumber, patient.id, uiState.userType)
                             }
-                        )
-                    }
+                        },
+                        onPatientCardClick = { relationshipId ->
+                            onNavigateToPatientDetail(relationshipId, uiState.userType)
+                        },
+                        onGoSearchUserClick = {
+                            onGoSearchUserClick()
+                        }
+                    )
+                }
 
-                    FavoriteTab.PLACES -> {
-                        PlaceList(
-                            places = uiState.places,
-                            onAddPlaceClick = {
-                                viewModel.onEvent(FavoriteUiEvent.OnAddPlaceClick)
-                            },
-                            onClickPlaceIcon = { favoriteId ->
-                                // 해당 장소로 바로 길찾기 시작
-                                val place = uiState.places.find { it.favoriteId == favoriteId }
-                                if (place != null) {
-                                    android.util.Log.d("FavoriteScreen", "🗺️ 길찾기 시작: ${place.displayName}, lat=${place.latitude}, lon=${place.longitude}")
+                FavoriteTab.PLACES -> {
+                    PlaceList(
+                        places = uiState.places,
+                        onAddPlaceClick = {
+                            viewModel.onEvent(FavoriteUiEvent.OnAddPlaceClick)
+                        },
+                        onClickPlaceIcon = { favoriteId ->
+                            // 해당 장소로 바로 길찾기 시작
+                            val place = uiState.places.find { it.favoriteId == favoriteId }
+                            if (place != null) {
+                                android.util.Log.d("FavoriteScreen", "🗺️ 길찾기 시작: ${place.displayName}, lat=${place.latitude}, lon=${place.longitude}")
 
-                                    try {
-                                        // 지도 화면(Location)의 savedStateHandle에 길찾기 정보 저장
-                                        // backQueue에서 Location 화면 찾기
-                                        val locationEntry = navController.getBackStackEntry(Routes.Location.route)
-                                        locationEntry.savedStateHandle.apply {
-                                            set("start_navigation", true)
-                                            set("navigation_end_lat", place.latitude)
-                                            set("navigation_end_lon", place.longitude)
-                                            set("navigation_end_name", place.displayName)
-                                        }
-                                        android.util.Log.d("FavoriteScreen", "✅ savedStateHandle 설정 완료")
-                                    } catch (e: IllegalArgumentException) {
-                                        // Location 화면이 백스택에 없는 경우 - 먼저 navigate한 후 설정
-                                        android.util.Log.w("FavoriteScreen", "⚠️ Location 화면이 백스택에 없음 - navigate 먼저 실행")
+                                try {
+                                    // 지도 화면(Location)의 savedStateHandle에 길찾기 정보 저장
+                                    // backQueue에서 Location 화면 찾기
+                                    val locationEntry = navController.getBackStackEntry(Routes.Location.route)
+                                    locationEntry.savedStateHandle.apply {
+                                        set("start_navigation", true)
+                                        set("navigation_end_lat", place.latitude)
+                                        set("navigation_end_lon", place.longitude)
+                                        set("navigation_end_name", place.displayName)
                                     }
-
-                                    // 지도 화면으로 이동
-                                    navController.navigate(Routes.Location.route) {
-                                        // 즐겨찾기만 제거 (Location은 유지)
-                                        popUpTo(Routes.Favorite.route) {
-                                            inclusive = true
-                                        }
-                                    }
-
-                                    // navigate 후에 savedStateHandle 설정 (백스택에 없었던 경우)
-                                    try {
-                                        val locationEntry = navController.getBackStackEntry(Routes.Location.route)
-                                        locationEntry.savedStateHandle.apply {
-                                            set("start_navigation", true)
-                                            set("navigation_end_lat", place.latitude)
-                                            set("navigation_end_lon", place.longitude)
-                                            set("navigation_end_name", place.displayName)
-                                        }
-                                        android.util.Log.d("FavoriteScreen", "✅ navigate 후 savedStateHandle 설정 완료")
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("FavoriteScreen", "❌ savedStateHandle 설정 실패", e)
-                                    }
-                                } else {
-                                    android.util.Log.e("FavoriteScreen", "❌ 장소를 찾을 수 없습니다: favoriteId=$favoriteId")
+                                    android.util.Log.d("FavoriteScreen", "✅ savedStateHandle 설정 완료")
+                                } catch (e: IllegalArgumentException) {
+                                    // Location 화면이 백스택에 없는 경우 - 먼저 navigate한 후 설정
+                                    android.util.Log.w("FavoriteScreen", "⚠️ Location 화면이 백스택에 없음 - navigate 먼저 실행")
                                 }
-                            },
-                            onClickPlaceCardWithPatient = { _, favoriteId ->
-                                // place.patientId 대신 실제 조회에 사용한 currentPatientId 사용 (403 방지)
-                                onNavigateToPlaceDetail(uiState.currentPatientId, favoriteId, uiState.userType)
-                            },
-                            onGoSearchPlaceClick = onGoSearchPlaceClick
-                        )
-                    }
+
+                                // 지도 화면으로 이동
+                                navController.navigate(Routes.Location.route) {
+                                    // 즐겨찾기만 제거 (Location은 유지)
+                                    popUpTo(Routes.Favorite.route) {
+                                        inclusive = true
+                                    }
+                                }
+
+                                // navigate 후에 savedStateHandle 설정 (백스택에 없었던 경우)
+                                try {
+                                    val locationEntry = navController.getBackStackEntry(Routes.Location.route)
+                                    locationEntry.savedStateHandle.apply {
+                                        set("start_navigation", true)
+                                        set("navigation_end_lat", place.latitude)
+                                        set("navigation_end_lon", place.longitude)
+                                        set("navigation_end_name", place.displayName)
+                                    }
+                                    android.util.Log.d("FavoriteScreen", "✅ navigate 후 savedStateHandle 설정 완료")
+                                } catch (e: Exception) {
+                                    android.util.Log.e("FavoriteScreen", "❌ savedStateHandle 설정 실패", e)
+                                }
+                            } else {
+                                android.util.Log.e("FavoriteScreen", "❌ 장소를 찾을 수 없습니다: favoriteId=$favoriteId")
+                            }
+                        },
+                        onClickPlaceCardWithPatient = { _, favoriteId ->
+                            // place.patientId 대신 실제 조회에 사용한 currentPatientId 사용 (403 방지)
+                            onNavigateToPlaceDetail(uiState.currentPatientId, favoriteId, uiState.userType)
+                        },
+                        onGoSearchPlaceClick = onGoSearchPlaceClick
+                    )
                 }
             }
-
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
     }
 }
