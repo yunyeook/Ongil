@@ -97,6 +97,43 @@ class AuthStateViewModel @Inject constructor(
     val selectedPatientId: StateFlow<String?> = userDataStoreManager.getSelectedPatientId()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    // DataStore에서 로그인한 사용자의 프로필 이미지 가져오기
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val currentUserProfileImage: StateFlow<String?> = currentUserId.flatMapLatest { userId ->
+        if (userId != null) {
+            userDataStoreManager.getProfileImage(userId)
+        } else {
+            flowOf(null)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // DataStore에서 선택된 환자의 프로필 이미지 가져오기
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedPatientProfileImage: StateFlow<String?> = selectedPatientId.flatMapLatest { patientId ->
+        if (patientId != null) {
+            userDataStoreManager.getProfileImage(patientId)
+        } else {
+            flowOf(null)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // 모든 환자들의 프로필 이미지 (Map<patientId, profileImageUrl>)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val patientProfileImages: StateFlow<Map<String, String?>> = patientList.flatMapLatest { patients ->
+        if (patients.isEmpty()) {
+            flowOf(emptyMap())
+        } else {
+            kotlinx.coroutines.flow.combine(
+                patients.map { patient ->
+                    userDataStoreManager.getProfileImage(patient.id.toString())
+                        .map { patient.id.toString() to it }
+                }
+            ) { results ->
+                results.toMap()
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     // 환자들의 실시간 위치 (Map<patientId, Coordinate>)
     private val _patientLocations = MutableStateFlow<Map<Long, Coordinate>>(emptyMap())
     val patientLocations: StateFlow<Map<Long, Coordinate>> = _patientLocations.asStateFlow()

@@ -105,4 +105,14 @@ interface UserDataStoreManager {
      * 안전구역 설정 변경 구독
      */
     fun observeSafeZoneSettings(patientId: Long): Flow<kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings>
+
+    /**
+     * 프로필 이미지 저장 (사용자별)
+     */
+    suspend fun saveProfileImage(userId: String, profileImageUrl: String?)
+
+    /**
+     * 프로필 이미지 불러오기 (사용자별)
+     */
+    fun getProfileImage(userId: String): Flow<String?>
 }
