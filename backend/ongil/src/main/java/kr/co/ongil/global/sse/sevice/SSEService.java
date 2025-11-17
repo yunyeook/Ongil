@@ -64,10 +64,14 @@ public class SSEService {
             log.warn("SSE 타임아웃: userId={}", userId);
         });
 
-        emitter.onError((e) -> {
+        emitter.onError(e -> {
+            if (e instanceof IOException ||
+                e instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException) {
+                log.debug("SSE 연결 종료: userId={}", userId);
+            } else {
+                log.error("SSE 에러: userId={}", userId, e);
+            }
             emitters.remove(userId);
-            emitter.complete();
-            log.error("SSE 에러: userId={}", userId, e);
         });
 
         log.info("SSE 연결됨: userId={}", userId);
