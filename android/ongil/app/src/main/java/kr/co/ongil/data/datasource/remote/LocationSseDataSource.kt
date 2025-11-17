@@ -133,7 +133,7 @@ class LocationSseDataSource @Inject constructor(
                                     }
                                 }
                                 else -> {
-                                    Log.d(TAG, "알 수 없는 이벤트: $currentEvent, data: $data")
+//                                    Log.d(TAG, "알 수 없는 이벤트: $currentEvent, data: $data")
                                 }
                             }
                         }
