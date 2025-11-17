@@ -96,11 +96,31 @@ fun RegisterScreen(
 
                 // 이름
                 LabeledField(label = "이름") {
-                    InputBox(
+                    OutlinedTextField(
                         value = uiState.name,
                         onValueChange = onNameChange,
-                        label = "",
-                        placeholder = "실명을 입력해주세요",
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = "실명을 입력해주세요",
+                                color = Color(0xFF9CA1A9),
+                                fontSize = 16.sp
+                            )
+                        },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color(0xFFDDE0E4),
+                            focusedBorderColor = Color(0xFF788F7E),
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.clearFocus() }
+                        ),
+                        singleLine = true
                     )
                 }
 
@@ -142,18 +162,36 @@ fun RegisterScreen(
 
                 // 휴대폰 번호 + 인증번호 발송 / 재발송
                 LabeledField(label = "휴대폰 번호") {
-
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.Bottom,
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        InputBox(
+                        OutlinedTextField(
                             value = uiState.phoneNumber,
                             onValueChange = onPhoneChange,
-                            label = "",
-                            placeholder = "010-1234-5678",
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            placeholder = {
+                                Text(
+                                    text = "010-1234-5678",
+                                    color = Color(0xFF9CA1A9),
+                                    fontSize = 16.sp
+                                )
+                            },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = Color(0xFFDDE0E4),
+                                focusedBorderColor = Color(0xFF788F7E),
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Phone,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { focusManager.clearFocus() }
+                            ),
+                            singleLine = true
                         )
 
                         GreenButton(
@@ -175,27 +213,48 @@ fun RegisterScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.Bottom,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            InputBox(
-                                value = uiState.verificationCode,
-                                onValueChange = onVerificationTokenChange,
-                                label = "인증번호",
-                                placeholder = "인증번호 6자리",
-                                modifier = Modifier.weight(1f)
-                            )
+                        LabeledField(label = "인증번호") {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedTextField(
+                                    value = uiState.verificationCode,
+                                    onValueChange = onVerificationTokenChange,
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = {
+                                        Text(
+                                            text = "인증번호 6자리",
+                                            color = Color(0xFF9CA1A9),
+                                            fontSize = 16.sp
+                                        )
+                                    },
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = Color(0xFFDDE0E4),
+                                        focusedBorderColor = Color(0xFF788F7E),
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Number,
+                                        imeAction = ImeAction.Done
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onDone = { focusManager.clearFocus() }
+                                    ),
+                                    singleLine = true
+                                )
 
-                            GreenButton(
-                                text = if (uiState.isCodeVerified) "확인됨" else "확인",
-                                enabled = !uiState.isCodeVerified,
-                                onClick = onVerifyTokenClick,
-                                modifier = Modifier
-                                    .weight(0.6f)
-                                    .height(56.dp)
-                            )
+                                GreenButton(
+                                    text = if (uiState.isCodeVerified) "확인됨" else "확인",
+                                    enabled = !uiState.isCodeVerified,
+                                    onClick = onVerifyTokenClick,
+                                    modifier = Modifier
+                                        .weight(0.6f)
+                                        .height(56.dp)
+                                )
+                            }
                         }
 
                         Row(
@@ -251,6 +310,7 @@ fun RegisterScreen(
                                     fontSize = 16.sp
                                 )
                             },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                             visualTransformation = if (uiState.isPasswordVisible)
                                 VisualTransformation.None
                             else
@@ -312,6 +372,7 @@ fun RegisterScreen(
                                     fontSize = 16.sp
                                 )
                             },
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                             visualTransformation = if (uiState.isConfirmPasswordVisible)
                                 VisualTransformation.None
                             else
