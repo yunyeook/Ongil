@@ -30,6 +30,7 @@ import kr.co.ongil.domain.usecase.fcm.HandleNavigationEndUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleAbnormalDetectedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleCallRequestUseCase
 import kr.co.ongil.domain.helper.NotificationHelper
+import kr.co.ongil.domain.usecase.fcm.HandleSafezoneUpdateUseCase
 import kr.co.ongil.presentation.MainActivity
 import javax.inject.Inject
 
@@ -50,6 +51,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var handleSafezoneExitUseCase: HandleSafezoneExitUseCase
+
+    @Inject
+    lateinit var handleSafezoneUpdateUseCase: HandleSafezoneUpdateUseCase
 
     @Inject
     lateinit var handleNavigationStartUseCase: HandleNavigationStartUseCase
@@ -115,6 +119,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
                 MessageType.SAFEZONE_EXIT -> {
                     handleSafezoneExitUseCase(this, fcmMessage)
+                }
+
+                MessageType.SAFEZONE_UPDATE -> {
+                    handleSafezoneUpdateUseCase(this, fcmMessage)
                 }
 
                 MessageType.NAVIGATION_START -> {

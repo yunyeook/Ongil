@@ -75,8 +75,6 @@ class LocationTrackingService : Service() {
     // [테스트용] 1초마다 위치 전송하는 타이머
     private var periodicSendJob: Job? = null
 
-    // 안전구역 설정 주기적 조회 (30초마다)
-    private var safeZoneSettingsPollingJob: Job? = null
 
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
@@ -128,62 +126,6 @@ class LocationTrackingService : Service() {
                     Log.d(TAG, "길찾기 종료 감지 - 경로 이탈 모니터 비활성화")
                     routeDeviationMonitor = null
                 }
-            }
-        }
-
-        // 안전구역 설정 주기적 조회 (보호자가 변경한 설정을 API에서 가져오기)
-        safeZoneSettingsPollingJob = serviceScope.launch {
-            val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
-            if (patientId == null) {
-                Log.w(TAG, "환자 ID를 가져올 수 없어 안전구역 설정 폴링을 시작할 수 없습니다")
-                return@launch
-            }
-
-            while (isActive) {
-                try {
-                    Log.d(TAG, "🔄 안전구역 설정 API 조회 중... (환자 ID: $patientId)")
-                    safeZoneRepository.getSafeZone(patientId).collect { result ->
-                        result.onSuccess { data ->
-//                            Log.d(TAG, "✅ API에서 최신 안전구역 설정 조회 성공")
-//                            Log.d(TAG, "  - 1단계: ${data.boundaries.first.radius}m / ${data.boundaries.first.time}분")
-//                            Log.d(TAG, "  - 2단계: ${data.boundaries.second.radius}m / ${data.boundaries.second.time}분")
-//                            Log.d(TAG, "  - 3단계: ${data.boundaries.third.radius}m / ${data.boundaries.third.time}분")
-
-                            // DataStore에 저장
-                            userDataStoreManager.saveSafeZoneSettings(
-                                patientId = patientId,
-                                level1Distance = data.boundaries.first.radius.toInt(),
-                                level1Dwell = data.boundaries.first.time,
-                                level2Distance = data.boundaries.second.radius.toInt(),
-                                level2Dwell = data.boundaries.second.time,
-                                level3Distance = data.boundaries.third.radius.toInt(),
-                                level3Dwell = data.boundaries.third.time,
-                                pushEnabled = true,
-                                autoCallEnabled = false
-                            )
-
-                            // SafetyZoneMonitor 업데이트
-                            val settings = kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings(
-                                level1Distance = data.boundaries.first.radius.toInt(),
-                                level1Dwell = data.boundaries.first.time,
-                                level2Distance = data.boundaries.second.radius.toInt(),
-                                level2Dwell = data.boundaries.second.time,
-                                level3Distance = data.boundaries.third.radius.toInt(),
-                                level3Dwell = data.boundaries.third.time,
-                                pushEnabled = true,
-                                autoCallEnabled = false
-                            )
-                            updateSafetyZoneMonitor(settings)
-                        }.onFailure { error ->
-                            Log.e(TAG, "❌ API에서 안전구역 설정 조회 실패: ${error.message}")
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ 안전구역 설정 폴링 중 오류", e)
-                }
-
-                // 30초 대기
-                delay(30000)
             }
         }
     }
@@ -316,8 +258,6 @@ class LocationTrackingService : Service() {
 
     override fun onDestroy() {
         stopTracking()
-        safeZoneSettingsPollingJob?.cancel()
-        safeZoneSettingsPollingJob = null
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -478,7 +418,7 @@ class LocationTrackingService : Service() {
                             speed < 0.5f -> {
                                 // 거의 정지 상태 (0.5m/s = 1.8km/h 미만) - 5m로 완화
                                 if (distance > 5.0) {
-                                    Log.w(TAG, "⚠️ 정지 상태 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+//                                    Log.w(TAG, "⚠️ 정지 상태 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
                                     return@launch
                                 }
                             }
@@ -490,7 +430,7 @@ class LocationTrackingService : Service() {
                                     else -> 60.0             // 15.0 → 60.0
                                 }
                                 if (distance > maxJump) {
-                                    Log.w(TAG, "⚠️ 저속 이동 중 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
+//                                    Log.w(TAG, "⚠️ 저속 이동 중 GPS 점프 감지 (${String.format("%.1f", distance)}m, 속도: ${String.format("%.1f", speed)}m/s) - 무시")
                                     return@launch
                                 }
                             }
