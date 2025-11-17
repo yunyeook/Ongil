@@ -64,7 +64,8 @@ fun MapScreen(
     authViewModel: AuthStateViewModel,
     searchPlaceholder: String = "장소를 검색해주세요",
     requestSearchFocus: Boolean = false,
-    onShowBarsChange: (Boolean) -> Unit = {}  // true: 표시, false: 숨김
+    onShowBarsChange: (Boolean) -> Unit = {},  // true: 표시, false: 숨김
+    onNavigateToCall: (targetName: String, targetPhone: String, targetId: Long, userType: String) -> Unit = { _, _, _, _ -> }
 ) {
     // ViewModel 상태
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -584,7 +585,7 @@ fun MapScreen(
                     // 전화 걸기 버튼
                     CircleFloatingButton(
                         icon = Icons.Default.Phone,
-                        onClick = { viewModel.onClickCall() },
+                        onClick = { viewModel.onClickCall(onNavigateToCall) },
                         containerColor = Color(0xFF5C7165),
                         contentColor = Color.White
                     )

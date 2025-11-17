@@ -34,6 +34,8 @@ import kr.co.ongil.presentation.ui.common.selection.PatientInfoUi
 fun MainScreen(
     incomingCallData: IncomingCallData? = null,
     onIncomingCallHandled: () -> Unit = {},
+    emergencyCallData: kr.co.ongil.presentation.EmergencyCallData? = null,
+    onEmergencyCallHandled: () -> Unit = {},
     authViewModel: AuthStateViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
@@ -89,6 +91,29 @@ fun MainScreen(
         // NavHost 초기화 방지용: navigation 이후 플래그만 정리
         delay(100)
         onIncomingCallHandled()
+    }
+
+    // ✅ 응급 전화: 경로 이탈 5분 경과 시 기본 보호자에게 자동 전화
+    LaunchedEffect(emergencyCallData?.targetName, emergencyCallData?.targetPhone) {
+        val data = emergencyCallData ?: return@LaunchedEffect
+
+        val route = Routes.VoipCall.createRoute(
+            targetName = data.targetName,
+            targetPhone = data.targetPhone,
+            isCaller = data.isCaller,
+            userType = data.userType,
+            callId = 0L, // 응급 전화는 callId 없음
+            receiverId = data.receiverId.toLongOrNull() ?: 0L
+        )
+
+        android.util.Log.d("MainScreen", "🚨 응급 전화 네비게이션: $route")
+
+        navController.navigate(route) {
+            launchSingleTop = true
+        }
+
+        delay(100)
+        onEmergencyCallHandled()
     }
 
     // 인증 관련 화면들 (Top/Bottom 숨김 대상)

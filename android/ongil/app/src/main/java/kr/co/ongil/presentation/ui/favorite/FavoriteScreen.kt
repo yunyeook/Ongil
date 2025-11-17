@@ -45,6 +45,7 @@ fun FavoriteScreen(
     onNavigateToPatientDetail: (relationshipId: Long) -> Unit,
     onGoSearchUserClick: () -> Unit,
     onGoSearchPlaceClick: () -> Unit,
+    onNavigateToCall: (targetName: String, targetPhone: String, targetId: Long, userType: String) -> Unit = { _, _, _, _ -> },
     modifier: Modifier = Modifier
 )
 {
@@ -157,7 +158,11 @@ fun FavoriteScreen(
                             patients = uiState.patients,
                             userType = uiState.userType,
                             onCallClick = { id ->
-                                viewModel.onEvent(FavoriteUiEvent.OnCallClick(id))
+                                // 환자 정보 찾아서 전화 화면으로 이동
+                                val patient = uiState.patients.find { it.id == id }
+                                if (patient != null) {
+                                    onNavigateToCall(patient.name, patient.phoneNumber, patient.id, uiState.userType)
+                                }
                             },
                             onPatientCardClick = { relationshipId ->
                                 onNavigateToPatientDetail(relationshipId)

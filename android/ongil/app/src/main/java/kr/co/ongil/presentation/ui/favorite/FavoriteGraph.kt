@@ -49,6 +49,19 @@ fun NavGraphBuilder.favoriteGraph(
                     navController.currentBackStackEntry?.savedStateHandle?.set("search_placeholder", "즐겨찾기에 등록할 장소를 검색해주세요.")
                     navController.currentBackStackEntry?.savedStateHandle?.set("request_search_focus", true)
                     navController.navigate(Routes.Location.route)
+                },
+                onNavigateToCall = { targetName, targetPhone, targetId, userType ->
+                    // VoipCall 화면으로 이동
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = targetName,
+                            targetPhone = targetPhone,
+                            isCaller = true,
+                            userType = userType, // 현재 사용자 타입
+                            callId = 0L, // 일반 전화는 callId 없음
+                            receiverId = targetId
+                        )
+                    )
                 }
             )
         }
