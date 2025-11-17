@@ -245,12 +245,13 @@ private fun PasswordInputField(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewChangePasswordScreen() {
-    MaterialTheme {
-        val fakeUserRepository = kr.co.ongil.data.repository.fake.FakeUserRepository()
-        val previewViewModel = ChangePasswordViewModel(userRepository = fakeUserRepository)
-        ChangePasswordScreen(viewModel = previewViewModel)
-    }
-}
+// Preview는 Hilt 의존성 때문에 주석 처리
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewChangePasswordScreen() {
+//    MaterialTheme {
+//        val fakeUserRepository = kr.co.ongil.data.repository.fake.FakeUserRepository()
+//        val previewViewModel = ChangePasswordViewModel(userRepository = fakeUserRepository)
+//        ChangePasswordScreen(viewModel = previewViewModel)
+//    }
+//}
