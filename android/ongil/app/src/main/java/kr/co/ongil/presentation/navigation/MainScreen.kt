@@ -115,8 +115,13 @@ fun MainScreen(
     // MapScreen에서 장소 상세 정보 표시 여부 (헤더/하단바 숨김 제어)
     var showBarsFromMap by remember { mutableStateOf(true) }
 
-    val showBottomBar = baseRoute in bottomBarRoutes && baseRoute !in authRoutes && baseRoute !in callRoutes && showBarsFromMap
-    val showTopBar = baseRoute !in authRoutes && baseRoute !in callRoutes && baseRoute != Routes.Notifications.route && showBarsFromMap
+    // 통화/인증/알림 화면에서는 헤더/하단바 숨김
+    val isCallScreen = baseRoute in callRoutes
+    val isAuthScreen = baseRoute in authRoutes
+    val isNotificationScreen = baseRoute == Routes.Notifications.route
+
+    val showBottomBar = !isAuthScreen && !isCallScreen && baseRoute in bottomBarRoutes && showBarsFromMap
+    val showTopBar = !isAuthScreen && !isCallScreen && !isNotificationScreen && showBarsFromMap
 
     // SafeZoneSetting 라우트에서 OngilBrandHeaderCard 사용
     val safeZoneSettingRoutes = listOf("safezone_setting")
