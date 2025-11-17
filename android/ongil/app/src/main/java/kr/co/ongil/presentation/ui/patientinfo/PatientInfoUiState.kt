@@ -13,7 +13,9 @@ data class PatientInfoUiState(
     val caregiverSuggestions: List<String> = emptyList(),
     val userType: String = "",
     val healthData: LocalHealthData? = null,
-    val healthPermissionGranted: Boolean = false
+    val healthPermissionGranted: Boolean = false,
+    val isLoadingHealthData: Boolean = false,
+    val healthSyncMessage: String? = null
 )
 
 // 활동 기록

@@ -193,9 +193,21 @@ class HomeViewModel @Inject constructor(
                     result.onSuccess { healthData ->
                         Log.d(TAG, "observeHealthData() - 건강 데이터 조회 성공: $healthData")
 
+                        // 개별 레코드에서 평균 계산
+                        val avgSleep = healthData.sleepRecords
+                            .map { it.durationHours }
+                            .average()
+                            .takeIf { !it.isNaN() }
+
+                        val avgSteps = healthData.stepsRecords
+                            .map { it.count.toDouble() }
+                            .average()
+                            .takeIf { !it.isNaN() }
+                            ?.toInt()
+
                         _uiState.value = _uiState.value.copy(
-                            averageSleepHours = healthData.sleep?.average,
-                            averageSteps = healthData.steps?.average?.toInt(),
+                            averageSleepHours = avgSleep,
+                            averageSteps = avgSteps,
                             healthData = healthData
                         )
                     }.onFailure { exception ->
