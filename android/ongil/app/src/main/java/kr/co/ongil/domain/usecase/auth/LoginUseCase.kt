@@ -39,6 +39,11 @@ class LoginUseCase @Inject constructor(
             // 사용자 ID와 타입 저장
             tokenManager.saveLoginUserId(response.data.user.id.toString())
             tokenManager.saveUserType(response.data.user.userType)
+            // 프로필 이미지 저장
+            tokenManager.saveProfileImage(
+                userId = response.data.user.id.toString(),
+                profileImageUrl = response.data.user.profileImage
+            )
         }
     }
 }
