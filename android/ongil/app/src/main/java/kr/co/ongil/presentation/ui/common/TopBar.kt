@@ -2,14 +2,34 @@ package kr.co.ongil.presentation.ui.common
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,19 +41,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
 import kr.co.ongil.R
+import kr.co.ongil.presentation.theme.*
 import kr.co.ongil.presentation.ui.common.selection.PatientInfoUi
 import kr.co.ongil.presentation.ui.common.selection.SelectPatientModal
-
-// ---- 색상 토큰(필요 시 theme/Color.kt로 이관) ----
-private val OngilAccent = Color(0xFF8CA898)
-private val OngilGray = Color(0xFF364046)
-private val OngilBeige = Color(0xFFF8EBD6)
 
 // ---- 헤더 타입 ----
 enum class OngilHeaderType { BackTitleBell, BrandCard }
@@ -113,6 +131,7 @@ fun OngilTopBar(
 fun OngilBrandHeaderCard(
     onBellClick: () -> Unit = {},
     profileImageUrl: String? = null,
+    profileName: String? = null,  // 프로필 이미지 옆에 표시할 이름
     patients: List<PatientInfoUi> = emptyList(),
     onSelectPatient: (PatientInfoUi) -> Unit = {},
     userType: String = "",  // "GUARDIAN" 또는 "PATIENT"
@@ -122,6 +141,10 @@ fun OngilBrandHeaderCard(
 ) {
     var showPatientModal by remember { mutableStateOf(false) }
     val isGuardian = userType.uppercase() == "GUARDIAN"
+
+    // 사용자 타입에 따른 색상 선택
+    val accentColor = if (userType.uppercase() == "PATIENT") OngilAccentPatient else OngilAccent
+    val beigeColor = if (userType.uppercase() == "PATIENT") OngilBeigePatient else OngilBeige
 
     Box {
         HeaderContainer(bottomDivider = bottomDivider) {
@@ -143,29 +166,48 @@ fun OngilBrandHeaderCard(
                 actions = {
                     // 보호자일 때만 프로필 표시
                     if (isGuardian) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(OngilBeige)
-                                .clickable { showPatientModal = true },
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.clickable { showPatientModal = true },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            if (!profileImageUrl.isNullOrEmpty()) {
-                                AsyncImage(
-                                    model = profileImageUrl,
-                                    contentDescription = "프로필",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape)
-                                )
-                            } else {
-                                // 프로필 이미지가 없을 때 기본 아이콘 표시
-                                Icon(
-                                    imageVector = Icons.Outlined.Person,
-                                    contentDescription = "프로필",
-                                    tint = OngilAccent,
-                                    modifier = Modifier.size(24.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(beigeColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (!profileImageUrl.isNullOrEmpty()) {
+                                    AsyncImage(
+                                        model = profileImageUrl,
+                                        contentDescription = "프로필",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape)
+                                    )
+                                } else {
+                                    // 프로필 이미지가 없을 때 기본 아이콘 표시
+                                    Icon(
+                                        imageVector = Icons.Outlined.Person,
+                                        contentDescription = "프로필",
+                                        tint = accentColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            // 이름 표시
+                            if (!profileName.isNullOrEmpty()) {
+                                Text(
+                                    text = profileName,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    ),
+                                    color = OngilGray,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -293,106 +335,3 @@ fun OngilTopBarForRoute(
     )
 }
 
-@androidx.compose.ui.tooling.preview.Preview(name = "TopBar_BackTitleBell", showBackground = true, widthDp = 360)
-@Composable
-private fun Preview_OngilTopBar() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxWidth()) {
-            OngilTopBar(
-                title = "즐겨찾기",
-                onBackClick = {},
-                onBellClick = {}
-            )
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(name = "BrandHeaderCard_Guardian", showBackground = true, widthDp = 360)
-@Composable
-private fun Preview_OngilBrandHeaderCard_Guardian() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxWidth()) {
-            OngilBrandHeaderCard(
-                onBellClick = {},
-                profileImageUrl = null,
-                userType = "GUARDIAN",
-                patients = listOf(
-                    PatientInfoUi("1", "김할머니", null),
-                    PatientInfoUi("2", "이할아버지", null)
-                )
-            )
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(name = "BrandHeaderCard_Patient", showBackground = true, widthDp = 360)
-@Composable
-private fun Preview_OngilBrandHeaderCard_Patient() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxWidth()) {
-            OngilBrandHeaderCard(
-                onBellClick = {},
-                profileImageUrl = null,
-                userType = "PATIENT"
-            )
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(name = "Header_BackTitleBell", showBackground = true, widthDp = 360)
-@Composable
-private fun Preview_OngilHeader_BackTitle() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxWidth()) {
-            OngilHeader(
-                type = OngilHeaderType.BackTitleBell,
-                title = "내 정보",
-                onBackClick = {},
-                onBellClick = {}
-            )
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(name = "Header_BrandCard", showBackground = true, widthDp = 360)
-@Composable
-private fun Preview_OngilHeader_BrandCard() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxWidth()) {
-            OngilHeader(
-                type = OngilHeaderType.BrandCard,
-                onBellClick = {},
-                profileImageUrl = null
-            )
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(name = "TopBar_ForRoute_UserDetail", showBackground = true, widthDp = 360)
-@Composable
-private fun Preview_OngilTopBarForRoute_UserDetail() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxWidth()) {
-            OngilTopBarForRoute(
-                route = "user_detail/1",
-                onBackClick = {},
-                onBellClick = {},
-                userType = "GUARDIAN"
-            )
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(name = "TopBar_ForRoute_PlaceDetail", showBackground = true, widthDp = 360)
-@Composable
-private fun Preview_OngilTopBarForRoute_PlaceDetail() {
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxWidth()) {
-            OngilTopBarForRoute(
-                route = "place_detail/10/스타벅스/서울시 강남구",
-                onBackClick = {},
-                onBellClick = {}
-            )
-        }
-    }
-}

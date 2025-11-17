@@ -20,6 +20,7 @@ fun NavGraphBuilder.userDetailGraph(
         val viewModel: UserDetailViewModel = hiltViewModel()
         UserDetailScreen(
             viewModel = viewModel,
+            userType = viewModel.uiState.value.userType,
             modifier = Modifier.padding(paddingValues),
             onNavigateBack = { navController.popBackStack() }
         )

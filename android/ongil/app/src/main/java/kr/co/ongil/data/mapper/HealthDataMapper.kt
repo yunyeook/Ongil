@@ -3,49 +3,39 @@ package kr.co.ongil.data.mapper
 import kr.co.ongil.data.model.health.HealthDataRecordRequest
 import kr.co.ongil.data.model.health.HealthDataUploadRequest
 import kr.co.ongil.data.model.health.LocalHealthData
-import kr.co.ongil.data.model.health.HeartRateData
-import kr.co.ongil.data.model.health.OxygenSaturationData
-import kr.co.ongil.data.model.health.SleepData
-import kr.co.ongil.data.model.health.StepsData
 import kr.co.ongil.domain.model.HealthData
 import kr.co.ongil.domain.model.HeartRate
 import kr.co.ongil.domain.model.OxygenSaturation
 import kr.co.ongil.domain.model.Sleep
 import kr.co.ongil.domain.model.Steps
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 /**
- * LocalHealthData (Health Connect 데이터) → HealthData (도메인 모델) 변환
+ * LocalHealthData → HealthData (도메인 모델) 변환
  */
 fun LocalHealthData.toDomain(): HealthData {
     return HealthData(
-        heartRate = this.heartRate?.let {
+        heartRateRecords = this.heartRateRecords.map { record ->
             HeartRate(
-                average = it.average,
-                max = it.max,
-                min = it.min
+                beatsPerMinute = record.beatsPerMinute,
+                measuredAt = record.measuredAt
             )
         },
-        oxygenSaturation = this.oxygenSaturation?.let {
+        oxygenSaturationRecords = this.oxygenSaturationRecords.map { record ->
             OxygenSaturation(
-                average = it.average,
-                max = it.max,
-                min = it.min
+                percentage = record.percentage,
+                measuredAt = record.measuredAt
             )
         },
-        sleep = this.sleep?.let {
+        sleepRecords = this.sleepRecords.map { record ->
             Sleep(
-                average = it.average,
-                max = it.max,
-                min = it.min
+                durationHours = record.durationHours,
+                measuredAt = record.measuredAt
             )
         },
-        steps = this.steps?.let {
+        stepsRecords = this.stepsRecords.map { record ->
             Steps(
-                average = it.average,
-                max = it.max,
-                min = it.min
+                count = record.count,
+                measuredAt = record.measuredAt
             )
         }
     )
@@ -55,65 +45,55 @@ fun LocalHealthData.toDomain(): HealthData {
  * HealthData (도메인 모델) → HealthDataUploadRequest 변환
  */
 fun HealthData.toUploadRequest(): HealthDataUploadRequest {
-    val now = LocalDateTime.now()
-        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
-
     val records = mutableListOf<HealthDataRecordRequest>()
 
-    // 심박수
-    heartRate?.let {
+    // 심박수 레코드들 변환
+    this.heartRateRecords.forEach { record ->
         records += HealthDataRecordRequest(
             type = "HEART_RATE",
-            average = it.average.toDouble(),
-            max = it.max.toDouble(),
-            min = it.min.toDouble(),
+            average = record.beatsPerMinute.toDouble(),
+            max = record.beatsPerMinute.toDouble(),
+            min = record.beatsPerMinute.toDouble(),
             unit = "bpm",
-            measuredAt = now
+            measuredAt = record.measuredAt
         )
     }
 
-    // 혈중 산소포화도
-    oxygenSaturation?.let {
+    // 혈중 산소포화도 레코드들 변환
+    this.oxygenSaturationRecords.forEach { record ->
         records += HealthDataRecordRequest(
             type = "OXYGEN_SATURATION",
-            average = it.average,
-            max = it.max,
-            min = it.min,
+            average = record.percentage,
+            max = record.percentage,
+            min = record.percentage,
             unit = "%",
-            measuredAt = now
+            measuredAt = record.measuredAt
         )
     }
 
-    // 수면 시간
-    sleep?.let {
+    // 수면 레코드들 변환
+    this.sleepRecords.forEach { record ->
         records += HealthDataRecordRequest(
             type = "SLEEP",
-            average = it.average,
-            max = it.max,
-            min = it.min,
+            average = record.durationHours,
+            max = record.durationHours,
+            min = record.durationHours,
             unit = "hours",
-            measuredAt = now
+            measuredAt = record.measuredAt
         )
     }
 
-    // 걸음 수
-    steps?.let {
+    // 걸음수 레코드들 변환
+    this.stepsRecords.forEach { record ->
         records += HealthDataRecordRequest(
             type = "STEP_COUNT",
-            average = it.average.toDouble(),
-            max = it.max.toDouble(),
-            min = it.min.toDouble(),
+            average = record.count.toDouble(),
+            max = record.count.toDouble(),
+            min = record.count.toDouble(),
             unit = "steps",
-            measuredAt = now
+            measuredAt = record.measuredAt
         )
     }
 
     return HealthDataUploadRequest(records = records)
-}
-
-/**
- * LocalHealthData → HealthDataUploadRequest 직접 변환 (편의 함수)
- */
-fun LocalHealthData.toUploadRequest(): HealthDataUploadRequest {
-    return this.toDomain().toUploadRequest()
 }

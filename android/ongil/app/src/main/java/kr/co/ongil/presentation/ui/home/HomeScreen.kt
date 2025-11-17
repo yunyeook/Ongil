@@ -39,6 +39,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
 import kr.co.ongil.presentation.ui.patientinfo.ActivityLog
+import kr.co.ongil.data.model.location.Coordinate
+import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import android.Manifest
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import kr.co.ongil.service.location.LocationTrackingService
 
 
 private object HomeColors {
@@ -69,8 +79,37 @@ data class HomeUiState(
 fun HomeScreen(
     uiState: HomeUiState,
     modifier: Modifier = Modifier,
-    onMapClick: () -> Unit = {}
+    onMapClick: () -> Unit = {},
+    userType: String = "",
+    selectedPatientId: String? = null,
+    patientLocations: Map<Long, Coordinate> = emptyMap(),
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null,
+    navigationProgress: Float = 0f,
+    showSafetyZones: Boolean = false
 ) {
+    val context = LocalContext.current
+    val inPreview = LocalInspectionMode.current
+
+    // 위치 권한 확인
+    val hasLocationPermission = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+    // 위치 추적 서비스 시작 (환자만, 권한이 있을 때)
+    LaunchedEffect(hasLocationPermission, userType) {
+        if (!inPreview && hasLocationPermission && userType == "PATIENT") {
+            android.util.Log.d("HomeScreen", "🚀 위치 추적 서비스 시작")
+            val intent = Intent(context, LocationTrackingService::class.java)
+                .setAction(LocationTrackingService.ACTION_START)
+            ContextCompat.startForegroundService(context, intent)
+        }
+    }
+
+    // 화면 종료 시 위치 추적 서비스는 중지하지 않음 (MapScreen에서도 사용하므로)
+    // MapScreen이 종료될 때 중지됨
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -84,8 +123,33 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp),
-            onClick = onMapClick
+            onClick = onMapClick,
+            userType = userType,
+            selectedPatientId = selectedPatientId,
+            patientLocations = patientLocations,
+            locationBus = locationBus,
+            navigationRoute = navigationRoute,
+            showSafetyZones = showSafetyZones
         )
+
+        Spacer(Modifier.height(12.dp))
+
+        // 길안내 진행 표시줄 (경로가 있을 때만, 지도 바로 아래)
+        if (navigationRoute != null) {
+            val timeText = if (navigationRoute.totalTimeMinutes > 0) {
+                "${navigationRoute.totalTimeMinutes}분"
+            } else {
+                "-"
+            }
+
+            NavigationProgressBar(
+                startLocation = navigationRoute.startLocationName,
+                endLocation = navigationRoute.endLocationName,
+                time = timeText,
+                progress = navigationProgress,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
 
@@ -148,24 +212,50 @@ fun HomeScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
-
     }
 }
 
 @Composable
 private fun MapSectionPreview(
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    userType: String = "",
+    selectedPatientId: String? = null,
+    patientLocations: Map<Long, Coordinate> = emptyMap(),
+    locationBus: kr.co.ongil.common.location.LocationStreamBus? = null,
+    navigationRoute: kr.co.ongil.common.location.NavigationRouteManager.NavigationRoute? = null,
+    showSafetyZones: Boolean = false
 ) {
+    // NavigationRouteManager.NavigationRoute를 Domain Route로 변환
+    val domainRoute = navigationRoute?.let { navRoute ->
+        kr.co.ongil.domain.model.Route(
+            totalTimeMinutes = 0,  // 홈 화면에서는 시간 정보 불필요
+            totalDistanceMeters = 0,  // 홈 화면에서는 거리 정보 불필요
+            path = navRoute.path.map { latLng ->
+                kr.co.ongil.domain.model.LatLng(
+                    latitude = latLng.latitude,
+                    longitude = latLng.longitude
+                )
+            }
+        )
+    }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
     ) {
-        // 실제 TMap 표시 (읽기 전용)
+        // 실제 TMap 표시 (환자는 본인 위치 추적, 보호자는 환자 위치 표시)
         kr.co.ongil.presentation.ui.map.TMapComposable(
             modifier = Modifier.fillMaxSize(),
-            enableTracking = false,
-            zoomLevel = 14
+            enableTracking = userType == "PATIENT",  // 환자만 위치 추적
+            locationBus = locationBus,
+            zoomLevel = 14,
+            userType = userType,
+            selectedPatientId = selectedPatientId,
+            patientLocations = patientLocations,
+            isHomeScreen = true,  // 홈 화면용 TMapView 사용
+            route = domainRoute,  // 길안내 경로 표시
+            showSafetyZones = showSafetyZones  // 안전범위 표시 상태
         )
 
         // 클릭 감지용 투명 레이어
@@ -370,10 +460,13 @@ private fun RiskGaugeCard(
     // 위험도 계산 (100점 만점에서 감점 방식)
     val riskScore = (100 - (totalIncidents * 5).coerceAtMost(100)).toInt()
 
-    val riskLevel = when {
-        riskScore >= 80 -> "양호" to Color(0xFF4CAF50)
-        riskScore >= 60 -> "주의" to Color(0xFFFFA726)
-        else -> "위험" to Color(0xFFEF5350)
+    // 🆕 5단계 건강검진 스타일 레벨 (치매 어르신 친화적)
+    val (riskLabel, riskColor, riskDescription) = when {
+        riskScore >= 85 -> Triple("우수", Color(0xFF4CAF50), "매우 안정적")
+        riskScore >= 70 -> Triple("양호", Color(0xFF66BB6A), "안정적")
+        riskScore >= 50 -> Triple("보통", Color(0xFFFFA726), "보통")
+        riskScore >= 30 -> Triple("주의", Color(0xFFFF7043), "관찰 필요")
+        else -> Triple("위험", Color(0xFFEF5350), "긴급 조치")
     }
 
     val previousTotal = (activityLog.routeLost - activityLog.routeLostDiff) +
@@ -407,11 +500,11 @@ private fun RiskGaugeCard(
             ) {
                 CircularGauge(
                     score = riskScore,
-                    color = riskLevel.second
+                    color = riskColor
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "${riskScore}점",
+                        text = riskLabel,
                         style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
                         color = HomeColors.TextPrimary
                     )
@@ -431,9 +524,9 @@ private fun RiskGaugeCard(
 
             // 하단 텍스트 (행동패턴 분석과 동일한 위치에 배치)
             Text(
-                text = "${riskLevel.first} (${riskScore}점 이상)",
-                style = MaterialTheme.typography.bodySmall,
-                color = riskLevel.second,
+                text = riskDescription,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                color = riskColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -698,13 +791,18 @@ private fun TimeBasedHeatmapCard(
             )
             Spacer(Modifier.height(12.dp))
 
-            // 간단한 시간대별 막대 (실제로는 더 상세한 데이터 필요)
-            val timeSlots = listOf(
-                "00-06시" to 0.2f,
-                "06-12시" to 0.1f,
-                "12-18시" to 0.3f,
-                "18-24시" to 0.4f
-            )
+            // 🆕 실제 백엔드 데이터 사용
+            val timeSlots = activityLog.timeSlotRisks.map {
+                it.timeRange to it.intensity
+            }.ifEmpty {
+                // 데이터 없을 때 기본값
+                listOf(
+                    "00-06시" to 0f,
+                    "06-12시" to 0f,
+                    "12-18시" to 0f,
+                    "18-24시" to 0f
+                )
+            }
 
             timeSlots.forEach { (time, intensity) ->
                 Row(
@@ -772,7 +870,7 @@ private fun CumulativeIncidentsCard(
             )
             Spacer(Modifier.height(16.dp))
 
-            // 간단한 라인 차트 (실제 구현에서는 더 상세한 데이터 필요)
+            // 🆕 실제 백엔드 데이터 사용
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -782,9 +880,11 @@ private fun CumulativeIncidentsCard(
                         val height = size.height
                         val points = 7
 
-                        // 가상 데이터 (1주일)
-                        val data = listOf(2f, 3f, 2f, 4f, 3f, 5f, activityLog.routeLost.toFloat())
-                        val maxVal = data.maxOrNull() ?: 1f
+                        // 🆕 실제 일별 데이터 (최근 7일)
+                        val data = activityLog.dailyRiskCounts
+                            .map { it.totalCount.toFloat() }
+                            .ifEmpty { listOf(0f, 0f, 0f, 0f, 0f, 0f, 0f) }
+                        val maxVal = data.maxOrNull()?.coerceAtLeast(1f) ?: 1f
 
                         val path = Path()
                         data.forEachIndexed { index, value ->
@@ -846,16 +946,21 @@ private fun CrossInsightCard(
 ) {
     val insights = mutableListOf<Pair<String, String>>()
 
+    // 개별 레코드에서 평균 계산
+    val avgSleep = healthData.sleepRecords.map { it.durationHours }.average().takeIf { !it.isNaN() } ?: 0.0
+    val avgHeartRate = healthData.heartRateRecords.map { it.beatsPerMinute.toDouble() }.average().takeIf { !it.isNaN() } ?: 0.0
+    val avgSteps = healthData.stepsRecords.map { it.count.toDouble() }.average().takeIf { !it.isNaN() } ?: 0.0
+
     // 교차 분석
-    if (activityLog.routeLost > 3 && (healthData.sleep?.average ?: 0.0) < 6.0) {
+    if (activityLog.routeLost > 3 && avgSleep < 6.0) {
         insights.add("활동량 감소" to "수면 부족으로 인한 피로 가능성")
     }
 
-    if (activityLog.safezoneEmer > 2 && (healthData.heartRate?.average ?: 0) > 80) {
+    if (activityLog.safezoneEmer > 2 && avgHeartRate > 80) {
         insights.add("이상탐지 증가" to "스트레스나 불안 가능성")
     }
 
-    if ((healthData.steps?.average ?: 0) < 2000) {
+    if (avgSteps < 2000) {
         insights.add("걸음 수 감소" to "활동량 저하 주의 필요")
     }
 

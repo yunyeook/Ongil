@@ -11,7 +11,7 @@ data class FavoriteUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val userName: String = "",
-    val userType: String = "" // PATIENT, GUARDIAN 등
+    val userType: String = "GUARDIAN" // 기본값: GUARDIAN (테마 깜빡임 방지)
 )
 
 // 탭 종류 (환자 목록 / 장소 목록)

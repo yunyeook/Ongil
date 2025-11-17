@@ -15,7 +15,11 @@ class NavigationRouteManager @Inject constructor() {
 
     data class NavigationRoute(
         val navigationId: String,
-        val path: List<LatLng>
+        val path: List<LatLng>,
+        val startLocationName: String = "출발지",
+        val endLocationName: String = "목적지",
+        val totalTimeMinutes: Int = 0,
+        val totalDistanceMeters: Int = 0
     )
 
     data class LatLng(
@@ -29,8 +33,22 @@ class NavigationRouteManager @Inject constructor() {
     /**
      * 경로 설정
      */
-    fun setRoute(navigationId: String, path: List<LatLng>) {
-        _currentRoute.value = NavigationRoute(navigationId, path)
+    fun setRoute(
+        navigationId: String,
+        path: List<LatLng>,
+        startLocationName: String = "출발지",
+        endLocationName: String = "목적지",
+        totalTimeMinutes: Int = 0,
+        totalDistanceMeters: Int = 0
+    ) {
+        _currentRoute.value = NavigationRoute(
+            navigationId,
+            path,
+            startLocationName,
+            endLocationName,
+            totalTimeMinutes,
+            totalDistanceMeters
+        )
     }
 
     /**

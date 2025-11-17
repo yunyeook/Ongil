@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,6 +33,9 @@ class MainActivity : ComponentActivity() {
     // FCM 수신 통화 데이터
     private var incomingCallData by mutableStateOf<IncomingCallData?>(null)
 
+    // 응급 전화 데이터
+    private var emergencyCallData by mutableStateOf<EmergencyCallData?>(null)
+
     // 알림 권한 요청 런처 (Android 13+)
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -50,14 +54,24 @@ class MainActivity : ComponentActivity() {
         // Android 13+ 알림 권한 요청
         requestNotificationPermission()
 
-        // FCM으로부터 전달된 Intent 처리
+        // FCM 수신 통화 및 응급 전화 Intent 처리
         handleIncomingCallIntent(intent)
+        handleEmergencyCallIntent(intent)
+
+        // ✅ 전화 올 때만 화면 설정
+        if (intent.getStringExtra("type") == "INCOMING_CALL") {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
 
         setContent {
             OngilTheme {
                  MainScreen(
                      incomingCallData = incomingCallData,
-                     onIncomingCallHandled = { incomingCallData = null }
+                     onIncomingCallHandled = { incomingCallData = null },
+                     emergencyCallData = emergencyCallData,
+                     onEmergencyCallHandled = { emergencyCallData = null }
                  )
 //                PlayGroundMJ()
                 // PlayGroundSH()
@@ -66,10 +80,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIncomingCallIntent(intent)
+        handleEmergencyCallIntent(intent)
     }
 
     private fun handleIncomingCallIntent(intent: Intent?) {
@@ -96,6 +112,26 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    private fun handleEmergencyCallIntent(intent: Intent?) {
+        if (intent?.getStringExtra("navigate_to") == "voip_call") {
+            val targetName = intent.getStringExtra("target_name") ?: ""
+            val targetPhone = intent.getStringExtra("target_phone") ?: ""
+            val isCaller = intent.getBooleanExtra("is_caller", true)
+            val userType = intent.getStringExtra("user_type") ?: "PATIENT"
+            val receiverId = intent.getStringExtra("receiver_id") ?: ""
+            val isEmergency = intent.getBooleanExtra("is_emergency", false)
+
+            emergencyCallData = EmergencyCallData(
+                targetName = targetName,
+                targetPhone = targetPhone,
+                isCaller = isCaller,
+                userType = userType,
+                receiverId = receiverId,
+                isEmergency = isEmergency
+            )
         }
     }
 
@@ -128,4 +164,16 @@ data class IncomingCallData(
     val callerName: String,
     val callerPhone: String,
     val userType: String
+)
+
+/**
+ * 응급 전화 데이터
+ */
+data class EmergencyCallData(
+    val targetName: String,
+    val targetPhone: String,
+    val isCaller: Boolean,
+    val userType: String,
+    val receiverId: String,
+    val isEmergency: Boolean
 )

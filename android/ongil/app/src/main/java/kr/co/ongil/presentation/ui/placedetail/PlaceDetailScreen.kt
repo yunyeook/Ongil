@@ -34,12 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.InputBox
+import kr.co.ongil.presentation.theme.OngilThemeProvider
+import kr.co.ongil.presentation.theme.ongilColors
 
 
 
 @Composable
 fun PlaceDetailScreen(
     viewModel: PlaceDetailViewModel,
+    userType: String,
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
     onSavedSuccess: () -> Unit,
@@ -53,6 +56,7 @@ fun PlaceDetailScreen(
         address = uiState.address,
         isDefault = uiState.isDefault,
         initialIsDefault = uiState.initialIsDefault,
+        userType = userType,
         onBackClick = onBackClick,
         onSetDefaultClick = { viewModel.setAsDefault() },
         onSaveClick = { name, addr, isDefault ->
@@ -79,6 +83,7 @@ fun PlaceDetailScreen(
     address: String,
     isDefault: Boolean,
     initialIsDefault: Boolean?,
+    userType: String,
     onBackClick: () -> Unit,
     onSetDefaultClick: () -> Unit,
     onSaveClick: (String, String, Boolean?) -> Unit,
@@ -111,6 +116,8 @@ fun PlaceDetailScreen(
         error?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
         successMessage?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
     }
+
+    val colors = ongilColors
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -162,7 +169,7 @@ fun PlaceDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                containerColor = if (isDefault) Color(0xFF87A293) else Color(0xFFD1D5DB)
+                containerColor = if (isDefault) colors.accent else Color(0xFFD1D5DB)
             )
 
             GreenButton(
@@ -182,12 +189,13 @@ fun PlaceDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                containerColor = if (hasChanges) Color(0xFF87A293) else Color(0xFFD1D5DB)
+                containerColor = if (hasChanges) colors.accent else Color(0xFFD1D5DB)
             )
 
             GreenButton(
                 text = "삭제하기",
                 onClick = onDeleteClick,
+                containerColor = colors.accent,
                 modifier = Modifier
                     .fillMaxWidth()
             )
@@ -223,6 +231,7 @@ private fun PlaceDetailScreenPreview() {
         address = "주소가어디게",
         isDefault = false,
         initialIsDefault = false,
+        userType = "GUARDIAN",
         onBackClick = {},
         onSetDefaultClick = {},
         onSaveClick = { _: String, _: String, _: Boolean? -> },
