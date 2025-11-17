@@ -68,4 +68,37 @@ public interface AbnormalRepository extends JpaRepository<Abnormal, Integer> {
         @Param("abnormalId") Integer abnormalId,
         @Param("patientId") Integer patientId
     );
+
+    // 🆕 시간대별 이상탐지 횟수 조회 (최근 7일)
+    @Query(value = """
+        SELECT
+            CASE
+                WHEN EXTRACT(HOUR FROM created_at) BETWEEN 0 AND 5 THEN '00-06'
+                WHEN EXTRACT(HOUR FROM created_at) BETWEEN 6 AND 11 THEN '06-12'
+                WHEN EXTRACT(HOUR FROM created_at) BETWEEN 12 AND 17 THEN '12-18'
+                ELSE '18-24'
+            END as timeSlot,
+            COUNT(*) as count
+        FROM abnormal_logs
+        WHERE patient_id = :patientId
+        AND created_at >= :startDate
+        GROUP BY timeSlot
+        """, nativeQuery = true)
+    List<Object[]> findCountByTimeSlots(@Param("patientId") Integer patientId,
+                                        @Param("startDate") LocalDateTime startDate);
+
+    // 🆕 일별 이상탐지 횟수 조회 (최근 7일)
+    @Query(value = """
+        SELECT
+            DATE(created_at) as date,
+            COUNT(*) as count
+        FROM abnormal_logs
+        WHERE patient_id = :patientId
+        AND DATE(created_at) BETWEEN :startDate AND :endDate
+        GROUP BY DATE(created_at)
+        ORDER BY date
+        """, nativeQuery = true)
+    List<Object[]> findCountByDay(@Param("patientId") Integer patientId,
+                                  @Param("startDate") LocalDate startDate,
+                                  @Param("endDate") LocalDate endDate);
 }
