@@ -428,7 +428,68 @@ private fun HealthInfoTab(
         contentPadding = PaddingValues(bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { SectionTitle("건강 정보") }
+        // 섹션 제목과 버튼
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SectionTitle("건강 정보")
+
+                // 건강정보 불러오기 버튼
+                if (uiState.healthPermissionGranted) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                viewModel.fetchAndSyncHealthData()
+                            }
+                        },
+                        enabled = !uiState.isLoadingHealthData,
+                        colors = ButtonDefaults.buttonColors(containerColor = OnGilColors.Primary),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        if (uiState.isLoadingHealthData) {
+                            Text("불러오는 중...", style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Text("건강정보 불러오기", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 동기화 메시지 표시
+        if (uiState.healthSyncMessage != null) {
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (uiState.healthSyncMessage.contains("성공"))
+                        Color(0xFFE8F5E9) else Color(0xFFFFF3E0)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.healthSyncMessage.contains("성공"))
+                                Icons.Filled.CheckCircle else Icons.Filled.Warning,
+                            contentDescription = null,
+                            tint = if (uiState.healthSyncMessage.contains("성공"))
+                                Color(0xFF4CAF50) else Color(0xFFFFA726),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = uiState.healthSyncMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = OnGilColors.Title
+                        )
+                    }
+                }
+            }
+        }
 
         val healthData = uiState.healthData
 

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -461,6 +462,101 @@ class PatientInfoViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "deleteHealthData() - 예외 발생", e)
+            }
+        }
+    }
+
+    /**
+     * 건강정보 불러오기 (삼성헬스 조회 → 백엔드 POST → 백엔드 GET)
+     * 건강정보 탭의 "건강정보 불러오기" 버튼에서 호출
+     */
+    fun fetchAndSyncHealthData() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "fetchAndSyncHealthData() - 건강정보 불러오기 시작")
+                _uiState.value = _uiState.value.copy(
+                    isLoadingHealthData = true,
+                    healthSyncMessage = null
+                )
+
+                val pid = currentPatientId
+                if (pid == null) {
+                    Log.w(TAG, "fetchAndSyncHealthData() - 환자 ID가 없습니다")
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingHealthData = false,
+                        healthSyncMessage = "환자 ID를 찾을 수 없습니다"
+                    )
+                    return@launch
+                }
+
+                // 1단계: 삼성헬스에서 건강 데이터 조회
+                Log.d(TAG, "fetchAndSyncHealthData() - 1단계: 삼성헬스 데이터 조회")
+
+                val result = getHealthDataUseCase().    first()
+                val localHealthData = result.getOrNull()
+
+                if (localHealthData == null) {
+                    Log.e(TAG, "fetchAndSyncHealthData() - 삼성헬스 데이터를 가져올 수 없습니다")
+                    val error = result.exceptionOrNull()
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingHealthData = false,
+                        healthSyncMessage = "삼성헬스 데이터를 가져올 수 없습니다${if (error != null) ": ${error.message}" else ""}"
+                    )
+                    return@launch
+                }
+
+                Log.d(TAG, "fetchAndSyncHealthData() - 삼성헬스 데이터 조회 성공: $localHealthData")
+
+                // 데이터가 비어있는지 확인
+                val data = localHealthData // 스마트 캐스팅을 위한 변수
+                val hasData = data.heartRate != null ||
+                              data.oxygenSaturation != null ||
+                              data.sleep != null ||
+                              data.steps != null
+
+                if (!hasData) {
+                    Log.w(TAG, "fetchAndSyncHealthData() - 삼성헬스에 데이터가 없습니다")
+                    _uiState.value = _uiState.value.copy(
+                        healthData = data,
+                        isLoadingHealthData = false,
+                        healthSyncMessage = "삼성헬스에 건강 데이터가 없습니다.\nSamsung Health 앱에서 먼저 데이터를 측정해주세요."
+                    )
+                    return@launch
+                }
+
+                // 2단계: 백엔드에 POST
+                Log.d(TAG, "fetchAndSyncHealthData() - 2단계: 백엔드에 POST")
+                val domainData = data.toDomain()
+                uploadHealthDataUseCase(pid, domainData)
+                    .onSuccess { msg: String ->
+                        Log.d(TAG, "fetchAndSyncHealthData() - 백엔드 업로드 성공: $msg")
+
+                        // 3단계: 로컬 데이터를 UI에 업데이트
+                        _uiState.value = _uiState.value.copy(
+                            healthData = data,
+                            isLoadingHealthData = false,
+                            healthSyncMessage = "건강정보를 성공적으로 불러왔습니다"
+                        )
+
+                        // 성공 메시지 3초 후 자동 제거
+                        launch {
+                            kotlinx.coroutines.delay(3000)
+                            _uiState.value = _uiState.value.copy(healthSyncMessage = null)
+                        }
+                    }
+                    .onFailure { exception ->
+                        Log.e(TAG, "fetchAndSyncHealthData() - 백엔드 업로드 실패", exception)
+                        _uiState.value = _uiState.value.copy(
+                            isLoadingHealthData = false,
+                            healthSyncMessage = "서버 업로드 실패: ${exception.message}"
+                        )
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "fetchAndSyncHealthData() - 예외 발생", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingHealthData = false,
+                    healthSyncMessage = "오류 발생: ${e.message}"
+                )
             }
         }
     }
