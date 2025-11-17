@@ -48,6 +48,9 @@ import kr.co.ongil.presentation.ui.common.map.SearchBar
 import kr.co.ongil.presentation.ui.common.map.SearchListItem
 import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettingRoutes
 import kr.co.ongil.service.location.LocationTrackingService
+import kr.co.ongil.presentation.theme.ongilColors
+import androidx.compose.foundation.border
+
 
 /**
  * 지도 화면
@@ -64,7 +67,8 @@ fun MapScreen(
     authViewModel: AuthStateViewModel,
     searchPlaceholder: String = "장소를 검색해주세요",
     requestSearchFocus: Boolean = false,
-    onShowBarsChange: (Boolean) -> Unit = {}  // true: 표시, false: 숨김
+    onShowBarsChange: (Boolean) -> Unit = {},  // true: 표시, false: 숨김
+    onNavigateToCall: (targetName: String, targetPhone: String, targetId: Long, userType: String) -> Unit = { _, _, _, _ -> }
 ) {
     // ViewModel 상태
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -527,10 +531,17 @@ fun MapScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(77.dp * visibleItemCount)  // 동적 높이
-                                .background(
-                                    Color.White,
+                                .border(
+                                        width = 1.dp,
+                                        color = Color(0xFFE5E7EB),              // 또는 ongilColors.borderLight
+                                        shape = RoundedCornerShape(23.dp)        // radius 값
+                                        )
+                                        .clip(RoundedCornerShape(23.dp))
+                               .background(
+                                   Color.White,
                                     RoundedCornerShape(8.dp)
-                                ),
+                                )
+                                ,
                             userScrollEnabled = searchResults.size > maxVisibleItems
                         ) {
                             items(searchResults) { place ->
@@ -567,7 +578,7 @@ fun MapScreen(
                             onClick = {
                                 navController.navigate(SafeZoneSettingRoutes.SETTING)
                             },
-                            containerColor = Color(0xFF8CA898),
+                            containerColor = ongilColors.accent,
                             contentColor = Color.White
                         )
                     }
@@ -584,8 +595,8 @@ fun MapScreen(
                     // 전화 걸기 버튼
                     CircleFloatingButton(
                         icon = Icons.Default.Phone,
-                        onClick = { viewModel.onClickCall() },
-                        containerColor = Color(0xFF5C7165),
+                        onClick = { viewModel.onClickCall(onNavigateToCall) },
+                        containerColor = ongilColors.accent,
                         contentColor = Color.White
                     )
 

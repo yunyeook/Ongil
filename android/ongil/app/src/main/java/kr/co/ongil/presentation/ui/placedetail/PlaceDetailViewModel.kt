@@ -26,6 +26,7 @@ class PlaceDetailViewModel @Inject constructor(
     private val initialAddress: String = savedStateHandle["address"] ?: ""
     private val initialIsDefault: Boolean = savedStateHandle["isDefault"] ?: false
     private val initialPatientId: Long = savedStateHandle["patientId"] ?: 0L
+    private val initialUserType: String = savedStateHandle["userType"] ?: "GUARDIAN"
 
     private val _uiState = MutableStateFlow(
         PlaceDetailUiState(
@@ -33,7 +34,8 @@ class PlaceDetailViewModel @Inject constructor(
             placeName = initialPlaceName,
             address = initialAddress,
             isDefault = initialIsDefault,
-            patientId = initialPatientId
+            patientId = initialPatientId,
+            userType = initialUserType
         )
     )
     val uiState: StateFlow<PlaceDetailUiState> = _uiState.asStateFlow()

@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.delay
 import kr.co.ongil.presentation.IncomingCallData
 import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
+import kr.co.ongil.presentation.theme.OngilThemeProvider
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
@@ -33,6 +34,8 @@ import kr.co.ongil.presentation.ui.common.selection.PatientInfoUi
 fun MainScreen(
     incomingCallData: IncomingCallData? = null,
     onIncomingCallHandled: () -> Unit = {},
+    emergencyCallData: kr.co.ongil.presentation.EmergencyCallData? = null,
+    onEmergencyCallHandled: () -> Unit = {},
     authViewModel: AuthStateViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
@@ -90,6 +93,29 @@ fun MainScreen(
         onIncomingCallHandled()
     }
 
+    // ✅ 응급 전화: 경로 이탈 5분 경과 시 기본 보호자에게 자동 전화
+    LaunchedEffect(emergencyCallData?.targetName, emergencyCallData?.targetPhone) {
+        val data = emergencyCallData ?: return@LaunchedEffect
+
+        val route = Routes.VoipCall.createRoute(
+            targetName = data.targetName,
+            targetPhone = data.targetPhone,
+            isCaller = data.isCaller,
+            userType = data.userType,
+            callId = 0L, // 응급 전화는 callId 없음
+            receiverId = data.receiverId.toLongOrNull() ?: 0L
+        )
+
+        android.util.Log.d("MainScreen", "🚨 응급 전화 네비게이션: $route")
+
+        navController.navigate(route) {
+            launchSingleTop = true
+        }
+
+        delay(100)
+        onEmergencyCallHandled()
+    }
+
     // 인증 관련 화면들 (Top/Bottom 숨김 대상)
     val authRoutes = setOf(
         Routes.Login.route,
@@ -126,10 +152,11 @@ fun MainScreen(
     // SafeZoneSetting 라우트에서 OngilBrandHeaderCard 사용
     val safeZoneSettingRoutes = listOf("safezone_setting")
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = Color.Transparent,
-        topBar = {
+    OngilThemeProvider(userType = userType) {
+        Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            containerColor = Color.Transparent,
+            topBar = {
             Box(modifier = Modifier.statusBarsPadding()) {
                 if (showTopBar) {
                     // BottomNav 탭 화면 또는 SafeZoneSetting 화면에서는 OngilBrandHeaderCard 사용
@@ -211,7 +238,8 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    userType = userType
                 )
             }
         }
@@ -236,5 +264,6 @@ fun MainScreen(
                 showBarsFromMap = showBars
             }
         )
+        }
     }
 }

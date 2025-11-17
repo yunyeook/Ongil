@@ -439,11 +439,71 @@ class MapViewModel @Inject constructor(
 
     /**
      * 전화 걸기 버튼 클릭
-     * TODO: 전화 기능 구현 필요
      */
-    fun onClickCall() {
-        Log.d("MapViewModel", "전화 걸기 버튼 클릭됨 (기능 미구현)")
-        // TODO: 전화 걸기 기능 구현
+    fun onClickCall(onNavigateToCall: (targetName: String, targetPhone: String, targetId: Long, userType: String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val userType = userDataStoreManager.getUserType().first() ?: "PATIENT"
+                Log.d("MapViewModel", "전화 걸기 버튼 클릭 - 사용자 타입: $userType")
+
+                if (userType == "PATIENT") {
+                    // 환자: 기본 보호자에게 전화
+                    val relationshipsResult = favoriteRepository.getMyRelationships()
+                    val relationships = relationshipsResult.getOrNull()
+                    if (relationships.isNullOrEmpty()) {
+                        Log.e("MapViewModel", "관계 정보를 가져올 수 없습니다")
+                        return@launch
+                    }
+
+                    // isDefault가 true인 기본 보호자 찾기
+                    val defaultGuardian = relationships.find { it.isDefault }
+                        ?: relationships.firstOrNull()
+
+                    if (defaultGuardian == null) {
+                        Log.e("MapViewModel", "기본 보호자를 찾을 수 없습니다")
+                        return@launch
+                    }
+
+                    Log.d("MapViewModel", "환자 → 기본 보호자에게 전화: ${defaultGuardian.name}")
+                    onNavigateToCall(
+                        defaultGuardian.name,
+                        defaultGuardian.phoneNumber,
+                        defaultGuardian.id,
+                        userType
+                    )
+                } else {
+                    // 보호자: 선택된 환자에게 전화
+                    val selectedPatientId = userDataStoreManager.getSelectedPatientId().first()
+                    if (selectedPatientId == null) {
+                        Log.e("MapViewModel", "선택된 환자가 없습니다")
+                        return@launch
+                    }
+
+                    val relationshipsResult = favoriteRepository.getMyRelationships()
+                    val relationships = relationshipsResult.getOrNull()
+                    if (relationships.isNullOrEmpty()) {
+                        Log.e("MapViewModel", "환자 정보를 가져올 수 없습니다")
+                        return@launch
+                    }
+
+                    val selectedPatient = relationships.find { it.id.toString() == selectedPatientId }
+                    if (selectedPatient == null) {
+                        Log.e("MapViewModel", "선택된 환자를 찾을 수 없습니다")
+                        return@launch
+                    }
+
+                    Log.d("MapViewModel", "보호자 → 선택된 환자에게 전화: ${selectedPatient.name}")
+                    onNavigateToCall(
+                        selectedPatient.name,
+                        selectedPatient.phoneNumber,
+                        selectedPatient.id,
+                        userType
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "전화 걸기 실패", e)
+            }
+        }
     }
 
     /**

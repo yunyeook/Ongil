@@ -23,8 +23,9 @@ class UserDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val relationshipId: Long = savedStateHandle["relationshipId"] ?: 0L
+    private val initialUserType: String = savedStateHandle["userType"] ?: "GUARDIAN"
 
-    private val _uiState = MutableStateFlow(UserDetailUiState())
+    private val _uiState = MutableStateFlow(UserDetailUiState(userType = initialUserType))
     val uiState: StateFlow<UserDetailUiState> = _uiState.asStateFlow()
 
     init {

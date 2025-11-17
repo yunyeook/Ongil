@@ -21,6 +21,7 @@ fun NavGraphBuilder.placeDetailGraph(
         val viewModel: PlaceDetailViewModel = hiltViewModel()
         PlaceDetailScreen(
             viewModel = viewModel,
+            userType = viewModel.uiState.value.userType,
             modifier = Modifier.padding(paddingValues),
             onBackClick = { navController.popBackStack() },
             onSavedSuccess = {
