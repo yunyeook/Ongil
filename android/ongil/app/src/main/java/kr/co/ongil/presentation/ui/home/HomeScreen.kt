@@ -936,16 +936,21 @@ private fun CrossInsightCard(
 ) {
     val insights = mutableListOf<Pair<String, String>>()
 
+    // 개별 레코드에서 평균 계산
+    val avgSleep = healthData.sleepRecords.map { it.durationHours }.average().takeIf { !it.isNaN() } ?: 0.0
+    val avgHeartRate = healthData.heartRateRecords.map { it.beatsPerMinute.toDouble() }.average().takeIf { !it.isNaN() } ?: 0.0
+    val avgSteps = healthData.stepsRecords.map { it.count.toDouble() }.average().takeIf { !it.isNaN() } ?: 0.0
+
     // 교차 분석
-    if (activityLog.routeLost > 3 && (healthData.sleep?.average ?: 0.0) < 6.0) {
+    if (activityLog.routeLost > 3 && avgSleep < 6.0) {
         insights.add("활동량 감소" to "수면 부족으로 인한 피로 가능성")
     }
 
-    if (activityLog.safezoneEmer > 2 && (healthData.heartRate?.average ?: 0) > 80) {
+    if (activityLog.safezoneEmer > 2 && avgHeartRate > 80) {
         insights.add("이상탐지 증가" to "스트레스나 불안 가능성")
     }
 
-    if ((healthData.steps?.average ?: 0) < 2000) {
+    if (avgSteps < 2000) {
         insights.add("걸음 수 감소" to "활동량 저하 주의 필요")
     }
 

@@ -220,7 +220,7 @@ class PatientInfoViewModel @Inject constructor(
         checkHealthPermissions()
     }
 
-    // 건강 데이터 로드 + 서버 동기화
+    // 건강 데이터 로드 + 자동 서버 동기화 (중복 방지)
     private fun loadHealthData() {
         viewModelScope.launch {
             try {
@@ -228,28 +228,18 @@ class PatientInfoViewModel @Inject constructor(
 
                 getHealthDataUseCase().collectLatest { result ->
                     result.onSuccess { localHealthData ->
-                        Log.d(TAG, "loadHealthData() - 건강 데이터 조회 성공: $localHealthData")
+                        Log.d(TAG, "loadHealthData() - 건강 데이터 조회 성공")
                         _uiState.value = _uiState.value.copy(healthData = localHealthData)
 
-                        // 🔁 서버에 동기화
+                        // 🔁 자동 서버 동기화 (중복 방지)
                         val pid = currentPatientId
-                        if (pid != null && localHealthData != null) {
+                        if (pid != null) {
                             launch {
-                                // LocalHealthData → 도메인 모델로 변환
-                                val domainData = localHealthData.toDomain()
-
-                                uploadHealthDataUseCase(pid, domainData)
-                                    .onSuccess { message ->
-                                        Log.d(TAG, "HealthData 서버 업로드 성공: $message")
-                                    }
-                                    .onFailure { e ->
-                                        Log.e(TAG, "HealthData 서버 업로드 실패", e)
-                                    }
+                                syncHealthDataWithDuplicateCheck(pid, localHealthData)
                             }
                         }
                     }.onFailure { exception ->
                         Log.e(TAG, "loadHealthData() - 건강 데이터 조회 실패", exception)
-                        // 건강 데이터 조회 실패는 치명적이지 않으므로 에러 표시하지 않음
                         _uiState.value = _uiState.value.copy(healthData = null)
                     }
                 }
@@ -257,6 +247,140 @@ class PatientInfoViewModel @Inject constructor(
                 Log.e(TAG, "loadHealthData() - 예외 발생", e)
                 _uiState.value = _uiState.value.copy(healthData = null)
             }
+        }
+    }
+
+    /**
+     * 수동 건강 데이터 동기화 (버튼 클릭 시 호출)
+     */
+    fun syncHealthDataManually() {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(
+                    isLoadingHealthData = true,
+                    healthSyncMessage = null
+                )
+
+                // 1. Health Connect에서 최신 데이터 가져오기
+                val result = getHealthDataUseCase().first()
+                result.onSuccess { localHealthData ->
+                    Log.d(TAG, "syncHealthDataManually() - 로컬 데이터 조회 성공")
+
+                    // 2. 서버에 동기화 (중복 체크 포함)
+                    val pid = currentPatientId
+                    if (pid != null) {
+                        syncHealthDataWithDuplicateCheck(pid, localHealthData)
+                        _uiState.value = _uiState.value.copy(
+                            healthData = localHealthData,
+                            isLoadingHealthData = false,
+                            healthSyncMessage = "건강 데이터를 동기화했습니다"
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isLoadingHealthData = false,
+                            healthSyncMessage = "환자 ID를 찾을 수 없습니다"
+                        )
+                    }
+                }.onFailure { e ->
+                    Log.e(TAG, "syncHealthDataManually() - 로컬 데이터 조회 실패", e)
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingHealthData = false,
+                        healthSyncMessage = "건강 데이터 조회 실패: ${e.message}"
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "syncHealthDataManually() - 예외 발생", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingHealthData = false,
+                    healthSyncMessage = "동기화 실패: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * 중복 체크를 통한 건강 데이터 동기화
+     * 서버에 이미 존재하는 데이터는 제외하고 새로운 데이터만 업로드
+     */
+    private suspend fun syncHealthDataWithDuplicateCheck(
+        patientId: Long,
+        localHealthData: kr.co.ongil.data.model.health.LocalHealthData
+    ) {
+        try {
+            // 1. 서버에서 기존 데이터 조회 (최근 30일)
+            Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 서버 데이터 조회 시작")
+
+            val serverDataResult = getHealthDataFromServerUseCase(
+                patientId = patientId,
+                type = null, // 전체 타입 조회
+                from = null, // 기본값: 1일 전
+                to = null,   // 기본값: 현재
+                sort = "measuredAt,desc"
+            )
+
+            serverDataResult.onSuccess { serverResponse ->
+                Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 서버 데이터 ${serverResponse.data.records.size}개 조회 완료")
+
+                // 2. 서버에 있는 measuredAt 시간 목록 추출
+                val serverMeasuredTimes = serverResponse.data.records.map { it.measuredAt }.toSet()
+                Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 서버에 저장된 시간: $serverMeasuredTimes")
+
+                // 3. 로컬 데이터를 도메인 모델로 변환
+                val domainData = localHealthData.toDomain()
+
+                // 4. 중복 제거: 서버에 없는 데이터만 필터링
+                val newHeartRateRecords = domainData.heartRateRecords.filter {
+                    it.measuredAt !in serverMeasuredTimes
+                }
+                val newOxygenRecords = domainData.oxygenSaturationRecords.filter {
+                    it.measuredAt !in serverMeasuredTimes
+                }
+                val newSleepRecords = domainData.sleepRecords.filter {
+                    it.measuredAt !in serverMeasuredTimes
+                }
+                val newStepsRecords = domainData.stepsRecords.filter {
+                    it.measuredAt !in serverMeasuredTimes
+                }
+
+                val newData = kr.co.ongil.domain.model.HealthData(
+                    heartRateRecords = newHeartRateRecords,
+                    oxygenSaturationRecords = newOxygenRecords,
+                    sleepRecords = newSleepRecords,
+                    stepsRecords = newStepsRecords
+                )
+
+                val totalNewRecords = newHeartRateRecords.size + newOxygenRecords.size +
+                        newSleepRecords.size + newStepsRecords.size
+
+                Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 새로운 데이터: 심박수=${newHeartRateRecords.size}, 산소=${newOxygenRecords.size}, 수면=${newSleepRecords.size}, 걸음수=${newStepsRecords.size}")
+
+                // 5. 새로운 데이터가 있으면 업로드
+                if (totalNewRecords > 0) {
+                    uploadHealthDataUseCase(patientId, newData)
+                        .onSuccess { message ->
+                            Log.d(TAG, "HealthData 서버 업로드 성공: $message (${totalNewRecords}개 레코드)")
+                        }
+                        .onFailure { e ->
+                            Log.e(TAG, "HealthData 서버 업로드 실패", e)
+                        }
+                } else {
+                    Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 업로드할 새로운 데이터가 없습니다")
+                }
+            }.onFailure { e ->
+                Log.w(TAG, "syncHealthDataWithDuplicateCheck() - 서버 데이터 조회 실패, 전체 데이터 업로드 시도", e)
+
+                // 서버 조회 실패 시 전체 데이터 업로드 (중복 가능성 있음)
+                val domainData = localHealthData.toDomain()
+                uploadHealthDataUseCase(patientId, domainData)
+                    .onSuccess { message ->
+                        Log.d(TAG, "HealthData 서버 업로드 성공 (전체): $message")
+                    }
+                    .onFailure { uploadError ->
+                        Log.e(TAG, "HealthData 서버 업로드 실패", uploadError)
+                    }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "syncHealthDataWithDuplicateCheck() - 예외 발생", e)
         }
     }
 
@@ -332,27 +456,60 @@ class PatientInfoViewModel @Inject constructor(
                 return@launch
             }
 
-            val localHealthData = _uiState.value.healthData
-            if (localHealthData == null) {
-                Log.w(TAG, "syncHealthDataToServer() - 건강 데이터가 없습니다")
-                return@launch
-            }
-
             try {
-                // LocalHealthData → 도메인 모델로 변환
-                val domainData = localHealthData.toDomain()
+                Log.d(TAG, "syncHealthDataToServer() - Health Connect에서 데이터 조회 시작")
 
-                uploadHealthDataUseCase(pid, domainData)
-                    .onSuccess { message ->
-                        Log.d(TAG, "수동 동기화 성공: $message")
-                        // TODO: UI 업데이트 (Toast 등)
+                // Health Connect에서 최신 데이터 조회
+                getHealthDataUseCase().collect { result ->
+                    result.onSuccess { localHealthData ->
+                        Log.d(TAG, "syncHealthDataToServer() - 조회 성공: 심박수=${localHealthData.heartRateRecords.size}개")
+
+                        // 데이터가 비어있는지 확인
+                        val hasData = localHealthData.heartRateRecords.isNotEmpty() ||
+                                     localHealthData.oxygenSaturationRecords.isNotEmpty() ||
+                                     localHealthData.sleepRecords.isNotEmpty() ||
+                                     localHealthData.stepsRecords.isNotEmpty()
+
+                        if (!hasData) {
+                            Log.w(TAG, "syncHealthDataToServer() - 건강 데이터가 없습니다")
+                            _uiState.value = _uiState.value.copy(
+                                error = "Samsung Health에 건강 데이터가 없습니다."
+                            )
+                            return@collect
+                        }
+
+                        // UI 업데이트
+                        _uiState.value = _uiState.value.copy(healthData = localHealthData)
+
+                        // LocalHealthData → 도메인 모델로 변환
+                        val domainData = localHealthData.toDomain()
+
+                        // 서버에 업로드
+                        uploadHealthDataUseCase(pid, domainData)
+                            .onSuccess { message ->
+                                Log.d(TAG, "수동 동기화 성공: $message")
+                                _uiState.value = _uiState.value.copy(
+                                    error = null
+                                )
+                            }
+                            .onFailure { e ->
+                                Log.e(TAG, "수동 동기화 실패", e)
+                                _uiState.value = _uiState.value.copy(
+                                    error = "건강 데이터 동기화에 실패했습니다."
+                                )
+                            }
+                    }.onFailure { exception ->
+                        Log.e(TAG, "syncHealthDataToServer() - Health Connect 조회 실패", exception)
+                        _uiState.value = _uiState.value.copy(
+                            error = "건강 데이터 조회에 실패했습니다."
+                        )
                     }
-                    .onFailure { e ->
-                        Log.e(TAG, "수동 동기화 실패", e)
-                        // TODO: 에러 처리
-                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "syncHealthDataToServer() - 예외 발생", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "오류가 발생했습니다: ${e.message}"
+                )
             }
         }
     }
@@ -462,101 +619,6 @@ class PatientInfoViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "deleteHealthData() - 예외 발생", e)
-            }
-        }
-    }
-
-    /**
-     * 건강정보 불러오기 (삼성헬스 조회 → 백엔드 POST → 백엔드 GET)
-     * 건강정보 탭의 "건강정보 불러오기" 버튼에서 호출
-     */
-    fun fetchAndSyncHealthData() {
-        viewModelScope.launch {
-            try {
-                Log.d(TAG, "fetchAndSyncHealthData() - 건강정보 불러오기 시작")
-                _uiState.value = _uiState.value.copy(
-                    isLoadingHealthData = true,
-                    healthSyncMessage = null
-                )
-
-                val pid = currentPatientId
-                if (pid == null) {
-                    Log.w(TAG, "fetchAndSyncHealthData() - 환자 ID가 없습니다")
-                    _uiState.value = _uiState.value.copy(
-                        isLoadingHealthData = false,
-                        healthSyncMessage = "환자 ID를 찾을 수 없습니다"
-                    )
-                    return@launch
-                }
-
-                // 1단계: 삼성헬스에서 건강 데이터 조회
-                Log.d(TAG, "fetchAndSyncHealthData() - 1단계: 삼성헬스 데이터 조회")
-
-                val result = getHealthDataUseCase().    first()
-                val localHealthData = result.getOrNull()
-
-                if (localHealthData == null) {
-                    Log.e(TAG, "fetchAndSyncHealthData() - 삼성헬스 데이터를 가져올 수 없습니다")
-                    val error = result.exceptionOrNull()
-                    _uiState.value = _uiState.value.copy(
-                        isLoadingHealthData = false,
-                        healthSyncMessage = "삼성헬스 데이터를 가져올 수 없습니다${if (error != null) ": ${error.message}" else ""}"
-                    )
-                    return@launch
-                }
-
-                Log.d(TAG, "fetchAndSyncHealthData() - 삼성헬스 데이터 조회 성공: $localHealthData")
-
-                // 데이터가 비어있는지 확인
-                val data = localHealthData // 스마트 캐스팅을 위한 변수
-                val hasData = data.heartRate != null ||
-                              data.oxygenSaturation != null ||
-                              data.sleep != null ||
-                              data.steps != null
-
-                if (!hasData) {
-                    Log.w(TAG, "fetchAndSyncHealthData() - 삼성헬스에 데이터가 없습니다")
-                    _uiState.value = _uiState.value.copy(
-                        healthData = data,
-                        isLoadingHealthData = false,
-                        healthSyncMessage = "삼성헬스에 건강 데이터가 없습니다.\nSamsung Health 앱에서 먼저 데이터를 측정해주세요."
-                    )
-                    return@launch
-                }
-
-                // 2단계: 백엔드에 POST
-                Log.d(TAG, "fetchAndSyncHealthData() - 2단계: 백엔드에 POST")
-                val domainData = data.toDomain()
-                uploadHealthDataUseCase(pid, domainData)
-                    .onSuccess { msg: String ->
-                        Log.d(TAG, "fetchAndSyncHealthData() - 백엔드 업로드 성공: $msg")
-
-                        // 3단계: 로컬 데이터를 UI에 업데이트
-                        _uiState.value = _uiState.value.copy(
-                            healthData = data,
-                            isLoadingHealthData = false,
-                            healthSyncMessage = "건강정보를 성공적으로 불러왔습니다"
-                        )
-
-                        // 성공 메시지 3초 후 자동 제거
-                        launch {
-                            kotlinx.coroutines.delay(3000)
-                            _uiState.value = _uiState.value.copy(healthSyncMessage = null)
-                        }
-                    }
-                    .onFailure { exception ->
-                        Log.e(TAG, "fetchAndSyncHealthData() - 백엔드 업로드 실패", exception)
-                        _uiState.value = _uiState.value.copy(
-                            isLoadingHealthData = false,
-                            healthSyncMessage = "서버 업로드 실패: ${exception.message}"
-                        )
-                    }
-            } catch (e: Exception) {
-                Log.e(TAG, "fetchAndSyncHealthData() - 예외 발생", e)
-                _uiState.value = _uiState.value.copy(
-                    isLoadingHealthData = false,
-                    healthSyncMessage = "오류 발생: ${e.message}"
-                )
             }
         }
     }

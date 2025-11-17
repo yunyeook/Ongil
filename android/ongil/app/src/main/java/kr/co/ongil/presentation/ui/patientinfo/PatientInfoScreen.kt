@@ -441,9 +441,7 @@ private fun HealthInfoTab(
                 if (uiState.healthPermissionGranted) {
                     Button(
                         onClick = {
-                            scope.launch {
-                                viewModel.fetchAndSyncHealthData()
-                            }
+                            viewModel.syncHealthDataToServer()
                         },
                         enabled = !uiState.isLoadingHealthData,
                         colors = ButtonDefaults.buttonColors(containerColor = OnGilColors.Primary),
@@ -497,12 +495,13 @@ private fun HealthInfoTab(
         if (uiState.healthPermissionGranted) {
             // 심박수
             item {
-                val heartRate = healthData?.heartRate
-                val stats = if (heartRate != null) {
+                val heartRateRecords = healthData?.heartRateRecords ?: emptyList()
+                val stats = if (heartRateRecords.isNotEmpty()) {
+                    val values = heartRateRecords.map { it.beatsPerMinute }
                     listOf(
-                        "평균" to StatValue.Text("${heartRate.average} BPM"),
-                        "최대" to StatValue.Text("${heartRate.max} BPM"),
-                        "최소" to StatValue.Text("${heartRate.min} BPM")
+                        "평균" to StatValue.Text("${values.average().toLong()} BPM"),
+                        "최대" to StatValue.Text("${values.maxOrNull() ?: 0} BPM"),
+                        "최소" to StatValue.Text("${values.minOrNull() ?: 0} BPM")
                     )
                 } else {
                     listOf("" to StatValue.Text("Samsung Health에서\n심박수를 측정해주세요"))
@@ -516,12 +515,13 @@ private fun HealthInfoTab(
 
             // 혈중산소포화도
             item {
-                val oxygen = healthData?.oxygenSaturation
-                val stats = if (oxygen != null) {
+                val oxygenRecords = healthData?.oxygenSaturationRecords ?: emptyList()
+                val stats = if (oxygenRecords.isNotEmpty()) {
+                    val values = oxygenRecords.map { it.percentage }
                     listOf(
-                        "평균" to StatValue.Text("${String.format("%.1f", oxygen.average)}%"),
-                        "최대" to StatValue.Text("${String.format("%.1f", oxygen.max)}%"),
-                        "최소" to StatValue.Text("${String.format("%.1f", oxygen.min)}%")
+                        "평균" to StatValue.Text("${String.format("%.1f", values.average())}%"),
+                        "최대" to StatValue.Text("${String.format("%.1f", values.maxOrNull() ?: 0.0)}%"),
+                        "최소" to StatValue.Text("${String.format("%.1f", values.minOrNull() ?: 0.0)}%")
                     )
                 } else {
                     listOf("" to StatValue.Text("Samsung Health에서\n혈중산소포화도를 측정해주세요"))
@@ -535,12 +535,13 @@ private fun HealthInfoTab(
 
             // 수면
             item {
-                val sleep = healthData?.sleep
-                val stats = if (sleep != null) {
+                val sleepRecords = healthData?.sleepRecords ?: emptyList()
+                val stats = if (sleepRecords.isNotEmpty()) {
+                    val values = sleepRecords.map { it.durationHours }
                     listOf(
-                        "평균" to StatValue.Text("${String.format("%.1f", sleep.average)}시간"),
-                        "최대" to StatValue.Text("${String.format("%.1f", sleep.max)}시간"),
-                        "최소" to StatValue.Text("${String.format("%.1f", sleep.min)}시간")
+                        "평균" to StatValue.Text("${String.format("%.1f", values.average())}시간"),
+                        "최대" to StatValue.Text("${String.format("%.1f", values.maxOrNull() ?: 0.0)}시간"),
+                        "최소" to StatValue.Text("${String.format("%.1f", values.minOrNull() ?: 0.0)}시간")
                     )
                 } else {
                     listOf("" to StatValue.Text("Samsung Health에서\n수면 기록을 측정해주세요"))
@@ -554,12 +555,13 @@ private fun HealthInfoTab(
 
             // 걸음수
             item {
-                val steps = healthData?.steps
-                val stats = if (steps != null) {
+                val stepsRecords = healthData?.stepsRecords ?: emptyList()
+                val stats = if (stepsRecords.isNotEmpty()) {
+                    val values = stepsRecords.map { it.count }
                     listOf(
-                        "평균" to StatValue.Text("${String.format("%,d", steps.average)}걸음"),
-                        "최대" to StatValue.Text("${String.format("%,d", steps.max)}걸음"),
-                        "최소" to StatValue.Text("${String.format("%,d", steps.min)}걸음")
+                        "평균" to StatValue.Text("${String.format("%,d", values.average().toLong())}걸음"),
+                        "최대" to StatValue.Text("${String.format("%,d", values.maxOrNull() ?: 0)}걸음"),
+                        "최소" to StatValue.Text("${String.format("%,d", values.minOrNull() ?: 0)}걸음")
                     )
                 } else {
                     listOf("" to StatValue.Text("Samsung Health에서\n걸음수를 측정해주세요"))
@@ -1114,16 +1116,21 @@ private fun CrossInsightCard(
 ) {
     val insights = mutableListOf<Pair<String, String>>()
 
+    // 개별 레코드에서 평균 계산
+    val avgSleep = healthData.sleepRecords.map { it.durationHours }.average().takeIf { !it.isNaN() } ?: 0.0
+    val avgHeartRate = healthData.heartRateRecords.map { it.beatsPerMinute.toDouble() }.average().takeIf { !it.isNaN() } ?: 0.0
+    val avgSteps = healthData.stepsRecords.map { it.count.toDouble() }.average().takeIf { !it.isNaN() } ?: 0.0
+
     // 교차 분석
-    if (activityLog.routeLost > 3 && (healthData.sleep?.average ?: 0.0) < 6.0) {
+    if (activityLog.routeLost > 3 && avgSleep < 6.0) {
         insights.add("활동량 감소" to "수면 부족으로 인한 피로 가능성")
     }
 
-    if (activityLog.safezoneEmer > 2 && (healthData.heartRate?.average ?: 0) > 80) {
+    if (activityLog.safezoneEmer > 2 && avgHeartRate > 80) {
         insights.add("이상탐지 증가" to "스트레스나 불안 가능성")
     }
 
-    if ((healthData.steps?.average ?: 0) < 2000) {
+    if (avgSteps < 2000) {
         insights.add("걸음 수 감소" to "활동량 저하 주의 필요")
     }
 
