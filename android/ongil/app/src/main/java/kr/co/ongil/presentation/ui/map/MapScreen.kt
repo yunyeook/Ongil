@@ -48,6 +48,8 @@ import kr.co.ongil.presentation.ui.common.map.SearchBar
 import kr.co.ongil.presentation.ui.common.map.SearchListItem
 import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettingRoutes
 import kr.co.ongil.service.location.LocationTrackingService
+import kr.co.ongil.presentation.theme.ongilColors
+
 
 /**
  * 지도 화면
@@ -568,7 +570,7 @@ fun MapScreen(
                             onClick = {
                                 navController.navigate(SafeZoneSettingRoutes.SETTING)
                             },
-                            containerColor = Color(0xFF8CA898),
+                            containerColor = ongilColors.accent,
                             contentColor = Color.White
                         )
                     }
@@ -586,7 +588,7 @@ fun MapScreen(
                     CircleFloatingButton(
                         icon = Icons.Default.Phone,
                         onClick = { viewModel.onClickCall(onNavigateToCall) },
-                        containerColor = Color(0xFF5C7165),
+                        containerColor = ongilColors.accent,
                         contentColor = Color.White
                     )
 
