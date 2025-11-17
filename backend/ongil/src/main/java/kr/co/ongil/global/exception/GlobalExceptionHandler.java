@@ -1,10 +1,12 @@
 package kr.co.ongil.global.exception;
 
+import java.util.Optional;
 import kr.co.ongil.global.common.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -90,6 +92,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE) // 415
             .body(ApiResponse.fail(ErrorCode.UNSUPPORTED_MEDIA_TYPE));
+    }
+    // SSE 응답 중단 시 발생
+    @ExceptionHandler(HttpMessageNotWritableException.class)
+    public ResponseEntity<Void> handleSseWriteError(HttpMessageNotWritableException e) {
+        if (Optional.ofNullable(e.getMessage()).orElse("")
+            .toLowerCase().contains("text/event-stream")) {
+            log.debug("SSE 연결 종료 중 HttpMessageNotWritableException");
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
     }
 
     // 그 외 모든 예외
