@@ -58,4 +58,5 @@ interface CallRepository {
     ): Result<Unit>
 
     suspend fun getTurnCredentials(): Result<TurnCredentialsDto>
+    suspend fun notifyCallerReady(callId: Long): Result<Unit>
 }

@@ -153,4 +153,18 @@ class CallRepositoryImpl @Inject constructor(
     } catch (e: Exception) {
         Result.failure(ErrorHandler.handleException(e))
     }
+
+    // ✅ 새로 추가
+    override suspend fun notifyCallerReady(callId: Long): Result<Unit> = try {
+        val response = callApi.notifyCallerReady(callId)
+
+        if (response.isSuccessful) {
+            Result.success(Unit)
+        } else {
+            val ex = ErrorHandler.handleException(retrofit2.HttpException(response))
+            Result.failure(ex)
+        }
+    } catch (e: Exception) {
+        Result.failure(ErrorHandler.handleException(e))
+    }
 }
