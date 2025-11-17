@@ -788,13 +788,18 @@ private fun TimeBasedHeatmapCard(
             )
             Spacer(Modifier.height(12.dp))
 
-            // 간단한 시간대별 막대 (실제로는 더 상세한 데이터 필요)
-            val timeSlots = listOf(
-                "00-06시" to 0.2f,
-                "06-12시" to 0.1f,
-                "12-18시" to 0.3f,
-                "18-24시" to 0.4f
-            )
+            // 🆕 실제 백엔드 데이터 사용
+            val timeSlots = activityLog.timeSlotRisks.map {
+                it.timeRange to it.intensity
+            }.ifEmpty {
+                // 데이터 없을 때 기본값
+                listOf(
+                    "00-06시" to 0f,
+                    "06-12시" to 0f,
+                    "12-18시" to 0f,
+                    "18-24시" to 0f
+                )
+            }
 
             timeSlots.forEach { (time, intensity) ->
                 Row(
@@ -862,7 +867,7 @@ private fun CumulativeIncidentsCard(
             )
             Spacer(Modifier.height(16.dp))
 
-            // 간단한 라인 차트 (실제 구현에서는 더 상세한 데이터 필요)
+            // 🆕 실제 백엔드 데이터 사용
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -872,9 +877,11 @@ private fun CumulativeIncidentsCard(
                         val height = size.height
                         val points = 7
 
-                        // 가상 데이터 (1주일)
-                        val data = listOf(2f, 3f, 2f, 4f, 3f, 5f, activityLog.routeLost.toFloat())
-                        val maxVal = data.maxOrNull() ?: 1f
+                        // 🆕 실제 일별 데이터 (최근 7일)
+                        val data = activityLog.dailyRiskCounts
+                            .map { it.totalCount.toFloat() }
+                            .ifEmpty { listOf(0f, 0f, 0f, 0f, 0f, 0f, 0f) }
+                        val maxVal = data.maxOrNull()?.coerceAtLeast(1f) ?: 1f
 
                         val path = Path()
                         data.forEachIndexed { index, value ->
