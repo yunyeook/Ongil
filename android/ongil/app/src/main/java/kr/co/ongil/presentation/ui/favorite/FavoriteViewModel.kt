@@ -38,6 +38,12 @@ class FavoriteViewModel @Inject constructor(
     val uiState: StateFlow<FavoriteUiState> = _uiState
 
     init {
+        // userType을 먼저 로드하여 테마 깜빡임 방지
+        viewModelScope.launch {
+            val initialUserType = userDataStoreManager.getUserType().first() ?: "GUARDIAN"
+            _uiState.update { it.copy(userType = initialUserType) }
+        }
+
         loadUserInfo()
         loadRelationships() // 사용자(환자/보호자) 목록 불러오기
 

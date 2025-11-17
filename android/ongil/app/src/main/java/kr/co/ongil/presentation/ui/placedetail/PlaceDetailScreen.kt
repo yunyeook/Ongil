@@ -117,12 +117,11 @@ fun PlaceDetailScreen(
         successMessage?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
     }
 
-    OngilThemeProvider(userType = userType) {
-        val colors = ongilColors
+    val colors = ongilColors
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-        ) { innerPadding ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
         Box(
             modifier = modifier
                 .fillMaxSize()
@@ -219,7 +218,6 @@ fun PlaceDetailScreen(
                 }
             }
         }
-    }
     }
 }
 

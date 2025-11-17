@@ -76,14 +76,13 @@ fun UserDetailContent(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OngilThemeProvider(userType = userType) {
-        val colors = ongilColors
+    val colors = ongilColors
 
-        Surface(
-            modifier = modifier
-                .fillMaxSize(),
-            color = Color(0xFFFFFFFF)
-        ) {
+    Surface(
+        modifier = modifier
+            .fillMaxSize(),
+        color = Color(0xFFFFFFFF)
+    ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -151,7 +150,6 @@ fun UserDetailContent(
                     .fillMaxWidth()
             )
         }
-    }
     }
 }
 
