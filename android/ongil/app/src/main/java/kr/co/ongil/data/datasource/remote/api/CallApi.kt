@@ -32,6 +32,10 @@ interface CallApi {
         @Query("sort") sort: String = "createdAt,desc"
     ): Response<CallLogResponse>
 
+    @POST("/api/v1/calls/{callId}/caller-ready")
+    suspend fun notifyCallerReady(
+        @Path("callId") callId: Long
+    ): Response<ApiResponse<Unit>>
     /**
      * 특정 통화 기록 상세 조회
      * GET /api/v1/calls/log/{callLogId}

@@ -42,6 +42,7 @@ data class NavigationUpdateEvent(
 
 @Serializable
 data class NavigationRoute(
+    val navigationId: String? = null,  // 길찾기 ID (종료 시 필요, 선택적)
     val startLocation: Location,
     val endLocation: Location,
     val totalDistance: Int,  // 미터
