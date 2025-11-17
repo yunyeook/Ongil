@@ -20,6 +20,7 @@ import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.common.location.LocationPoint
@@ -32,6 +33,7 @@ import kr.co.ongil.data.model.map.ReportAbnormalRequest
 import kr.co.ongil.data.model.map.UpdateLocationRequest
 import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.presentation.MainActivity
+import kr.co.ongil.BuildConfig
 import java.time.Instant
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -73,7 +75,6 @@ class LocationTrackingService : Service() {
     // [테스트용] 1초마다 위치 전송하는 타이머
     private var periodicSendJob: Job? = null
 
-
     // 마지막으로 백엔드에 전송한 위치
     private var lastSentLocation: LocationPoint? = null
 
@@ -108,14 +109,20 @@ class LocationTrackingService : Service() {
             navigationRouteManager.currentRoute.collect() { route ->
                 if (route != null) {
                     // 길찾기 시작 - 경로 이탈 모니터 생성
+                    // 경로 이탈 범위와 시간은 RouteDeviationMonitor.kt에서만 설정
                     Log.d(TAG, "길찾기 시작 감지 - 경로 이탈 모니터 활성화")
                     routeDeviationMonitor = RouteDeviationMonitor(
                         routePath = route.path,
-                        deviationThresholdMeters = 50.0,
                         onRouteDeviation = { distance ->
                             Log.w(TAG, "⚠️ 경로 이탈 감지: ${String.format("%.1f", distance)}m 벗어남")
                             serviceScope.launch {
                                 handleRouteDeviation(distance)
+                            }
+                        },
+                        onEmergencyTimeout = {
+                            Log.w(TAG, "🚨 경로 이탈 타이머 경과 - 응급 전화 걸기")
+                            serviceScope.launch {
+                                handleEmergencyCall()
                             }
                         }
                     )
@@ -450,11 +457,20 @@ class LocationTrackingService : Service() {
 
                     val userType = userDataStoreManager.getUserType().first()
                     if (userType == "PATIENT") {
-                        safetyZoneMonitor?.updateLocation(
-                            point.latitude,
-                            point.longitude,
-                            point.timeMillis
-                        )
+                        // 길찾기 중일 때는 경로 이탈 감지만 동작
+                        if (routeDeviationMonitor != null) {
+                            routeDeviationMonitor?.updateLocation(
+                                point.latitude,
+                                point.longitude
+                            )
+                        } else {
+                            // 길찾기 중이 아닐 때만 배회 감지 동작
+                            safetyZoneMonitor?.updateLocation(
+                                point.latitude,
+                                point.longitude,
+                                point.timeMillis
+                            )
+                        }
                     }
 
                     sendLocationToBackend(point)
@@ -662,6 +678,57 @@ class LocationTrackingService : Service() {
             Log.d(TAG, "경로 이탈 알림 전송 성공: ${String.format("%.1f", distanceFromRoute)}m")
         } catch (e: Exception) {
             Log.e(TAG, "경로 이탈 알림 전송 실패", e)
+        }
+    }
+
+    /**
+     * 경로 이탈 5분 경과 시 응급 전화 걸기
+     */
+    private suspend fun handleEmergencyCall() {
+        try {
+            val userType = userDataStoreManager.getUserType().first()
+            if (userType != "PATIENT") {
+                Log.w(TAG, "환자가 아니므로 응급 전화를 걸지 않습니다")
+                return
+            }
+
+            Log.w(TAG, "🚨 경로 이탈 5분 경과 - 응급상황 감지, 기본 보호자에게 자동 전화 걸기")
+
+            // 기본 보호자 정보 가져오기
+            val relationshipsResult = favoriteRepository.getMyRelationships()
+            val relationships = relationshipsResult.getOrNull()
+            if (relationships.isNullOrEmpty()) {
+                Log.e(TAG, "관계 정보를 가져올 수 없습니다")
+                return
+            }
+
+            // isDefault가 true인 기본 보호자 찾기
+            val defaultGuardian = relationships.find { it.isDefault }
+                ?: relationships.firstOrNull()
+
+            if (defaultGuardian == null) {
+                Log.e(TAG, "기본 보호자를 찾을 수 없습니다")
+                return
+            }
+
+            Log.d(TAG, "기본 보호자: ${defaultGuardian.name} (${defaultGuardian.phoneNumber})")
+
+            // MainActivity를 통해 VoipCall 화면으로 이동
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("navigate_to", "voip_call")
+                putExtra("target_name", defaultGuardian.name)
+                putExtra("target_phone", defaultGuardian.phoneNumber)
+                putExtra("is_caller", true)
+                putExtra("user_type", "PATIENT")
+                putExtra("receiver_id", defaultGuardian.id.toString())
+                putExtra("is_emergency", true) // 응급 전화 플래그
+            }
+            startActivity(intent)
+
+            Log.d(TAG, "응급 전화 화면 시작 성공")
+        } catch (e: Exception) {
+            Log.e(TAG, "응급 전화 걸기 실패", e)
         }
     }
 }
