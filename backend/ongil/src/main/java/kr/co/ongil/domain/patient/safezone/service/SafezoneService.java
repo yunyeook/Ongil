@@ -1,5 +1,10 @@
 package kr.co.ongil.domain.patient.safezone.service;
 
+import kr.co.ongil.domain.fcm.service.FcmService;
+import kr.co.ongil.domain.notification.dto.request.NotificationRequest;
+import kr.co.ongil.domain.notification.entity.Notification;
+import kr.co.ongil.domain.notification.entity.NotificationType;
+import kr.co.ongil.domain.notification.service.NotificationService;
 import kr.co.ongil.domain.patient.safezone.dto.request.SafeZonePatchRequest;
 import kr.co.ongil.domain.patient.safezone.dto.request.SafeZoneUpsertRequest;
 import kr.co.ongil.domain.patient.safezone.dto.response.SafeZoneResponse;
@@ -23,6 +28,7 @@ public class SafezoneService {
     private final SafeZoneRepository safeZoneRepository;
     private final UserRepository userRepository;
     private final PatientAccessValidator patientAccessValidator;
+    private final NotificationService notificationService;
 
     /**
      * 안전범위 생성 또는 전체 교체 (Upsert)
@@ -60,6 +66,12 @@ public class SafezoneService {
         // 6. 저장
         SafeZone saved = safeZoneRepository.save(safeZone);
         log.info("안전범위 저장 완료: id={}", saved.getId());
+
+
+
+        //7. 안전범위 수정시 환자에 알림
+        User caller = userRepository.findById(callerId).get();
+        sendSafezoneUpdateNotification(caller, saved.getPatient());
 
         return SafeZoneResponse.from(saved);
     }
@@ -158,5 +170,24 @@ public class SafezoneService {
      */
     private void validateAccess(Integer patientId, Integer callerId) {
         patientAccessValidator.validateAccess(patientId, callerId, ErrorCode.SAFEZONE_ACCESS_DENIED);
+    }
+
+    /**
+     * 안전범위 변경 알림 전송
+     */
+    private void sendSafezoneUpdateNotification(User sender, User receiver) {
+        try {
+            NotificationRequest notificationRequest = NotificationRequest.of(
+                NotificationType.SAFEZONE_UPDATE.getDescription(),
+                sender.getName() + "님이 안전범위를 변경하였습니다.",
+                NotificationType.SOS_REQUEST,
+                sender.getId(),
+                receiver.getId()
+            );
+            notificationService.createNotifications(notificationRequest,null);
+            log.info("안전범위 변경 알림 전송 완료 - receiver: {}", receiver.getId());
+        } catch (Exception e) {
+            log.error("안전범위 변경 알림 전송 실패", e);
+        }
     }
 }

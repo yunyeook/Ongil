@@ -30,7 +30,10 @@ public enum NotificationType {
     // SOS (도움 요청) 관련 알림
     SOS_REQUEST("SOS 요청"),
     SOS_ACK("SOS 재생 완료 여부 응답"),
-    SOS_STOP("SOS 음성 재생 종료");
+    SOS_STOP("SOS 음성 재생 종료"),
+
+    //안전범위 수정
+    SAFEZONE_UPDATE("안전범위 변경");
 
     private final String description;
 }
