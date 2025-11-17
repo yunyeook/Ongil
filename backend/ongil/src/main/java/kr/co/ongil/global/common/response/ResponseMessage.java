@@ -79,6 +79,7 @@ public enum ResponseMessage {
     CALL_REQUESTED("통화 요청이 전송되었습니다."),
     CALL_ACCEPTED("통화가 연결되었습니다."),
     CALL_ENDED("통화가 정상적으로 종료되었습니다."),
+    CALL_REQUIRED("통화 발신자가 준비되었습니다."),
 
     // Call Log
     CALL_LOG_CREATED("통화 로그가 성공적으로 저장되었습니다."),

@@ -92,50 +92,67 @@ public class CallService {
         log.info("✅ VoIP 통화 세션 생성 완료: callId={}, sessionId={}, caller={}, receiver={}",
             savedCall.getId(), sessionId, caller.getId(), receiver.getId());
 
-        // 8. FCM 푸시 알림 전송 (앱 깨우기) - 실패해도 계속 진행
+        return CallResponse.from(savedCall);
+    }
+
+    /**
+     * 발신자 준비 완료 - 이제 수신자에게 FCM 발송
+     */
+    @Transactional
+    public void notifyCallerReady(Integer callId, Integer callerId) {
+        log.info("발신자 준비 완료: callId={}, callerId={}", callId, callerId);
+
+        Call call = callRepository.findById(callId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
+
+        // 1. 발신자 권한 확인
+        if (!call.getCaller().getId().equals(callerId)) {
+            throw new BusinessException(ErrorCode.INVALID_VERIFICATION_CODE);
+        }
+
+        // 2. 이미 종료된 통화인지 확인
+        if (call.isEnded()) {
+            throw new BusinessException(ErrorCode.CALL_ALREADY_ENDED);
+        }
+
+        // 3. 상태 확인 (CREATED 상태에서만 가능)
+        if (call.getStatus() != CallStatus.CREATED) {
+            log.warn("이미 CALLER_READY 처리됨: callId={}, status={}", callId, call.getStatus());
+            return;
+        }
+
+        User receiver = call.getReceiver();
+        User caller = call.getCaller();
+
+        // 4. FCM 푸시 알림 전송
         try {
-            log.info("📱 FCM 푸시 알림 전송 시도: receiverId={}", receiver.getId());
+            log.info("📱 [CALLER_READY] FCM 푸시 알림 전송: receiverId={}", receiver.getId());
             fcmService.sendCallNotification(
-                receiver.getId(),
-                caller.getId(),
-                caller.getName(),
-                savedCall.getId(),
-                sessionId,
-                request.callType().name()
+                    receiver.getId(),
+                    caller.getId(),
+                    caller.getName(),
+                    call.getId(),
+                    call.getSessionId(),
+                    call.getCallType().name()
             );
             log.info("✅ FCM 푸시 알림 전송 완료");
         } catch (Exception e) {
-            log.warn("⚠️ FCM 푸시 알림 전송 실패 (계속 진행): {}", e.getMessage());
-            // FCM 실패해도 WebSocket 시그널은 전송
+            log.error("❌ FCM 푸시 알림 전송 실패", e);
+            throw new BusinessException(ErrorCode.INVALID_NOTIFICATION_TYPE);
         }
 
-        // 9. 수신자에게 INCOMING 시그널 전송 (WebSocket - 연결되어 있으면 즉시 전달)
-        log.info("🔔 INCOMING 시그널 전송 호출 시작: callId={}, from={}, to={}",
-            savedCall.getId(), caller.getId(), receiver.getId());
-
+        // 5. INCOMING 시그널 전송 (WebSocket)
         callSignalController.sendIncomingCall(
-            savedCall.getId(),
-            caller.getId(),
-            receiver.getId()
+                call.getId(),
+                caller.getId(),
+                receiver.getId()
         );
 
-        log.info("✅ INCOMING 시그널 전송 호출 완료");
+        // 6. 상태를 RINGING으로 전환
+        call.ring();
+        callRepository.save(call);
 
-        // 알림: '전화가 왔어요' (수신자) - 실패해도 계속 진행
-        try {
-            log.info("🔔 DB 알림 저장 시도: receiverId={}", receiver.getId());
-            notificationService.notifyCallIncoming(caller.getId(), receiver.getId(), savedCall.getId(), caller.getName());
-            log.info("✅ DB 알림 저장 완료");
-        } catch (Exception e) {
-            log.warn("⚠️ DB 알림 저장 실패 (계속 진행): {}", e.getMessage());
-        }
-
-        // 9. INCOMING 시그널 전송 후 자동으로 RINGING 상태로 전환
-        savedCall.ring();
-        savedCall = callRepository.save(savedCall);
-        log.info("통화 상태 RINGING으로 전환: callId={}", savedCall.getId());
-
-        return CallResponse.from(savedCall);
+        log.info("✅ 발신자 준비 완료 처리됨: callId={}, status=RINGING", callId);
     }
 
     /**
