@@ -51,15 +51,18 @@ fun FindPasswordScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(Modifier.height(32.dp))
-            Text(
-                text = "가입시 사용한 휴대폰 번호를 입력해주시면 비밀번호 재설정 링크를 전송해드립니다.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(24.dp))
 
-            Text("휴대폰 번호", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
+            Text(
+                "휴대폰 번호",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(1.dp))
+            Text(
+                text = "가입시 사용한 휴대폰 번호를 입력해주세요.",
+                style = MaterialTheme.typography.bodySmall, // 글자 더 작게
+                color = Color(0xFFE53935)
+            )
+            Spacer(Modifier.height(-5.dp)) // 라벨~인풋 사이 전체 간격 줄어듦
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -70,7 +73,7 @@ fun FindPasswordScreen(
                     value = uiState.phone,
                     onValueChange = { raw -> onEvent(FindPasswordUiEvent.ChangePhone(formatPhone(raw))) },
                     label = "",
-                    placeholder = "010-1234-5678",
+                    placeholder = "휴대폰 번호를 입력해주세요.",
                     modifier = Modifier.weight(1f),
                     enabled = !uiState.isCodeRequested
                 )

@@ -22,11 +22,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.uistate.ChangePasswordEvent
 import kr.co.ongil.presentation.uistate.ChangePasswordUiState
 import kr.co.ongil.presentation.viewmodel.ChangePasswordViewModel
-
-private val PasswordAccent = Color(0xFF8CA898)
 
 /**
  * 비밀번호 변경 화면 (ViewModel 기반)
@@ -36,7 +35,8 @@ fun ChangePasswordScreen(
     modifier: Modifier = Modifier,
     viewModel: ChangePasswordViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
-    onPasswordChanged: () -> Unit = {}
+    onPasswordChanged: () -> Unit = {},
+    isResetMode: Boolean = false  // 비밀번호 찾기에서 온 경우 true
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -50,7 +50,8 @@ fun ChangePasswordScreen(
     ChangePasswordContent(
         uiState = uiState,
         onEvent = viewModel::onEvent,
-        modifier = modifier
+        modifier = modifier,
+        isResetMode = isResetMode
     )
 }
 
@@ -61,7 +62,8 @@ fun ChangePasswordScreen(
 private fun ChangePasswordContent(
     uiState: ChangePasswordUiState,
     onEvent: (ChangePasswordEvent) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isResetMode: Boolean = false
 ) {
     // Snackbar 호스트 상태
     val snackbarHostState = remember { SnackbarHostState() }
@@ -92,17 +94,21 @@ private fun ChangePasswordContent(
         ) {
 
 
-            // 현재 비밀번호
-            PasswordInputField(
-                label = "현재 비밀번호",
-                placeholder = "현재 비밀번호를 입력해주세요.",
-                value = uiState.currentPassword,
-                onValueChange = { onEvent(ChangePasswordEvent.UpdateCurrentPassword(it)) },
-                visible = uiState.currentPasswordVisible,
-                onVisibilityToggle = { onEvent(ChangePasswordEvent.ToggleCurrentPasswordVisibility) }
-            )
-
-            Spacer(Modifier.height(20.dp))
+            // 현재 비밀번호 (비밀번호 재설정 모드에서는 숨김)
+            if (!isResetMode) {
+                PasswordInputField(
+                    label = "현재 비밀번호",
+                    placeholder = "현재 비밀번호를 입력해주세요.",
+                    value = uiState.currentPassword,
+                    onValueChange = { onEvent(ChangePasswordEvent.UpdateCurrentPassword(it)) },
+                    visible = uiState.currentPasswordVisible,
+                    onVisibilityToggle = { onEvent(ChangePasswordEvent.ToggleCurrentPasswordVisibility) }
+                )
+                Spacer(Modifier.height(20.dp))
+            } else {
+                // 재설정 모드일 때 위쪽 여백 추가
+                Spacer(Modifier.height(60.dp))
+            }
 
             // 새 비밀번호
             PasswordInputField(
@@ -152,11 +158,11 @@ private fun ChangePasswordContent(
             Button(
                 onClick = { onEvent(ChangePasswordEvent.ChangePassword) },
                 enabled = !uiState.isLoading &&
-                        uiState.currentPassword.isNotBlank() &&
+                        (isResetMode || uiState.currentPassword.isNotBlank()) &&
                         uiState.newPassword.isNotBlank() &&
                         uiState.confirmPassword.isNotBlank() &&
                         uiState.newPassword == uiState.confirmPassword,
-                colors = ButtonDefaults.buttonColors(containerColor = CallAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = ongilColors.accent),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
@@ -238,12 +244,13 @@ private fun PasswordInputField(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewChangePasswordScreen() {
-    MaterialTheme {
-        val fakeUserRepository = kr.co.ongil.data.repository.fake.FakeUserRepository()
-        val previewViewModel = ChangePasswordViewModel(userRepository = fakeUserRepository)
-        ChangePasswordScreen(viewModel = previewViewModel)
-    }
-}
+// Preview는 Hilt 의존성 때문에 주석 처리
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewChangePasswordScreen() {
+//    MaterialTheme {
+//        val fakeUserRepository = kr.co.ongil.data.repository.fake.FakeUserRepository()
+//        val previewViewModel = ChangePasswordViewModel(userRepository = fakeUserRepository)
+//        ChangePasswordScreen(viewModel = previewViewModel)
+//    }
+//}

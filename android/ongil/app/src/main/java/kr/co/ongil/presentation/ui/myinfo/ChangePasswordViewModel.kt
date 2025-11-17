@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.core.utils.PasswordValidationResult
 import kr.co.ongil.core.utils.validatePasswordChange
+import kr.co.ongil.domain.repository.FindPasswordAuthRepository
 import kr.co.ongil.domain.repository.UserRepository
 import kr.co.ongil.presentation.uistate.ChangePasswordEvent
 import kr.co.ongil.presentation.uistate.ChangePasswordUiState
@@ -21,7 +22,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class ChangePasswordViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val findPasswordAuthRepository: FindPasswordAuthRepository
 ) : ViewModel() {
 
     companion object {
@@ -60,6 +62,10 @@ class ChangePasswordViewModel @Inject constructor(
                 _uiState.update { it.copy(confirmPasswordVisible = !it.confirmPasswordVisible) }
             }
 
+            is ChangePasswordEvent.SetVerificationToken -> {
+                _uiState.update { it.copy(verificationToken = event.token) }
+            }
+
             is ChangePasswordEvent.ChangePassword -> {
                 changePassword()
             }
@@ -67,11 +73,26 @@ class ChangePasswordViewModel @Inject constructor(
     }
 
     /**
-     * 비밀번호 변경
+     * 비밀번호 변경 또는 재설정
      */
     private fun changePassword() {
         val currentState = _uiState.value
-        Log.d(TAG, "changePassword() called")
+        Log.d(TAG, "changePassword() called, verificationToken: ${currentState.verificationToken != null}")
+
+        // verificationToken이 있으면 비밀번호 재설정, 없으면 비밀번호 변경
+        if (currentState.verificationToken != null) {
+            resetPassword(currentState.verificationToken)
+        } else {
+            changePasswordWithCurrent()
+        }
+    }
+
+    /**
+     * 비밀번호 변경 (현재 비밀번호 필요)
+     */
+    private fun changePasswordWithCurrent() {
+        val currentState = _uiState.value
+        Log.d(TAG, "changePasswordWithCurrent() called")
 
         // 유효성 검사 (ValidationUtils 사용)
         val validationResult = validatePasswordChange(
@@ -115,6 +136,56 @@ class ChangePasswordViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         error = e.message ?: "비밀번호 변경에 실패했습니다."
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * 비밀번호 재설정 (verificationToken 사용)
+     */
+    private fun resetPassword(verificationToken: String) {
+        val currentState = _uiState.value
+        Log.d(TAG, "resetPassword() called")
+
+        // 비밀번호 일치 확인
+        if (currentState.newPassword != currentState.confirmPassword) {
+            _uiState.update { it.copy(error = "비밀번호가 일치하지 않습니다.") }
+            return
+        }
+
+        // 비밀번호 길이 확인
+        if (currentState.newPassword.length < 8) {
+            _uiState.update { it.copy(error = "비밀번호는 8자 이상이어야 합니다.") }
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+                Log.d(TAG, "Calling resetPassword API")
+
+                // API 호출
+                findPasswordAuthRepository.resetPassword(
+                    verificationToken = verificationToken,
+                    newPassword = currentState.newPassword,
+                    confirmPassword = currentState.confirmPassword
+                ).getOrThrow()
+
+                Log.d(TAG, "Password reset successful")
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isSuccess = true
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Password reset failed", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "비밀번호 재설정에 실패했습니다."
                     )
                 }
             }
