@@ -14,7 +14,19 @@ interface FindPasswordAuthRepository {
      * 인증번호 확인
      * @param phone 전화번호
      * @param code 인증번호
-     * @return 인증 성공 여부
+     * @return 인증 성공 시 verificationToken 반환
      */
-    suspend fun verifyCode(phone: String, code: String): Result<Boolean>
+    suspend fun verifyCode(phone: String, code: String): Result<String>
+
+    /**
+     * 비밀번호 재설정
+     * @param verificationToken 인증 토큰
+     * @param newPassword 새 비밀번호
+     * @param confirmPassword 새 비밀번호 확인
+     */
+    suspend fun resetPassword(
+        verificationToken: String,
+        newPassword: String,
+        confirmPassword: String
+    ): Result<Unit>
 }

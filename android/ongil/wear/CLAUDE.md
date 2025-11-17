@@ -65,21 +65,63 @@
 - [WearAppModule.kt](di/WearAppModule.kt)
 - [WearDataModule.kt](di/WearDataModule.kt)
 
+#### 5. Phase 1: 기본 인프라 구축 (✅ 완료 - 2025-11-17)
+- **네트워크 레이어**: WearRetrofitClient, WearAuthInterceptor
+- **API 인터페이스**: WearAuthApi, WearLocationApi, WearCallApi, WearSosApi
+- **DTO 정의**: 위치/네비게이션/통화/SOS 관련 DTO
+- **도메인 모델**: LocationUpdate, NavigationState, CallState, SosState, PatientInfo
+- **Repository 구현**: LocationRepository, CallRepository, SosRepository
+- **네비게이션 구조**: WearRoute, WearNavGraph
+- **DI 모듈**: WearNetworkModule, WearRepositoryModule
+- **DataStore 확장**: 토큰 관리 API
+
+**주요 파일**:
+- [WearRetrofitClient.kt](data/datasource/remote/WearRetrofitClient.kt)
+- [WearAuthInterceptor.kt](data/datasource/remote/interceptor/WearAuthInterceptor.kt)
+- [WearLocationApi.kt](data/datasource/remote/api/WearLocationApi.kt)
+- [WearCallApi.kt](data/datasource/remote/api/WearCallApi.kt)
+- [WearSosApi.kt](data/datasource/remote/api/WearSosApi.kt)
+- [LocationRepository.kt](domain/repository/LocationRepository.kt)
+- [WearRoute.kt](presentation/navigation/WearRoute.kt)
+- [WearNavGraph.kt](presentation/navigation/WearNavGraph.kt)
+- [WearNetworkModule.kt](di/WearNetworkModule.kt)
+
+#### 6. Phase 2: 위치 추적 및 안전 범위 모니터링 (✅ 완료 - 2025-11-18)
+- **WearLocationTrackingService**: Foreground Service 기반 위치 추적
+- **MonitorSafeZoneUseCase**: SafetyZoneMonitor(Common 모듈) 통합
+- **MapScreen**: 실시간 위치 + 3단계 안전 범위 시각화
+- **WearTMapComposable**: 안전 범위 오버레이 (100m/350m/700m)
+- **LocationStreamBus 통합**: 앱 내 위치 브로드캐스트
+- **Phone-Watch 위치 동기화**: WearDataClient를 통한 실시간 위치 전송
+
+**주요 파일**:
+- [WearLocationTrackingService.kt](service/location/WearLocationTrackingService.kt)
+- [MonitorSafeZoneUseCase.kt](domain/usecase/MonitorSafeZoneUseCase.kt)
+- [MapScreen.kt](presentation/ui/map/MapScreen.kt)
+- [MapViewModel.kt](presentation/viewmodel/MapViewModel.kt)
+- [WearAppModule.kt](di/WearAppModule.kt) - LocationStreamBus, FusedLocationProviderClient 제공
+
+**통합 완료**:
+- Common 모듈의 SafetyZoneMonitor 활용
+- LocationStreamBus를 통한 리액티브 위치 업데이트
+- App 모듈의 LocationTrackingService와 워치 위치 동기화
+- Android 브랜치와 병합 완료 (LoginUseCase, LocationTrackingService 충돌 해결)
+
 ### 🚧 진행 중/필요한 기능
 
 #### 1. 화면 및 네비게이션
 - [ ] 환자 선택 화면 (보호자용)
 - [ ] 메인 대시보드 (전화/지도/도움 아이콘)
-- [ ] 지도 화면 (환자 위치 + 안전 범위)
+- [x] 지도 화면 (환자 위치 + 안전 범위) ✅
 - [ ] 통화 화면 (통화 중 UI)
 - [ ] 도움 요청 화면
 - [ ] 네비게이션 경로 안내 화면
 
 #### 2. 위치 추적 기능
-- [ ] Foreground Service 기반 위치 추적
-- [ ] 주기적 위치 전송 (서버 + 보호자 앱)
+- [x] Foreground Service 기반 위치 추적 ✅
+- [x] 주기적 위치 전송 (Phone 앱 DataLayer 동기화) ✅
 - [ ] 배터리 최적화 전략
-- [ ] 안전 범위 모니터링
+- [x] 안전 범위 모니터링 ✅
 
 #### 3. 통화 기능
 - [ ] WebRTC 기반 VoIP 통화
@@ -120,11 +162,11 @@ kr.co.ongil.wear/
 │   │   │   └── DashboardScreen.kt                    [TODO]
 │   │   ├── map/
 │   │   │   ├── WearTMapComposable.kt                 [✅ 완료]
-│   │   │   ├── MapScreen.kt                          [TODO]
+│   │   │   ├── MapScreen.kt                          [✅ 완료 - Phase 2]
 │   │   │   ├── NavigationScreen.kt                   [TODO]
 │   │   │   └── component/
 │   │   │       ├── ArrowNavigationIndicator.kt       [TODO]
-│   │   │       └── SafeZoneOverlay.kt                [TODO]
+│   │   │       └── SafeZoneOverlay.kt                [✅ 완료 - WearTMapComposable에 포함]
 │   │   ├── call/
 │   │   │   ├── CallScreen.kt                         [TODO]
 │   │   │   ├── IncomingCallScreen.kt                 [TODO]
@@ -137,34 +179,38 @@ kr.co.ongil.wear/
 │   │       └── ErrorScreen.kt
 │   ├── viewmodel/
 │   │   ├── WearAuthViewModel.kt                      [✅ 완료]
-│   │   ├── MapViewModel.kt                           [TODO]
+│   │   ├── MapViewModel.kt                           [✅ 완료 - Phase 2]
 │   │   ├── CallViewModel.kt                          [TODO]
 │   │   ├── NavigationViewModel.kt                    [TODO]
 │   │   └── HelpRequestViewModel.kt                   [TODO]
 │   ├── navigation/
-│   │   ├── WearNavGraph.kt                           [TODO]
-│   │   └── WearRoute.kt                              [TODO]
+│   │   ├── WearNavGraph.kt                           [✅ 완료 - Phase 1]
+│   │   └── WearRoute.kt                              [✅ 완료 - Phase 1]
 │   └── theme/
 │       └── Theme.kt                                   [✅ 완료]
 ├── domain/
 │   ├── model/
 │   │   ├── WearLoginData.kt                          [✅ 완료]
-│   │   ├── PatientInfo.kt                            [TODO]
-│   │   ├── LocationUpdate.kt                         [TODO]
-│   │   ├── SafeZoneConfig.kt                         [TODO]
-│   │   ├── NavigationState.kt                        [TODO]
-│   │   └── CallState.kt                              [TODO]
+│   │   ├── PatientInfo.kt                            [✅ 완료 - Phase 1]
+│   │   ├── LocationUpdate.kt                         [✅ 완료 - Phase 1]
+│   │   ├── SafeZoneConfig.kt                         [✅ 완료 - Phase 2]
+│   │   ├── SafeZoneStatus.kt                         [✅ 완료 - Phase 2]
+│   │   ├── NavigationState.kt                        [✅ 완료 - Phase 1]
+│   │   ├── NavigationLocation.kt                     [✅ 완료 - Phase 1]
+│   │   ├── CallState.kt                              [✅ 완료 - Phase 1]
+│   │   ├── TurnCredentials.kt                        [✅ 완료 - Phase 1]
+│   │   └── SosState.kt                               [✅ 완료 - Phase 1]
 │   ├── repository/
 │   │   ├── WearAuthRepository.kt                     [✅ 완료]
-│   │   ├── LocationRepository.kt                     [TODO]
-│   │   ├── CallRepository.kt                         [TODO]
-│   │   ├── NavigationRepository.kt                   [TODO]
+│   │   ├── LocationRepository.kt                     [✅ 완료 - Phase 1]
+│   │   ├── CallRepository.kt                         [✅ 완료 - Phase 1]
+│   │   ├── SosRepository.kt                          [✅ 완료 - Phase 1]
 │   │   └── PatientRepository.kt                      [TODO]
 │   └── usecase/
 │   │   ├── SyncLoginDataUseCase.kt                   [✅ 완료]
-│   │   ├── TrackLocationUseCase.kt                   [TODO]
+│   │   ├── TrackLocationUseCase.kt                   [✅ 완료 - Phase 2]
 │   │   ├── StartCallUseCase.kt                       [TODO]
-│   │   ├── MonitorSafeZoneUseCase.kt                 [TODO]
+│   │   ├── MonitorSafeZoneUseCase.kt                 [✅ 완료 - Phase 2]
 │   │   ├── NavigateToDestinationUseCase.kt           [TODO]
 │   │   └── RequestHelpUseCase.kt                     [TODO]
 ├── data/
@@ -175,13 +221,18 @@ kr.co.ongil.wear/
 │   │   │   └── DataStoreKeys.kt                      [✅ 완료]
 │   │   ├── remote/
 │   │   │   ├── api/
-│   │   │   │   ├── WearLocationApi.kt                [TODO]
-│   │   │   │   ├── WearCallApi.kt                    [TODO]
-│   │   │   │   └── WearNavigationApi.kt              [TODO]
+│   │   │   │   ├── WearLocationApi.kt                [✅ 완료 - Phase 1]
+│   │   │   │   ├── WearCallApi.kt                    [✅ 완료 - Phase 1]
+│   │   │   │   ├── WearSosApi.kt                     [✅ 완료 - Phase 1]
+│   │   │   │   └── WearAuthApi.kt                    [✅ 완료 - Phase 1]
+│   │   │   ├── dto/
+│   │   │   │   ├── (위치/네비게이션/통화/SOS DTO)  [✅ 완료 - Phase 1]
+│   │   │   ├── interceptor/
+│   │   │   │   └── WearAuthInterceptor.kt            [✅ 완료 - Phase 1]
 │   │   │   ├── websocket/
 │   │   │   │   ├── WearWebSocketManager.kt           [TODO]
 │   │   │   │   └── CallSignalingService.kt           [TODO]
-│   │   │   └── RetrofitClient.kt                     [TODO]
+│   │   │   └── WearRetrofitClient.kt                 [✅ 완료 - Phase 1]
 │   │   └── sync/
 │   │       ├── PhoneDataSyncManager.kt               [✅ 완료]
 │   │       └── LocationSyncManager.kt                [TODO]
@@ -192,12 +243,12 @@ kr.co.ongil.wear/
 │   │   └── NavigationDto.kt                          [TODO]
 │   └── repository/
 │       ├── WearAuthRepositoryImpl.kt                 [✅ 완료]
-│       ├── LocationRepositoryImpl.kt                 [TODO]
-│       ├── CallRepositoryImpl.kt                     [TODO]
-│       └── NavigationRepositoryImpl.kt               [TODO]
+│       ├── LocationRepositoryImpl.kt                 [✅ 완료 - Phase 1]
+│       ├── CallRepositoryImpl.kt                     [✅ 완료 - Phase 1]
+│       └── SosRepositoryImpl.kt                      [✅ 완료 - Phase 1]
 ├── service/
 │   ├── location/
-│   │   └── WearLocationTrackingService.kt            [TODO]
+│   │   └── WearLocationTrackingService.kt            [✅ 완료 - Phase 2]
 │   ├── call/
 │   │   └── WearCallService.kt                        [TODO]
 │   └── notification/
@@ -205,7 +256,8 @@ kr.co.ongil.wear/
 ├── di/
 │   ├── WearAppModule.kt                              [✅ 완료]
 │   ├── WearDataModule.kt                             [✅ 완료]
-│   ├── WearNetworkModule.kt                          [TODO]
+│   ├── WearNetworkModule.kt                          [✅ 완료 - Phase 1]
+│   ├── WearRepositoryModule.kt                       [✅ 완료 - Phase 1]
 │   └── WearServiceModule.kt                          [TODO]
 ├── tile/
 │   └── StatusTileService.kt                          [✅ 완료]
@@ -262,15 +314,15 @@ kr.co.ongil.wear/
 
 ## 워치 앱 개발 로드맵
 
-### Phase 1: 기본 인프라 구축 (1-2주)
+### Phase 1: 기본 인프라 구축 (✅ 완료 - 2025-11-17)
 **목표**: 네트워크, 데이터 동기화, 네비게이션 기반 구축
 
 #### 1.1 네트워크 레이어
-- [ ] Retrofit 클라이언트 설정 (앱 모듈 참고)
-- [ ] API 인터페이스 정의 (WearLocationApi, WearCallApi)
-- [ ] Auth Interceptor (토큰 자동 주입)
+- [x] Retrofit 클라이언트 설정 (WearRetrofitClient) ✅
+- [x] API 인터페이스 정의 (WearLocationApi, WearCallApi, WearSosApi, WearAuthApi) ✅
+- [x] Auth Interceptor (토큰 자동 주입 + Refresh 로직) ✅
 - [ ] WebSocket Manager (VoIP 신호용)
-- [ ] 에러 핸들링 및 재시도 로직
+- [x] 에러 핸들링 및 재시도 로직 (401 Refresh 재시도) ✅
 
 **참고 파일 (앱 모듈)**:
 - `app/data/datasource/remote/RetrofitClient.kt`
@@ -278,30 +330,35 @@ kr.co.ongil.wear/
 - `app/data/datasource/websocket/WebSocketManager.kt`
 
 #### 1.2 데이터 모델 및 Repository
-- [ ] DTOs (LocationDto, CallDto, NavigationDto, SafeZoneDto)
-- [ ] Domain Models (LocationUpdate, CallState, NavigationState)
-- [ ] Repository Interfaces (domain layer)
-- [ ] Repository Implementations (data layer)
+- [x] DTOs (위치/네비게이션/통화/SOS 관련 Request/Response) ✅
+- [x] Domain Models (LocationUpdate, CallState, NavigationState, SosState, PatientInfo) ✅
+- [x] Repository Interfaces (LocationRepository, CallRepository, SosRepository) ✅
+- [x] Repository Implementations (LocationRepositoryImpl, CallRepositoryImpl, SosRepositoryImpl) ✅
 
 #### 1.3 Navigation 구조
-- [ ] WearRoute sealed class (화면 라우트 정의)
-- [ ] WearNavGraph (NavHost 설정)
+- [x] WearRoute sealed class (화면 라우트 정의) ✅
+- [x] WearNavGraph (SwipeDismissableNavHost 설정) ✅
 - [ ] Deep linking for incoming calls
-- [ ] Scaffold 기반 화면 전환
+- [x] 기본 화면 전환 구조 (임시 화면 연결) ✅
+
+**구현 세부사항**:
+- WearRoute: LoginSync, Dashboard, Map, Navigation, Call, IncomingCall, HelpRequest, PatientSelection, Settings
+- WearNavGraph: navigationId, callId 등 인자 처리
+- DashboardScreen: 지도/통화/도움 요청 진입점 (실제 UI는 TODO)
 
 **참고 파일 (앱 모듈)**:
 - `app/presentation/navigation/Routes.kt`
 - `app/presentation/navigation/AppNavGraph.kt`
 
-### Phase 2: 위치 추적 및 안전 범위 (2-3주)
+### Phase 2: 위치 추적 및 안전 범위 (✅ 완료 - 2025-11-18)
 **목표**: 실시간 위치 추적 및 안전 구역 모니터링
 
 #### 2.1 위치 추적 Service
-- [ ] WearLocationTrackingService (Foreground Service)
-- [ ] FusedLocationProviderClient 통합
-- [ ] 주기적 위치 전송 (서버 API)
+- [x] WearLocationTrackingService (Foreground Service) ✅
+- [x] FusedLocationProviderClient 통합 ✅
+- [x] 주기적 위치 전송 (Phone 앱 DataLayer 동기화) ✅
 - [ ] 배터리 최적화 (업데이트 간격 조정)
-- [ ] LocationStreamBus 통합 (Common 모듈)
+- [x] LocationStreamBus 통합 (Common 모듈) ✅
 
 **참고 파일**:
 - `app/service/location/LocationTrackingService.kt`
@@ -348,10 +405,10 @@ class WearLocationTrackingService : Service() {
 ```
 
 #### 2.2 안전 범위 모니터링
-- [ ] MonitorSafeZoneUseCase
-- [ ] SafetyZoneMonitor 통합 (Common 모듈)
+- [x] MonitorSafeZoneUseCase ✅
+- [x] SafetyZoneMonitor 통합 (Common 모듈) ✅
 - [ ] 안전 범위 이탈 알림 (Notification)
-- [ ] 3단계 안전 구역 시각화 (지도 오버레이)
+- [x] 3단계 안전 구역 시각화 (지도 오버레이) ✅
 
 **참고 파일**:
 - `common/location/SafetyZoneMonitor.kt`
@@ -391,10 +448,17 @@ class MonitorSafeZoneUseCase @Inject constructor(
 ```
 
 #### 2.3 지도 화면 구현
-- [ ] MapScreen (환자 위치 + 안전 범위)
-- [ ] SafeZoneOverlay Composable (3단계 원 표시)
-- [ ] 실시간 위치 업데이트 반영
-- [ ] TMap 마커 및 원형 오버레이
+- [x] MapScreen (환자 위치 + 안전 범위) ✅
+- [x] SafeZoneOverlay Composable (3단계 원 표시 - WearTMapComposable에 포함) ✅
+- [x] 실시간 위치 업데이트 반영 ✅
+- [x] TMap 마커 및 원형 오버레이 ✅
+
+**구현 세부사항**:
+- MapViewModel을 통한 상태 관리 (위치, 안전 범위 상태, 추적 활성화)
+- MapScreen: 상태 표시 오버레이 + 제어 버튼 (시작/중지)
+- WearTMapComposable: 3단계 원형 오버레이 (Stage 1: 100m 녹색, Stage 2: 350m 주황, Stage 3: 700m 빨강)
+- LocationStreamBus를 통한 리액티브 위치 업데이트
+- SafetyZoneMonitor(Common 모듈)를 통한 안전 범위 판정
 
 **UI 컴포넌트**:
 ```kotlin
@@ -1332,11 +1396,14 @@ dependencies {
 ## 개발 우선순위
 
 ### 1순위: 핵심 기능 (필수)
-- [x] 로그인 동기화
-- [ ] 위치 추적 Service
-- [ ] 지도 화면 (환자 위치 표시)
-- [ ] 안전 범위 모니터링
-- [ ] 메인 대시보드 (3개 버튼)
+- [x] 로그인 동기화 ✅
+- [x] 네트워크 레이어 구축 ✅ (Phase 1 완료)
+- [x] 도메인/Repository 구조 ✅ (Phase 1 완료)
+- [x] 네비게이션 구조 ✅ (Phase 1 완료)
+- [x] 위치 추적 Service ✅ (Phase 2 완료)
+- [x] 지도 화면 (환자 위치 표시) ✅ (Phase 2 완료)
+- [x] 안전 범위 모니터링 ✅ (Phase 2 완료)
+- [ ] 메인 대시보드 (3개 버튼 - 실제 UI)
 
 ### 2순위: 주요 기능
 - [ ] VoIP 통화 (핫라인)

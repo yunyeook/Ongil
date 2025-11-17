@@ -8,5 +8,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class HealthDataUploadResponse(
     val message: String,
-    val data: String? = null
+    val data: UploadedData
+)
+
+@Serializable
+data class UploadedData(
+    val uploadedCount: Int
 )

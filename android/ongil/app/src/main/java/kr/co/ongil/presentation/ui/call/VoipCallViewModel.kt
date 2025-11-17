@@ -68,45 +68,43 @@ class VoipCallViewModel @Inject constructor(
     // =========================================================
 
     fun startVoipCall(receiverId: Long, userType: String, callType: String = "NORMAL") {
-        Log.d(TAG, "=== [CALLER] startVoipCall: to=$receiverId, userType=$userType, type=$callType")
+        Log.d(TAG, "=== [CALLER] startVoipCall: to=$receiverId")
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, message = null, error = null) }
+            _uiState.update { it.copy(isLoading = true, message = "연결 준비 중...", error = null) }
 
             try {
-                // 1-3. 통화 생성, WebSocket 연결, 구독
+                // 1. 통화 생성 (상태: CREATED, FCM 발송 안 됨)
                 val call = callRepository.createVoipCall(receiverId, callType).getOrThrow()
                 currentCall = call
+                Log.d(TAG, "✓ Call created: id=${call.id}, status=CREATED")
 
+                // 2. WebSocket 연결 & 구독
                 val token = userDataStoreManager.getAccessToken().first()
-                val connected = voipSignalingService.connectAndWait(token!!)
-                val subscribed = voipSignalingService.subscribeToCall(call.id)
+                voipSignalingService.connectAndWait(token!!)
+                voipSignalingService.subscribeToCall(call.id)
+                Log.d(TAG, "✓ WebSocket connected and subscribed")
 
-                // ✅ 4. 구독 후 1초 대기 (RabbitMQ 구독 완전 완료 보장)
-                Log.d(TAG, "⏳ Waiting for subscription to be fully established...")
-                delay(1000)
-
-                // 5. TURN 조회 & WebRTC 초기화
+                // 3. TURN 조회 & WebRTC 초기화
                 val turn = callRepository.getTurnCredentials().getOrThrow()
                 val iceServers = turn.toIceServers()
-                webRtcCallClient.init(iceServers)
 
+                webRtcCallClient.init(iceServers)
                 setupPeerConnectionStateMonitoring()
                 setupIceCandidateListener(call.id, call.sessionId, currentUserId!!, receiverId)
+                isWebRtcInitialized = true
+                Log.d(TAG, "✓ WebRTC initialized")
 
-                // 6. Offer 생성 및 전송
-                webRtcCallClient.createOffer { sdp ->
-                    Log.d(TAG, "📤 Now sending OFFER (after subscription delay)")
+                // ✅ 4. 발신자 준비 완료 알림 → 이제 FCM 발송됨!
+                callRepository.notifyCallerReady(call.id).getOrThrow()
+                Log.d(TAG, "✅ Caller ready notification sent - FCM will be sent now")
 
-                    voipSignalingService.sendOffer(
-                        callId = call.id,
-                        sessionId = call.sessionId,
-                        fromUserId = currentUserId!!,
-                        toUserId = receiverId,
-                        sdp = sdp.description
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        call = call,
+                        message = "상대방 응답 대기 중..."
                     )
-
-                    Log.d(TAG, "✅ Offer sent: callId=${call.id}")
                 }
 
             } catch (e: Exception) {
@@ -429,31 +427,48 @@ class VoipCallViewModel @Inject constructor(
             }
 
             "ACCEPT" -> {
-                Log.d(TAG, "✅ Remote user accepted the call (senderId=$actualSenderId)")  // ✅
-                val currentCall = currentCall ?: run {
-                    Log.w(TAG, "currentCall is null when receiving ACCEPT")
-                    return
-                }
+                Log.d(TAG, "✅ Remote user accepted the call")
+                val currentCall = currentCall ?: return
 
-                Log.d(TAG, "[CALLER] Received ACCEPT for callId=${currentCall.id}, current status=${currentCall.status}")
+                // ✅ 발신자: 수락 받았으니 이제 Offer 생성!
+                if (call?.callerId == currentUserId) {
+                    Log.d(TAG, "[CALLER] Creating offer after ACCEPT")
 
-                viewModelScope.launch {
-                    callRepository.updateVoipCallStatus(currentCall.id, "CONNECTED")
-                        .onSuccess { updated ->
-                            this@VoipCallViewModel.currentCall = updated
-                            Log.d(TAG, "✓ [CALLER] Call status updated to CONNECTED after ACCEPT")
-                            _uiState.update {
-                                it.copy(
-                                    call = updated,
-                                    message = "상대방이 통화를 수락했습니다."
-                                )
+                    viewModelScope.launch {
+                        // 서버 상태 업데이트
+                        callRepository.updateVoipCallStatus(currentCall.id, "CONNECTED")
+                            .onSuccess { updated ->
+                                this@VoipCallViewModel.currentCall = updated
+
+                                // ✅ 이제 Offer 생성 및 전송
+                                webRtcCallClient.createOffer { sdp ->
+                                    val receiverId = updated.receiverId ?: return@createOffer
+
+                                    voipSignalingService.sendOffer(
+                                        callId = updated.id,
+                                        sessionId = updated.sessionId,
+                                        fromUserId = currentUserId!!,
+                                        toUserId = receiverId,
+                                        sdp = sdp.description
+                                    )
+
+                                    Log.d(TAG, "✅ Offer sent after acceptance")
+                                }
+
+                                startTimer()
+
+                                _uiState.update {
+                                    it.copy(
+                                        call = updated,
+                                        message = "상대방이 통화를 수락했습니다."
+                                    )
+                                }
                             }
-
-                            startTimer()
-                        }
-                        .onFailure { e ->
-                            Log.e(TAG, "Failed to update call status on ACCEPT: ${e.message}", e)
-                        }
+                    }
+                }
+                // 수신자는 기존 로직 유지
+                else {
+                    Log.d(TAG, "[CALLEE] Received ACCEPT confirmation")
                 }
             }
 

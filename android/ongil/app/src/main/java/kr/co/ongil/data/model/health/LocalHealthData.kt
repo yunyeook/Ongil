@@ -3,34 +3,43 @@ package kr.co.ongil.data.model.health
 /**
  * Health Connect에서 가져온 로컬 건강 데이터
  * (API 응답 모델인 HealthDataResponse의 HealthData와 구분하기 위해 LocalHealthData로 명명)
+ * 시간대별 개별 레코드들을 담고 있음
  */
 data class LocalHealthData(
-    val heartRate: HeartRateData?,
-    val oxygenSaturation: OxygenSaturationData?,
-    val sleep: SleepData?,
-    val steps: StepsData?
+    val heartRateRecords: List<HeartRateRecord>,
+    val oxygenSaturationRecords: List<OxygenSaturationRecord>,
+    val sleepRecords: List<SleepRecord>,
+    val stepsRecords: List<StepsRecord>
 )
 
-data class HeartRateData(
-    val average: Long,
-    val max: Long,
-    val min: Long
+/**
+ * 심박수 개별 레코드
+ */
+data class HeartRateRecord(
+    val beatsPerMinute: Long,
+    val measuredAt: String // ISO-8601 형식: "2025-10-18T14:22:00"
 )
 
-data class OxygenSaturationData(
-    val average: Double,
-    val max: Double,
-    val min: Double
+/**
+ * 혈중산소포화도 개별 레코드
+ */
+data class OxygenSaturationRecord(
+    val percentage: Double,
+    val measuredAt: String
 )
 
-data class SleepData(
-    val average: Double, // 시간 단위
-    val max: Double,
-    val min: Double
+/**
+ * 수면 개별 레코드
+ */
+data class SleepRecord(
+    val durationHours: Double, // 시간 단위
+    val measuredAt: String
 )
 
-data class StepsData(
-    val average: Long,
-    val max: Long,
-    val min: Long
+/**
+ * 걸음수 개별 레코드
+ */
+data class StepsRecord(
+    val count: Long,
+    val measuredAt: String
 )

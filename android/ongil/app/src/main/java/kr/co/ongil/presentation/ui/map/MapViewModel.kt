@@ -1,5 +1,7 @@
 package kr.co.ongil.presentation.ui.map
 
+import android.content.Context
+import android.location.Geocoder
 import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.layout.size
@@ -7,6 +9,8 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +20,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kr.co.ongil.domain.model.SearchPlace
 import kr.co.ongil.domain.repository.MapRepository
 import kr.co.ongil.domain.usecase.map.SearchPlaceUseCase
@@ -24,18 +29,21 @@ import kr.co.ongil.domain.model.Route
 import kr.co.ongil.domain.usecase.map.FindRouteUseCase
 import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.presentation.ui.safezonesetting.SafeZoneSettings
+import java.util.Locale
 import javax.inject.Inject
 import kr.co.ongil.BuildConfig
 import kr.co.ongil.common.location.NavigationRouteManager
 import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.domain.usecase.sosalert.SendSosAlertUseCase
 import kr.co.ongil.domain.usecase.sosalert.StopSosAlertUseCase
+import kr.co.ongil.common.location.SafetyZoneStateManager
 
 /**
  * 지도 화면 ViewModel
  */
 @HiltViewModel
 class MapViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     val locationBus: LocationStreamBus,
     private val searchPlaceUseCase: SearchPlaceUseCase,
     private val mapRepository: MapRepository,
@@ -45,7 +53,8 @@ class MapViewModel @Inject constructor(
     private val gpsWebSocketManager: GpsWebSocketManager,
     private val favoriteRepository: kr.co.ongil.domain.repository.FavoriteRepository,
     private val sendSosAlertUseCase: SendSosAlertUseCase,
-    private val stopSosAlertUseCase: StopSosAlertUseCase
+    private val stopSosAlertUseCase: StopSosAlertUseCase,
+    val safetyZoneStateManager: SafetyZoneStateManager
 ) : ViewModel() {
 
     companion object {
@@ -86,6 +95,16 @@ class MapViewModel @Inject constructor(
     private val _showArrivalDialog = MutableStateFlow(false)
     val showArrivalDialog: StateFlow<Boolean> = _showArrivalDialog.asStateFlow()
 
+    // 목적지 변경 확인 모달 상태
+    data class DestinationChangeRequest(
+        val endLatitude: Double,
+        val endLongitude: Double,
+        val endName: String,
+        val selectedPatientId: String?
+    )
+    private val _showDestinationChangeDialog = MutableStateFlow<DestinationChangeRequest?>(null)
+    val showDestinationChangeDialog: StateFlow<DestinationChangeRequest?> = _showDestinationChangeDialog.asStateFlow()
+
     // 네비게이션 모드 (1인칭 시점)
     private val _isNavigationMode = MutableStateFlow(false)
     val isNavigationMode: StateFlow<Boolean> = _isNavigationMode.asStateFlow()
@@ -98,6 +117,10 @@ class MapViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    // 기본 목적지 좌표 (안전범위 기준점)
+    private val _defaultDestination = MutableStateFlow<Pair<Double, Double>?>(null)
+    val defaultDestination: StateFlow<Pair<Double, Double>?> = _defaultDestination.asStateFlow()
+
     // 안전구역 설정값
     private val _safeZoneSettings = MutableStateFlow(SafeZoneSettings())
     val safeZoneSettings: StateFlow<SafeZoneSettings> = _safeZoneSettings.asStateFlow()
@@ -107,10 +130,36 @@ class MapViewModel @Inject constructor(
     val isSosActive: StateFlow<Boolean> = _isSosActive.asStateFlow()
 
     init {
-        // 안전구역 설정값 구독
+        // 기본 목적지 조회 (안전범위 기준점)
         viewModelScope.launch {
-            userDataStoreManager.observeSafeZoneSettings().collect { settings ->
-                _safeZoneSettings.value = settings
+            loadDefaultDestination()
+        }
+
+        // 선택된 환자 ID 변경 감지 (보호자용 - 환자가 바뀌면 기본 목적지 다시 로드)
+        viewModelScope.launch {
+            userDataStoreManager.getSelectedPatientId().collect { selectedId ->
+                val userType = userDataStoreManager.getUserType().first()
+                if (userType == "GUARDIAN" && selectedId != null) {
+                    Log.d("MapViewModel", "선택된 환자 변경 감지: $selectedId - 기본 목적지 다시 로드")
+                    loadDefaultDestination()
+                }
+            }
+        }
+
+        // 안전구역 설정값 구독 (선택된 환자 기준)
+        viewModelScope.launch {
+            // 먼저 사용자 타입과 환자 ID를 확인
+            val userType = userDataStoreManager.getUserType().first()
+            val patientId = if (userType == "PATIENT") {
+                userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            } else {
+                userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+            }
+
+            if (patientId != null) {
+                userDataStoreManager.observeSafeZoneSettings(patientId).collect { settings ->
+                    _safeZoneSettings.value = settings
+                }
             }
         }
         // 검색어 변경 시 debounce 적용하여 자동 검색
@@ -136,6 +185,73 @@ class MapViewModel @Inject constructor(
                 .collectLatest { location ->
                     checkArrival(location.latitude, location.longitude)
                 }
+        }
+
+        // 길찾기 경로 변경 감지
+        viewModelScope.launch {
+            navigationRouteManager.currentRoute.collect { route ->
+                if (route != null) {
+                    _navigationRoute.value = Route(
+                        path = route.path.map { latLng ->
+                            kr.co.ongil.domain.model.LatLng(
+                                latitude = latLng.latitude,
+                                longitude = latLng.longitude
+                            )
+                        },
+                        totalTimeMinutes = route.totalTimeMinutes,
+                        totalDistanceMeters = route.totalDistanceMeters
+                    )
+                    Log.d("MapViewModel", "길찾기 경로 업데이트")
+                } else {
+                    _navigationRoute.value = null
+                    Log.d("MapViewModel", "길찾기 경로 제거")
+                }
+            }
+        }
+    }
+
+    /**
+     * 기본 목적지 새로고침 (public - 화면 재진입 시 호출)
+     */
+    fun refreshDefaultDestination() {
+        viewModelScope.launch {
+            loadDefaultDestination()
+        }
+    }
+
+    /**
+     * 기본 목적지 조회 (안전범위 기준점)
+     */
+    private suspend fun loadDefaultDestination() {
+        try {
+            val userType = userDataStoreManager.getUserType().first()
+            val patientId = if (userType == "PATIENT") {
+                userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            } else {
+                // 보호자는 선택된 환자 ID 사용
+                userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+            }
+
+            if (patientId == null) {
+                Log.w("MapViewModel", "환자 ID를 가져올 수 없어 기본 목적지를 조회할 수 없습니다")
+                return
+            }
+
+            // 기본 목적지 조회
+            val favoritePlaces = favoriteRepository.getFavoritePlaces(patientId)
+            val defaultPlace = favoritePlaces.getOrNull()?.items?.firstOrNull { it.isDefault }
+
+            if (defaultPlace == null) {
+                Log.w("MapViewModel", "⚠️ 기본 목적지가 설정되어 있지 않습니다")
+                _defaultDestination.value = null
+                return
+            }
+
+            _defaultDestination.value = Pair(defaultPlace.latitude, defaultPlace.longitude)
+            Log.d("MapViewModel", "✅ 기본 목적지 로드 완료: ${defaultPlace.displayName} (${defaultPlace.latitude}, ${defaultPlace.longitude})")
+        } catch (e: Exception) {
+            Log.e("MapViewModel", "❌ 기본 목적지 조회 실패", e)
+            _defaultDestination.value = null
         }
     }
 
@@ -182,19 +298,40 @@ class MapViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
+    // 환자 위치 저장 (보호자가 검색할 때 사용)
+    private var patientLocationForSearch: kr.co.ongil.data.model.location.Coordinate? = null
+
+    /**
+     * 환자 위치 업데이트 (보호자용)
+     */
+    fun updatePatientLocation(location: kr.co.ongil.data.model.location.Coordinate?) {
+        patientLocationForSearch = location
+    }
+
     /**
      * 장소 검색 (실시간 TMap 검색)
      */
     private suspend fun searchPlaces(query: String) {
         _isSearching.value = true
 
-        val location = locationBus.lastValue
-        Log.d("MapViewModel", "장소 검색: $query (lat: ${location?.latitude}, lng: ${location?.longitude})")
+        // 보호자인 경우 선택된 환자의 위치를 기준으로 검색
+        val userType = userDataStoreManager.getUserType().first()
+        val selectedPatientId = userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+
+        val (latitude, longitude) = if (userType == "GUARDIAN" && selectedPatientId != null && patientLocationForSearch != null) {
+            // 보호자는 환자의 위치를 사용
+            patientLocationForSearch!!.latitude to patientLocationForSearch!!.longitude
+        } else {
+            // 환자는 본인의 위치 사용
+            locationBus.lastValue?.latitude to locationBus.lastValue?.longitude
+        }
+
+        Log.d("MapViewModel", "장소 검색: $query (userType: $userType, selectedPatientId: $selectedPatientId, lat: $latitude, lng: $longitude)")
 
         searchPlaceUseCase(
             query = query,
-            latitude = location?.latitude,
-            longitude = location?.longitude
+            latitude = latitude,
+            longitude = longitude
         )
             .onSuccess { places ->
                 _searchResults.value = places
@@ -252,12 +389,20 @@ class MapViewModel @Inject constructor(
             // 실시간 검색 결과 숨김
             _searchResults.value = emptyList()
 
-            val location = locationBus.lastValue
-            val latitude = location?.latitude
-            val longitude = location?.longitude
+            // 보호자인 경우 선택된 환자의 위치를 기준으로 검색
+            val userType = userDataStoreManager.getUserType().first()
+            val selectedPatientId = userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
+
+            val (latitude, longitude) = if (userType == "GUARDIAN" && selectedPatientId != null && patientLocationForSearch != null) {
+                // 보호자는 환자의 위치를 사용
+                patientLocationForSearch!!.latitude to patientLocationForSearch!!.longitude
+            } else {
+                // 환자는 본인의 위치 사용
+                locationBus.lastValue?.latitude to locationBus.lastValue?.longitude
+            }
 
             _isSearching.value = true
-            Log.d("MapViewModel", "최종 검색 시작: $query (lat: $latitude, lng: $longitude)")
+            Log.d("MapViewModel", "최종 검색 시작: $query (userType: $userType, selectedPatientId: $selectedPatientId, lat: $latitude, lng: $longitude)")
 
             mapRepository.searchPlaces(
                 query = query,
@@ -294,11 +439,71 @@ class MapViewModel @Inject constructor(
 
     /**
      * 전화 걸기 버튼 클릭
-     * TODO: 전화 기능 구현 필요
      */
-    fun onClickCall() {
-        Log.d("MapViewModel", "전화 걸기 버튼 클릭됨 (기능 미구현)")
-        // TODO: 전화 걸기 기능 구현
+    fun onClickCall(onNavigateToCall: (targetName: String, targetPhone: String, targetId: Long, userType: String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val userType = userDataStoreManager.getUserType().first() ?: "PATIENT"
+                Log.d("MapViewModel", "전화 걸기 버튼 클릭 - 사용자 타입: $userType")
+
+                if (userType == "PATIENT") {
+                    // 환자: 기본 보호자에게 전화
+                    val relationshipsResult = favoriteRepository.getMyRelationships()
+                    val relationships = relationshipsResult.getOrNull()
+                    if (relationships.isNullOrEmpty()) {
+                        Log.e("MapViewModel", "관계 정보를 가져올 수 없습니다")
+                        return@launch
+                    }
+
+                    // isDefault가 true인 기본 보호자 찾기
+                    val defaultGuardian = relationships.find { it.isDefault }
+                        ?: relationships.firstOrNull()
+
+                    if (defaultGuardian == null) {
+                        Log.e("MapViewModel", "기본 보호자를 찾을 수 없습니다")
+                        return@launch
+                    }
+
+                    Log.d("MapViewModel", "환자 → 기본 보호자에게 전화: ${defaultGuardian.name}")
+                    onNavigateToCall(
+                        defaultGuardian.name,
+                        defaultGuardian.phoneNumber,
+                        defaultGuardian.id,
+                        userType
+                    )
+                } else {
+                    // 보호자: 선택된 환자에게 전화
+                    val selectedPatientId = userDataStoreManager.getSelectedPatientId().first()
+                    if (selectedPatientId == null) {
+                        Log.e("MapViewModel", "선택된 환자가 없습니다")
+                        return@launch
+                    }
+
+                    val relationshipsResult = favoriteRepository.getMyRelationships()
+                    val relationships = relationshipsResult.getOrNull()
+                    if (relationships.isNullOrEmpty()) {
+                        Log.e("MapViewModel", "환자 정보를 가져올 수 없습니다")
+                        return@launch
+                    }
+
+                    val selectedPatient = relationships.find { it.id.toString() == selectedPatientId }
+                    if (selectedPatient == null) {
+                        Log.e("MapViewModel", "선택된 환자를 찾을 수 없습니다")
+                        return@launch
+                    }
+
+                    Log.d("MapViewModel", "보호자 → 선택된 환자에게 전화: ${selectedPatient.name}")
+                    onNavigateToCall(
+                        selectedPatient.name,
+                        selectedPatient.phoneNumber,
+                        selectedPatient.id,
+                        userType
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "전화 걸기 실패", e)
+            }
+        }
     }
 
     /**
@@ -365,6 +570,90 @@ class MapViewModel @Inject constructor(
     }
 
     /**
+     * 좌표를 주소로 변환 (Reverse Geocoding)
+     * 도로명 주소만 반환 (예: "테헤란로 427")
+     */
+    private suspend fun getAddressFromCoordinates(latitude: Double, longitude: Double): String {
+        return withContext(Dispatchers.IO) {
+            try {
+                val geocoder = Geocoder(context, Locale.KOREA)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Android 13 이상: 비동기 API 사용
+                    var resultAddress = "내 위치"
+                    geocoder.getFromLocation(latitude, longitude, 1) { addresses ->
+                        if (addresses.isNotEmpty()) {
+                            val address = addresses[0]
+                            Log.d("MapViewModel", "주소 정보: thoroughfare=${address.thoroughfare}, subThoroughfare=${address.subThoroughfare}, featureName=${address.featureName}, addressLine=${address.getAddressLine(0)}")
+
+                            // 도로명 주소 추출
+                            resultAddress = when {
+                                // 1. thoroughfare + subThoroughfare (도로명 + 번지)
+                                address.thoroughfare != null -> {
+                                    if (address.subThoroughfare != null) {
+                                        "${address.thoroughfare} ${address.subThoroughfare}"
+                                    } else {
+                                        address.thoroughfare!!
+                                    }
+                                }
+                                // 2. getAddressLine에서 도로명 주소 부분만 추출
+                                else -> {
+                                    val fullAddress = address.getAddressLine(0) ?: ""
+                                    // "서울특별시 강남구 테헤란로 427" 형태에서 "테헤란로 427"만 추출
+                                    val parts = fullAddress.split(" ")
+                                    if (parts.size >= 4) {
+                                        "${parts[parts.size - 2]} ${parts[parts.size - 1]}"
+                                    } else {
+                                        "내 위치"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // 비동기 결과를 기다리는 간단한 방법
+                    kotlinx.coroutines.delay(500)
+                    resultAddress
+                } else {
+                    // Android 12 이하: 동기 API 사용
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+                    if (addresses != null && addresses.isNotEmpty()) {
+                        val address = addresses[0]
+                        Log.d("MapViewModel", "주소 정보: thoroughfare=${address.thoroughfare}, subThoroughfare=${address.subThoroughfare}, featureName=${address.featureName}, addressLine=${address.getAddressLine(0)}")
+
+                        // 도로명 주소 추출
+                        when {
+                            // 1. thoroughfare + subThoroughfare (도로명 + 번지)
+                            address.thoroughfare != null -> {
+                                if (address.subThoroughfare != null) {
+                                    "${address.thoroughfare} ${address.subThoroughfare}"
+                                } else {
+                                    address.thoroughfare!!
+                                }
+                            }
+                            // 2. getAddressLine에서 도로명 주소 부분만 추출
+                            else -> {
+                                val fullAddress = address.getAddressLine(0) ?: ""
+                                // "서울특별시 강남구 테헤란로 427" 형태에서 "테헤란로 427"만 추출
+                                val parts = fullAddress.split(" ")
+                                if (parts.size >= 4) {
+                                    "${parts[parts.size - 2]} ${parts[parts.size - 1]}"
+                                } else {
+                                    "내 위치"
+                                }
+                            }
+                        }
+                    } else {
+                        "내 위치"
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "주소 변환 실패: ${e.message}", e)
+                "내 위치"
+            }
+        }
+    }
+
+    /**
      * 통화 로그 기록
      */
     fun logCall(phoneNumber: String) {
@@ -400,7 +689,7 @@ class MapViewModel @Inject constructor(
     }
 
     /**
-     * 길안내 시작
+     * 길안내 시작 요청 (길찾기 중이면 확인 모달 표시)
      */
     fun startNavigation(
         endLatitude: Double,
@@ -408,16 +697,66 @@ class MapViewModel @Inject constructor(
         endName: String,
         selectedPatientId: String? = null
     ) {
-        viewModelScope.launch {
-            val location = locationBus.lastValue
-            if (location == null) {
-                Log.e("MapViewModel", "길안내 시작 실패: 위치 정보 없음")
-                return@launch
+        // 이미 길찾기 중이면 목적지 변경 확인 모달 표시
+        if (_navigationRoute.value != null) {
+            _showDestinationChangeDialog.value = DestinationChangeRequest(
+                endLatitude = endLatitude,
+                endLongitude = endLongitude,
+                endName = endName,
+                selectedPatientId = selectedPatientId
+            )
+            Log.d("MapViewModel", "길찾기 중 - 목적지 변경 확인 모달 표시")
+            return
+        }
+
+        // 길찾기 중이 아니면 바로 시작
+        startNavigationInternal(endLatitude, endLongitude, endName, selectedPatientId)
+    }
+
+    /**
+     * 목적지 변경 확인
+     */
+    fun confirmDestinationChange() {
+        val request = _showDestinationChangeDialog.value
+        if (request != null) {
+            _showDestinationChangeDialog.value = null
+            // 기존 길찾기 종료 후 새로운 길찾기 시작
+            viewModelScope.launch {
+                // 기존 길찾기 종료
+                val navigationIdString = currentNavigationId
+                if (navigationIdString != null) {
+                    endNavigationApi(navigationIdString, isSuccessful = false)
+                }
+                // 새로운 길찾기 시작
+                startNavigationInternal(
+                    request.endLatitude,
+                    request.endLongitude,
+                    request.endName,
+                    request.selectedPatientId
+                )
             }
+        }
+    }
 
-            Log.d("MapViewModel", "길안내 시작: $endName")
+    /**
+     * 목적지 변경 취소
+     */
+    fun cancelDestinationChange() {
+        _showDestinationChangeDialog.value = null
+        Log.d("MapViewModel", "목적지 변경 취소")
+    }
 
-            // userType에 따라 patientId 결정
+    /**
+     * 길안내 시작 (내부 함수)
+     */
+    private fun startNavigationInternal(
+        endLatitude: Double,
+        endLongitude: Double,
+        endName: String,
+        selectedPatientId: String? = null
+    ) {
+        viewModelScope.launch {
+            // userType에 따라 patientId와 출발 위치 결정
             val userType = userDataStoreManager.getUserType().first()
             val patientId = if (userType == "PATIENT") {
                 // 환자: 자기 자신의 ID
@@ -427,20 +766,51 @@ class MapViewModel @Inject constructor(
                 selectedPatientId?.toLongOrNull() ?: 1L
             }
 
-            Log.d("MapViewModel", "userType=$userType, patientId=$patientId")
+            // 보호자인 경우 환자의 위치를 출발점으로 사용
+            val startLocation = if (userType == "GUARDIAN" && patientLocationForSearch != null) {
+                // 보호자는 환자의 위치를 사용
+                patientLocationForSearch
+            } else {
+                // 환자는 본인의 위치 사용
+                locationBus.lastValue
+            }
+
+            if (startLocation == null) {
+                Log.e("MapViewModel", "길안내 시작 실패: 위치 정보 없음 (userType=$userType)")
+                return@launch
+            }
+
+            Log.d("MapViewModel", "길안내 시작: $endName (userType=$userType, patientId=$patientId)")
 
             // 길안내 종료 시 사용하기 위해 저장
             currentPatientId = patientId
 
+            // 출발지 좌표 추출
+            val startLat: Double
+            val startLng: Double
+            if (startLocation is kr.co.ongil.data.model.location.Coordinate) {
+                startLat = startLocation.latitude
+                startLng = startLocation.longitude
+            } else {
+                // LocationPoint
+                val locationPoint = startLocation as kr.co.ongil.common.location.LocationPoint
+                startLat = locationPoint.latitude
+                startLng = locationPoint.longitude
+            }
+
+            // 출발지 주소 가져오기
+            val startAddress = getAddressFromCoordinates(startLat, startLng)
+            Log.d("MapViewModel", "출발지 주소: $startAddress (lat=$startLat, lng=$startLng)")
+
             findRouteUseCase(
                 patientId = patientId,
-                startLatitude = location.latitude,
-                startLongitude = location.longitude,
-                startName = "내 위치",
+                startLatitude = startLat,
+                startLongitude = startLng,
+                startName = startAddress,
                 endLatitude = endLatitude,
                 endLongitude = endLongitude,
                 endName = endName,
-                initiatedBy = "PATIENT"
+                initiatedBy = if (userType == "PATIENT") "PATIENT" else "GUARDIAN"
             ).onSuccess { result ->
                 Log.d("MapViewModel", "경로 탐색 성공: navigationId=${result.navigationId}, 경로 포인트 수=${result.route.path.size}")
                 currentNavigationId = result.navigationId
@@ -461,8 +831,15 @@ class MapViewModel @Inject constructor(
                         longitude = latLng.longitude
                     )
                 }
-                navigationRouteManager.setRoute(result.navigationId, routePath)
-                Log.d("MapViewModel", "경로 정보 저장 완료: ${routePath.size}개 포인트")
+                navigationRouteManager.setRoute(
+                    navigationId = result.navigationId,
+                    path = routePath,
+                    startLocationName = startAddress,
+                    endLocationName = endName,
+                    totalTimeMinutes = result.route.totalTimeMinutes,
+                    totalDistanceMeters = result.route.totalDistanceMeters
+                )
+                Log.d("MapViewModel", "경로 정보 저장 완료: ${routePath.size}개 포인트, 소요시간: ${result.route.totalTimeMinutes}분")
 
                 // 네비게이션 모드 활성화 (환자일 때만)
                 val userType = userDataStoreManager.getUserType().first()
@@ -488,27 +865,39 @@ class MapViewModel @Inject constructor(
      */
     fun stopNavigation() {
         viewModelScope.launch {
-            val navigationIdString = currentNavigationId
+            // NavigationRouteManager에서 navigationId 가져오기 (ViewModel 재생성 시에도 유지됨)
+            val navigationIdString = navigationRouteManager.getCurrentRoute()?.navigationId
             if (navigationIdString == null) {
-                Log.e("MapViewModel", "길안내 종료 실패: navigationId 없음")
+                Log.e("MapViewModel", "길안내 종료 실패: navigationId 없음 (경로 정보 없음)")
+                // 상태만 정리
                 _navigationRoute.value = null
+                _isNavigationMode.value = false
+                _isNavigationModalVisible.value = false
                 return@launch
             }
+
+            Log.d("MapViewModel", "길안내 종료: navigationId=$navigationIdString")
 
             // 현재 위치 확인
             val currentLocation = locationBus.lastValue
             if (currentLocation == null) {
                 Log.e("MapViewModel", "길안내 종료 실패: 위치 정보 없음")
+                // 위치 없어도 종료는 진행 (실패로 처리)
+                endNavigationApi(navigationIdString, isSuccessful = false)
                 return@launch
             }
 
-            // 목적지 좌표 확인
-            val destLat = destinationLatitude
-            val destLng = destinationLongitude
-            if (destLat == null || destLng == null) {
-                Log.e("MapViewModel", "길안내 종료 실패: 목적지 정보 없음")
+            // 목적지 좌표 - NavigationRouteManager에서 가져오기
+            val route = navigationRouteManager.getCurrentRoute()
+            if (route == null || route.path.isEmpty()) {
+                Log.e("MapViewModel", "길안내 종료 실패: 경로 정보 없음")
+                endNavigationApi(navigationIdString, isSuccessful = false)
                 return@launch
             }
+
+            val destination = route.path.last()
+            val destLat = destination.latitude
+            val destLng = destination.longitude
 
             // 현재 위치와 목적지 거리 계산
             val distance = calculateDistance(
@@ -644,6 +1033,71 @@ class MapViewModel @Inject constructor(
     }
 
     /**
+     * SSE로 받은 길찾기 정보를 NavigationRouteManager에 동기화 (환자용)
+     */
+    fun syncNavigationFromSse(route: Route) {
+        viewModelScope.launch {
+            // SSE 데이터의 실제 navigationId 사용 (없으면 임시 ID)
+            val navigationId = route.navigationId ?: "sse_${System.currentTimeMillis()}"
+
+            // NavigationRouteManager에 저장 (길찾기 종료 시 필요)
+            currentNavigationId = navigationId
+
+            // NavigationRouteManager에 경로 저장
+            val routePath = route.path.map { latLng ->
+                NavigationRouteManager.LatLng(
+                    latitude = latLng.latitude,
+                    longitude = latLng.longitude
+                )
+            }
+            navigationRouteManager.setRoute(
+                navigationId = navigationId,
+                path = routePath,
+                startLocationName = route.startLocationName ?: "출발지",
+                endLocationName = route.endLocationName ?: "목적지",
+                totalTimeMinutes = route.totalTimeMinutes,
+                totalDistanceMeters = route.totalDistanceMeters
+            )
+
+            // 네비게이션 모드 활성화 (환자만)
+            val userType = userDataStoreManager.getUserType().first()
+            if (userType == "PATIENT") {
+                _isNavigationMode.value = true
+                _isNavigationModalVisible.value = true
+                Log.d("MapViewModel", "SSE로 길찾기 시작됨 (보호자가 시작함): ${route.startLocationName} → ${route.endLocationName}")
+            }
+
+            // 목적지 좌표 저장 (도착 감지용)
+            if (route.path.isNotEmpty()) {
+                val destination = route.path.last()
+                destinationLatitude = destination.latitude
+                destinationLongitude = destination.longitude
+            }
+        }
+    }
+
+    /**
+     * SSE로 받은 길찾기 종료 정보를 반영 (환자용)
+     */
+    fun clearNavigationFromSse() {
+        viewModelScope.launch {
+            // 경로 정보 초기화
+            navigationRouteManager.clearRoute()
+
+            _isNavigationMode.value = false
+            _isNavigationModalVisible.value = false
+
+            // 상태 초기화
+            currentNavigationId = null
+            currentPatientId = null
+            destinationLatitude = null
+            destinationLongitude = null
+
+            Log.d("MapViewModel", "SSE로 길찾기 종료됨 (보호자가 종료함)")
+        }
+    }
+
+    /**
      * 즐겨찾기 토글 (추가/삭제)
      */
     fun toggleFavorite(onSuccess: (String) -> Unit, onError: (String) -> Unit) {
@@ -654,12 +1108,13 @@ class MapViewModel @Inject constructor(
                 return@launch
             }
 
-            // patientId 가져오기
+            // patientId 가져오기 (환자는 본인, 보호자는 선택된 환자)
             val userType = userDataStoreManager.getUserType().first()
             val patientId = if (userType == "PATIENT") {
                 userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
             } else {
-                null
+                // 보호자는 선택된 환자의 즐겨찾기에 추가
+                userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
             }
 
             if (patientId == null) {

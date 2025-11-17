@@ -38,7 +38,14 @@ sealed class Routes(val route: String) {
     object SearchUser : Routes("search_user")
 
     // 비밀번호 변경
-    object ChangePassword : Routes("change_password")
+    object ChangePassword : Routes("change_password?isResetMode={isResetMode}&verificationToken={verificationToken}") {
+        fun createRoute(isResetMode: Boolean = false, verificationToken: String? = null): String {
+            return "change_password?isResetMode=$isResetMode&verificationToken=${verificationToken ?: ""}"
+        }
+    }
+
+    // 비밀번호 찾기
+    object FindPassword : Routes("find_password")
 
     // 알림
     object Notifications : Routes("notifications")
@@ -62,14 +69,15 @@ sealed class Routes(val route: String) {
 
     // 장소 상세
     // MOVED: PlaceDetailRoutes.kt 참조
-    object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}") {
-        fun createRoute(patientId: Long, favoriteId: Long): String {
-            return "place_detail/$patientId/$favoriteId"
+    object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}/{userType}") {
+        fun createRoute(patientId: Long, favoriteId: Long, userType: String = "GUARDIAN"): String {
+            return "place_detail/$patientId/$favoriteId/$userType"
         }
 
         val arguments = listOf(
             navArgument("patientId") { type = NavType.LongType },
-            navArgument("favoriteId") { type = NavType.LongType }
+            navArgument("favoriteId") { type = NavType.LongType },
+            navArgument("userType") { type = NavType.StringType; defaultValue = "GUARDIAN" }
         )
     }
 

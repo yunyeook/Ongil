@@ -26,14 +26,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.ui.common.LabeledOutlinedField
 import kr.co.ongil.presentation.uistate.MyInfoEditEvent
 import kr.co.ongil.presentation.uistate.MyInfoEditUiState
 import kr.co.ongil.presentation.viewmodel.MyInfoEditViewModel
 import java.util.*
-
-// 톤 컬러 (가능하면 theme로 이동 권장)
-private val Accent = Color(0xFF8CA898)
 
 /* =========================
    유틸: 날짜 포맷
@@ -51,6 +49,7 @@ fun formatDateForStorage(date: String): String = date.replace(".", "")
 @Composable
 fun MyInfoEditScreen(
     modifier: Modifier = Modifier,
+    paddingValues: PaddingValues = PaddingValues(0.dp),
     viewModel: MyInfoEditViewModel = viewModel(),
     onNavigateBack: () -> Unit = {},
     onChangePasswordClick: () -> Unit = {}
@@ -62,7 +61,8 @@ fun MyInfoEditScreen(
         onEvent = viewModel::onEvent,
         onNavigateBack = onNavigateBack,
         onChangePasswordClick = onChangePasswordClick,
-        modifier = modifier
+        modifier = modifier,
+        outerPaddingValues = paddingValues
     )
 }
 
@@ -75,7 +75,8 @@ fun MyInfoEditContent(
     onEvent: (MyInfoEditEvent) -> Unit,
     onNavigateBack: () -> Unit,
     onChangePasswordClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    outerPaddingValues: PaddingValues = PaddingValues(0.dp)
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -127,6 +128,7 @@ fun MyInfoEditContent(
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .padding(outerPaddingValues)
                 .padding(paddingValues)
                 .padding(horizontal = 24.dp, vertical = 24.dp)
                 .verticalScroll(rememberScrollState()) // ✅ 스크롤
@@ -160,7 +162,7 @@ fun MyInfoEditContent(
                         }
                     }
                     Surface(
-                        color = Accent,
+                        color = ongilColors.accent,
                         shape = CircleShape,
                         shadowElevation = 6.dp,
                         modifier = Modifier
@@ -181,7 +183,7 @@ fun MyInfoEditContent(
 
             Text(
                 text = uiState.roleLabel,
-                color = Accent,
+                color = ongilColors.accent,
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -233,7 +235,7 @@ fun MyInfoEditContent(
             Spacer(Modifier.height(16.dp))
 
             TextButton(onClick = onChangePasswordClick) {
-                Text("비밀번호 변경하기", color = Accent, style = MaterialTheme.typography.titleMedium)
+                Text("비밀번호 변경하기", color = ongilColors.accent, style = MaterialTheme.typography.titleMedium)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -243,7 +245,7 @@ fun MyInfoEditContent(
                     onEvent(MyInfoEditEvent.SaveInfo)
                 },
                 enabled = !uiState.isLoading,
-                colors = ButtonDefaults.buttonColors(containerColor = Accent),
+                colors = ButtonDefaults.buttonColors(containerColor = ongilColors.accent),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier
                     .fillMaxWidth()

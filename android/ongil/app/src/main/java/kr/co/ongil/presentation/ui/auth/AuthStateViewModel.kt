@@ -97,6 +97,43 @@ class AuthStateViewModel @Inject constructor(
     val selectedPatientId: StateFlow<String?> = userDataStoreManager.getSelectedPatientId()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    // DataStore에서 로그인한 사용자의 프로필 이미지 가져오기
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val currentUserProfileImage: StateFlow<String?> = currentUserId.flatMapLatest { userId ->
+        if (userId != null) {
+            userDataStoreManager.getProfileImage(userId)
+        } else {
+            flowOf(null)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // DataStore에서 선택된 환자의 프로필 이미지 가져오기
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedPatientProfileImage: StateFlow<String?> = selectedPatientId.flatMapLatest { patientId ->
+        if (patientId != null) {
+            userDataStoreManager.getProfileImage(patientId)
+        } else {
+            flowOf(null)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // 모든 환자들의 프로필 이미지 (Map<patientId, profileImageUrl>)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val patientProfileImages: StateFlow<Map<String, String?>> = patientList.flatMapLatest { patients ->
+        if (patients.isEmpty()) {
+            flowOf(emptyMap())
+        } else {
+            kotlinx.coroutines.flow.combine(
+                patients.map { patient ->
+                    userDataStoreManager.getProfileImage(patient.id.toString())
+                        .map { patient.id.toString() to it }
+                }
+            ) { results ->
+                results.toMap()
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     // 환자들의 실시간 위치 (Map<patientId, Coordinate>)
     private val _patientLocations = MutableStateFlow<Map<Long, Coordinate>>(emptyMap())
     val patientLocations: StateFlow<Map<Long, Coordinate>> = _patientLocations.asStateFlow()
@@ -141,17 +178,17 @@ class AuthStateViewModel @Inject constructor(
 
                             is SseEvent.GpsUpdate -> {
                                 val gpsUpdate = event.data
-                                android.util.Log.d(
-                                    "AuthStateViewModel",
-                                    "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}"
-                                )
+//                                android.util.Log.d(
+//                                    "AuthStateViewModel",
+//                                    "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}"
+//                                )
                                 _patientLocations.update { currentMap ->
                                     val updated =
                                         currentMap + (gpsUpdate.patientId to gpsUpdate.coordinate)
-                                    android.util.Log.d(
-                                        "AuthStateViewModel",
-                                        "patientLocations 업데이트: ${updated.keys}"
-                                    )
+//                                    android.util.Log.d(
+//                                        "AuthStateViewModel",
+//                                        "patientLocations 업데이트: ${updated.keys}"
+//                                    )
                                     updated
                                 }
                             }
@@ -175,7 +212,10 @@ class AuthStateViewModel @Inject constructor(
                                                         latitude = coord.latitude,
                                                         longitude = coord.longitude
                                                     )
-                                                }
+                                                },
+                                                navigationId = sseRoute.navigationId,
+                                                startLocationName = sseRoute.startLocation.name,
+                                                endLocationName = sseRoute.endLocation.name
                                             )
 
                                             _patientNavigationRoutes.update { currentMap ->
@@ -183,7 +223,7 @@ class AuthStateViewModel @Inject constructor(
                                             }
                                             android.util.Log.d(
                                                 "AuthStateViewModel",
-                                                "환자 ${navUpdate.patientId} 길찾기 시작: ${sseRoute.path.size}개 포인트"
+                                                "환자 ${navUpdate.patientId} 길찾기 시작: ${sseRoute.startLocation.name} → ${sseRoute.endLocation.name} (${sseRoute.path.size}개 포인트)"
                                             )
                                         }
                                     }
@@ -223,13 +263,13 @@ class AuthStateViewModel @Inject constructor(
     }
 
     init {
-        // 사용자 타입에 따라 SSE 연결 (보호자일 때만)
+        // 사용자 타입에 따라 SSE 연결 (보호자와 환자 모두)
         viewModelScope.launch {
             currentUserInfo.collect { userInfoResult ->
                 val userType = userInfoResult?.getOrNull()?.userType
                 android.util.Log.d("AuthStateViewModel", "사용자 타입: $userType")
-                if (userType == "GUARDIAN") {
-                    android.util.Log.d("AuthStateViewModel", "보호자 로그인 감지 - SSE 연결 시작")
+                if (userType == "GUARDIAN" || userType == "PATIENT") {
+                    android.util.Log.d("AuthStateViewModel", "$userType 로그인 감지 - SSE 연결 시작")
                     startSseConnection()
                 }
             }

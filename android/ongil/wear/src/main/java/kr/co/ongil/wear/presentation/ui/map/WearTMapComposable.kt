@@ -20,15 +20,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.wear.compose.material.CircularProgressIndicator
 import com.skt.tmap.TMapPoint
 import com.skt.tmap.TMapView
+import com.skt.tmap.overlay.TMapCircle
 import com.skt.tmap.overlay.TMapMarkerItem
 import kotlinx.coroutines.delay
 import kr.co.ongil.common.BuildConfig
+import kr.co.ongil.wear.domain.model.SafeZoneConfig
 
 /**
  * 워치용 간단한 TMap Composable
  *
  * - 지도만 표시 (읽기 전용)
  * - 현재 위치 마커
+ * - 안전 범위 오버레이 (3단계)
  * - 워치 화면에 최적화
  */
 @Composable
@@ -36,7 +39,10 @@ fun WearTMapComposable(
     modifier: Modifier = Modifier,
     latitude: Double = 37.5665,  // 서울시청 기본값
     longitude: Double = 126.9780,
-    zoomLevel: Int = 15
+    zoomLevel: Int = 15,
+    showCurrentLocation: Boolean = true,
+    showSafeZone: Boolean = false,
+    safeZoneConfig: SafeZoneConfig? = null
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -64,7 +70,7 @@ fun WearTMapComposable(
     )
 
     // 지도 초기화 (비동기)
-    LaunchedEffect(mapView) {
+    LaunchedEffect(mapView, latitude, longitude, showSafeZone, safeZoneConfig) {
         mapView?.let { tmap ->
             try {
                 android.util.Log.d("WearTMapComposable", "지도 초기화 시작")
@@ -72,8 +78,22 @@ fun WearTMapComposable(
                 // 지도 엔진 초기화 대기
                 delay(500)
 
-                // 마커 추가
-                addLocationMarker(tmap, latitude, longitude, context)
+                // 기존 오버레이 제거
+                tmap.removeAllTMapMarkerItem()
+                tmap.removeAllTMapCircle()
+
+                // 안전 범위 오버레이 추가 (마커보다 먼저 추가해야 아래에 표시됨)
+                if (showSafeZone && safeZoneConfig != null) {
+                    addSafeZoneOverlay(tmap, safeZoneConfig)
+                }
+
+                // 현재 위치 마커 추가
+                if (showCurrentLocation) {
+                    addLocationMarker(tmap, latitude, longitude, context)
+                }
+
+                // 지도 중심 업데이트
+                tmap.setCenterPoint(longitude, latitude)
 
                 android.util.Log.d("WearTMapComposable", "지도 초기화 완료")
                 isLoading = false
@@ -176,6 +196,88 @@ private fun createCircleMarkerBitmap(context: Context): Bitmap {
         isAntiAlias = true
     }
     canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - 4, paintInner)
+
+    return bitmap
+}
+
+/**
+ * 안전 범위 오버레이 추가 (3단계 원형)
+ */
+private fun addSafeZoneOverlay(
+    mapView: TMapView,
+    config: SafeZoneConfig
+) {
+    try {
+        android.util.Log.d("WearTMapComposable", "안전 범위 오버레이 추가 시작")
+
+        val centerPoint = TMapPoint(config.homeLatitude, config.homeLongitude)
+
+        // Stage 3 (가장 큰 원, 빨간색) - 700m
+        val circle3 = TMapCircle()
+        circle3.id = "safe_zone_stage3"
+        circle3.centerPoint = centerPoint
+        circle3.radius = config.stage3Radius.toDouble()
+        circle3.lineColor = android.graphics.Color.argb(100, 255, 0, 0)  // 반투명 빨강
+        circle3.areaColor = android.graphics.Color.argb(30, 255, 0, 0)
+        mapView.addTMapCircle(circle3)
+
+        // Stage 2 (중간 원, 노란색) - 350m
+        val circle2 = TMapCircle()
+        circle2.id = "safe_zone_stage2"
+        circle2.centerPoint = centerPoint
+        circle2.radius = config.stage2Radius.toDouble()
+        circle2.lineColor = android.graphics.Color.argb(100, 255, 165, 0)  // 반투명 주황
+        circle2.areaColor = android.graphics.Color.argb(30, 255, 165, 0)
+        mapView.addTMapCircle(circle2)
+
+        // Stage 1 (가장 작은 원, 녹색) - 100m
+        val circle1 = TMapCircle()
+        circle1.id = "safe_zone_stage1"
+        circle1.centerPoint = centerPoint
+        circle1.radius = config.stage1Radius.toDouble()
+        circle1.lineColor = android.graphics.Color.argb(100, 0, 255, 0)  // 반투명 초록
+        circle1.areaColor = android.graphics.Color.argb(30, 0, 255, 0)
+        mapView.addTMapCircle(circle1)
+
+        // 홈 위치 마커 추가
+        val homeMarker = TMapMarkerItem().apply {
+            id = "home_location"
+            tMapPoint = centerPoint
+            icon = createHomeMarkerBitmap()
+        }
+        mapView.addTMapMarkerItem(homeMarker)
+
+        android.util.Log.d("WearTMapComposable", "안전 범위 오버레이 추가 완료")
+
+    } catch (e: Exception) {
+        android.util.Log.e("WearTMapComposable", "안전 범위 오버레이 추가 실패", e)
+    }
+}
+
+/**
+ * 홈 위치 마커 비트맵 생성 (집 모양)
+ */
+private fun createHomeMarkerBitmap(): Bitmap {
+    val size = 50  // 마커 크기 (픽셀)
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // 집 모양 (간단한 원으로 대체)
+    val paint = Paint().apply {
+        color = android.graphics.Color.parseColor("#FF6B6B")  // 빨간색
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+
+    // 외곽선
+    val paintStroke = Paint().apply {
+        color = android.graphics.Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+    canvas.drawCircle(size / 2f, size / 2f, (size / 2f) - 2, paintStroke)
 
     return bitmap
 }

@@ -1,5 +1,7 @@
 package kr.co.ongil.presentation.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -53,10 +55,14 @@ fun AppNavGraph(
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier.background(Color.White)
+        modifier = modifier.background(Color.White),
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
         // 홈
-        homeGraph(navController, paddingValues)
+        homeGraph(navController, paddingValues, authViewModel)
 
         // 위치 - 지도 화면
         composable(Routes.Location.route) { backStackEntry ->
@@ -78,7 +84,20 @@ fun AppNavGraph(
                 authViewModel = authViewModel ?: hiltViewModel(),
                 onShowBarsChange = onMapShowBarsChange,
                 searchPlaceholder = searchPlaceholder,
-                requestSearchFocus = requestSearchFocus
+                requestSearchFocus = requestSearchFocus,
+                onNavigateToCall = { targetName, targetPhone, targetId, userType ->
+                    // VoipCall 화면으로 이동
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = targetName,
+                            targetPhone = targetPhone,
+                            isCaller = true,
+                            userType = userType,
+                            callId = 0L,
+                            receiverId = targetId
+                        )
+                    )
+                }
             )
         }
 
@@ -178,19 +197,101 @@ fun AppNavGraph(
                     // 내정보 화면으로 명시적으로 이동 (EditInfo 화면 제거)
                     navController.popBackStack(Routes.MyInfo.route, inclusive = false)
                 },
-                onChangePasswordClick = { navController.navigate(Routes.ChangePassword.route) }
+                onChangePasswordClick = { navController.navigate(Routes.ChangePassword.route) },
+                paddingValues = paddingValues
             )
         }
 
         // 비밀번호 변경
-        composable(Routes.ChangePassword.route) {
+        composable(
+            route = Routes.ChangePassword.route,
+            arguments = listOf(
+                navArgument("isResetMode") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+                navArgument("verificationToken") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val isResetMode = backStackEntry.arguments?.getBoolean("isResetMode") ?: false
+            val verificationToken = backStackEntry.arguments?.getString("verificationToken")
             val changePasswordViewModel: kr.co.ongil.presentation.viewmodel.ChangePasswordViewModel = hiltViewModel()
+
+            // verificationToken이 있으면 ViewModel에 설정
+            LaunchedEffect(verificationToken) {
+                verificationToken?.takeIf { it.isNotBlank() }?.let { token ->
+                    changePasswordViewModel.onEvent(
+                        kr.co.ongil.presentation.uistate.ChangePasswordEvent.SetVerificationToken(token)
+                    )
+                }
+            }
+
             ChangePasswordScreen(
                 viewModel = changePasswordViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onPasswordChanged = {
-                    // 비밀번호 변경 성공 시 내정보 화면으로 이동 (EditInfo 화면 건너뛰기)
-                    navController.popBackStack(Routes.MyInfo.route, inclusive = false)
+                    // 비밀번호 변경 성공 시
+                    if (isResetMode) {
+                        // 재설정 모드: 로그인 화면으로 이동
+                        navController.navigate(Routes.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    } else {
+                        // 변경 모드: 내정보 화면으로 이동
+                        navController.popBackStack(Routes.MyInfo.route, inclusive = false)
+                    }
+                },
+                isResetMode = isResetMode
+            )
+        }
+
+        // 비밀번호 찾기
+        composable(Routes.FindPassword.route) {
+            val findPasswordViewModel: kr.co.ongil.presentation.ui.findpassword.FindPasswordViewModel = hiltViewModel()
+            val uiState by findPasswordViewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                findPasswordViewModel.effect.collectLatest { effect ->
+                    when (effect) {
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.NavigateBack -> {
+                            navController.popBackStack()
+                        }
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.NavigateLogin -> {
+                            navController.navigate(Routes.Login.route) {
+                                popUpTo(Routes.Login.route) { inclusive = true }
+                            }
+                        }
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.NavigateResetPassword -> {
+                            // 비밀번호 재설정 화면으로 이동 (verificationToken 전달)
+                            val verificationToken = uiState.verificationToken
+                            navController.navigate(
+                                Routes.ChangePassword.createRoute(
+                                    isResetMode = true,
+                                    verificationToken = verificationToken
+                                )
+                            )
+                        }
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.ShowToast -> {
+                            // 토스트 메시지 표시 (필요시 SnackbarHost 사용)
+                        }
+                    }
+                }
+            }
+
+            kr.co.ongil.presentation.ui.findpassword.FindPasswordScreen(
+                uiState = uiState,
+                onEvent = findPasswordViewModel::onEvent,
+                formatPhone = { phone ->
+                    val digits = phone.filter { it.isDigit() }
+                    when {
+                        digits.length <= 3 -> digits
+                        digits.length <= 7 -> "${digits.substring(0, 3)}-${digits.substring(3)}"
+                        else -> "${digits.substring(0, 3)}-${digits.substring(3, 7)}-${digits.substring(7).take(4)}"
+                    }
                 }
             )
         }

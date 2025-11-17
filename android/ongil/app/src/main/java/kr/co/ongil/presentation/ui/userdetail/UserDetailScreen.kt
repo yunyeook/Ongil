@@ -20,11 +20,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.InputBox
+import kr.co.ongil.presentation.theme.OngilThemeProvider
+import kr.co.ongil.presentation.theme.ongilColors
 
 
 @Composable
 fun UserDetailScreen(
     viewModel: UserDetailViewModel,
+    userType: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -38,6 +41,7 @@ fun UserDetailScreen(
         name = name,
         phoneNumber = phoneNumber,
         relationshipType = relationshipType,
+        userType = userType,
         onNameChange = { name = it },
         onPhoneChange = { phoneNumber = it },
         onRelationshipTypeChange = { relationshipType = it },
@@ -64,6 +68,7 @@ fun UserDetailContent(
     name: String,
     phoneNumber: String,
     relationshipType: String,
+    userType: String,
     onNameChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onRelationshipTypeChange: (String) -> Unit,
@@ -71,17 +76,19 @@ fun UserDetailContent(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = ongilColors
+
     Surface(
         modifier = modifier
             .fillMaxSize(),
         color = Color(0xFFFFFFFF)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -127,6 +134,7 @@ fun UserDetailContent(
             GreenButton(
                 text = "저장하기",
                 onClick = onSaveClick,
+                containerColor = colors.accent,
                 modifier = Modifier
                     .fillMaxWidth()
             )
@@ -137,6 +145,7 @@ fun UserDetailContent(
             GreenButton(
                 text = "삭제하기",
                 onClick = onDeleteClick,
+                containerColor = colors.accent,
                 modifier = Modifier
                     .fillMaxWidth()
             )
@@ -152,6 +161,7 @@ fun UserDetailScreenPreview() {
         name = "김철수",
         phoneNumber = "010-1234-5678",
         relationshipType = "자녀",
+        userType = "GUARDIAN",
         onNameChange = {},
         onPhoneChange = {},
         onRelationshipTypeChange = {},

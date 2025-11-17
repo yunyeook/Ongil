@@ -13,6 +13,9 @@ data class ChangePasswordUiState(
     val newPasswordVisible: Boolean = false,
     val confirmPasswordVisible: Boolean = false,
 
+    // 비밀번호 재설정용
+    val verificationToken: String? = null,
+
     // 전역 상태
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
@@ -32,6 +35,9 @@ sealed interface ChangePasswordEvent {
     data object ToggleCurrentPasswordVisibility : ChangePasswordEvent
     data object ToggleNewPasswordVisibility : ChangePasswordEvent
     data object ToggleConfirmPasswordVisibility : ChangePasswordEvent
+
+    // 비밀번호 재설정용
+    data class SetVerificationToken(val token: String) : ChangePasswordEvent
 
     // 비밀번호 변경
     data object ChangePassword : ChangePasswordEvent

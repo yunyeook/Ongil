@@ -1,7 +1,9 @@
 package kr.co.ongil.presentation.ui.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -13,8 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,45 +53,55 @@ fun LoginScreen(
     // 비밀번호 보기/숨기기 토글은 로컬 UI 상태로 유지
     var pwVisible by remember { mutableStateOf(false) }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
-        // 타이틀
-        Text(
-            text = "로그인",
-            fontSize = 36.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TitleGray,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "안전한 돌봄을 위한 스마트 케어",
-            fontSize = 14.sp,
-            color = HintGray,
-            textAlign = TextAlign.Center
-        )
+            // 로고
+            Image(
+                painter = painterResource(id = R.drawable.logosymbol),
+                contentDescription = "온길 로고",
+                modifier = Modifier.size(85.dp)
+            )
+            Spacer(Modifier.height(15.dp))
 
-        Spacer(Modifier.height(32.dp))
+            // 타이틀
+            Text(
+                text = "온길",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = BrandGreen,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "안전한 돌봄을 위한 스마트 케어",
+                fontSize = 15.sp,
+                color = HintGray,
+                textAlign = TextAlign.Center
+            )
 
-        // 전화번호 입력
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text("전화번호", color = TitleGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(48.dp))
+
+            // 전화번호 입력
             OutlinedTextField(
                 value = state.phone,
                 onValueChange = onPhoneChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp),
+                    .height(64.dp),
+                  //  .shadow(2.dp, RoundedCornerShape(12.dp)),
                 singleLine = true,
-                placeholder = { Text("전화번호를 입력해주세요", color = HintGray, fontSize = 14.sp) },
+                placeholder = { Text("전화번호", color = HintGray, fontSize = 15.sp) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Call,
@@ -98,28 +110,28 @@ fun LoginScreen(
                     )
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BrandGreen,
-                    unfocusedBorderColor = FieldBorder,
-                    cursorColor = BrandGreen
+                    unfocusedBorderColor = Color.Transparent,
+                    cursorColor = BrandGreen,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
                 )
             )
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
-        // 비밀번호 입력
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text("비밀번호", color = TitleGray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(6.dp))
+            // 비밀번호 입력
             OutlinedTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp),
+                    .height(64.dp),
+                   // .shadow(2.dp, RoundedCornerShape(12.dp)),
                 singleLine = true,
-                placeholder = { Text("비밀번호를 입력해주세요", color = HintGray, fontSize = 14.sp) },
+                placeholder = { Text("비밀번호", color = HintGray, fontSize = 15.sp) },
                 visualTransformation = if (pwVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 leadingIcon = {
                     Icon(
@@ -131,7 +143,7 @@ fun LoginScreen(
                 trailingIcon = {
                     IconButton(onClick = { pwVisible = !pwVisible }) {
                         Icon(
-                            imageVector = if (pwVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                            imageVector = if (pwVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
                             contentDescription = "비밀번호 보기 전환",
                             tint = HintGray
                         )
@@ -139,109 +151,126 @@ fun LoginScreen(
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 keyboardActions = KeyboardActions(onDone = { onLoginClick() }),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BrandGreen,
-                    unfocusedBorderColor = FieldBorder,
-                    cursorColor = BrandGreen
+                    unfocusedBorderColor = Color.Transparent,
+                    cursorColor = BrandGreen,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
                 )
             )
-        }
 
-        Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(4.dp))
 
-        // 비밀번호 찾기 / 회원가입
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            TextButton(onClick = onClickFindPw) {
-                Text("비밀번호 찾기", color = TitleGray, fontSize = 13.sp)
+            // 비밀번호 찾기 / 회원가입
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onClickFindPw) {
+                    Text(
+                        "비밀번호 찾기",
+                        color = HintGray,
+                        fontSize = 13.sp
+                    )
+                }
+                TextButton(onClick = onClickSignup) {
+                    Text(
+                        "회원가입",
+                        color = BrandGreen,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
+                    )
+                }
             }
-            TextButton(onClick = onClickSignup) {
-                Text("회원가입", color = BrandGreen, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            }
-        }
 
-        Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(24.dp))
 
-        // 로그인 버튼
-        Button(
-            onClick = onLoginClick,
-            enabled = state.isLoginEnabled && !state.isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = BrandGreen),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            if (state.isLoading) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(18.dp),
-                    color = Color.White
+            // 로그인 버튼
+            Button(
+                onClick = onLoginClick,
+                enabled = state.isLoginEnabled && !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = BrandGreen,
+                    disabledContainerColor = BrandGreen.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                if (state.isLoading) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
+                Text(
+                    "로그인",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp
                 )
-                Spacer(Modifier.width(8.dp))
             }
-            Text("로그인", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+
+                // 구분선
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Divider(modifier = Modifier.weight(1f), color = DividerGray, thickness = 1.dp)
+//                Text("  또는  ", color = HintGray, fontSize = 12.sp)
+//                Divider(modifier = Modifier.weight(1f), color = DividerGray, thickness = 1.dp)
+//            }
+//
+//            Spacer(Modifier.height(16.dp))
+//
+//            // 카카오 로그인
+//            OutlinedButton(
+//                onClick = onClickKakao,
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(48.dp),
+//                colors = ButtonDefaults.outlinedButtonColors(containerColor = KakaoYellow),
+//                border = null,
+//                shape = MaterialTheme.shapes.medium
+//            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_kakao), // drawable/ic_kakao.xml
+//                    contentDescription = "카카오 로고",
+//                    modifier = Modifier.size(55.dp),
+//                    tint = Color.Unspecified
+//                )
+//                Spacer(Modifier.width(1.dp))
+//                Text("카카오로 시작하기", color = TitleGray, fontWeight = FontWeight.Medium)
+//            }
+//
+//            Spacer(Modifier.height(10.dp))
+//
+//            // 구글 로그인
+//            OutlinedButton(
+//                onClick = onClickGoogle,
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(48.dp),
+//                colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.background),
+//                border = ButtonDefaults.outlinedButtonBorder.copy(brush = SolidColor(GoogleBorder)),
+//                shape = MaterialTheme.shapes.medium
+//            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_google), // drawable/ic_google.xml
+//                    contentDescription = "Google 로고",
+//                    modifier = Modifier.size(18.dp),
+//                    tint = Color.Unspecified
+//                )
+//                Spacer(Modifier.width(20.dp))
+//                Text("구글로 시작하기", color = TitleGray, fontWeight = FontWeight.Medium)
+//            }
         }
-
-        Spacer(Modifier.height(28.dp))
-
-        // 구분선
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Divider(modifier = Modifier.weight(1f), color = DividerGray, thickness = 1.dp)
-            Text("  또는  ", color = HintGray, fontSize = 12.sp)
-            Divider(modifier = Modifier.weight(1f), color = DividerGray, thickness = 1.dp)
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // 카카오 로그인
-        OutlinedButton(
-            onClick = onClickKakao,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = KakaoYellow),
-            border = null,
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_kakao), // drawable/ic_kakao.xml
-                contentDescription = "카카오 로고",
-                modifier = Modifier.size(55.dp),
-                tint = Color.Unspecified
-            )
-            Spacer(Modifier.width(1.dp))
-            Text("카카오로 시작하기", color = TitleGray, fontWeight = FontWeight.Medium)
-        }
-
-        Spacer(Modifier.height(10.dp))
-
-        // 구글 로그인
-        OutlinedButton(
-            onClick = onClickGoogle,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.background),
-            border = ButtonDefaults.outlinedButtonBorder.copy(brush = SolidColor(GoogleBorder)),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_google), // drawable/ic_google.xml
-                contentDescription = "Google 로고",
-                modifier = Modifier.size(18.dp),
-                tint = Color.Unspecified
-            )
-            Spacer(Modifier.width(20.dp))
-            Text("구글로 시작하기", color = TitleGray, fontWeight = FontWeight.Medium)
-        }
-
-        Spacer(Modifier.height(12.dp))
     }
 }
 

@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.ui.common.favorite
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kr.co.ongil.presentation.theme.OngilThemeProvider
+import kr.co.ongil.presentation.theme.ongilColors
 
 @Composable
 fun PlaceCard(
@@ -32,16 +35,29 @@ fun PlaceCard(
     onClickIcon: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = ongilColors
+
+    val borderColor = if (isDefault) {
+        colors.accent.copy(alpha = 0.5f)      // 기본 목적지 → 살짝 진한 테두리
+    } else {
+        Color(0xFFE5E7EB)                     // 일반 카드 → 연한 회색 테두리
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClickCard() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDefault) Color(0xFFDFF5E1) else Color.White
+            containerColor = if (isDefault) {
+                colors.accent.copy(alpha = 0.08f) // 은은한 배경 하이라이트
+            } else {
+                Color.White
+            }
         ),
+        border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp
+            defaultElevation = 0.dp              // 그림자 대신 테두리만
         )
     ) {
         Row(
@@ -58,10 +74,11 @@ fun PlaceCard(
                         text = "기본 목적지",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF2E7D32),
+                        color = colors.accent,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
+
                 Text(
                     text = name,
                     fontSize = 18.sp,
@@ -87,7 +104,7 @@ fun PlaceCard(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF5C7165))
+                    .background(colors.accent)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Place,
@@ -100,22 +117,23 @@ fun PlaceCard(
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF1E1E1E)
+@Preview(showBackground = true, backgroundColor = 0xFFF9FAFB)
 @Composable
-fun PlaceCardPreview() {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        color = Color(0xFF1E1E1E)
-    ) {
-        PlaceCard(
-            name = "이마트 중계점",
-            address = "서울시 노원구 중계로 235",
-            isDefault = true,
-            onClickCard = {},
-            onClickIcon = {},
+fun PlaceCardPreviewGuardian() {
+    OngilThemeProvider(userType = "GUARDIAN") {
+        Surface(
             modifier = Modifier
-        )
+                .fillMaxWidth()
+                .padding(16.dp),
+            color = Color(0xFFF9FAFB)
+        ) {
+            PlaceCard(
+                name = "이마트 중계점",
+                address = "서울시 노원구 중계로 235",
+                isDefault = true,
+                onClickCard = {},
+                onClickIcon = {}
+            )
+        }
     }
 }

@@ -25,6 +25,7 @@ import com.skt.tmap.TMapView
 import com.skt.tmap.overlay.TMapCircle
 import com.skt.tmap.overlay.TMapMarkerItem
 import com.skt.tmap.overlay.TMapPolyLine
+import com.skt.tmap.overlay.TMapPolygon
 import kr.co.ongil.common.location.LocationPoint
 import kr.co.ongil.common.location.LocationStreamBus
 import kr.co.ongil.domain.model.Route
@@ -72,8 +73,10 @@ fun TMapComposable(
     level1Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS,
     level2Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS,
     level3Distance: Int = SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS,
+    defaultDestinationCoordinate: Pair<Double, Double>? = null,  // 기본 목적지 좌표 (안전범위 기준점)
     placeLocationTrigger: Pair<Int, Pair<Double, Double>> = 0 to Pair(0.0, 0.0),  // 장소 위치로 이동 트리거
-    disableFollowMode: Boolean = false  // 팔로우 모드 강제 비활성화 (장소 상세 정보 표시 중)
+    disableFollowMode: Boolean = false,  // 팔로우 모드 강제 비활성화 (장소 상세 정보 표시 중)
+    isHomeScreen: Boolean = false  // 홈 화면 여부
 ) {
     val context = LocalContext.current
     var mapView by remember { mutableStateOf<TMapView?>(null) }
@@ -195,10 +198,13 @@ fun TMapComposable(
     }
 
     // 펄스 애니메이션 루프 (환자용 - 자신의 위치)
-    LaunchedEffect(locationMarker, mapView) {
+    LaunchedEffect(locationMarker, isMapInitialized) {
         if (userType != "PATIENT") return@LaunchedEffect  // 환자만 자신의 위치 표시
+        if (!isMapInitialized) return@LaunchedEffect  // 지도 초기화 완료 후 시작
         val marker = locationMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
+
+        Log.d("TMapComposable", "🎬 펄스 애니메이션 시작 (환자) - marker: ${marker.id}")
 
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
@@ -233,10 +239,13 @@ fun TMapComposable(
     }
 
     // 펄스 애니메이션 루프 (보호자용 - 선택된 환자의 위치)
-    LaunchedEffect(patientMarker, mapView) {
+    LaunchedEffect(patientMarker, mapView, isMapInitialized) {
         if (userType != "GUARDIAN") return@LaunchedEffect  // 보호자만 환자 위치 표시
+        if (!isMapInitialized) return@LaunchedEffect  // 지도 초기화 완료 후 시작
         val marker = patientMarker ?: return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
+
+        Log.d("TMapComposable", "🎬 펄스 애니메이션 시작 (보호자)")
 
         while (isActive) {  // isActive 체크 추가
             delay(100) // 100ms마다 프레임 변경 (초당 10프레임)
@@ -270,20 +279,46 @@ fun TMapComposable(
         }
     }
 
+    // 컴포넌트 시작 시 로그 및 상태 초기화
+    LaunchedEffect(Unit) {
+        Log.d("TMapComposable", "📍 TMapComposable 시작 - enableTracking=$enableTracking, userType=$userType, selectedPatientId=$selectedPatientId, patientLocations=${patientLocations.keys}")
+        // 기존 마커 상태 초기화 (TMapViewFactory에서 마커 제거했으므로)
+        locationMarker = null
+        patientMarker = null
+        Log.d("TMapComposable", "🔄 마커 상태 초기화")
+    }
+
+    // 환자 위치 변경 로그
+    LaunchedEffect(patientLocations) {
+        Log.d("TMapComposable", "📍 환자 위치 변경됨: ${patientLocations.keys}, userType=$userType")
+    }
+
     // 지도 초기화
     LaunchedEffect(Unit) {
         try {
-            Log.d("TMapComposable", "🔄 지도 초기화 시작")
+            Log.d("TMapComposable", "🔄 지도 초기화 시작 (isHomeScreen=$isHomeScreen)")
 
-            val tmapView = TMapViewFactory.createTMapView(
+            val (tmapView, isCached) = TMapViewFactory.createTMapView(
                 context = context,
-                zoomLevel = zoomLevel
+                zoomLevel = zoomLevel,
+                isHomeScreen = isHomeScreen
             )
 
-            Log.d("TMapComposable", "🗺️ 지도 생성 완료")
+            Log.d("TMapComposable", "🗺️ 지도 생성 완료 (캐싱됨: $isCached)")
 
-            // 지도 엔진 초기화 대기
-            delay(300)
+            if (isCached) {
+                // 캐싱된 TMapView는 이미 초기화 완료 상태 - 즉시 사용 가능
+                Log.d("TMapComposable", "✅ TMapView 엔진 준비 완료 (캐싱됨: 즉시 설정)")
+                isMapInitialized = true
+                onMapReady?.invoke(tmapView)
+            } else {
+                // 새로 생성된 TMapView - OnMapReadyListener 대기
+                tmapView.setOnMapReadyListener {
+                    Log.d("TMapComposable", "✅ TMapView 엔진 준비 완료 (새로 생성됨)")
+                    isMapInitialized = true
+                    onMapReady?.invoke(tmapView)
+                }
+            }
 
             tmapView.setCompassMode(false)
 
@@ -299,10 +334,8 @@ fun TMapComposable(
             }
 
             mapView = tmapView
-            isMapInitialized = true
             isLoading = false
 
-            onMapReady?.invoke(tmapView)
             Log.d("TMapComposable", "✅ 지도 초기화 완료")
         } catch (e: Exception) {
             Log.e("TMapComposable", "❌ 지도 초기화 실패", e)
@@ -391,7 +424,7 @@ fun TMapComposable(
                         val marker = TMapMarkerItem().apply {
                             id = "place_marker"
                             tMapPoint = TMapPoint(lat, lon)
-                            icon = createMarkerBitmap(context, "장소", Color.parseColor("#FF9800"))
+                            icon = createPlaceMarkerBitmap(context, Color.parseColor("#FF9800"))
                         }
 
                         try {
@@ -443,90 +476,151 @@ fun TMapComposable(
         }
     }
 
-    // 안전 범위 동심원 표시/숨김 (PolyLine 사용)
-    LaunchedEffect(mapView, isMapInitialized, showSafetyZones, level1Distance, level2Distance, level3Distance) {
+    // 안전 범위 동심원 표시/숨김 (Polygon 사용 - 채워진 영역)
+    LaunchedEffect(mapView, isMapInitialized, showSafetyZones, level1Distance, level2Distance, level3Distance, defaultDestinationCoordinate) {
+        Log.d("TMapComposable", "🔄 안전범위 LaunchedEffect 실행 - showSafetyZones=$showSafetyZones, isHomeScreen=$isHomeScreen, defaultDestination=$defaultDestinationCoordinate")
         if (!isMapInitialized) return@LaunchedEffect
         val tmap = mapView ?: return@LaunchedEffect
 
         try {
             withContext(Dispatchers.Main) {
                 if (showSafetyZones) {
-                    // 기존 폴리라인 제거
+                    // 기본 목적지가 설정되지 않은 경우 안전범위 표시 안함
+                    if (defaultDestinationCoordinate == null) {
+                        Log.w("TMapComposable", "⚠️ 기본 목적지가 설정되지 않아 안전범위를 표시할 수 없습니다")
+                        return@withContext
+                    }
+
+                    val (centerLat, centerLon) = defaultDestinationCoordinate
+                    Log.d("TMapComposable", "✅ 기본 목적지 기준 안전범위 표시: ($centerLat, $centerLon)")
+
+                    // 기존 폴리곤 제거
                     safetyCircles.forEach { id ->
                         try {
-                            tmap.removeTMapPolyLine(id)
+                            tmap.removeTMapPolygon(id)
                         } catch (e: Exception) {
-                            Log.e("TMapComposable", "폴리라인 제거 실패: $id", e)
+                            Log.e("TMapComposable", "폴리곤 제거 실패: $id", e)
                         }
                     }
 
-                    // 홈 위치로 지도 이동 (동심원이 보이도록)
-                    tmap.setCenterPoint(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE
+                    val polygons = mutableListOf<String>()
+
+                    // 각 영역을 겹치지 않는 링(donut) 형태로 생성
+                    // 1단계 - 초록색 (level1Distance ~ level2Distance 사이의 링)
+                    val outerPoints1 = createCirclePoints(
+                        centerLat,
+                        centerLon,
+                        level2Distance,
+                        72
                     )
-                    tmap.setZoomLevel(14)
-                    Log.d("TMapComposable", "🏠 홈 위치로 이동: ${SafetyZoneConfig.HomeLocation.LATITUDE}, ${SafetyZoneConfig.HomeLocation.LONGITUDE}")
-
-                    val circles = mutableListOf<String>()
-
-                    // 3단계 - 빨간색
-                    val points3 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        level3Distance
+                    val innerPoints1 = createCirclePoints(
+                        centerLat,
+                        centerLon,
+                        level1Distance,
+                        72
                     )
-                    val poly3 = TMapPolyLine("safety_zone_stage3", points3)
-                    poly3.setLineColor(CircleColors.stage3StrokeColor.toArgb())
-                    poly3.setLineWidth(0.5f)
-                    poly3.setOutLineColor(0xFFD40806.toInt())  // 빨간색 외곽선
-                    tmap.addTMapPolyLine(poly3)
-                    circles.add("safety_zone_stage3")
-                    Log.d("TMapComposable", "✅ 3단계 동심원 추가 (${level3Distance}m, ${points3.size}개 점)")
+                    val pointList1 = ArrayList<TMapPoint>().apply {
+                        addAll(outerPoints1)
+                        addAll(innerPoints1.reversed())
+                    }
+                    val polygon1 = TMapPolygon("safety_zone_stage1", pointList1)
+                    polygon1.setAreaColor(Color.rgb(16, 192, 10))  // 초록색
+                    polygon1.setAreaAlpha(32)
+                    polygon1.setLineColor(Color.TRANSPARENT)
+                    polygon1.setPolygonWidth(0f)
+                    tmap.addTMapPolygon(polygon1)
+                    polygons.add("safety_zone_stage1")
+                    Log.d("TMapComposable", "✅ 1단계 안전 범위 추가 (${level1Distance}m ~ ${level2Distance}m)")
 
-                    // 2단계 - 주황색
-                    val points2 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        level2Distance
+                    // 2단계 - 파란색 (level2Distance ~ level3Distance 사이의 링)
+                    val outerPoints2 = createCirclePoints(
+                        centerLat,
+                        centerLon,
+                        level3Distance,
+                        72
                     )
-                    val poly2 = TMapPolyLine("safety_zone_stage2", points2)
-                    poly2.setLineColor(CircleColors.stage2StrokeColor.toArgb())
-                    poly2.setLineWidth(0.5f)
-                    poly2.setOutLineColor(0xFF007BFF.toInt())  // 파란색 외곽선
-                    tmap.addTMapPolyLine(poly2)
-                    circles.add("safety_zone_stage2")
-                    Log.d("TMapComposable", "✅ 2단계 동심원 추가 (${level2Distance}m, ${points2.size}개 점)")
-
-                    // 1단계 - 초록색
-                    val points1 = createCirclePoints(
-                        SafetyZoneConfig.HomeLocation.LATITUDE,
-                        SafetyZoneConfig.HomeLocation.LONGITUDE,
-                        level1Distance
+                    val innerPoints2 = createCirclePoints(
+                        centerLat,
+                        centerLon,
+                        level2Distance,
+                        72
                     )
-                    val poly1 = TMapPolyLine("safety_zone_stage1", points1)
-                    poly1.setLineColor(CircleColors.stage1StrokeColor.toArgb())
-                    poly1.setLineWidth(0.5f)
-                    poly1.setOutLineColor(0xFF10C00A.toInt())  // 초록색 외곽선
-                    tmap.addTMapPolyLine(poly1)
-                    circles.add("safety_zone_stage1")
-                    Log.d("TMapComposable", "✅ 1단계 동심원 추가 (${level1Distance}m, ${points1.size}개 점)")
+                    val pointList2 = ArrayList<TMapPoint>().apply {
+                        addAll(outerPoints2)
+                        addAll(innerPoints2.reversed())
+                    }
+                    val polygon2 = TMapPolygon("safety_zone_stage2", pointList2)
+                    polygon2.setAreaColor(Color.rgb(0, 123, 255))  // 파란색
+                    polygon2.setAreaAlpha(32)
+                    polygon2.setLineColor(Color.TRANSPARENT)
+                    polygon2.setPolygonWidth(0f)
+                    tmap.addTMapPolygon(polygon2)
+                    polygons.add("safety_zone_stage2")
+                    Log.d("TMapComposable", "✅ 2단계 안전 범위 추가 (${level2Distance}m ~ ${level3Distance}m)")
 
+                    // 3단계 - 빨간색 (level3Distance ~ 50km 사이의 링)
+                    val maxRadius = 50000 // 50km
+                    val outerPoints3 = createCirclePoints(
+                        centerLat,
+                        centerLon,
+                        maxRadius,
+                        721
+                    )
+                    val innerPoints3 = createCirclePoints(
+                        centerLat,
+                        centerLon,
+                        level3Distance,
+                        72
+                    )
+                    val pointList3 = ArrayList<TMapPoint>().apply {
+                        addAll(outerPoints3)
+                        addAll(innerPoints3.reversed())
+                    }
+                    val polygon3 = TMapPolygon("safety_zone_stage3", pointList3)
+                    polygon3.setAreaColor(Color.rgb(212, 8, 6))  // 빨간색
+                    polygon3.setAreaAlpha(32)
+                    polygon3.setLineColor(Color.TRANSPARENT)
+                    polygon3.setPolygonWidth(0f)
+                    tmap.addTMapPolygon(polygon3)
+                    polygons.add("safety_zone_stage3")
+                    Log.d("TMapComposable", "✅ 3단계 안전 범위 추가 (${level3Distance}m ~ ${maxRadius}m)")
 
+                    safetyCircles = polygons
 
-                    safetyCircles = circles
-                    Log.d("TMapComposable", "✅ 안전 범위 동심원 표시 완료 (총 ${circles.size}개)")
+                    Log.d("TMapComposable", "✅ 안전 범위 동심원 표시 완료 (총 ${polygons.size}개)")
+
+                    // 안전 범위 추가 후 마커를 폴리곤 위로 재추가
+                    if (userType == "PATIENT") {
+                        locationMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                                tmap.addTMapMarkerItem(marker)
+                                Log.d("TMapComposable", "✅ 현재위치 마커 재추가 (폴리곤 위)")
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "현재위치 마커 재추가 실패", e)
+                            }
+                        }
+                    } else if (userType == "GUARDIAN") {
+                        patientMarker?.let { marker ->
+                            try {
+                                tmap.removeTMapMarkerItem(marker.id)
+                                tmap.addTMapMarkerItem(marker)
+                                Log.d("TMapComposable", "✅ 환자 마커 재추가 (폴리곤 위)")
+                            } catch (e: Exception) {
+                                Log.e("TMapComposable", "환자 마커 재추가 실패", e)
+                            }
+                        }
+                    }
                 } else {
-                    // 폴리라인 숨김
+                    // 폴리곤 숨김
                     safetyCircles.forEach { id ->
                         try {
-                            tmap.removeTMapPolyLine(id)
+                            tmap.removeTMapPolygon(id)
                         } catch (e: Exception) {
-                            Log.e("TMapComposable", "폴리라인 제거 실패: $id", e)
+                            Log.e("TMapComposable", "폴리곤 제거 실패: $id", e)
                         }
                     }
                     safetyCircles = emptyList()
-
 
                     Log.d("TMapComposable", "🗑️ 안전 범위 동심원 숨김 완료")
                 }
@@ -538,7 +632,7 @@ fun TMapComposable(
 
     // 환자 위치 업데이트 (보호자용 - 선택된 환자만)
     LaunchedEffect(mapView, isMapInitialized, patientLocations, selectedPatientId, userType) {
-        Log.d("TMapComposable", "환자 위치 업데이트 LaunchedEffect 실행: isMapInitialized=$isMapInitialized, userType=$userType, selectedPatientId=$selectedPatientId, patientLocations=${patientLocations.keys}")
+//        Log.d("TMapComposable", "환자 위치 업데이트 LaunchedEffect 실행: isMapInitialized=$isMapInitialized, userType=$userType, selectedPatientId=$selectedPatientId, patientLocations=${patientLocations.keys}")
 
         if (!isMapInitialized) {
             Log.d("TMapComposable", "지도 초기화 안됨")
@@ -698,8 +792,22 @@ fun TMapComposable(
 
                 lastPoint = point
 
-                // 마커 생성 (최초 1회)
-                if (locationMarker == null) {
+                // 마커 생성 또는 업데이트
+                val currentMarker = locationMarker
+
+                // 마커가 없거나 무효화된 경우 재생성
+                if (currentMarker == null || currentMarker.id == null) {
+                    // 기존 마커가 있으면 제거 시도
+                    if (currentMarker != null) {
+                        try {
+                            tmap.removeTMapMarkerItem("location_marker")
+                            Log.d("TMapComposable", "무효화된 마커 제거")
+                        } catch (e: Exception) {
+                            // 이미 제거되었을 수 있음
+                        }
+                    }
+
+                    // 새 마커 생성
                     val markerBitmap = pulseFrames[currentPulseFrame]
                     val marker = TMapMarkerItem().apply {
                         id = "location_marker"
@@ -709,21 +817,28 @@ fun TMapComposable(
 
                     try {
                         tmap.addTMapMarkerItem(marker)
+                        locationMarker = marker
                         Log.d("TMapComposable", "✅ 마커 생성 완료")
+
+                        // 첫 위치로 지도 이동
+                        tmap.setCenterPoint(point.latitude, point.longitude)
+                        // 홈 화면이 아닐 때만 줌 레벨 변경
+                        if (!isHomeScreen) {
+                            tmap.setZoomLevel(17)
+                        }
                     } catch (e: Exception) {
                         Log.e("TMapComposable", "마커 추가 실패", e)
+                        locationMarker = null
                     }
-
-                    locationMarker = marker
-
-                    // 첫 위치로 지도 이동
-                    tmap.setCenterPoint(point.latitude, point.longitude)
-                    tmap.setZoomLevel(17)
                 } else {
                     // 마커 위치 업데이트
                     try {
-                        locationMarker?.tMapPoint = TMapPoint(point.latitude, point.longitude)
-                        locationMarker?.let { tmap.updateTMapMarkerItem(it) }
+                        currentMarker.tMapPoint = TMapPoint(point.latitude, point.longitude)
+                        tmap.updateTMapMarkerItem(currentMarker)
+                    } catch (e: NullPointerException) {
+                        // 마커가 무효화됨 - 다음 위치 업데이트 시 재생성
+                        Log.w("TMapComposable", "마커 무효화됨 - 재생성 필요")
+                        locationMarker = null
                     } catch (e: Exception) {
                         Log.e("TMapComposable", "마커 위치 업데이트 실패", e)
                     }
@@ -795,7 +910,7 @@ fun TMapComposable(
                         val startMarker = TMapMarkerItem().apply {
                             id = "start_marker"
                             tMapPoint = TMapPoint(startPoint.latitude, startPoint.longitude)
-                            icon = createMarkerBitmap(context, "출발", Color.parseColor("#4CAF50"))
+                            icon = createStartMarkerBitmap(context, Color.parseColor("#4CAF50"))
                         }
                         try {
                             tmap.addTMapMarkerItem(startMarker)
@@ -811,7 +926,7 @@ fun TMapComposable(
                         val endMarker = TMapMarkerItem().apply {
                             id = "end_marker"
                             tMapPoint = TMapPoint(endPoint.latitude, endPoint.longitude)
-                            icon = createMarkerBitmap(context, "도착", Color.parseColor("#F44336"))
+                            icon = createEndMarkerBitmap(context, Color.parseColor("#F44336"))
                         }
                         try {
                             tmap.addTMapMarkerItem(endMarker)
@@ -829,6 +944,57 @@ fun TMapComposable(
                         Log.d("TMapComposable", "📐 경로 초기 방향: ${routeBearing}°")
                     } else {
                         routeBearing = 0f
+                    }
+
+                    // 홈 화면에서 경로 전체가 보이도록 자동 줌 조정
+                    if (isHomeScreen && route.path.isNotEmpty()) {
+                        try {
+                            // 경로의 최소/최대 위경도 계산
+                            val minLat = route.path.minOf { it.latitude }
+                            val maxLat = route.path.maxOf { it.latitude }
+                            val minLon = route.path.minOf { it.longitude }
+                            val maxLon = route.path.maxOf { it.longitude }
+
+                            // 경로 중심으로 이동
+                            tmap.setCenterPoint(
+                                (minLat + maxLat) / 2,
+                                (minLon + maxLon) / 2
+                            )
+
+                            // 경로 범위에 맞는 줌 레벨 계산 (여유를 위해 1.8배 확장)
+                            val latDiff = (maxLat - minLat) * 1.8
+                            val lonDiff = (maxLon - minLon) * 1.8
+                            val maxDiff = maxOf(latDiff, lonDiff)
+
+                            // 줌 레벨 계산
+                            val autoZoomLevel = when {
+//                                maxDiff > 0.4 -> 10      // 매우 매우 넓은 범위 (40km+)
+                                maxDiff > 0.2 -> 10      // 매우 넓은 범위 (20-40km)
+                                maxDiff > 0.1 -> 11      // 넓은 범위 (10-20km)
+                                maxDiff > 0.05 -> 12     // 중간 범위 (5-10km)
+                                maxDiff > 0.025 -> 13    // 좁은 범위 (2.5-5km)
+                                maxDiff > 0.012 -> 14    // 매우 좁은 범위 (1.2-2.5km)
+                                maxDiff > 0.006 -> 15    // 아주 좁은 범위 (600m-1.2km)
+                                maxDiff > 0.003 -> 16    // 초근접 (300-600m)
+                                maxDiff > 0.0015 -> 17   // 극근접 (150-300m)
+                                else -> 18               // 최대 확대 (150m 미만)
+                            }
+
+                            tmap.zoomLevel = autoZoomLevel
+                            Log.d("TMapComposable", "🔍 홈 화면 자동 줌 조정: $autoZoomLevel (범위: ${String.format("%.4f", maxDiff)}, 약 ${String.format("%.1f", maxDiff * 111)}km)")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "자동 줌 조정 실패", e)
+                        }
+                    } else if (!isHomeScreen && route.path.isNotEmpty()) {
+                        // 위치 탭에서 길찾기 시작 시: 출발지(환자 위치)로 이동 + 줌 레벨 18
+                        try {
+                            val startPoint = route.path.first()
+                            tmap.setCenterPoint(startPoint.latitude, startPoint.longitude)
+                            tmap.setZoomLevel(19)
+                            Log.d("TMapComposable", "🔍 길찾기 시작 - 출발지로 이동 (줌 레벨 18)")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "출발지 이동 실패", e)
+                        }
                     }
 
                     Log.d("TMapComposable", "✅ 경로 그리기 완료")
@@ -851,6 +1017,17 @@ fun TMapComposable(
                     } catch (e: Exception) {
                         Log.w("TMapComposable", "마커 제거 실패", e)
                     }
+
+                    // 홈 화면에서 경로 제거 시 기본 줌 레벨로 복원
+                    if (isHomeScreen) {
+                        try {
+                            tmap.zoomLevel = zoomLevel
+                            Log.d("TMapComposable", "🔍 홈 화면 기본 줌 복원: $zoomLevel")
+                        } catch (e: Exception) {
+                            Log.e("TMapComposable", "기본 줌 복원 실패", e)
+                        }
+                    }
+
                     Log.d("TMapComposable", "🗑️ 경로 제거 완료")
                 }
             } catch (e: Exception) {
@@ -877,8 +1054,11 @@ fun TMapComposable(
     DisposableEffect(Unit) {
         onDispose {
             // TMapView를 캐싱하여 재사용하므로 destroy하지 않음
-            // 부모에서만 제거하고 TMapView 인스턴스는 유지
-            Log.d("TMapComposable", "🔄 TMapComposable dispose (TMapView는 캐시에 유지)")
+            // 하지만 마커 상태는 초기화하여 펄스 애니메이션 종료
+            locationMarker = null
+            patientMarker = null
+            placeMarker = null
+            Log.d("TMapComposable", "🔄 TMapComposable dispose - 마커 상태 초기화 (TMapView는 캐시에 유지)")
         }
     }
 }
@@ -1002,47 +1182,340 @@ private fun createCirclePoints(centerLat: Double, centerLon: Double, radiusMeter
 }
 
 /**
- * 출발/도착 마커 비트맵 생성
+ * 출발/도착/장소 마커 비트맵 생성 (핀 모양)
  */
 private fun createMarkerBitmap(
     context: android.content.Context,
     text: String,
     backgroundColor: Int
 ): Bitmap {
-    val sizeDp = 40
-    val sizePx = (sizeDp * context.resources.displayMetrics.density).toInt()
-    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val widthDp = 48
+    val heightDp = 64  // 핀 모양이므로 높이가 더 김
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    val centerX = sizePx / 2f
-    val centerY = sizePx / 2f
+    val centerX = widthPx / 2f
 
-    // 배경 원
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자 효과
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(8f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리 (하단 삼각형)
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2f, pinHeadCenterY + pinHeadRadius - 4f)
+        lineTo(centerX + pinHeadRadius / 2f, pinHeadCenterY + pinHeadRadius - 4f)
+        lineTo(centerX, heightPx - 8f)
+        close()
+    }
+
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 배경 (외곽 원)
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 3f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
     val bgPaint = Paint().apply {
         color = backgroundColor
         style = Paint.Style.FILL
         isAntiAlias = true
     }
-    canvas.drawCircle(centerX, centerY, sizePx / 2f - 4f, bgPaint)
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
 
-    // 흰색 테두리
-    val borderPaint = Paint().apply {
+    // 내부 흰색 원 (텍스트 배경)
+    val innerCirclePaint = Paint().apply {
         color = Color.WHITE
-        style = Paint.Style.STROKE
-        strokeWidth = 4f
+        style = Paint.Style.FILL
         isAntiAlias = true
     }
-    canvas.drawCircle(centerX, centerY, sizePx / 2f - 4f, borderPaint)
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius - 6f, innerCirclePaint)
 
     // 텍스트
     val textPaint = Paint().apply {
-        color = Color.WHITE
-        textSize = 14 * context.resources.displayMetrics.density
+        color = backgroundColor
+        textSize = 16 * context.resources.displayMetrics.density
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
         isFakeBoldText = true
     }
-    val textY = centerY - (textPaint.descent() + textPaint.ascent()) / 2
+    val textY = pinHeadCenterY - (textPaint.descent() + textPaint.ascent()) / 2
     canvas.drawText(text, centerX, textY, textPaint)
+
+    return bitmap
+}
+
+/**
+ * 출발 마커 비트맵 생성 (핀 모양 + 원형 아이콘)
+ */
+private fun createStartMarkerBitmap(
+    context: android.content.Context,
+    backgroundColor: Int
+): Bitmap {
+    val widthDp = 36
+    val heightDp = 48
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = widthPx / 2f
+
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(6f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX + pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX, heightPx - 6f)
+        close()
+    }
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 외곽
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
+    val bgPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
+
+    // 내부 흰색 원형 아이콘
+    val iconRadius = pinHeadRadius * 0.5f
+    val iconPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, iconRadius, iconPaint)
+
+    return bitmap
+}
+
+/**
+ * 도착 마커 비트맵 생성 (핀 모양 + 깃발 아이콘)
+ */
+private fun createEndMarkerBitmap(
+    context: android.content.Context,
+    backgroundColor: Int
+): Bitmap {
+    val widthDp = 36
+    val heightDp = 48
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = widthPx / 2f
+
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(6f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX + pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX, heightPx - 6f)
+        close()
+    }
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 외곽
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
+    val bgPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
+
+    // 내부 흰색 깃발 아이콘
+    val iconSize = pinHeadRadius * 0.8f
+    val flagLeft = centerX - iconSize * 0.35f
+    val flagTop = pinHeadCenterY - iconSize * 0.4f
+
+    // 깃대
+    val polePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        isAntiAlias = true
+    }
+    canvas.drawLine(
+        flagLeft,
+        flagTop,
+        flagLeft,
+        flagTop + iconSize * 0.8f,
+        polePaint
+    )
+
+    // 깃발
+    val flagPath = android.graphics.Path().apply {
+        moveTo(flagLeft, flagTop)
+        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.15f)
+        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.45f)
+        lineTo(flagLeft, flagTop + iconSize * 0.3f)
+        close()
+    }
+    val flagPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(flagPath, flagPaint)
+
+    return bitmap
+}
+
+/**
+ * 장소 마커 비트맵 생성 (핀 모양)
+ */
+private fun createPlaceMarkerBitmap(
+    context: android.content.Context,
+    backgroundColor: Int
+): Bitmap {
+    val widthDp = 36
+    val heightDp = 48
+    val widthPx = (widthDp * context.resources.displayMetrics.density).toInt()
+    val heightPx = (heightDp * context.resources.displayMetrics.density).toInt()
+    val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val centerX = widthPx / 2f
+
+    // 핀 헤드 (상단 원)
+    val pinHeadRadius = widthPx / 2f - 8f
+    val pinHeadCenterY = pinHeadRadius + 8f
+
+    // 그림자
+    val shadowPaint = Paint().apply {
+        color = Color.argb(80, 0, 0, 0)
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        maskFilter = android.graphics.BlurMaskFilter(6f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, shadowPaint)
+
+    // 핀 꼬리
+    val pinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX + pinHeadRadius / 2.5f, pinHeadCenterY + pinHeadRadius - 2f)
+        lineTo(centerX, heightPx - 6f)
+        close()
+    }
+    val tailPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawPath(pinTailPath, tailPaint)
+
+    // 핀 헤드 외곽
+    val outerCirclePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius + 2f, outerCirclePaint)
+
+    // 핀 헤드 메인 색상
+    val bgPaint = Paint().apply {
+        color = backgroundColor
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
+
+    // 내부 아이콘 (위치 핀 아이콘)
+    val iconSize = pinHeadRadius * 0.8f
+    val iconPaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    val iconStrokePaint = Paint().apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        isAntiAlias = true
+    }
+
+    // 작은 핀 모양 아이콘
+    val iconPinRadius = iconSize * 0.25f
+    val iconPinCenterY = pinHeadCenterY - iconSize * 0.15f
+
+    // 아이콘 핀 헤드 (원)
+    canvas.drawCircle(centerX, iconPinCenterY, iconPinRadius, iconPaint)
+
+    // 아이콘 핀 꼬리 (삼각형)
+    val iconPinTailPath = android.graphics.Path().apply {
+        moveTo(centerX - iconPinRadius * 0.4f, iconPinCenterY + iconPinRadius - 1f)
+        lineTo(centerX + iconPinRadius * 0.4f, iconPinCenterY + iconPinRadius - 1f)
+        lineTo(centerX, pinHeadCenterY + iconSize * 0.25f)
+        close()
+    }
+    canvas.drawPath(iconPinTailPath, iconPaint)
 
     return bitmap
 }

@@ -9,6 +9,7 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import kr.co.ongil.wear.presentation.ui.LoginSyncScreen
 import kr.co.ongil.wear.presentation.ui.MainScreen
+import kr.co.ongil.wear.presentation.ui.map.MapScreen
 
 /**
  * Wear OS 네비게이션 그래프
@@ -49,7 +50,7 @@ fun WearNavGraph(
 
         // 지도 화면
         composable(WearRoute.Map.route) {
-            MainScreen() // 임시로 기존 MainScreen 사용 (나중에 MapScreen으로 교체)
+            MapScreen()
         }
 
         // 네비게이션 화면
