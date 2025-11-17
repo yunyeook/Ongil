@@ -3,6 +3,7 @@ package kr.co.ongil.presentation.ui.findpassword
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -13,14 +14,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import kr.co.ongil.presentation.ui.common.GreenButton
-import kr.co.ongil.presentation.ui.common.InputBox
 import kr.co.ongil.presentation.ui.common.GreyButton
 import kr.co.ongil.presentation.ui.common.OngilTopBar
 
@@ -32,6 +34,8 @@ fun FindPasswordScreen(
     formatPhone: (String) -> String,
     goHelp: () -> Unit = {}
 ) {
+    val focusManager = LocalFocusManager.current
+
     Scaffold(
         topBar = {
             OngilTopBar(
@@ -66,16 +70,36 @@ fun FindPasswordScreen(
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                InputBox(
+                OutlinedTextField(
                     value = uiState.phone,
                     onValueChange = { raw -> onEvent(FindPasswordUiEvent.ChangePhone(formatPhone(raw))) },
-                    label = "",
-                    placeholder = "휴대폰 번호를 입력해주세요.",
                     modifier = Modifier.weight(1f),
-                    enabled = !uiState.isCodeRequested
+                    placeholder = {
+                        Text(
+                            text = "휴대폰 번호를 입력해주세요.",
+                            color = Color(0xFF9CA1A9),
+                            fontSize = 16.sp
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                    enabled = !uiState.isCodeRequested,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = Color(0xFFDDE0E4),
+                        focusedBorderColor = Color(0xFF788F7E),
+                        disabledBorderColor = Color(0xFFDDE0E4),
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { focusManager.clearFocus() }
+                    ),
+                    singleLine = true
                 )
                 val sendLabel = if (uiState.isCodeRequested) "재전송" else "발송"
                 val sendEnabled = uiState.isPhoneValid
@@ -100,19 +124,38 @@ fun FindPasswordScreen(
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Bottom,
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    InputBox(
+                    OutlinedTextField(
                         value = uiState.code,
                         onValueChange = { input ->
                             if (input.length <= uiState.codeLength && input.all { it.isDigit() }) {
                                 onEvent(FindPasswordUiEvent.ChangeCode(input))
                             }
                         },
-                        label = "",
-                        placeholder = "인증번호 ${uiState.codeLength}자리",
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        placeholder = {
+                            Text(
+                                text = "인증번호 ${uiState.codeLength}자리",
+                                color = Color(0xFF9CA1A9),
+                                fontSize = 16.sp
+                            )
+                        },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color(0xFFDDE0E4),
+                            focusedBorderColor = Color(0xFF788F7E),
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { focusManager.clearFocus() }
+                        ),
+                        singleLine = true
                     )
                     val verifyEnabled = uiState.code.length == uiState.codeLength && uiState.remainingSec > 0
                     GreenButton(
