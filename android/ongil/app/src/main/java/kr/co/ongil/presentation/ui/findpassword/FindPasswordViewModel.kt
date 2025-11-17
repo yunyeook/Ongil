@@ -105,11 +105,13 @@ class FindPasswordViewModel @Inject constructor(
         }
         if (state.code.length != state.codeLength) return
         viewModelScope.launch {
-            authRepository.verifyCode(state.phoneDigits(), state.code).onSuccess { ok ->
-                if (ok) {
-                    _uiState.update { it.copy(codeVerifyStatus = CodeVerifyStatus.Success, isResetEnabled = true) }
-                } else {
-                    _uiState.update { it.copy(codeVerifyStatus = CodeVerifyStatus.Error, isResetEnabled = false) }
+            authRepository.verifyCode(state.phoneDigits(), state.code).onSuccess { verificationToken ->
+                _uiState.update {
+                    it.copy(
+                        codeVerifyStatus = CodeVerifyStatus.Success,
+                        isResetEnabled = true,
+                        verificationToken = verificationToken
+                    )
                 }
             }.onFailure {
                 _uiState.update { it.copy(codeVerifyStatus = CodeVerifyStatus.Error, isResetEnabled = false) }

@@ -22,11 +22,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.uistate.ChangePasswordEvent
 import kr.co.ongil.presentation.uistate.ChangePasswordUiState
 import kr.co.ongil.presentation.viewmodel.ChangePasswordViewModel
-
-private val PasswordAccent = Color(0xFF8CA898)
 
 /**
  * 비밀번호 변경 화면 (ViewModel 기반)
@@ -163,7 +162,7 @@ private fun ChangePasswordContent(
                         uiState.newPassword.isNotBlank() &&
                         uiState.confirmPassword.isNotBlank() &&
                         uiState.newPassword == uiState.confirmPassword,
-                colors = ButtonDefaults.buttonColors(containerColor = CallAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = ongilColors.accent),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {

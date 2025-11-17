@@ -31,10 +31,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.uistate.*
 import kr.co.ongil.presentation.viewmodel.CallDetailViewModel
 
-val CallAccent = Color(0xFF8CA898)
 private val Danger = Color(0xFFD85B4E)
 private val ChipBg = Color(0xFFEFF4F2)
 private val SurfaceBg = Color(0xFFF8F9FA)
@@ -94,7 +94,7 @@ private fun CallDetailContent(
                     .padding(vertical = 32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = CallAccent)
+                CircularProgressIndicator(color = ongilColors.accent)
             }
             return@Column
         }

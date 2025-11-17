@@ -58,6 +58,15 @@ interface AuthApi {
     ): VerifyCodeResponse
 
     /**
+     * 비밀번호 재설정
+     * POST /api/v1/password/reset
+     */
+    @POST("/api/v1/password/reset")
+    suspend fun resetPassword(
+        @Body request: ResetPasswordRequest
+    ): ResetPasswordResponse
+
+    /**
      * 토큰 재발급
      * POST /api/v1/auth/refresh
      */

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import kr.co.ongil.presentation.navigation.BottomNavItem
 import kr.co.ongil.presentation.navigation.OngilBottomNavItems
 import kr.co.ongil.presentation.theme.OngilIconSelected
+import kr.co.ongil.presentation.theme.OngilIconSelectedPatient
 import kr.co.ongil.presentation.theme.OngilIconUnselected
 
 /**
@@ -40,8 +41,14 @@ fun OngilBottomBar(
     selectedRoute: String,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
-    items: List<BottomNavItem> = OngilBottomNavItems.all
+    items: List<BottomNavItem> = OngilBottomNavItems.all,
+    userType: String = "GUARDIAN"
 ) {
+    val selectedColor = if (userType.uppercase() == "PATIENT") {
+        OngilIconSelectedPatient
+    } else {
+        OngilIconSelected
+    }
     // 카드는 상단 모서리만 둥글게, 하단은 직각, 좌우 패딩 없음
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -72,6 +79,7 @@ fun OngilBottomBar(
                     BottomBarItem(
                         label = item.label,
                         selected = selected,
+                        selectedColor = selectedColor,
                         icon = {
                             Icon(
                                 imageVector = item.icon,
@@ -103,11 +111,12 @@ fun OngilBottomBar(
 private fun BottomBarItem(
     label: String,
     selected: Boolean,
+    selectedColor: Color,
     icon: @Composable () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val iconTint = if (selected) OngilIconSelected else OngilIconUnselected
+    val iconTint = if (selected) selectedColor else OngilIconUnselected
     val textColor = iconTint
 
     Column(

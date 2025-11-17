@@ -38,7 +38,14 @@ sealed class Routes(val route: String) {
     object SearchUser : Routes("search_user")
 
     // 비밀번호 변경
-    object ChangePassword : Routes("change_password")
+    object ChangePassword : Routes("change_password?isResetMode={isResetMode}&verificationToken={verificationToken}") {
+        fun createRoute(isResetMode: Boolean = false, verificationToken: String? = null): String {
+            return "change_password?isResetMode=$isResetMode&verificationToken=${verificationToken ?: ""}"
+        }
+    }
+
+    // 비밀번호 찾기
+    object FindPassword : Routes("find_password")
 
     // 알림
     object Notifications : Routes("notifications")

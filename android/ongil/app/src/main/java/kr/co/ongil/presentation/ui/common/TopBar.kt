@@ -49,13 +49,9 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import coil.compose.AsyncImage
 import kr.co.ongil.R
+import kr.co.ongil.presentation.theme.*
 import kr.co.ongil.presentation.ui.common.selection.PatientInfoUi
 import kr.co.ongil.presentation.ui.common.selection.SelectPatientModal
-
-// ---- 색상 토큰(필요 시 theme/Color.kt로 이관) ----
-private val OngilAccent = Color(0xFF8CA898)
-private val OngilGray = Color(0xFF364046)
-private val OngilBeige = Color(0xFFF8EBD6)
 
 // ---- 헤더 타입 ----
 enum class OngilHeaderType { BackTitleBell, BrandCard }
@@ -146,6 +142,10 @@ fun OngilBrandHeaderCard(
     var showPatientModal by remember { mutableStateOf(false) }
     val isGuardian = userType.uppercase() == "GUARDIAN"
 
+    // 사용자 타입에 따른 색상 선택
+    val accentColor = if (userType.uppercase() == "PATIENT") OngilAccentPatient else OngilAccent
+    val beigeColor = if (userType.uppercase() == "PATIENT") OngilBeigePatient else OngilBeige
+
     Box {
         HeaderContainer(bottomDivider = bottomDivider) {
             TopAppBar(
@@ -175,7 +175,7 @@ fun OngilBrandHeaderCard(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)
-                                    .background(OngilBeige),
+                                    .background(beigeColor),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (!profileImageUrl.isNullOrEmpty()) {
@@ -191,7 +191,7 @@ fun OngilBrandHeaderCard(
                                     Icon(
                                         imageVector = Icons.Outlined.Person,
                                         contentDescription = "프로필",
-                                        tint = OngilAccent,
+                                        tint = accentColor,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }

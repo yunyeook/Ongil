@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.delay
 import kr.co.ongil.presentation.IncomingCallData
 import kr.co.ongil.presentation.ui.auth.AuthStateViewModel
+import kr.co.ongil.presentation.theme.OngilThemeProvider
 import kr.co.ongil.presentation.ui.common.OngilBrandHeaderCard
 import kr.co.ongil.presentation.ui.common.OngilTopBarForRoute
 import kr.co.ongil.presentation.ui.common.bottomnav.OngilBottomBar
@@ -126,10 +127,11 @@ fun MainScreen(
     // SafeZoneSetting 라우트에서 OngilBrandHeaderCard 사용
     val safeZoneSettingRoutes = listOf("safezone_setting")
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = Color.Transparent,
-        topBar = {
+    OngilThemeProvider(userType = userType) {
+        Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            containerColor = Color.Transparent,
+            topBar = {
             Box(modifier = Modifier.statusBarsPadding()) {
                 if (showTopBar) {
                     // BottomNav 탭 화면 또는 SafeZoneSetting 화면에서는 OngilBrandHeaderCard 사용
@@ -211,7 +213,8 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    userType = userType
                 )
             }
         }
@@ -236,5 +239,6 @@ fun MainScreen(
                 showBarsFromMap = showBars
             }
         )
+        }
     }
 }
