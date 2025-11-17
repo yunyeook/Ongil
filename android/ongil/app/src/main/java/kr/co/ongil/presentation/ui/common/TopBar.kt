@@ -169,11 +169,11 @@ fun OngilBrandHeaderCard(
                         Row(
                             modifier = Modifier.clickable { showPatientModal = true },
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(32.dp)
                                     .clip(CircleShape)
                                     .background(OngilBeige),
                                 contentAlignment = Alignment.Center
@@ -192,7 +192,7 @@ fun OngilBrandHeaderCard(
                                         imageVector = Icons.Outlined.Person,
                                         contentDescription = "프로필",
                                         tint = OngilAccent,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
