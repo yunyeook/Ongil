@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.RadioButtonChecked
@@ -26,7 +27,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -205,6 +211,9 @@ fun MapScreen(
 
     // 검색창 포커스 요청 트리거
     var requestSearchFocusTrigger by remember { mutableStateOf(false) }
+
+    // 도움말 표시 상태
+    var showHelp by remember { mutableStateOf(false) }
 
     // 검색 중 (검색창에 포커스가 있거나, 검색 결과가 있을 때)
     val isSearchActive = isSearchFocused || searchResults.isNotEmpty()
@@ -571,6 +580,25 @@ fun MapScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     horizontalAlignment = Alignment.End
                 ) {
+                    // 도움말 버튼 (아이콘만)
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(
+                                color = if (showHelp) ongilColors.accent else Color.White,
+                                shape = CircleShape
+                            )
+                            .clickable { showHelp = !showHelp },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "도움말",
+                            tint = if (showHelp) Color.White else ongilColors.accent,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
                     // 안전범위 설정 버튼 (보호자이고 안전범위가 켜져 있을 때만 표시)
                     if (userType == "GUARDIAN" && showSafetyZones) {
                         CircleFloatingButton(
@@ -636,6 +664,17 @@ fun MapScreen(
                         }
                     )
                 }
+            }
+
+            // 도움말 오버레이
+            if (showHelp) {
+                HelpOverlay(
+                    userType = userType,
+                    showSafetyZones = showSafetyZones,
+                    paddingValues = paddingValues,
+                    onDismiss = { showHelp = false },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
 
@@ -899,6 +938,157 @@ private fun DestinationChangeConfirmationDialog(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * 도움말 오버레이
+ * - 반투명 배경
+ * - 각 아이콘에 대한 설명 표시
+ */
+@Composable
+fun HelpOverlay(
+    userType: String,
+    showSafetyZones: Boolean,
+    paddingValues: PaddingValues,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = ongilColors
+
+    Box(
+        modifier = modifier
+            .background(Color.Black.copy(alpha = 0.85f))
+            .clickable(onClick = onDismiss)
+    ) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.End
+        ) {
+            // 도움말 버튼 (아이콘만, 설명 없음)
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(
+                        color = Color.White,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "도움말",
+                    tint = colors.accent,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            // 안전범위 설정 버튼 (보호자이고 안전범위가 켜져 있을 때만)
+            if (userType == "GUARDIAN" && showSafetyZones) {
+                HelpButtonWithLabel(
+                    icon = Icons.Default.Settings,
+                    label = "안전 범위 설정",
+                    containerColor = colors.accent
+                )
+            }
+
+            // 안전범위 표시 토글
+            HelpButtonWithLabel(
+                icon = Icons.Default.RadioButtonChecked,
+                label = "안전 범위 표시 ON/OFF"
+            )
+
+            // 전화 걸기
+            HelpButtonWithLabel(
+                icon = Icons.Default.Phone,
+                label = "보호자/환자에게 전화 걸기",
+                containerColor = colors.accent
+            )
+
+            // 도움요청 (보호자만)
+            if (userType == "GUARDIAN") {
+                HelpButtonWithLabel(
+                    icon = Icons.Default.Warning,
+                    label = "SOS 도움 요청 보내기"
+                )
+            }
+
+            // 북쪽 고정
+            HelpButtonWithLabel(
+                icon = Icons.Default.Explore,
+                label = "지도 북쪽으로 고정"
+            )
+
+            // 내 위치로 이동
+            HelpButtonWithLabel(
+                icon = Icons.Default.MyLocation,
+                label = "내 현재 위치로 이동"
+            )
+        }
+    }
+}
+
+/**
+ * 도움말 버튼과 라벨
+ * 실제 플로팅 버튼과 동일한 모양 + 옆에 설명 라벨 (모두 점선 안에)
+ */
+@Composable
+fun HelpButtonWithLabel(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    containerColor: Color = Color.White,
+    contentColor: Color = Color(0xFF374151),
+    modifier: Modifier = Modifier
+) {
+    val stroke = Stroke(
+        width = 2f,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+    )
+
+    // 텍스트와 아이콘을 나란히 배치하되, 텍스트만 점선 안에
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // 설명 라벨 (점선 테두리)
+        Box(
+            modifier = Modifier
+                .drawBehind {
+                    drawRoundRect(
+                        color = Color.White,
+                        style = stroke,
+                        cornerRadius = CornerRadius(8.dp.toPx())
+                    )
+                }
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            androidx.compose.material3.Text(
+                text = label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White
+            )
+        }
+
+        // 버튼 아이콘 (실제 버튼과 동일, 점선 밖)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .background(containerColor, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
