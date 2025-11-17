@@ -68,11 +68,6 @@ public class SafezoneService {
         log.info("안전범위 저장 완료: id={}", saved.getId());
 
 
-
-        //7. 안전범위 수정시 환자에 알림
-        User caller = userRepository.findById(callerId).get();
-        sendSafezoneUpdateNotification(caller, saved.getPatient());
-
         return SafeZoneResponse.from(saved);
     }
 
@@ -134,6 +129,13 @@ public class SafezoneService {
         );
 
         log.info("안전범위 부분 수정 완료: id={}", safeZone.getId());
+
+
+
+        //7. 안전범위 수정시 환자에 알림
+        User caller = userRepository.findById(callerId).get();
+        User patient = userRepository.findById(patientId).get();
+        sendSafezoneUpdateNotification(caller, patient);
 
         return SafeZoneResponse.from(safeZone);
     }
