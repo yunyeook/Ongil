@@ -10,6 +10,8 @@ import androidx.wear.compose.navigation.composable
 import kr.co.ongil.wear.presentation.ui.LoginSyncScreen
 import kr.co.ongil.wear.presentation.ui.MainScreen
 import kr.co.ongil.wear.presentation.ui.map.MapScreen
+import kr.co.ongil.wear.presentation.ui.call.CallScreen
+import kr.co.ongil.wear.presentation.ui.call.IncomingCallScreen
 
 /**
  * Wear OS 네비게이션 그래프
@@ -65,28 +67,69 @@ fun WearNavGraph(
             MainScreen() // 임시
         }
 
-        // 통화 화면
+        // 통화 화면 (발신/통화 중)
         composable(
             route = WearRoute.Call.route,
             arguments = listOf(
-                navArgument("callId") { type = NavType.LongType }
+                navArgument("targetUserId") { type = NavType.StringType },
+                navArgument("targetName") { type = NavType.StringType },
+                navArgument("targetPhone") { type = NavType.StringType },
+                navArgument("isCaller") { type = NavType.BoolType }
             )
         ) { backStackEntry ->
-            val callId = backStackEntry.arguments?.getLong("callId") ?: 0L
-            // TODO: CallScreen 구현
-            MainScreen() // 임시
+            val targetUserId = backStackEntry.arguments?.getString("targetUserId") ?: ""
+            val targetName = backStackEntry.arguments?.getString("targetName") ?: ""
+            val targetPhone = backStackEntry.arguments?.getString("targetPhone") ?: ""
+            val isCaller = backStackEntry.arguments?.getBoolean("isCaller") ?: true
+
+            CallScreen(
+                targetUserId = targetUserId,
+                targetName = targetName,
+                targetPhone = targetPhone,
+                isCaller = isCaller,
+                onCallEnded = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         // 수신 통화 화면
         composable(
             route = WearRoute.IncomingCall.route,
             arguments = listOf(
-                navArgument("callId") { type = NavType.LongType }
+                navArgument("callId") { type = NavType.LongType },
+                navArgument("callerUserId") { type = NavType.StringType },
+                navArgument("callerName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val callId = backStackEntry.arguments?.getLong("callId") ?: 0L
-            // TODO: IncomingCallScreen 구현
-            MainScreen() // 임시
+            val callerUserId = backStackEntry.arguments?.getString("callerUserId") ?: ""
+            val callerName = backStackEntry.arguments?.getString("callerName") ?: ""
+
+            IncomingCallScreen(
+                callId = callId,
+                callerUserId = callerUserId,
+                callerName = callerName,
+                onCallAccepted = {
+                    // 수락 후 CallScreen으로 이동
+                    navController.navigate(
+                        WearRoute.Call.createRoute(
+                            targetUserId = callerUserId,
+                            targetName = callerName,
+                            targetPhone = "",
+                            isCaller = false
+                        )
+                    ) {
+                        // IncomingCallScreen 제거
+                        popUpTo(WearRoute.IncomingCall.route) {
+                            inclusive = true
+                        }
+                    }
+                },
+                onCallRejected = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         // 도움 요청 화면
