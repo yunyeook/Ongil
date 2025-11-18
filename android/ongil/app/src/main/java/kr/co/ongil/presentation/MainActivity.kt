@@ -188,20 +188,68 @@
         }
 
         // Android 13+ 알림 권한 요청
-        private fun requestNotificationPermission() {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                when {
-                    ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED -> {
-                        // 이미 권한이 있음
-                        android.util.Log.d("MainActivity", "알림 권한 이미 승인됨")
-                    }
-                    else -> {
-                        // 권한 요청
-                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
+        requestNotificationPermission()
+
+        // FCM 수신 통화 및 응급 전화 Intent 처리
+        handleIncomingCallIntent(intent)
+        handleEmergencyCallIntent(intent)
+
+        // ✅ 전화 올 때만 화면 설정
+        if (intent.getStringExtra("type") == "INCOMING_CALL") {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
+        setContent {
+            OngilTheme {
+                 MainScreen(
+                     incomingCallData = incomingCallData,
+                     onIncomingCallHandled = { incomingCallData = null },
+                     emergencyCallData = emergencyCallData,
+                     onEmergencyCallHandled = { emergencyCallData = null },
+                     notificationNavigation = notificationNavigation,
+                     onNotificationNavigationHandled = { notificationNavigation = null}
+                 )
+//                PlayGroundMJ()
+                // PlayGroundSH()
+                // PlayGroundGK()
+            }
+        }
+    }
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // FCM 수신 통화 및 응급 전화 Intent 처리
+        handleIncomingCallIntent(intent)
+        handleEmergencyCallIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleIncomingCallIntent(intent: Intent?) {
+        if (intent?.getStringExtra("type") == "INCOMING_CALL") {
+            val callId = intent.getLongExtra("callId", 0L)
+            val sessionId = intent.getStringExtra("sessionId")
+            val callerName = intent.getStringExtra("callerName") ?: ""
+            val callerPhone = intent.getStringExtra("callerPhone") ?: ""
+
+            if (callId > 0) {
+                lifecycleScope.launch {
+                    // AuthStateViewModel에서 실제 사용자 타입 가져오기
+                    val userType = authViewModel.currentUserInfo.firstOrNull()
+                        ?.getOrNull()
+                        ?.userType
+                        ?: "PATIENT"  // 기본값
+
+                    incomingCallData = IncomingCallData(
+                        callId = callId,
+                        sessionId = sessionId,
+                        callerName = callerName,
+                        callerPhone = callerPhone,
+                        userType = userType
+                    )
                 }
             }
         }
@@ -218,14 +266,65 @@
         val userType: String
     )
 
-    /**
-     * 응급 전화 데이터
-     */
-    data class EmergencyCallData(
-        val targetName: String,
-        val targetPhone: String,
-        val isCaller: Boolean,
-        val userType: String,
-        val receiverId: String,
-        val isEmergency: Boolean
-    )
+            emergencyCallData = EmergencyCallData(
+                targetName = targetName,
+                targetPhone = targetPhone,
+                isCaller = isCaller,
+                userType = userType,
+                receiverId = receiverId,
+                isEmergency = isEmergency
+            )
+        }
+    }
+
+    private var notificationNavigation by mutableStateOf<String?>(null)
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        val navigateTo = intent?.getStringExtra("navigate_to")
+        if (navigateTo == "call_history") {
+            notificationNavigation = "call_history"
+        }
+    }
+
+    // Android 13+ 알림 권한 요청
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // 이미 권한이 있음
+                    android.util.Log.d("MainActivity", "알림 권한 이미 승인됨")
+                }
+                else -> {
+                    // 권한 요청
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * FCM 수신 통화 데이터
+ */
+data class IncomingCallData(
+    val callId: Long,
+    val sessionId: String?,
+    val callerName: String,
+    val callerPhone: String,
+    val userType: String
+)
+
+/**
+ * 응급 전화 데이터
+ */
+data class EmergencyCallData(
+    val targetName: String,
+    val targetPhone: String,
+    val isCaller: Boolean,
+    val userType: String,
+    val receiverId: String,
+    val isEmergency: Boolean
+)

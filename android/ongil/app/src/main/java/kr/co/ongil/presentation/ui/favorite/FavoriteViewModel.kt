@@ -38,50 +38,57 @@ class FavoriteViewModel @Inject constructor(
     val uiState: StateFlow<FavoriteUiState> = _uiState
 
     init {
-        // userType을 먼저 로드하여 테마 깜빡임 방지
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+
+            // userType을 먼저 로드
             val initialUserType = userDataStoreManager.getUserType().first() ?: "GUARDIAN"
             _uiState.update { it.copy(userType = initialUserType) }
-        }
 
-        loadUserInfo()
-        loadRelationships() // 사용자(환자/보호자) 목록 불러오기
+            // 세 가지 작업을 병렬로 실행
+            val userInfoJob = launch { loadUserInfoInternal() }
+            val relationshipsJob = launch { loadRelationshipsInternal() }
 
-        // initialPatientId가 0L이 아니면 바로 로드
-        if (initialPatientId != 0L) {
-            Log.d("FavoriteViewModel", "initialPatientId로 로드: $initialPatientId")
-            loadData(initialPatientId)
-        } else {
-            // initialPatientId가 0L이면 사용자 타입에 따라 즉시 로드
-            viewModelScope.launch {
-                val userType = userDataStoreManager.getUserType().first()
-                Log.d("FavoriteViewModel", "사용자 타입 확인: $userType")
-
-                if (userType == "GUARDIAN") {
-                    // 보호자: 선택된 환자 ID로 바로 로드
-                    val selectedId = userDataStoreManager.getSelectedPatientId().first()
-                    val patientId = selectedId?.toLongOrNull()
-
-                    if (patientId != null) {
-                        Log.d("FavoriteViewModel", "보호자 초기 로드 - 선택된 환자 ID: $patientId")
-                        loadData(patientId)
-                    } else {
-                        Log.w("FavoriteViewModel", "선택된 환자 ID가 없습니다")
-                    }
+            val dataJob = launch {
+                if (initialPatientId != 0L) {
+                    Log.d("FavoriteViewModel", "initialPatientId로 로드: $initialPatientId")
+                    loadDataInternal(initialPatientId)
                 } else {
-                    // 환자: 본인 ID로 로드
-                    userRepository.getMyInfo()
-                        .first()
-                        .onSuccess { userDto ->
-                            val userId = userDto.id.toLong()
-                            Log.d("FavoriteViewModel", "환자 초기 로드 - 사용자 ID: $userId")
-                            loadData(userId)
+                    val userType = userDataStoreManager.getUserType().first()
+                    Log.d("FavoriteViewModel", "사용자 타입 확인: $userType")
+
+                    if (userType == "GUARDIAN") {
+                        val selectedId = userDataStoreManager.getSelectedPatientId().first()
+                        val patientId = selectedId?.toLongOrNull()
+
+                        if (patientId != null) {
+                            Log.d("FavoriteViewModel", "보호자 초기 로드 - 선택된 환자 ID: $patientId")
+                            loadDataInternal(patientId)
+                        } else {
+                            Log.w("FavoriteViewModel", "선택된 환자 ID가 없습니다")
                         }
-                        .onFailure { error ->
-                            Log.e("FavoriteViewModel", "사용자 정보 조회 실패", error)
-                        }
+                    } else {
+                        userRepository.getMyInfo()
+                            .first()
+                            .onSuccess { userDto ->
+                                val userId = userDto.id.toLong()
+                                Log.d("FavoriteViewModel", "환자 초기 로드 - 사용자 ID: $userId")
+                                loadDataInternal(userId)
+                            }
+                            .onFailure { error ->
+                                Log.e("FavoriteViewModel", "사용자 정보 조회 실패", error)
+                            }
+                    }
                 }
             }
+
+            // 모든 작업이 완료될 때까지 대기
+            userInfoJob.join()
+            relationshipsJob.join()
+            dataJob.join()
+
+            // 모든 로딩 완료
+            _uiState.update { it.copy(isLoading = false) }
         }
 
         // 선택된 환자 ID 변경 감지 (보호자 전용 - 초기 로드 이후)
@@ -91,7 +98,6 @@ class FavoriteViewModel @Inject constructor(
                 userDataStoreManager.getSelectedPatientId().collect { selectedId ->
                     val patientId = selectedId?.toLongOrNull()
 
-                    // 이미 로드된 환자가 아닌 경우에만 다시 로드
                     if (patientId != null && patientId != lastLoadedPatientId) {
                         Log.d("FavoriteViewModel", "선택된 환자 변경 감지: $patientId")
                         loadData(patientId)
@@ -103,107 +109,98 @@ class FavoriteViewModel @Inject constructor(
 
     private fun loadUserInfo() {
         viewModelScope.launch {
-            userRepository.getMyInfo()
-                .onEach { result ->
-                    result.onSuccess { userDto ->
-                                _uiState.update {
-                                    it.copy(
-                                        userName = userDto.name,
-                                        userType = userDto.userType
-                                    )
-                                }
-                                Log.d("FavoriteViewModel", "사용자 정보 로드 성공: name=${userDto.name}, type=${userDto.userType}")
-                            }.onFailure { error ->
-                                Log.e("FavoriteViewModel", "사용자 정보 로드 실패", error)
-                            }
-                    }
-                    .collect()
+            loadUserInfoInternal()
         }
     }
 
     private fun loadRelationships() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = favoriteRepository.getMyRelationships()
-            result.fold(
-                onSuccess = { relationships ->
-                    // 각 환자의 프로필 이미지를 DataStore에 저장
-                    relationships.forEach { patient ->
-                        userDataStoreManager.saveProfileImage(
-                            userId = patient.id.toString(),
-                            profileImageUrl = patient.profileImage
-                        )
-                    }
-
-                    // 기본 보호자/환자를 맨 위로 정렬
-                    val sortedRelationships = relationships.sortedByDescending { it.isDefault }
-
-                    _uiState.update {
-                        it.copy(
-                            patients = sortedRelationships,
-                            isLoading = false
-                        )
-                    }
-                    Log.d("FavoriteViewModel", "사용자 목록 로드 성공: ${relationships.size}명")
-                },
-                onFailure = { error ->
-                    Log.e("FavoriteViewModel", "사용자 목록 로드 실패", error)
-                    val exception = ErrorHandler.handleException(error as? Exception ?: Exception(error))
-                    val userMessage = exception.message
-
-                    // 한글 메시지만 표시 (HTTP, JSON 등 기술적 메시지 제외)
-                    val shouldShowError = userMessage != null && userMessage.matches(Regex(".*[가-힣]+.*"))
-
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = if (shouldShowError) userMessage else null
-                        )
-                    }
-                }
-            )
+            loadRelationshipsInternal()
         }
     }
 
     fun loadData(patientId: Long, force: Boolean = false) {
-        if (!force && _uiState.value.isLoading) return
-        lastLoadedPatientId = patientId
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, currentPatientId = patientId) }
-            val currentPatients = _uiState.value.patients
-            val result = favoriteRepository.getFavoritePlaces(patientId)
-            result.fold(
-                onSuccess = { placesDomain ->
-                    // 기본 목적지를 맨 위로 정렬
-                    val sortedPlaces = placesDomain.items.sortedByDescending { it.isDefault }
-
-                    _uiState.update {
-                        it.copy(
-                            patients = currentPatients,
-                            places = sortedPlaces,
-                            currentPatientId = patientId,
-                            isLoading = false,
-                            error = null
-                        )
-                    }
-                },
-                onFailure = { throwable ->
-                    val exception = ErrorHandler.handleException(throwable as? Exception ?: Exception(throwable))
-                    val userMessage = exception.message
-
-                    // 한글 메시지만 표시 (HTTP, JSON 등 기술적 메시지 제외)
-                    val shouldShowError = userMessage != null && userMessage.matches(Regex(".*[가-힣]+.*"))
-
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = if (shouldShowError) userMessage else null
-                        )
-                    }
-                }
-            )
+            loadDataInternal(patientId)
         }
     }
+    private suspend fun loadUserInfoInternal() {
+        userRepository.getMyInfo()
+            .onEach { result ->
+                result.onSuccess { userDto ->
+                    _uiState.update {
+                        it.copy(
+                            userName = userDto.name,
+                            userType = userDto.userType
+                        )
+                    }
+                    Log.d("FavoriteViewModel", "사용자 정보 로드 성공: name=${userDto.name}, type=${userDto.userType}")
+                }.onFailure { error ->
+                    Log.e("FavoriteViewModel", "사용자 정보 로드 실패", error)
+                }
+            }
+            .collect()
+    }
+
+    private suspend fun loadRelationshipsInternal() {
+        val result = favoriteRepository.getMyRelationships()
+        result.fold(
+            onSuccess = { relationships ->
+                relationships.forEach { patient ->
+                    userDataStoreManager.saveProfileImage(
+                        userId = patient.id.toString(),
+                        profileImageUrl = patient.profileImage
+                    )
+                }
+
+                val sortedRelationships = relationships.sortedByDescending { it.isDefault }
+
+                _uiState.update {
+                    it.copy(patients = sortedRelationships)
+                }
+                Log.d("FavoriteViewModel", "사용자 목록 로드 성공: ${relationships.size}명")
+            },
+            onFailure = { error ->
+                Log.e("FavoriteViewModel", "사용자 목록 로드 실패", error)
+                val exception = ErrorHandler.handleException(error as? Exception ?: Exception(error))
+                val userMessage = exception.message
+                val shouldShowError = userMessage != null && userMessage.matches(Regex(".*[가-힣]+.*"))
+
+                _uiState.update {
+                    it.copy(error = if (shouldShowError) userMessage else null)
+                }
+            }
+        )
+    }
+
+    private suspend fun loadDataInternal(patientId: Long) {
+        lastLoadedPatientId = patientId
+        _uiState.update { it.copy(error = null, currentPatientId = patientId) }
+        val result = favoriteRepository.getFavoritePlaces(patientId)
+        result.fold(
+            onSuccess = { placesDomain ->
+                val sortedPlaces = placesDomain.items.sortedByDescending { it.isDefault }
+
+                _uiState.update {
+                    it.copy(
+                        places = sortedPlaces,
+                        currentPatientId = patientId,
+                        error = null
+                    )
+                }
+            },
+            onFailure = { throwable ->
+                val exception = ErrorHandler.handleException(throwable as? Exception ?: Exception(throwable))
+                val userMessage = exception.message
+                val shouldShowError = userMessage != null && userMessage.matches(Regex(".*[가-힣]+.*"))
+
+                _uiState.update {
+                    it.copy(error = if (shouldShowError) userMessage else null)
+                }
+            }
+        )
+    }
+
 
     fun onPatientChanged(newPatientId: Long) {
         if (lastLoadedPatientId != newPatientId) {
@@ -214,16 +211,13 @@ class FavoriteViewModel @Inject constructor(
     fun refresh() {
         loadRelationships() // 사용자 목록 새로고침
 
-        // 장소 목록 새로고침 - 항상 최신 selectedPatientId 확인
         viewModelScope.launch {
             val userType = userDataStoreManager.getUserType().first()
             Log.d("FavoriteViewModel", "refresh - userType: $userType")
 
             val patientId = if (userType == "GUARDIAN") {
-                // 보호자: 선택된 환자 ID 사용
                 userDataStoreManager.getSelectedPatientId().first()?.toLongOrNull()
             } else {
-                // 환자: 본인 ID 사용
                 userRepository.getMyInfo().first().getOrNull()?.id?.toLong()
             }
 
