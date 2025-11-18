@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 object DataStoreKeys {
+    val FCM_TOKEN_SYNCED_KEY = booleanPreferencesKey("fcm_token_synced")  // ✅ 추가
     val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
     val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
     val FCM_TOKEN_KEY = stringPreferencesKey("fcm_token")
