@@ -104,7 +104,8 @@ fun AppNavGraph(
         // 환자 정보
         composable(Routes.PatientList.route) {
             kr.co.ongil.presentation.ui.patientinfo.PatientInfoScreen(
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier,
+                paddingValues = paddingValues
             )
         }
 

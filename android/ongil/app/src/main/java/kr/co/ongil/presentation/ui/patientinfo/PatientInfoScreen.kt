@@ -41,12 +41,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawBehind
@@ -80,45 +82,64 @@ private object OnGilColors {
 @Composable
 fun PatientInfoScreen(
     modifier: Modifier = Modifier,
+    paddingValues: PaddingValues,
+
+
     viewModel: PatientInfoViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selected by rememberSaveable { mutableStateOf(0) }
+    val themeColors = if (uiState.userType == "PATIENT") PatientColors else GuardianColors
+    val bottomInset = paddingValues.calculateBottomPadding()
 
     Surface(color = OnGilColors.Bg) {
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .systemBarsPadding()
-                .padding(horizontal = 16.dp)
         ) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "환자 기록",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = OnGilColors.Title,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = if (selected == 0) "활동기록을 확인하고 관리해보세요" else "건강정보를 확인해보세요",
-                style = MaterialTheme.typography.bodyMedium,
-                color = OnGilColors.Label
-            )
-            Spacer(Modifier.height(16.dp))
+            // 헤더 영역 (paddingValues의 top, start, end 적용)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        top = paddingValues.calculateTopPadding(),
+                        start = paddingValues.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+                        end = paddingValues.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr)
+                    )
+                    .padding(horizontal = 16.dp)
+            ) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "환자 기록",
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = OnGilColors.Title,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = if (selected == 0) "활동기록을 확인하고 관리해보세요" else "건강정보를 확인해보세요",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnGilColors.Label
+                )
+                Spacer(Modifier.height(20.dp))
 
-            SegmentedTwoTabs(
-                left = "활동 기록",
-                right = "건강 정보",
-                selectedIndex = selected,
-                onSelected = { selected = it }
-            )
+                SegmentedTwoTabs(
+                    left = "활동 기록",
+                    right = "건강 정보",
+                    selectedIndex = selected,
+                    onSelected = { selected = it },
+                    accentColor = themeColors.accent
+                )
+            }
 
             Spacer(Modifier.height(20.dp))
 
             if (selected == 0) {
-                ActivityLogTab(uiState = uiState)
+                ActivityLogTab(uiState = uiState,
+                    bottomInset = bottomInset)
+
             } else {
-                HealthInfoTab(uiState = uiState, viewModel = viewModel)
+                HealthInfoTab(uiState = uiState, viewModel = viewModel, bottomInset = bottomInset)
             }
         }
     }
@@ -130,19 +151,31 @@ private fun SegmentedTwoTabs(
     right: String,
     selectedIndex: Int,
     onSelected: (Int) -> Unit,
+    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    val pillShape = RoundedCornerShape(18.dp)
-    Row(
-        modifier
-            .fillMaxWidth()
-            .clip(pillShape)
-            .background(OnGilColors.Pill)
-            .padding(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        color = Color(0xFFF3F4F6),
+        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.fillMaxWidth()
     ) {
-        SegmentItem(text = left, selected = selectedIndex == 0, onClick = { onSelected(0) }, modifier = Modifier.weight(1f))
-        SegmentItem(text = right, selected = selectedIndex == 1, onClick = { onSelected(1) }, modifier = Modifier.weight(1f))
+        Row(
+            modifier = Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            SegmentItem(
+                text = left,
+                selected = selectedIndex == 0,
+                onClick = { onSelected(0) },
+                modifier = Modifier.weight(1f)
+            )
+            SegmentItem(
+                text = right,
+                selected = selectedIndex == 1,
+                onClick = { onSelected(1) },
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -153,21 +186,23 @@ private fun SegmentItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val bgColor = if (selected) Color.White else Color.Transparent
+    val textColor = if (selected) Color(0xFF111827) else Color(0xFF6B7280)
+    val fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+
     Box(
-        modifier
-            .clip(shape)
-            .background(if (selected) Color.White else Color.Transparent)
-            .clickable { onClick() }
-            .padding(vertical = 10.dp),
+        modifier = modifier
+            .height(44.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(bgColor)
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.titleMedium,
-            color = if (selected) OnGilColors.Title else OnGilColors.Label,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            fontSize = 16.sp,
+            fontWeight = fontWeight,
+            color = textColor
         )
     }
 }
@@ -203,13 +238,17 @@ private fun getTrendIcon(transition: String): StatValue.Icon {
 
 // ———————————————— Tab 1: 활동 기록 ————————————————
 @Composable
-private fun ActivityLogTab(uiState: PatientInfoUiState) {
+private fun ActivityLogTab(
+    uiState: PatientInfoUiState,
+    bottomInset: Dp = 0.dp
+) {
     LazyColumn(
-        contentPadding = PaddingValues(bottom = 80.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = bottomInset + 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { SectionTitle("활동 기록") }
-
         when {
             uiState.isLoading -> {
                 item {
@@ -418,7 +457,8 @@ private fun RiskBarRow(
 @Composable
 private fun HealthInfoTab(
     uiState: PatientInfoUiState,
-    viewModel: PatientInfoViewModel
+    viewModel: PatientInfoViewModel,
+    bottomInset: Dp = 0.dp
 ) {
     val scope = rememberCoroutineScope()
 
@@ -434,7 +474,10 @@ private fun HealthInfoTab(
     android.util.Log.d("HealthInfoTab", "healthData: ${uiState.healthData}")
 
     LazyColumn(
-        contentPadding = PaddingValues(bottom = 80.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = bottomInset + 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // 섹션 제목과 버튼
@@ -444,8 +487,6 @@ private fun HealthInfoTab(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SectionTitle("건강 정보")
-
                 // 건강정보 불러오기 버튼
                 if (uiState.healthPermissionGranted) {
                     val themeColors = if (uiState.userType == "PATIENT") PatientColors else GuardianColors
@@ -1261,7 +1302,8 @@ private fun PatientInfoScreenPreview() {
                 left = "활동 기록",
                 right = "건강 정보",
                 selectedIndex = 0,
-                onSelected = { }
+                onSelected = { },
+                accentColor = Color.Transparent
             )
 
             Spacer(Modifier.height(20.dp))
@@ -1283,7 +1325,7 @@ private fun SummarySection(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFFF5F7FA),
+        color = Color.White,
         shadowElevation = 2.dp
     ) {
         Column(
@@ -1292,40 +1334,27 @@ private fun SummarySection(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFE8EAF6),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "📊",
-                            fontSize = 20.sp
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Color(0xFF5E72E4))
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(
                     text = "주간 요약",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = OnGilColors.Title
                 )
             }
 
             Spacer(Modifier.height(16.dp))
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = Color.White
-            ) {
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp),
-                    color = OnGilColors.Title,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                color = OnGilColors.Title
+            )
         }
     }
 }
@@ -1347,22 +1376,16 @@ private fun PositiveSignalsSection(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFE8F5E9),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "✨",
-                            fontSize = 20.sp
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Color(0xFF4CAF50))
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(
                     text = "좋아요",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = OnGilColors.Title
                 )
             }
@@ -1374,7 +1397,7 @@ private fun PositiveSignalsSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFFF8F9FA), RoundedCornerShape(12.dp))
-                        .padding(vertical = 32.dp),
+                        .padding(vertical = 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1386,7 +1409,7 @@ private fun PositiveSignalsSection(
                 }
             } else {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     signals.forEach { text ->
                         SignalChip(
@@ -1408,7 +1431,7 @@ private fun WarningSignalsSection(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+          color = Color.White,
         shadowElevation = 2.dp
     ) {
         Column(
@@ -1417,22 +1440,16 @@ private fun WarningSignalsSection(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFFF3E0),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "⚠️",
-                            fontSize = 20.sp
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Color(0xFFFFA726))
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(
                     text = "주의가 필요해요",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = OnGilColors.Title
                 )
             }
@@ -1444,7 +1461,7 @@ private fun WarningSignalsSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFFF8F9FA), RoundedCornerShape(12.dp))
-                        .padding(vertical = 32.dp),
+                        .padding(vertical = 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1456,7 +1473,7 @@ private fun WarningSignalsSection(
                 }
             } else {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     signals.forEach { text ->
                         SignalChip(
@@ -1487,22 +1504,16 @@ private fun CaregiverSuggestionsSection(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFE3F2FD),
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "💡",
-                            fontSize = 20.sp
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Color(0xFF42A5F5))
+                )
+                Spacer(Modifier.width(10.dp))
                 Text(
                     text = "보호자 팁",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = OnGilColors.Title
                 )
             }
@@ -1514,7 +1525,7 @@ private fun CaregiverSuggestionsSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFFF8F9FA), RoundedCornerShape(12.dp))
-                        .padding(vertical = 32.dp),
+                        .padding(vertical = 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -1525,32 +1536,27 @@ private fun CaregiverSuggestionsSection(
                     )
                 }
             } else {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFFFBF0)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        suggestions.forEach { line ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "•",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color(0xFFFFA726),
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text(
-                                    text = line,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = OnGilColors.Title,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
+                    suggestions.forEach { line ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(4.dp)
+                                    .offset(y = 8.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(Color(0xFF42A5F5))
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = line,
+                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                                color = OnGilColors.Title,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -1563,50 +1569,42 @@ private fun CaregiverSuggestionsSection(
 private fun SignalChip(
     text: String,
     type: SignalType,
-    modifier: Modifier = Modifier,
-    positiveIconColor: Color = Color(0xFF4CAF50),
-    warningIconColor: Color = Color(0xFFD1462C)
+    modifier: Modifier = Modifier
 ) {
     val bgColor = when (type) {
         SignalType.POSITIVE -> Color(0xFFF1F8F4)
         SignalType.WARNING -> Color(0xFFFFF4E5)
     }
-    val borderColor = when (type) {
-        SignalType.POSITIVE -> Color(0xFF4CAF50).copy(alpha = 0.3f)
-        SignalType.WARNING -> Color(0xFFFFA726).copy(alpha = 0.3f)
-    }
-    val icon = when (type) {
-        SignalType.POSITIVE -> Icons.Filled.CheckCircle
-        SignalType.WARNING -> Icons.Filled.Warning
+    val accentBarColor = when (type) {
+        SignalType.POSITIVE -> Color(0xFF66BB6A)
+        SignalType.WARNING -> Color(0xFFFFB74D)
     }
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = bgColor,
-        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
-        shadowElevation = 0.dp
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(1.dp, RoundedCornerShape(12.dp))
+            .background(bgColor, RoundedCornerShape(12.dp))
+            .drawBehind {
+                val barWidth = 3.dp.toPx()
+                drawRect(
+                    color = accentBarColor,
+                    topLeft = Offset.Zero,
+                    size = Size(barWidth, size.height)
+                )
+            }
+            .padding(start = 24.dp, end = 28.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = when (type) {
-                    SignalType.POSITIVE -> positiveIconColor
-                    SignalType.WARNING -> warningIconColor
-                },
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
-                color = OnGilColors.Title
-            )
-        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp
+            ),
+            color = OnGilColors.Title,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
