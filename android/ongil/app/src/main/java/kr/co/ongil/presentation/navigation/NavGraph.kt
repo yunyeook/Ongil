@@ -232,6 +232,7 @@ fun AppNavGraph(
             }
 
             ChangePasswordScreen(
+                modifier = Modifier.padding(paddingValues),
                 viewModel = changePasswordViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onPasswordChanged = {
