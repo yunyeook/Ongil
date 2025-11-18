@@ -1,0 +1,178 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-11-19",
+    "sources": [
+      "NICE NG97 - Dementia: assessment, management and support",
+      "PMC3062259 - Sleep disturbances in dementia",
+      "PMC11226213 - HRV and Cognitive Impairment",
+      "한국 중앙치매센터 - 치매 관리 가이드라인"
+    ]
+  },
+
+  "guidelines": {
+    "spatial_confusion": {
+      "clinical_basis": "배회(wandering)와 길 잃음은 치매 환자에게 가장 위험한 증상 중 하나로, 실종·낙상·사고 위험과 직결됩니다. 특히 야간 배회는 즉각적인 개입이 필요한 고위험 신호입니다.",
+
+      "risk_indicators": [
+        "길 잃음이 주 2회 이상 발생하는 경우",
+        "배회 시간이 평균 10분 이상 지속되는 경우",
+        "야간(22시~06시) 배회가 관찰되는 경우",
+        "익숙한 장소에서도 방향을 헷갈려 하는 경우"
+      ],
+
+      "caregiver_recommendations": [
+        "현관문에 알림 센서를 설치하여 외출을 즉시 감지할 수 있도록 합니다",
+        "GPS 추적 기기나 배회감지기를 착용시켜 위치를 실시간으로 확인합니다",
+        "낮 시간이나 저녁 시간대에 규칙적으로 함께 산책하여 에너지를 소진시킵니다",
+        "야간 조명을 켜두어 화장실이나 방 찾기를 쉽게 합니다",
+        "경찰서에 사전 지문 등록을 하고, 인식표를 의복에 부착합니다"
+      ],
+
+      "intervention_priority": "HIGH",
+      "reference": "한국 중앙치매센터 배회 관리 가이드라인"
+    },
+
+    "physical_drop": {
+      "clinical_basis": "수면 부족, 활동량 감소, 심박변이도(HRV) 저하, 산소포화도 저하는 신체 상태 악화를 시사하며, 인지 기능 저하 및 행동 증상 악화와 연결됩니다.",
+
+      "sleep": {
+        "normal_range": "성인 기준 7-9시간",
+        "risk_threshold": "평균 6시간 미만",
+        "severe_threshold": "평균 4.5시간 미만",
+        "clinical_impact": "수면 6시간 미만 시 주간 초조감(agitation), 적대감, 공격성 증가, 집중력·주의력·기억력 저하, 낙상 위험 증가",
+        "recommendations": [
+          "규칙적인 수면 일정을 유지합니다 (매일 같은 시간에 취침·기상)",
+          "낮 시간에 신체 활동과 밝은 빛(자연광) 노출을 늘립니다",
+          "카페인과 자극적인 음식을 오후 이후 제한합니다",
+          "저녁 시간에 느린 속도의 등 마사지나 이완 활동을 제공합니다",
+          "수면제보다는 비약물적 중재를 우선 시도합니다"
+        ],
+        "reference": "PMC3062259"
+      },
+
+      "heart_rate_variability": {
+        "clinical_significance": "HRV(심박변이도) 감소는 자율신경계 기능 저하를 의미하며, 인지 저하 및 치매 진행의 조기 바이오마커로 주목받고 있습니다",
+        "normal_pattern": "건강한 성인은 상당한 변동성을 보임",
+        "risk_pattern": "SDNN/RMSSD 감소, HF(고주파) 감소, LF/HF 비율 증가",
+        "risk_threshold": "변동성 20 미만",
+        "severe_threshold": "변동성 15 미만",
+        "recommendations": [
+          "규칙적인 가벼운 유산소 운동을 권장합니다",
+          "스트레스 관리와 이완 기법(호흡 훈련)을 시도합니다",
+          "심혈관 질환 여부를 전문의와 상담합니다",
+          "과도한 교감신경 자극(카페인, 긴장 상황)을 피합니다"
+        ],
+        "reference": "PMC11226213"
+      },
+
+      "oxygen_saturation": {
+        "normal_range": "95-100%",
+        "caution_threshold": "95% 미만",
+        "risk_threshold": "94% 미만",
+        "severe_threshold": "92% 미만 (즉시 의료 조치 필요)",
+        "recommendations": [
+          "호흡 곤란, 숨가쁨, 피로감이 동반되는지 관찰합니다",
+          "94% 미만이 지속되면 호흡기내과 또는 주치의 상담을 권장합니다",
+          "실내 환기를 자주 하고, 공기가 맑은 시간대에 야외 활동을 합니다"
+        ],
+        "reference": "일반 임상 기준"
+      },
+
+      "intervention_priority": "MEDIUM_TO_HIGH"
+    },
+
+    "anxiety_escalation": {
+      "clinical_basis": "긴급 통화, SOS 신호, 야간 외출의 급증은 불안·초조·공포 반응의 증가를 시사하며, BPSD(행동심리증상) 악화의 신호입니다.",
+
+      "risk_indicators": [
+        "긴급 통화나 SOS 신호가 이전 기간 대비 2회 이상 증가",
+        "SOS 신호를 보냈으나 미응답된 경우가 1회 이상",
+        "야간 외출이나 배회가 동반되는 경우"
+      ],
+
+      "caregiver_recommendations": [
+        "환자가 불안해하는 상황이나 시간대를 파악하고 기록합니다",
+        "불안 유발 요인(소음, 낯선 사람, 복잡한 환경)을 제거합니다",
+        "친숙한 물건, 사진, 음악 등으로 안심시킵니다",
+        "SOS 신호 시 신속히 응답하고, 침착하게 대응합니다",
+        "반복적인 긴급 상황 발생 시 정신건강의학과 상담을 고려합니다"
+      ],
+
+      "intervention_priority": "HIGH",
+      "reference": "NICE NG97"
+    },
+
+    "panic_response": {
+      "clinical_basis": "짧은 기간 내 반복적인 긴급 상황 발생과 미응답 SOS는 극심한 불안·패닉 상태를 의미하며, 환자와 보호자 모두에게 즉각적인 지원이 필요합니다.",
+
+      "risk_indicators": [
+        "주간/주 단위로 긴급 통화나 SOS가 3회 이상 발생",
+        "미응답 SOS가 2회 이상 발생",
+        "야간 배회와 긴급 상황이 함께 발생하는 경우"
+      ],
+
+      "caregiver_recommendations": [
+        "긴급 연락 수단을 항상 가까이 두고, 알림 설정을 최대화합니다",
+        "환자가 쉽게 볼 수 있는 곳에 보호자 사진과 연락처를 크게 게시합니다",
+        "야간 모니터링을 강화하고, 필요 시 침실 근처에서 대기합니다",
+        "반복적인 패닉 반응은 의료진과 즉시 상담하여 원인을 파악합니다",
+        "보호자 본인의 심리적 소진도 체크하고, 지역 치매안심센터 지원 서비스를 활용합니다"
+      ],
+
+      "intervention_priority": "CRITICAL",
+      "reference": "NICE NG97, 한국 중앙치매센터"
+    },
+
+    "sleep_activity_correlation": {
+      "clinical_basis": "수면 부족과 활동량 감소 또는 배회 증가가 동시에 나타나는 경우, 수면 장애가 주간 행동 문제를 유발하거나 악화시키고 있을 가능성이 높습니다.",
+
+      "risk_indicators": [
+        "평균 수면 시간 6시간 미만",
+        "걸음수가 이전 기간 대비 15% 이상 감소",
+        "또는 배회·안전구역 이탈이 증가하는 패턴"
+      ],
+
+      "caregiver_recommendations": [
+        "낮 시간 활동량을 늘려 야간 수면을 유도합니다",
+        "낮잠 시간을 30분 이내로 제한합니다",
+        "낮 동안 햇빛 노출을 충분히 하여 생체리듬을 조절합니다",
+        "저녁 시간대 과도한 수분 섭취를 줄여 야간 화장실 방문을 줄입니다",
+        "수면 환경을 어둡고 조용하게 유지합니다"
+      ],
+
+      "intervention_priority": "MEDIUM",
+      "reference": "PMC3062259"
+    },
+
+    "routine_change": {
+      "clinical_basis": "일상 패턴의 급격한 변화는 인지 기능 변동, 환경 적응력 저하, 또는 새로운 스트레스 요인의 유입을 시사할 수 있습니다.",
+
+      "risk_indicators": [
+        "자주 가는 장소의 다양성이 급격히 감소 (다양성 지수 < 0.3)",
+        "안전구역 이탈이 3회 이상 증가",
+        "걸음수가 30% 이상 급증 또는 급감"
+      ],
+
+      "caregiver_recommendations": [
+        "최근 환경 변화(이사, 보호자 교체 등)가 있었는지 확인합니다",
+        "가능한 한 규칙적인 일상 루틴을 유지합니다",
+        "익숙한 활동과 장소를 중심으로 일정을 구성합니다",
+        "갑작스러운 변화보다는 점진적인 변화를 시도합니다",
+        "환자의 선호도와 편안함을 최우선으로 고려합니다"
+      ],
+
+      "intervention_priority": "MEDIUM",
+      "reference": "NICE NG97"
+    }
+  },
+
+  "general_principles": {
+    "non_pharmacological_first": "모든 행동심리증상(BPSD)에 대해 약물 치료보다 비약물적 중재를 우선적으로 시도합니다.",
+    "personalized_approach": "환자의 과거 습관, 선호도, 성격을 고려한 개인화된 접근이 가장 효과적입니다.",
+    "environmental_modification": "환경 조정(조명, 소음 제거, 친숙한 물건 배치)만으로도 많은 증상이 완화될 수 있습니다.",
+    "caregiver_support": "보호자 교육과 지원이 환자 관리의 핵심입니다. 보호자의 소진을 예방하고, 지역사회 자원(치매안심센터 등)을 적극 활용합니다.",
+    "early_intervention": "위험 신호를 조기에 발견하고 개입할수록 악화를 예방할 수 있습니다.",
+    "holistic_assessment": "단일 지표보다는 여러 지표의 조합과 맥락을 종합적으로 평가합니다."
+  }
+}
