@@ -129,13 +129,7 @@ fun VoipCallScreen(
 
             Spacer(Modifier.height(40.dp))
 
-            // 상단 "통화 중" + 초록 점
-            Text(
-                text = if (uiState.call?.status == "CONNECTED") "통화 중" else "연결 중",
-                color = Color(0xFF9FA9B8),
-                fontSize = 14.sp
-            )
-            Spacer(Modifier.height(6.dp))
+
             Box(
                 modifier = Modifier
                     .size(8.dp)
@@ -143,7 +137,7 @@ fun VoipCallScreen(
                     .background(Color(0xFF2ED573))
             )
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(100.dp))
 
             // 프로필 동그라미 (이미지 없으니 placeholder)
             Box(
@@ -227,26 +221,9 @@ fun VoipCallScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // 녹음 중/메시지/에러 표시
+            // 에러 표시만 남김
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-                Text(
-                    text = "● 녹음 중",
-                    color = Color(0xFF9FA9B8),
-                    fontSize = 12.sp
-                )
-
-                uiState.message?.let {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = it,
-                        color = Color(0xFF2ED573),
-                        fontSize = 12.sp
-                    )
-                }
-
                 uiState.error?.let {
-                    Spacer(Modifier.height(6.dp))
                     Text(
                         text = it,
                         color = Color(0xFFFF6B81),
@@ -347,12 +324,7 @@ private fun VoipCallScreenPreviewContent(
             Spacer(Modifier.height(40.dp))
 
             // 상단 "통화 중" + 초록 점
-            Text(
-                text = if (callStatus == "CONNECTED") "통화 중" else "연결 중",
-                color = Color(0xFF9FA9B8),
-                fontSize = 14.sp
-            )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(100.dp))
             Box(
                 modifier = Modifier
                     .size(8.dp)
@@ -439,14 +411,8 @@ private fun VoipCallScreenPreviewContent(
 
             Spacer(Modifier.height(32.dp))
 
-            // 녹음 중/메시지/에러 표시
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "● 녹음 중",
-                    color = Color(0xFF9FA9B8),
-                    fontSize = 12.sp
-                )
+
+
             }
         }
     }
-}

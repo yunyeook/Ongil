@@ -794,7 +794,7 @@ private fun NavigationStatusBar(
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF8A9A8A),
+        color = ongilColors.accent,  // 테마 색상 사용
         tonalElevation = 4.dp
     ) {
         Row(

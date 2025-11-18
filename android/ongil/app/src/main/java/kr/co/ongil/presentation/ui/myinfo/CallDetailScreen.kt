@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CallReceived
 import androidx.compose.material.icons.outlined.Event
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Message
@@ -160,7 +161,7 @@ private fun ContactHeaderCard(
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFEBF0EF),
+        color = ongilColors.accent.copy(alpha = 0.1f),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         modifier = modifier.fillMaxWidth()
@@ -174,7 +175,7 @@ private fun ContactHeaderCard(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF5C7165)),
+                    .background(ongilColors.accent),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -228,13 +229,13 @@ private fun SmallBadge(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(Color(0xFFDBEAFE))
+            .background(ongilColors.accent.copy(alpha = 0.2f))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium.copy(
-                color = Color(0xFF2563EB),
+                color = ongilColors.accent,
                 fontWeight = FontWeight.SemiBold
             )
         )
@@ -251,6 +252,11 @@ private fun CallSummaryCard(
     end: String,
     modifier: Modifier = Modifier
 ) {
+    // 부재중/걸려온 전화 판단 (direction에 "수신" 또는 "부재" 포함)
+    val isIncoming = direction.contains("수신") || direction.contains("부재")
+    val phoneIcon = if (isIncoming) Icons.Outlined.CallReceived else Icons.Outlined.Phone
+    val phoneIconTint = if (isIncoming) Danger else ongilColors.accent
+
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = Color.White,
@@ -268,9 +274,9 @@ private fun CallSummaryCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Phone,
+                        imageVector = phoneIcon,
                         contentDescription = "통화",
-                        tint = Color(0xFF1F9A54),
+                        tint = phoneIconTint,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(12.dp))
@@ -295,10 +301,10 @@ private fun CallSummaryCard(
             HorizontalDivider(color = DividerColor, thickness = 1.dp)
             Spacer(Modifier.height(12.dp))
 
-            InfoRow(icon = Icons.Outlined.LocationOn, iconTint = Color(0xFF1F9A54), label = "환자 위치", value = location)
-            InfoRow(icon = Icons.Outlined.Event, iconTint = Color(0xFF9333EA), label = "통화일시", value = date, top = 14.dp)
-            InfoRow(icon = Icons.Outlined.PlayArrow, iconTint = Color(0xFF2563EB), label = "시작 시간", value = start, top = 14.dp)
-            InfoRow(icon = Icons.Outlined.Stop, iconTint = Color(0xFFDC2626), label = "종료 시간", value = end, top = 14.dp)
+            InfoRow(icon = Icons.Outlined.LocationOn, iconTint = ongilColors.accent, label = "환자 위치", value = location)
+            InfoRow(icon = Icons.Outlined.Event, iconTint = ongilColors.accent.copy(alpha = 0.8f), label = "통화일시", value = date, top = 14.dp)
+            InfoRow(icon = Icons.Outlined.PlayArrow, iconTint = ongilColors.accent, label = "시작 시간", value = start, top = 14.dp)
+            InfoRow(icon = Icons.Outlined.Stop, iconTint = Danger, label = "종료 시간", value = end, top = 14.dp)
         }
     }
 }
@@ -345,7 +351,7 @@ private fun ChatSection(messages: List<ChatMessage>) {
         Icon(
             imageVector = Icons.Outlined.Message,
             contentDescription = "통화 내용",
-            tint = Color(0xFF1F9A54),
+            tint = ongilColors.accent,
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(8.dp))
@@ -384,7 +390,7 @@ private fun ChatBubble(
     time: String,
     mine: Boolean
 ) {
-    val bg = if (mine) Color(0xFFEAF6F0) else Color(0xFFF4F6F8)
+    val bg = if (mine) ongilColors.accent.copy(alpha = 0.15f) else Color(0xFFF4F6F8)
     val align = if (mine) Alignment.End else Alignment.Start
     val corner = if (mine)
         RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
