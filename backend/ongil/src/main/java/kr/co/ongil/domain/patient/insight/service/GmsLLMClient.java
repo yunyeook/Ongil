@@ -499,7 +499,7 @@ public class GmsLLMClient {
     }
 
     /**
-     * 유저 프롬프트 생성 (RAG 방식으로 가이드라인 주입)
+     * 유저 프롬프트 생성 (위험도별 전문 프롬프트 전략)
      */
     private String buildUserPrompt(PatientInsightFeatures features) {
         try {
@@ -510,7 +510,12 @@ public class GmsLLMClient {
             // 활성화된 플래그에 따라 관련 가이드라인 추출
             String relevantGuidelines = extractRelevantGuidelines(features.flags());
 
-            return String.format("""
+            // 위험도에 따른 요청사항 커스터마이징
+            String riskLevel = features.flags().estimateRiskLevel();
+            String customRequirements = buildRiskLevelSpecificRequirements(riskLevel);
+
+            // 공통 프롬프트 구조
+            String basePrompt = String.format("""
                 다음은 환자의 %s 활동 및 건강 데이터입니다.
 
                 **분석 기간:**
@@ -533,14 +538,6 @@ public class GmsLLMClient {
                 - 주의(4+점) 항목: %d개
                 - 총 심각도 점수: %d점
                 %s
-
-                **요청사항:**
-                1. 이전 기간 대비 현재 기간의 주요 변화를 분석해주세요.
-                2. 위 임상 가이드라인을 참고하여 각 위험 신호를 해석해주세요.
-                3. 보호자가 오늘부터 당장 실천할 수 있는 구체적인 행동을 3가지 이상 제안해주세요.
-                4. 데이터가 부족한 부분은 data_notes에 명시해주세요.
-
-                반드시 JSON 형식으로 응답해주세요.
                 """,
                 features.period().periodType().getDescription(),
                 features.period().currentStart(),
@@ -554,16 +551,71 @@ public class GmsLLMClient {
                 features.flags().physicalConditionDrop() ? "예" : "아니오", features.flags().physicalDropSeverity(),
                 features.flags().sleepActivityCorrelation() ? "예" : "아니오", features.flags().sleepActivitySeverity(),
                 features.flags().panicResponsePattern() ? "예" : "아니오", features.flags().panicResponseSeverity(),
-                features.flags().estimateRiskLevel(),
+                riskLevel,
                 features.flags().severeCount(),
                 features.flags().moderateCount(),
                 features.flags().totalSeverity(),
                 relevantGuidelines
             );
 
+            return basePrompt + customRequirements;
+
         } catch (JsonProcessingException e) {
             log.error("유저 프롬프트 생성 실패: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.INSIGHT_GENERATION_FAILED);
         }
+    }
+
+    /**
+     * 위험도별 맞춤 요청사항 생성
+     */
+    private String buildRiskLevelSpecificRequirements(String riskLevel) {
+        return switch (riskLevel) {
+            case "HIGH" -> """
+
+                ⚠️ **긴급 상황 분석 모드**
+
+                **요청사항 (고위험 환자):**
+                1. 이전 기간 대비 현재 기간의 주요 변화를 분석하되, **가장 위험한 신호 2가지**를 명확히 강조해주세요.
+                2. 위 임상 가이드라인을 참고하여 각 위험 신호가 왜 심각한지 구체적으로 설명해주세요.
+                3. 보호자가 **오늘/내일 당장** 실천해야 할 긴급 행동을 5가지 이상 제안해주세요.
+                   - 즉시 실행 가능한 구체적 행동
+                   - 전문가 상담이 필요한지 여부
+                   - 응급 상황 대비 체크리스트
+                4. 방치할 경우 어떤 위험이 있는지 보호자에게 경각심을 줄 수 있도록 설명해주세요.
+                5. 데이터가 부족한 부분은 data_notes에 명시해주세요.
+
+                반드시 JSON 형식으로 응답해주세요.
+                """;
+
+            case "MEDIUM" -> """
+
+                **요청사항 (주의 필요 환자):**
+                1. 이전 기간 대비 현재 기간의 주요 변화를 분석하되, **주의가 필요한 신호**를 우선 설명해주세요.
+                2. 위 임상 가이드라인을 참고하여 각 위험 신호를 해석해주세요.
+                3. 보호자가 **이번 주 내로** 실천할 수 있는 구체적인 행동을 4가지 이상 제안해주세요.
+                   - 실천 가능한 구체적 행동
+                   - 악화 방지를 위한 예방 조치
+                   - 모니터링이 필요한 지표
+                4. 긍정적인 신호가 있다면 함께 강조하여 보호자를 격려해주세요.
+                5. 데이터가 부족한 부분은 data_notes에 명시해주세요.
+
+                반드시 JSON 형식으로 응답해주세요.
+                """;
+
+            default -> """
+
+                **요청사항 (안정적 상태 환자):**
+                1. 이전 기간 대비 현재 기간의 변화를 분석하되, **긍정적인 신호**를 우선 강조해주세요.
+                2. 경미한 주의 사항이 있다면 위 임상 가이드라인을 참고하여 간단히 설명해주세요.
+                3. 보호자가 **현재 상태를 유지**하기 위해 계속할 수 있는 행동을 3가지 제안해주세요.
+                   - 현재 잘 유지되고 있는 습관
+                   - 예방 차원의 권장 활동
+                4. 긍정적인 톤으로 보호자를 격려하고, 앞으로도 지속적인 관심을 당부해주세요.
+                5. 데이터가 부족한 부분은 data_notes에 명시해주세요.
+
+                반드시 JSON 형식으로 응답해주세요.
+                """;
+        };
     }
 }
