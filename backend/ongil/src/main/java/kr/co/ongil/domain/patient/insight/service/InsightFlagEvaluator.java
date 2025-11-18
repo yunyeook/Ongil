@@ -169,15 +169,17 @@ public class InsightFlagEvaluator {
         boolean stepDecrease = health.steps().trend().equals("DECREASE") &&
             health.steps().changeRate() < -STEP_DECREASE_THRESHOLD;
 
-        // 심박수 변동성 증가 (30 이상)
-        boolean highHeartRateVariability = health.heartRate().variabilityCurrent() != null &&
-            health.heartRate().variabilityCurrent() > 30.0;
+        // 심박수 변동성 저하 (낮을수록 위험, 20 미만)
+        // 근거: PMC11226213 - HRV 감소는 인지 저하와 양의 상관관계
+        // SDNN, RMSSD 감소가 치매 환자에서 관찰됨
+        boolean lowHeartRateVariability = health.heartRate().variabilityCurrent() != null &&
+            health.heartRate().variabilityCurrent() < 20.0;
 
         // 산소포화도 저하 (95% 미만)
         boolean lowOxygen = health.oxygenSaturation().avgCurrent() != null &&
             health.oxygenSaturation().avgCurrent() < 95.0;
 
-        return sleepDecrease || stepDecrease || highHeartRateVariability || lowOxygen;
+        return sleepDecrease || stepDecrease || lowHeartRateVariability || lowOxygen;
     }
 
     /**
@@ -384,13 +386,16 @@ public class InsightFlagEvaluator {
             }
         }
 
-        // 심박수 변동성 (데이터 있을 때만)
+        // 심박수 변동성 저하 (데이터 있을 때만)
+        // 근거: PMC11226213 - 낮은 HRV는 인지 저하와 연관
         if (health.dataAvailability().heartRate() && health.heartRate().variabilityCurrent() != null) {
             double variability = health.heartRate().variabilityCurrent();
-            if (variability > 50.0) {
-                severity += 2;
-            } else if (variability > 35.0) {
-                severity += 1;
+            if (variability < 15.0) {
+                severity += 3;  // 매우 낮음 (심각)
+            } else if (variability < 20.0) {
+                severity += 2;  // 낮음 (주의)
+            } else if (variability < 25.0) {
+                severity += 1;  // 약간 낮음
             }
         }
 
