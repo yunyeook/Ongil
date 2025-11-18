@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kr.co.ongil.presentation.theme.OngilAccent
+import kr.co.ongil.presentation.theme.ongilColors
 
 
 @Composable
@@ -22,7 +22,7 @@ fun GreenButton(
     onClick: () -> Unit,
     isActive: Boolean = true,  // 얘는 기본목적지 설정처럼 토글 느낌으로
     enabled: Boolean = true,
-    containerColor: Color = OngilAccent,
+    containerColor: Color = ongilColors.accent,
 ) {
     Button(
         onClick = onClick,

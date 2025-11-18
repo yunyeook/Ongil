@@ -50,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.border
+import kr.co.ongil.presentation.theme.ongilColors
 
 @Composable
 fun SearchUserScreen(
@@ -96,6 +97,7 @@ fun SearchUserScreen(
     }
 
     SearchUserScreenContent(
+        modifier = modifier,
         uiState = uiState,
         onEvent = { evt -> viewModel.onEvent(evt) },
         onGoHome = {
@@ -109,12 +111,13 @@ fun SearchUserScreen(
 
 @Composable
 private fun SearchUserScreenContent(
+    modifier: Modifier = Modifier,
     uiState: SearchUserUiState,
     onEvent: (SearchUserUiEvent) -> Unit,
     onGoHome: () -> Unit,
 ) {
     Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .background(Color(0xFFFFFFFF))
         ) {
@@ -221,7 +224,7 @@ private fun SearchHeader() {
             modifier = Modifier
                 .size(96.dp)
                 .clip(RoundedCornerShape(35.dp))
-                .background(Color(0xFF7D9686)),
+                .background(ongilColors.accent),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -274,8 +277,10 @@ private fun SearchInputSection(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .padding(top = 24.dp),
+            .padding(top = 24.dp)
+            .imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
