@@ -36,7 +36,6 @@ class OngilApplication : Application() {
 
     private suspend fun syncFcmTokenOnAppStart() {
         try {
-            // Hilt EntryPoint를 통해 UserDataStoreManager 가져오기
             val entryPoint = EntryPointAccessors.fromApplication(
                 applicationContext,
                 UserDataStoreManagerEntryPoint::class.java
@@ -46,16 +45,35 @@ class OngilApplication : Application() {
             val accessToken = userDataStoreManager.getAccessToken().firstOrNull()
 
             if (accessToken != null) {
-                // 로그인 상태면 FCM 토큰 전송
+                // 현재 FCM 토큰 가져오기
                 val fcmToken = suspendCancellableCoroutine<String?> { continuation ->
                     FirebaseMessaging.getInstance().token
-                        .addOnSuccessListener { continuation.resumeWith(Result.success(it)) }
-                        .addOnFailureListener { continuation.resumeWith(Result.success(null)) }
+                        .addOnSuccessListener { token ->
+                            Log.d("FCM_DEBUG", "📱 현재 FCM 토큰: ${token?.take(20)}...")
+                            continuation.resumeWith(Result.success(token))
+                        }
+                        .addOnFailureListener {
+                            continuation.resumeWith(Result.success(null))
+                        }
                 }
 
                 if (fcmToken != null) {
-                    sendTokenToServer(fcmToken, accessToken)
-                    userDataStoreManager.saveFcmToken(fcmToken)
+                    // 👇 저장된 토큰과 비교
+                    val savedToken = userDataStoreManager.getFcmToken().firstOrNull()
+                    Log.d("FCM_DEBUG", "💾 저장된 FCM 토큰: ${savedToken?.take(20)}...")
+
+                    if (fcmToken == savedToken) {
+                        Log.d("FCM_DEBUG", "✅ 토큰 동일 - 서버 전송 스킵")
+                        return
+                    }
+
+                    Log.d("FCM_DEBUG", "🔄 토큰 변경됨 - 서버 전송 시도")
+
+                    // 토큰이 다른 경우에만 서버 전송
+                    val success = sendTokenToServer(fcmToken, accessToken)
+                    if (success) {
+                        userDataStoreManager.saveFcmToken(fcmToken)
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -63,8 +81,8 @@ class OngilApplication : Application() {
         }
     }
 
-    private suspend fun sendTokenToServer(fcmToken: String, accessToken: String) {
-        withContext(Dispatchers.IO) {
+    private suspend fun sendTokenToServer(fcmToken: String, accessToken: String): Boolean {
+        return withContext(Dispatchers.IO) {
             try {
                 val client = OkHttpClient()
                 val json = JSONObject().apply { put("token", fcmToken) }
@@ -78,22 +96,34 @@ class OngilApplication : Application() {
                     .build()
 
                 client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        Log.d("FCM", "✅ 앱 시작 시 토큰 전송 성공")
-                    } else {
-                        Log.e("FCM", "❌ 토큰 전송 실패: ${response.code}")
+                    when {
+                        response.isSuccessful -> {
+                            Log.d("FCM", "✅ 앱 시작 시 토큰 전송 성공")
+                            true
+                        }
+
+                        response.code in 400..599 -> {
+                            Log.w("FCM", "⚠️ 토큰 전송 에러: ${response.code} - 무시")
+                            false
+                        }
+
+                        else -> {
+                            Log.e("FCM", "❌ 토큰 전송 실패: ${response.code}")
+                            false
+                        }
                     }
                 }
             } catch (e: Exception) {
                 Log.e("FCM", "토큰 전송 중 오류", e)
+                false
             }
         }
     }
-}
 
-// EntryPoint 인터페이스 추가 (같은 파일 또는 별도 파일)
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface UserDataStoreManagerEntryPoint {
-    fun userDataStoreManager(): kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+    // EntryPoint 인터페이스 추가 (같은 파일 또는 별도 파일)
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface UserDataStoreManagerEntryPoint {
+        fun userDataStoreManager(): kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+    }
 }
