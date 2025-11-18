@@ -228,7 +228,7 @@ public class GmsLLMClient {
     }
 
     /**
-     * LLM 응답 파싱
+     * LLM 응답 파싱 및 검증
      */
     private LLMInsightResponse parseLLMResponse(String responseJson) {
         try {
@@ -245,12 +245,66 @@ public class GmsLLMClient {
             String content = (String) message.get("content");
 
             // content를 LLMInsightResponse로 파싱
-            return objectMapper.readValue(content, LLMInsightResponse.class);
+            LLMInsightResponse response = objectMapper.readValue(content, LLMInsightResponse.class);
+
+            // 응답 검증
+            validateLLMResponse(response);
+
+            return response;
 
         } catch (JsonProcessingException e) {
             log.error("LLM 응답 파싱 실패: {}", e.getMessage(), e);
             throw new BusinessException(ErrorCode.INSIGHT_GENERATION_FAILED);
         }
+    }
+
+    /**
+     * LLM 응답 검증 로직
+     */
+    private void validateLLMResponse(LLMInsightResponse response) {
+        // 1. 필수 필드 검증
+        if (response.summary() == null || response.summary().trim().isEmpty()) {
+            log.warn("LLM 응답에 summary가 비어있음");
+            throw new BusinessException(ErrorCode.INSIGHT_GENERATION_FAILED);
+        }
+
+        if (response.overallRiskLevel() == null) {
+            log.warn("LLM 응답에 overall_risk_level이 없음");
+            throw new BusinessException(ErrorCode.INSIGHT_GENERATION_FAILED);
+        }
+
+        // 2. summary 길이 검증 (최소 10자, 최대 500자)
+        if (response.summary().length() < 10) {
+            log.warn("LLM 응답의 summary가 너무 짧음: {} 자", response.summary().length());
+            throw new BusinessException(ErrorCode.INSIGHT_GENERATION_FAILED);
+        }
+
+        if (response.summary().length() > 500) {
+            log.warn("LLM 응답의 summary가 너무 김: {} 자", response.summary().length());
+        }
+
+        // 3. risk_level 값 검증
+        String riskLevel = response.overallRiskLevel().toUpperCase();
+        if (!riskLevel.equals("LOW") && !riskLevel.equals("MEDIUM") && !riskLevel.equals("HIGH")) {
+            log.warn("LLM 응답의 risk_level이 유효하지 않음: {}", riskLevel);
+            throw new BusinessException(ErrorCode.INSIGHT_GENERATION_FAILED);
+        }
+
+        // 4. caregiver_suggestions 검증 (최소 1개 이상)
+        if (response.caregiverSuggestions() == null || response.caregiverSuggestions().isEmpty()) {
+            log.warn("LLM 응답에 caregiver_suggestions가 없음 - 기본 제안 추가");
+            // Fallback: 기본 제안 추가는 서비스 레이어에서 처리
+        }
+
+        // 5. warning_signals가 비어있는지 확인 (정보성)
+        if ((response.warningSignals() == null || response.warningSignals().isEmpty()) &&
+            (riskLevel.equals("MEDIUM") || riskLevel.equals("HIGH"))) {
+            log.info("MEDIUM/HIGH 위험도임에도 warning_signals가 비어있음 (LLM 판단 존중)");
+        }
+
+        log.debug("LLM 응답 검증 완료 - summary 길이: {}, risk: {}, suggestions: {}개",
+            response.summary().length(), riskLevel,
+            response.caregiverSuggestions() != null ? response.caregiverSuggestions().size() : 0);
     }
 
     /**
