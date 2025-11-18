@@ -99,6 +99,12 @@ fun MapScreen(
             if (event == Lifecycle.Event.ON_RESUME) {
                 android.util.Log.d("MapScreen", "화면 재개 - 기본 목적지 새로고침")
                 viewModel.refreshDefaultDestination()
+
+                // 길찾기 진행 중이면 모달 닫기 (진행중 상태바만 보이도록)
+                if (navigationRoute != null && isNavigationModalVisible) {
+                    android.util.Log.d("MapScreen", "화면 재개 - 안내중지 모달 닫기")
+                    viewModel.closeNavigationModal()
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
