@@ -14,16 +14,25 @@ import org.springframework.stereotype.Service;
 @Service
 public class InsightFlagEvaluator {
 
-    // ==================== 임계값 상수 ====================
+    // ==================== 임계값 상수 (논문/가이드라인 기반) ====================
 
+    // 일상 패턴 변화
     private static final double ROUTINE_CHANGE_THRESHOLD = 30.0;  // 일상 변화 비율 (%)
     private static final int SAFEZONE_EXIT_THRESHOLD = 3;  // 안전구역 이탈 횟수
+
+    // 공간 혼란 (한국 중앙치매센터 배회 관리 가이드라인 참고)
     private static final int WANDER_THRESHOLD = 2;  // 배회 횟수
     private static final int ROUTE_LOST_THRESHOLD = 2;  // 길 잃음 횟수
+
+    // 불안/위험 증가
     private static final double ANXIETY_ESCALATION_THRESHOLD = 50.0;  // 불안 증가율 (%)
     private static final int EMERGENCY_INCREASE_THRESHOLD = 2;  // 긴급 상황 증가 횟수
+
+    // 신체 상태 (PMC3062259: Sleep disturbances in dementia 참고)
     private static final double SLEEP_DECREASE_THRESHOLD = 1.0;  // 수면 감소 시간 (시간)
     private static final double STEP_DECREASE_THRESHOLD = 20.0;  // 걸음수 감소율 (%)
+
+    // 패닉 반응
     private static final int SOS_NOT_RESPONDED_THRESHOLD = 1;  // 미응답 SOS 횟수
 
     /**
@@ -175,9 +184,10 @@ public class InsightFlagEvaluator {
         boolean lowHeartRateVariability = health.heartRate().variabilityCurrent() != null &&
             health.heartRate().variabilityCurrent() < 20.0;
 
-        // 산소포화도 저하 (95% 미만)
+        // 산소포화도 저하 (94% 미만)
+        // 근거: 일반 임상 기준 - 정상 95-100%, 94% 미만 시 저산소증 의심
         boolean lowOxygen = health.oxygenSaturation().avgCurrent() != null &&
-            health.oxygenSaturation().avgCurrent() < 95.0;
+            health.oxygenSaturation().avgCurrent() < 94.0;
 
         return sleepDecrease || stepDecrease || lowHeartRateVariability || lowOxygen;
     }
@@ -193,6 +203,7 @@ public class InsightFlagEvaluator {
         }
 
         // 수면 부족 (평균 6시간 미만)
+        // 근거: PMC3062259 - 수면 6시간 미만 시 주간 초조감, 인지 기능 저하
         boolean sleepDeprivation = health.sleep().avgHoursCurrent() != null &&
             health.sleep().avgHoursCurrent() < 6.0;
 
@@ -400,12 +411,15 @@ public class InsightFlagEvaluator {
         }
 
         // 산소포화도 저하 (데이터 있을 때만)
+        // 근거: 일반 임상 기준 - 정상 95-100%
         if (health.dataAvailability().oxygen() && health.oxygenSaturation().avgCurrent() != null) {
             double oxygen = health.oxygenSaturation().avgCurrent();
-            if (oxygen < 94.0) {
-                severity += 2;
+            if (oxygen < 92.0) {
+                severity += 3;  // 매우 심각 (즉시 의료 조치 필요)
+            } else if (oxygen < 94.0) {
+                severity += 2;  // 심각
             } else if (oxygen < 95.0) {
-                severity += 1;
+                severity += 1;  // 주의
             }
         }
 
