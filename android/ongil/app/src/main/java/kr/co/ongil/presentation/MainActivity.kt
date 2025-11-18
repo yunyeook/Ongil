@@ -8,6 +8,7 @@
     import android.os.Build
     import android.os.Bundle
     import android.provider.Settings
+    import android.util.Log
     import android.view.WindowManager
     import androidx.activity.ComponentActivity
     import androidx.activity.compose.setContent
@@ -57,6 +58,7 @@
             // Android 13+ 알림 권한 요청
             requestNotificationPermission()
             requestFullScreenIntentPermission()
+            requestAudioPermissions()
 
             // FCM 수신 통화 및 응급 전화 Intent 처리
             handleIncomingCallIntent(intent)
@@ -80,6 +82,31 @@
     //                PlayGroundMJ()
                     // PlayGroundSH()
                     // PlayGroundGK()
+                }
+            }
+        }
+
+        // ✅ 오디오 권한 요청 추가
+        private val audioPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val audioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
+            Log.d("MainActivity", "오디오 권한: $audioGranted")
+        }
+
+        private fun requestAudioPermissions() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val permissions = arrayOf(
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.MODIFY_AUDIO_SETTINGS
+                )
+
+                val needsRequest = permissions.any {
+                    ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+                }
+
+                if (needsRequest) {
+                    audioPermissionLauncher.launch(permissions)
                 }
             }
         }
