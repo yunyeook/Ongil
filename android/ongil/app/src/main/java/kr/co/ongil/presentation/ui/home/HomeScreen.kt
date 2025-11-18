@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.PI
@@ -193,19 +195,19 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             // 3. 이상변동 강조 카드
             AbnormalChangeSpotlightCard(activityLog = activityLog)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             // 4. 시간대별 위험도
             TimeBasedHeatmapCard(activityLog = activityLog)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
 
             // 5. 위험 행동 누적 추이
             CumulativeIncidentsCard(activityLog = activityLog)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
 
             // 6. 활동 vs 건강 교차 지표 (종합 인사이트)
             if (uiState.healthData != null) {
@@ -498,30 +500,45 @@ private fun RiskGaugeCard(
             )
             Spacer(Modifier.height(20.dp))
 
-            // 원형 게이지
-            Box(
+            // 원형 게이지 (반응형)
+            BoxWithConstraints(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(180.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                CircularGauge(
-                    score = riskScore,
-                    color = riskColor
-                )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = riskLabel,
-                        style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                        color = HomeColors.TextPrimary
+                val gaugeSize = (maxWidth * 0.8f).coerceAtMost(220.dp)
+                val labelTextSize = ((gaugeSize.value / 7).coerceIn(20f, 32f)).sp
+                val diffTextSize = ((gaugeSize.value / 16).coerceIn(10f, 14f)).sp
+
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(gaugeSize)
+                ) {
+                    CircularGauge(
+                        score = riskScore,
+                        color = riskColor
                     )
-                    Text(
-                        text = if (scoreDiff > 0) "지난주보다 +${scoreDiff}점"
-                               else if (scoreDiff < 0) "지난주보다 ${scoreDiff}점"
-                               else "지난주와 동일",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (scoreDiff > 0) Color(0xFF4CAF50)
-                               else if (scoreDiff < 0) Color(0xFFEF5350)
-                               else HomeColors.TextSecondary
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = riskLabel,
+                            fontSize = labelTextSize,
+                            fontWeight = FontWeight.Bold,
+                            color = HomeColors.TextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = if (scoreDiff > 0) "지난주보다 +${scoreDiff}점"
+                                   else if (scoreDiff < 0) "지난주보다 ${scoreDiff}점"
+                                   else "지난주와 동일",
+                            fontSize = diffTextSize,
+                            color = if (scoreDiff > 0) Color(0xFF4CAF50)
+                                   else if (scoreDiff < 0) Color(0xFFEF5350)
+                                   else HomeColors.TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 
@@ -585,7 +602,7 @@ private fun BehaviorRadarCard(
         activityLog.safezoneEmer.toFloat() / maxValue.toFloat(),
         activityLog.sosSign.toFloat() / maxValue.toFloat(),
         activityLog.emerCall.toFloat() / maxValue.toFloat()
-    ).map { it.coerceIn(0f, 1f) }
+    ).map { (it.coerceIn(0f, 1f)).coerceAtLeast(if (it > 0f) 0.15f else 0f) } // 최소값 보장
 
     val labels = listOf("길찾기\n이탈", "안전구역\n이상탐지", "도움\n요청", "응급\n전화")
 
@@ -604,28 +621,154 @@ private fun BehaviorRadarCard(
                 color = HomeColors.TextPrimary,
                 textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(28.dp))
 
-            Box(
-                modifier = Modifier.size(180.dp),
+            // 레이더 차트 (라벨 포함)
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                RadarChart(
-                    values = values,
-                    labels = labels,
-                    modifier = Modifier.size(180.dp)
-                )
+                val chartSize = (maxWidth * 0.7f).coerceAtMost(200.dp)
+
+                Box(
+                    modifier = Modifier.size(chartSize),
+                    contentAlignment = Alignment.Center
+                ) {
+                    RadarChartWithLabels(
+                        values = values,
+                        labels = listOf("길찾기\n이탈", "안전구역\n이상", "도움\n요청", "응급\n전화"),
+                        counts = listOf(
+                            activityLog.routeLost,
+                            activityLog.safezoneEmer,
+                            activityLog.sosSign,
+                            activityLog.emerCall
+                        ),
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
             Text(
-                text = "차트가 넓게 퍼질수록 위험도가 높습니다",
+                text = "차트가 넓게 퍼질수록 여러 영역에서 위험 행동이 많습니다",
                 style = MaterialTheme.typography.bodySmall,
                 color = HomeColors.TextSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+// 라벨이 포함된 레이더 차트
+@Composable
+private fun RadarChartWithLabels(
+    values: List<Float>,
+    labels: List<String>,
+    counts: List<Long>,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val centerX = size.width / 2
+        val centerY = size.height / 2
+        val radius = size.minDimension / 2 * 0.65f
+        val angleStep = (2 * PI / values.size).toFloat()
+
+        // 배경 격자 (3단계)
+        for (level in 1..3) {
+            val levelRadius = radius * (level / 3f)
+            val path = Path()
+            for (i in values.indices) {
+                val angle = -PI.toFloat() / 2 + angleStep * i
+                val x = centerX + levelRadius * cos(angle)
+                val y = centerY + levelRadius * sin(angle)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            path.close()
+            drawPath(
+                path = path,
+                color = Color(0xFFE0E0E0),
+                style = Stroke(width = 1.dp.toPx())
+            )
+        }
+
+        // 축 선
+        for (i in values.indices) {
+            val angle = -PI.toFloat() / 2 + angleStep * i
+            val endX = centerX + radius * cos(angle)
+            val endY = centerY + radius * sin(angle)
+            drawLine(
+                color = Color(0xFFE0E0E0),
+                start = Offset(centerX, centerY),
+                end = Offset(endX, endY),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+
+        // 데이터 영역
+        val dataPath = Path()
+        for (i in values.indices) {
+            val angle = -PI.toFloat() / 2 + angleStep * i
+            val distance = radius * values[i]
+            val x = centerX + distance * cos(angle)
+            val y = centerY + distance * sin(angle)
+            if (i == 0) dataPath.moveTo(x, y) else dataPath.lineTo(x, y)
+        }
+        dataPath.close()
+
+        // 채우기
+        drawPath(
+            path = dataPath,
+            color = HomeColors.Primary.copy(alpha = 0.3f)
+        )
+
+        // 테두리
+        drawPath(
+            path = dataPath,
+            color = HomeColors.Primary,
+            style = Stroke(width = 2.dp.toPx())
+        )
+
+        // 데이터 포인트
+        for (i in values.indices) {
+            val angle = -PI.toFloat() / 2 + angleStep * i
+            val distance = radius * values[i]
+            val x = centerX + distance * cos(angle)
+            val y = centerY + distance * sin(angle)
+            drawCircle(
+                color = HomeColors.Primary,
+                radius = 4.dp.toPx(),
+                center = Offset(x, y)
+            )
+        }
+
+        // 라벨을 축 끝에 표시 (네이티브 캔버스 사용)
+        val textPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.parseColor("#6B7280")
+            textSize = 9.sp.toPx()
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        drawIntoCanvas { canvas ->
+            labels.forEachIndexed { index, label ->
+                val angle = -PI.toFloat() / 2 + angleStep * index
+                val labelDistance = radius + 20.dp.toPx()
+                val x = centerX + labelDistance * cos(angle)
+                val y = centerY + labelDistance * sin(angle)
+
+                // 줄바꿈 처리
+                val lines = label.split("\n")
+                lines.forEachIndexed { lineIndex, line ->
+                    val yOffset = y + (lineIndex - lines.size / 2f) * 11.sp.toPx()
+                    canvas.nativeCanvas.drawText(
+                        line,
+                        x,
+                        yOffset,
+                        textPaint
+                    )
+                }
+            }
         }
     }
 }
