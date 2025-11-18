@@ -36,6 +36,7 @@ import kr.co.ongil.domain.usecase.fcm.HandleNavigationEndUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleAbnormalDetectedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleCallRequestUseCase
 import kr.co.ongil.domain.helper.NotificationHelper
+import kr.co.ongil.domain.usecase.fcm.HandleCallMissedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleSafezoneUpdateUseCase
 import kr.co.ongil.presentation.MainActivity
 import kr.co.ongil.presentation.ui.call.IncomingCallActivity
@@ -80,6 +81,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var handleCallRequestUseCase: HandleCallRequestUseCase
+
+    @Inject
+    lateinit var handleCallMissedUseCase: HandleCallMissedUseCase
+
 
     @Inject
     lateinit var notificationHelper: NotificationHelper
@@ -200,6 +205,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
                 MessageType.CALL_REQUEST -> {
                     handleCallRequestUseCase(this, fcmMessage)
+                }
+
+                MessageType.CALL_MISSED -> {
+                    handleCallMissedUseCase(this, fcmMessage)
                 }
             }
         }

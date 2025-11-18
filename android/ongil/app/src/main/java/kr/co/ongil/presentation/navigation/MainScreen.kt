@@ -36,6 +36,8 @@ fun MainScreen(
     onIncomingCallHandled: () -> Unit = {},
     emergencyCallData: kr.co.ongil.presentation.EmergencyCallData? = null,
     onEmergencyCallHandled: () -> Unit = {},
+    notificationNavigation: String? = null,
+    onNotificationNavigationHandled: () -> Unit = {},
     authViewModel: AuthStateViewModel = hiltViewModel()
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
@@ -114,6 +116,19 @@ fun MainScreen(
 
         delay(100)
         onEmergencyCallHandled()
+    }
+
+    // ✅ 알림 클릭 시 화면 이동
+    LaunchedEffect(notificationNavigation) {
+        when (notificationNavigation) {
+            "call_history" -> {
+                navController.navigate(Routes.CallHistory.route) {
+                    launchSingleTop = true
+                }
+                delay(100)
+                onNotificationNavigationHandled()
+            }
+        }
     }
 
     // 인증 관련 화면들 (Top/Bottom 숨김 대상)
