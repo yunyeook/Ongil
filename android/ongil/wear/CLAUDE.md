@@ -1,5 +1,40 @@
 # 온길(Ongil) Wear OS 앱 개발 가이드
 
+## ⚠️ 중요 공지 (2025-11-18 업데이트)
+
+**워치 모델: 블루투스 (Bluetooth) 전용**
+
+이 Wear OS 앱은 **블루투스 모델**을 기준으로 개발됩니다:
+- 워치는 **Phone 앱을 통해서만** 서버와 통신
+- 워치 → Phone: **DataLayer** (Wearable Data API)
+- Phone → Server: **REST API, WebSocket, WebRTC**
+- 워치는 **UI와 센서 데이터 수집**만 담당
+- 모든 네트워크 처리는 **Phone 앱이 relay**
+
+**아키텍처 원칙:**
+```
+Watch (Bluetooth)          Phone App              Server
+┌─────────────┐           ┌─────────────┐        ┌─────────────┐
+│ UI Layer    │           │ DataLayer   │        │   REST API  │
+│ ViewModels  │◄─DataLayer┤ Receiver    │◄──────►│  WebSocket  │
+│ UseCases    │           │ Network     │        │   WebRTC    │
+│ DataClient  │           │ WebRTC      │        └─────────────┘
+└─────────────┘           └─────────────┘
+```
+
+**불필요한 코드 (삭제 대상):**
+- ❌ WearRetrofitClient (직접 API 호출)
+- ❌ WearWebRtcCallClient (직접 WebRTC 연결)
+- ❌ WearWebSocketManager (직접 WebSocket 연결)
+- ❌ WearVoipSignalingService (직접 시그널링)
+
+**필요한 코드:**
+- ✅ WearDataClient 확장 (Phone으로 메시지 전송)
+- ✅ Phone 앱 DataLayer Server (Watch 메시지 수신)
+- ✅ UI + ViewModel + UseCase (Watch 로직)
+
+---
+
 ## 목차
 1. [프로젝트 개요](#프로젝트-개요)
 2. [현재 구현 상태](#현재-구현-상태)
@@ -14,7 +49,7 @@
 
 ## 프로젝트 개요
 
-온길(Ongil)은 치매 환자 및 노인을 위한 안전 케어 솔루션입니다. Wear OS 앱은 환자가 착용하는 스마트워치에서 실행되며, 보호자 앱과 연동하여 다음 기능을 제공합니다:
+온길(Ongil)은 치매 환자 및 노인을 위한 안전 케어 솔루션입니다. Wear OS 앱은 환자가 착용하는 **블루투스 스마트워치**에서 실행되며, **Phone 앱을 통해** 보호자와 서버에 연동되어 다음 기능을 제공합니다:
 
 - **실시간 위치 추적**: 환자의 현재 위치를 보호자에게 전송
 - **안전 구역 모니터링**: 설정된 안전 범위 이탈 감지
@@ -65,47 +100,62 @@
 - [WearAppModule.kt](di/WearAppModule.kt)
 - [WearDataModule.kt](di/WearDataModule.kt)
 
-#### 5. Phase 1: 기본 인프라 구축 (✅ 완료 - 2025-11-17)
-- **네트워크 레이어**: WearRetrofitClient, WearAuthInterceptor
-- **API 인터페이스**: WearAuthApi, WearLocationApi, WearCallApi, WearSosApi
-- **DTO 정의**: 위치/네비게이션/통화/SOS 관련 DTO
-- **도메인 모델**: LocationUpdate, NavigationState, CallState, SosState, PatientInfo
-- **Repository 구현**: LocationRepository, CallRepository, SosRepository
-- **네비게이션 구조**: WearRoute, WearNavGraph
-- **DI 모듈**: WearNetworkModule, WearRepositoryModule
-- **DataStore 확장**: 토큰 관리 API
+#### 5. Phase 1: 기본 인프라 구축 (🔄 재설계 필요 - 블루투스 모델 전환)
+**이전 방식 (❌ 삭제)**:
+- WearRetrofitClient로 직접 API 호출
+- WearAuthInterceptor로 토큰 관리
+- Wear 앱이 직접 서버 통신
 
-**주요 파일**:
-- [WearRetrofitClient.kt](data/datasource/remote/WearRetrofitClient.kt)
-- [WearAuthInterceptor.kt](data/datasource/remote/interceptor/WearAuthInterceptor.kt)
-- [WearLocationApi.kt](data/datasource/remote/api/WearLocationApi.kt)
-- [WearCallApi.kt](data/datasource/remote/api/WearCallApi.kt)
-- [WearSosApi.kt](data/datasource/remote/api/WearSosApi.kt)
-- [LocationRepository.kt](domain/repository/LocationRepository.kt)
-- [WearRoute.kt](presentation/navigation/WearRoute.kt)
-- [WearNavGraph.kt](presentation/navigation/WearNavGraph.kt)
-- [WearNetworkModule.kt](di/WearNetworkModule.kt)
+**새로운 방식 (✅ 구현)**:
+- **WearDataClient 확장**: Phone으로 메시지 전송
+- **Phone DataLayer Server**: Watch 메시지 수신 및 처리
+- **도메인 모델**: LocationUpdate, NavigationState, CallState, SosState, PatientInfo (유지)
+- **Repository 재구현**: DataLayer 기반으로 전환
+- **네비게이션 구조**: WearRoute, WearNavGraph (유지)
 
-#### 6. Phase 2: 위치 추적 및 안전 범위 모니터링 (✅ 완료 - 2025-11-18)
-- **WearLocationTrackingService**: Foreground Service 기반 위치 추적
-- **MonitorSafeZoneUseCase**: SafetyZoneMonitor(Common 모듈) 통합
-- **MapScreen**: 실시간 위치 + 3단계 안전 범위 시각화
-- **WearTMapComposable**: 안전 범위 오버레이 (100m/350m/700m)
-- **LocationStreamBus 통합**: 앱 내 위치 브로드캐스트
-- **Phone-Watch 위치 동기화**: WearDataClient를 통한 실시간 위치 전송
+**주요 파일 (재작성 필요)**:
+- ❌ ~~WearRetrofitClient.kt~~ → ✅ WearDataClient.kt (확장)
+- ❌ ~~WearAuthInterceptor.kt~~ (삭제)
+- ❌ ~~WearLocationApi.kt~~ (삭제)
+- ❌ ~~WearCallApi.kt~~ (삭제)
+- ❌ ~~WearSosApi.kt~~ (삭제)
+- ✅ LocationRepository.kt (DataLayer 기반으로 재구현)
+- ✅ CallRepository.kt (DataLayer 기반으로 재구현)
+- ✅ SosRepository.kt (DataLayer 기반으로 재구현)
+- ✅ WearRoute.kt (유지)
+- ✅ WearNavGraph.kt (유지)
 
-**주요 파일**:
-- [WearLocationTrackingService.kt](service/location/WearLocationTrackingService.kt)
-- [MonitorSafeZoneUseCase.kt](domain/usecase/MonitorSafeZoneUseCase.kt)
-- [MapScreen.kt](presentation/ui/map/MapScreen.kt)
-- [MapViewModel.kt](presentation/viewmodel/MapViewModel.kt)
-- [WearAppModule.kt](di/WearAppModule.kt) - LocationStreamBus, FusedLocationProviderClient 제공
+**Phone 앱 추가 필요**:
+- ✅ WearMessageListenerService.kt (Watch 메시지 수신)
+- ✅ WearDataLayerServer.kt (Watch 요청 처리)
+
+#### 6. Phase 2: 위치 추적 및 안전 범위 모니터링 (🔄 재설계 필요 - 블루투스 모델 전환)
+**이전 방식 (⚠️ 수정)**:
+- WearLocationTrackingService에서 직접 서버로 위치 전송
+- Phone 앱과 독립적으로 동작
+
+**새로운 방식 (✅ 구현)**:
+- **WearLocationTrackingService**: 위치 수집만 담당
+- **WearDataClient**: Phone으로 위치 전송
+- **Phone 앱**: Watch로부터 위치 수신 → 서버로 전송
+- **MapScreen**: 실시간 위치 + 3단계 안전 범위 시각화 (유지)
+- **MonitorSafeZoneUseCase**: SafetyZoneMonitor(Common 모듈) 통합 (유지)
+
+**주요 파일 (수정 필요)**:
+- 🔄 WearLocationTrackingService.kt (서버 전송 제거, DataLayer 전송만)
+- ✅ MonitorSafeZoneUseCase.kt (유지)
+- ✅ MapScreen.kt (유지)
+- ✅ MapViewModel.kt (유지)
+- ✅ WearAppModule.kt (유지)
+
+**Phone 앱 추가 필요**:
+- ✅ WearLocationReceiver.kt (Watch 위치 수신)
+- ✅ LocationTrackingService에 Watch 위치 처리 로직 추가
 
 **통합 완료**:
 - Common 모듈의 SafetyZoneMonitor 활용
 - LocationStreamBus를 통한 리액티브 위치 업데이트
-- App 모듈의 LocationTrackingService와 워치 위치 동기화
-- Android 브랜치와 병합 완료 (LoginUseCase, LocationTrackingService 충돌 해결)
+- **Watch → Phone → Server** 경로로 위치 전송
 
 ### 🚧 진행 중/필요한 기능
 
@@ -477,57 +527,104 @@ fun SafeZoneOverlay(
 }
 ```
 
-### Phase 3: VoIP 통화 기능 (2-3주)
-**목표**: WebRTC 기반 핫라인 통화 기능
+### Phase 3: VoIP 통화 기능 (🔄 재설계 - Phone Relay 방식)
+**목표**: Phone 앱이 WebRTC 처리, Watch는 UI + 오디오 입출력만
 
-#### 3.1 WebRTC 통합
-- [ ] WearCallService
-- [ ] WebRTC PeerConnection 설정
-- [ ] Audio Track 관리
-- [ ] ICE 후보 교환
+**이전 방식 (❌ 삭제)**:
+- Watch에서 직접 WebRTC PeerConnection 생성
+- Watch에서 직접 WebSocket 시그널링
+- Watch가 독립적으로 통화 관리
 
-**참고 파일**:
-- `app/core/webrtc/WebRtcCallClient.kt`
-- `app/core/webrtc/WebRtcModule.kt`
+**새로운 방식 (✅ 구현)**:
+- **Phone 앱**: WebRTC PeerConnection, WebSocket 시그널링 모두 처리
+- **Watch 앱**: UI 표시 + 오디오 입출력 + DataLayer 통신만
+- **통화 흐름**:
+  1. Watch: 통화 시작 버튼 → Phone으로 메시지 전송
+  2. Phone: WebRTC 연결 + 시그널링 처리
+  3. Phone → Watch: 통화 상태 업데이트 (연결 중, 통화 중, 종료)
+  4. Watch: 스피커/마이크로 오디오 입출력 (Phone Bluetooth 스트리밍)
 
-**구현 계획**:
+#### 3.1 Watch 통화 UI
+- ✅ CallScreen.kt (통화 중 화면)
+- ✅ IncomingCallScreen.kt (수신 화면)
+- ✅ WearCallViewModel.kt (상태 관리)
+- ✅ CallRepository.kt (DataLayer 기반)
+
+**Watch 구현 계획**:
 ```kotlin
-// WearCallService.kt
-class WearCallService @Inject constructor(
-    private val peerConnectionFactory: PeerConnectionFactory,
-    private val webSocketManager: WearWebSocketManager,
+// WearCallViewModel.kt
+class WearCallViewModel @Inject constructor(
+    private val wearDataClient: WearDataClient,
     private val callRepository: CallRepository
-) {
-    private var peerConnection: PeerConnection? = null
-    private var localAudioTrack: AudioTrack? = null
+) : ViewModel() {
 
-    suspend fun startCall(targetUserId: String, targetPhone: String) {
-        // 1. 서버에 통화 생성 요청
-        val callId = callRepository.createCall(targetUserId, targetPhone)
+    fun startCall(receiverId: Long) {
+        viewModelScope.launch {
+            // Phone으로 통화 시작 요청 전송
+            wearDataClient.sendMessage("/call/start", "receiver_id=$receiverId")
+        }
+    }
 
-        // 2. WebRTC PeerConnection 생성
-        peerConnection = createPeerConnection()
+    fun endCall() {
+        viewModelScope.launch {
+            // Phone으로 통화 종료 요청 전송
+            wearDataClient.sendMessage("/call/end", "")
+        }
+    }
 
-        // 3. Audio Track 추가
-        localAudioTrack = createAudioTrack()
-        peerConnection?.addTrack(localAudioTrack)
-
-        // 4. SDP Offer 생성 및 전송
-        val offer = peerConnection?.createOffer()
-        peerConnection?.setLocalDescription(offer)
-        webSocketManager.sendSignal(callId, "OFFER", offer.description)
-
-        // 5. WebSocket으로 신호 수신
-        webSocketManager.observeSignals(callId).collect { signal ->
-            when (signal.type) {
-                "ANSWER" -> handleAnswer(signal)
-                "ICE" -> handleIceCandidate(signal)
-                "HANGUP" -> endCall()
+    // Phone으로부터 통화 상태 수신 (DataLayer)
+    init {
+        viewModelScope.launch {
+            wearDataClient.observeMessages("/call/state").collect { message ->
+                when (message) {
+                    "CONNECTING" -> _uiState.update { it.copy(status = CallStatus.CONNECTING) }
+                    "CONNECTED" -> _uiState.update { it.copy(status = CallStatus.CONNECTED) }
+                    "ENDED" -> _uiState.update { it.copy(status = CallStatus.ENDED) }
+                }
             }
         }
     }
 }
 ```
+
+#### 3.2 Phone 통화 처리
+- ✅ WearCallMessageReceiver.kt (Watch 요청 수신)
+- ✅ VoipCallViewModel 확장 (Watch 통화 지원)
+- ✅ WebRtcCallClient (기존 코드 재사용)
+- ✅ VoipSignalingService (기존 코드 재사용)
+
+**Phone 구현 계획**:
+```kotlin
+// WearCallMessageReceiver.kt (Phone 앱)
+class WearCallMessageReceiver : WearableListenerService() {
+    @Inject lateinit var voipCallViewModel: VoipCallViewModel
+
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        when (messageEvent.path) {
+            "/call/start" -> {
+                val receiverId = messageEvent.data.toString().split("=")[1].toLong()
+                // Phone에서 WebRTC 통화 시작
+                voipCallViewModel.startVoipCall(receiverId, "PATIENT")
+            }
+            "/call/end" -> {
+                voipCallViewModel.endCall()
+            }
+        }
+    }
+}
+
+// VoipCallViewModel.kt (Phone 앱 - 확장)
+fun syncCallStateToWatch(state: String) {
+    viewModelScope.launch {
+        wearDataClient.sendMessage("/call/state", state)
+    }
+}
+```
+
+**불필요한 파일 (삭제)**:
+- ❌ WearWebRtcCallClient.kt
+- ❌ WearWebSocketManager.kt
+- ❌ WearVoipSignalingService.kt
 
 #### 3.2 통화 UI
 - [ ] IncomingCallScreen (수신 화면)

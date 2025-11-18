@@ -74,6 +74,16 @@
             android:enabled="true"
             android:foregroundServiceType="location" />
 
+        <!-- Watch 메시지 수신 서비스 (블루투스 모델) -->
+        <service
+            android:name="kr.co.ongil.service.wear.WearMessageListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" />
+            </intent-filter>
+        </service>
+
         <activity
 
             android:windowSoftInputMode="adjustResize"

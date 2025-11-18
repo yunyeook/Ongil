@@ -225,17 +225,20 @@ class WearLocationTrackingService : Service() {
         // 1. LocationStreamBus로 앱 내 브로드캐스트
         locationStreamBus.tryEmit(locationPoint)
 
-        // 2. 서버로 위치 전송 (중복 전송 방지)
-        if (shouldSendToServer(locationPoint)) {
-            sendLocationToServer(locationPoint)
-        }
+        // 2. 서버로 위치 전송 (블루투스 모델: Phone으로 relay)
+        // TODO: 필요 시 활성화 (현재는 주석 처리)
+        // if (shouldSendToServer(locationPoint)) {
+        //     sendLocationToServer(locationPoint)
+        // }
 
         // 3. 배터리 최적화 - 동적 업데이트 간격 조정
         adjustLocationUpdateInterval(location.speed)
     }
 
     /**
-     * 서버로 전송할지 여부 판단
+     * 서버로 전송할지 여부 판단 (블루투스 모델: Phone으로 relay)
+     *
+     * TODO: 필요 시 활성화 (현재는 주석 처리)
      */
     private fun shouldSendToServer(newLocation: LocationPoint): Boolean {
         val lastSent = lastSentLocation ?: return true
@@ -253,7 +256,12 @@ class WearLocationTrackingService : Service() {
     }
 
     /**
-     * 서버로 위치 전송
+     * 서버로 위치 전송 (블루투스 모델: Watch → Phone → Server)
+     *
+     * LocationRepository가 WearDataClient를 사용하여 Phone으로 relay
+     * Phone의 WearMessageListenerService가 수신 → 서버로 전송
+     *
+     * TODO: 필요 시 활성화 (현재는 주석 처리)
      */
     private fun sendLocationToServer(locationPoint: LocationPoint) {
         val currentPatientId = patientId ?: run {
@@ -263,6 +271,7 @@ class WearLocationTrackingService : Service() {
 
         serviceScope.launch {
             try {
+                // LocationRepository → WearDataClient → Phone → Server
                 val result = locationRepository.updatePatientLocation(
                     patientId = currentPatientId,
                     latitude = locationPoint.latitude,
@@ -271,12 +280,12 @@ class WearLocationTrackingService : Service() {
 
                 if (result.isSuccess) {
                     lastSentLocation = locationPoint
-                    Log.d(TAG, "Location sent to server successfully")
+                    Log.d(TAG, "Location sent to Phone successfully")
                 } else {
                     Log.e(TAG, "Failed to send location: ${result.exceptionOrNull()}")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error sending location to server", e)
+                Log.e(TAG, "Error sending location to Phone", e)
             }
         }
     }

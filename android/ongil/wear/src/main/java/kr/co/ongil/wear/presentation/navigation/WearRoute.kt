@@ -20,13 +20,22 @@ sealed class WearRoute(val route: String) {
     }
 
     // 통화 화면 (발신/통화 중)
-    data object Call : WearRoute("call/{callId}") {
-        fun createRoute(callId: Long) = "call/$callId"
+    data object Call : WearRoute("call/{targetUserId}/{targetName}/{targetPhone}/{isCaller}") {
+        fun createRoute(
+            targetUserId: String,
+            targetName: String,
+            targetPhone: String,
+            isCaller: Boolean = true
+        ) = "call/$targetUserId/$targetName/$targetPhone/$isCaller"
     }
 
     // 수신 통화 화면
-    data object IncomingCall : WearRoute("incoming_call/{callId}") {
-        fun createRoute(callId: Long) = "incoming_call/$callId"
+    data object IncomingCall : WearRoute("incoming_call/{callId}/{callerUserId}/{callerName}") {
+        fun createRoute(
+            callId: Long,
+            callerUserId: String,
+            callerName: String
+        ) = "incoming_call/$callId/$callerUserId/$callerName"
     }
 
     // 도움 요청 화면
