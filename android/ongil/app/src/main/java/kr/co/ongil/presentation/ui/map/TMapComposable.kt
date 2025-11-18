@@ -47,6 +47,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.content.Context as AndroidContext
+import kr.co.ongil.presentation.theme.ongilColors
 
 
 /**
@@ -79,6 +80,26 @@ fun TMapComposable(
     isHomeScreen: Boolean = false  // 홈 화면 여부
 ) {
     val context = LocalContext.current
+
+    // 테마 색상 미리 가져오기 (Composable 컨텍스트)
+    val themeAccentColor = ongilColors.accent
+
+    // 마커용 진한 색상 (테마 색상을 30% 어둡게)
+    val darkerMarkerColor = androidx.compose.ui.graphics.Color(
+        red = themeAccentColor.red * 0.7f,
+        green = themeAccentColor.green * 0.7f,
+        blue = themeAccentColor.blue * 0.7f,
+        alpha = themeAccentColor.alpha
+    )
+
+    // 경로 선용 색상 (테마 색상을 약간만 밝게)
+    val lighterLineColor = androidx.compose.ui.graphics.Color(
+        red = themeAccentColor.red + (1f - themeAccentColor.red) * 0.15f,
+        green = themeAccentColor.green + (1f - themeAccentColor.green) * 0.15f,
+        blue = themeAccentColor.blue + (1f - themeAccentColor.blue) * 0.15f,
+        alpha = themeAccentColor.alpha
+    )
+
     var mapView by remember { mutableStateOf<TMapView?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isMapInitialized by remember { mutableStateOf(false) }
@@ -102,9 +123,9 @@ fun TMapComposable(
     // 홈 위치 마커 (안전 범위 기준점)
     var homeMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
 
-    // 펄스 애니메이션 프레임 생성 (녹색)
-    val pulseFrames = remember {
-        createPulseFrames(context, color = "#5C7165")
+    // 펄스 애니메이션 프레임 생성 (테마 색상)
+    val pulseFrames = remember(themeAccentColor) {
+        createPulseFrames(context, color = String.format("#%06X", 0xFFFFFF and themeAccentColor.toArgb()))
     }
 
     // 방위각 센서 (네비게이션 모드용)
@@ -855,7 +876,7 @@ fun TMapComposable(
     }
 
     // 길안내 경로 그리기
-    LaunchedEffect(mapView, isMapInitialized, route) {
+    LaunchedEffect(mapView, isMapInitialized, route, lighterLineColor) {
         Log.d("TMapComposable", "경로 그리기 LaunchedEffect 트리거 - route: ${route != null}")
         if (!isMapInitialized) {
             Log.d("TMapComposable", "지도가 초기화되지 않음")
@@ -886,7 +907,7 @@ fun TMapComposable(
                     // TMapPolyLine 생성 (ID와 pointList를 생성자에 전달)
                     val polyLine = TMapPolyLine("route_line", pointList)
                     polyLine.lineWidth = 10f
-                    polyLine.lineColor = Color.parseColor("#5C7165")
+                    polyLine.lineColor = lighterLineColor.toArgb()  // 연한 테마 색상 사용
                     polyLine.outLineWidth = 2f
                     polyLine.outLineColor = Color.WHITE
 
@@ -910,7 +931,7 @@ fun TMapComposable(
                         val startMarker = TMapMarkerItem().apply {
                             id = "start_marker"
                             tMapPoint = TMapPoint(startPoint.latitude, startPoint.longitude)
-                            icon = createStartMarkerBitmap(context, Color.parseColor("#4CAF50"))
+                            icon = createStartMarkerBitmap(context, darkerMarkerColor.toArgb())  // 진한 테마 색상
                         }
                         try {
                             tmap.addTMapMarkerItem(startMarker)
@@ -926,7 +947,7 @@ fun TMapComposable(
                         val endMarker = TMapMarkerItem().apply {
                             id = "end_marker"
                             tMapPoint = TMapPoint(endPoint.latitude, endPoint.longitude)
-                            icon = createEndMarkerBitmap(context, Color.parseColor("#F44336"))
+                            icon = createEndMarkerBitmap(context, darkerMarkerColor.toArgb())  // 진한 테마 색상
                         }
                         try {
                             tmap.addTMapMarkerItem(endMarker)
@@ -1391,40 +1412,34 @@ private fun createEndMarkerBitmap(
     }
     canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
 
-    // 내부 흰색 깃발 아이콘
-    val iconSize = pinHeadRadius * 0.8f
-    val flagLeft = centerX - iconSize * 0.35f
-    val flagTop = pinHeadCenterY - iconSize * 0.4f
+    // 내부 흰색 별 아이콘 (5각 별)
+    val starRadius = pinHeadRadius * 0.6f
 
-    // 깃대
-    val polePaint = Paint().apply {
-        color = Color.WHITE
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-        isAntiAlias = true
-    }
-    canvas.drawLine(
-        flagLeft,
-        flagTop,
-        flagLeft,
-        flagTop + iconSize * 0.8f,
-        polePaint
-    )
-
-    // 깃발
-    val flagPath = android.graphics.Path().apply {
-        moveTo(flagLeft, flagTop)
-        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.15f)
-        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.45f)
-        lineTo(flagLeft, flagTop + iconSize * 0.3f)
-        close()
-    }
-    val flagPaint = Paint().apply {
+    val iconPaint = Paint().apply {
         color = Color.WHITE
         style = Paint.Style.FILL
         isAntiAlias = true
     }
-    canvas.drawPath(flagPath, flagPaint)
+
+    // 5각 별 그리기
+    val starPath = android.graphics.Path()
+    val innerRadius = starRadius * 0.4f
+
+    for (i in 0 until 10) {
+        val angle = Math.PI / 2 + (i * Math.PI / 5)
+        val radius = if (i % 2 == 0) starRadius else innerRadius
+        val x = centerX + (radius * Math.cos(angle)).toFloat()
+        val y = pinHeadCenterY - (radius * Math.sin(angle)).toFloat()
+
+        if (i == 0) {
+            starPath.moveTo(x, y)
+        } else {
+            starPath.lineTo(x, y)
+        }
+    }
+    starPath.close()
+
+    canvas.drawPath(starPath, iconPaint)
 
     return bitmap
 }

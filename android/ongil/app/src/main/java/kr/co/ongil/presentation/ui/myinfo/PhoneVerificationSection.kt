@@ -15,8 +15,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kr.co.ongil.presentation.uistate.PhoneUiState
-
-private val PhoneAccent = Color(0xFF8CA898)
+import kr.co.ongil.presentation.theme.ongilColors
 
 /**
  * Stateless 휴대폰 인증 섹션
@@ -105,7 +104,7 @@ private fun PhoneIdleState(
 
         Button(
             onClick = onChangeClick,
-            colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
+            colors = ButtonDefaults.buttonColors(containerColor = ongilColors.accent),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.height(56.dp),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
@@ -131,7 +130,7 @@ private fun PhoneEditingState(
         OutlinedTextField(
             value = newPhone,
             onValueChange = { onPhoneChange(it.filter { ch -> ch.isDigit() || ch == '-' }) },
-            placeholder = { Text("새로운 번호를 입력하세요") },
+            placeholder = { Text("새로운 번호를 입력하세요", color = Color(0xFFB0B0B0)) },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
@@ -147,14 +146,16 @@ private fun PhoneEditingState(
                 unfocusedBorderColor = Color(0xFFE3E7E5),
                 cursorColor = Color(0xFF6B767A),
                 focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
+                unfocusedContainerColor = Color.White,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black
             )
         )
 
         Button(
             onClick = onSendClick,
             enabled = newPhone.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
+            colors = ButtonDefaults.buttonColors(containerColor = ongilColors.accent),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.height(56.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
@@ -208,7 +209,7 @@ private fun PhoneVerifyingState(
 
             Button(
                 onClick = onResendClick,
-                colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = ongilColors.accent),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.height(56.dp).width(100.dp)
             ) {
@@ -258,7 +259,7 @@ private fun PhoneVerifyingState(
             Button(
                 onClick = onVerifyClick,
                 enabled = code.length == 6,
-                colors = ButtonDefaults.buttonColors(containerColor = PhoneAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = ongilColors.accent),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.height(56.dp).width(100.dp)
             ) {

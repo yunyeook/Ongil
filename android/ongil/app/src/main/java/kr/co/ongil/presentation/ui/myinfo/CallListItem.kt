@@ -19,10 +19,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
-
-val CallListAccent = Color(0xFF8CA898)
 
 
 /**
@@ -37,7 +36,7 @@ fun CallListItem(
 ) {
     val containerColor = when (item.type) {
         CallType.EMERGENCY -> Color(0xFFF6F4F0)  // 긴급 통화 연한 강조
-        CallType.VOIP -> Color(0xFFF2F6F4)       // 살짝 민트 톤
+        CallType.VOIP -> ongilColors.accent.copy(alpha = 0.08f)  // 타입별 테마 색상
         CallType.NORMAL -> Color(0xFFF7F9F8)
     }
 
@@ -88,7 +87,7 @@ private fun CallAvatar(
         modifier = modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(Color(0xFF7E8C87)),
+            .background(ongilColors.accent),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -161,7 +160,7 @@ private fun CallActions(
         Icon(
             imageVector = Icons.Outlined.Phone,
             contentDescription = "전화",
-            tint = Color(0xFF8CA898),
+            tint = ongilColors.accent,
             modifier = Modifier
                 .size(22.dp)
                 .clickable(onClick = onCallClick)

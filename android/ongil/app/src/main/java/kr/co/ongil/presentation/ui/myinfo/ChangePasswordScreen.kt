@@ -81,19 +81,17 @@ private fun ChangePasswordContent(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.White
-    ) { paddingValues ->
+    ) { innerPadding ->
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .imePadding(),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-
             // 현재 비밀번호 (비밀번호 재설정 모드에서는 숨김)
             if (!isResetMode) {
                 PasswordInputField(

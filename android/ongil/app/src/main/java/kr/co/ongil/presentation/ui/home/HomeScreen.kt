@@ -51,10 +51,11 @@ import android.Manifest
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import kr.co.ongil.service.location.LocationTrackingService
-
+import kr.co.ongil.presentation.theme.GuardianColors
+import kr.co.ongil.presentation.theme.PatientColors
 
 private object HomeColors {
-    val Primary = Color(0xFF88A293)
+    val Primary = Color(0xFF88A293)  // 기본 Primary 색상
     val CardBg = Color(0xFFF3F4F6)
     val TextPrimary = Color(0xFF111827)
     val TextSecondary = Color(0xFF6B767A)
@@ -62,6 +63,7 @@ private object HomeColors {
     val HighlightBg = Color(0xFFE8EFEA)
     val OnPrimary = Color(0xFFFFFFFF)
 }
+
 
 @Immutable
 data class HomeUiState(
@@ -156,9 +158,10 @@ fun HomeScreen(
         Spacer(Modifier.height(24.dp))
 
         // 대시보드 시작: "최근 정보를 요약했어요"
+        val themeColors = if (userType == "PATIENT") PatientColors else GuardianColors
         Text(
             text = buildAnnotatedString {
-                withStyle(SpanStyle(color = HomeColors.Primary)) {
+                withStyle(SpanStyle(color = themeColors.accent)) {
                     append(uiState.patientName)
                 }
                 append("님의 최근 정보를\n요약했어요.")
@@ -169,7 +172,7 @@ fun HomeScreen(
 
         Spacer(Modifier.height(20.dp))
 
-        KeyIndicatorsSection(uiState = uiState)
+        KeyIndicatorsSection(uiState = uiState, userType = userType)
 
         Spacer(Modifier.height(24.dp))
 
@@ -272,9 +275,11 @@ private fun MapSectionPreview(
 @Composable
 private fun KeyIndicatorsSection(
     uiState: HomeUiState,
+    userType: String,
     modifier: Modifier = Modifier
 ) {
     val hasHealthData = uiState.averageSleepHours != null && uiState.averageSteps != null
+    val themeColors = if (userType == "PATIENT") PatientColors else GuardianColors
 
     Column(
         modifier = modifier.fillMaxWidth()
@@ -294,14 +299,14 @@ private fun KeyIndicatorsSection(
             if (hasHealthData) {
                 IndicatorCard(
                     title = "수면 시간",
-                    value = uiState.averageSleepHours?.let { String.format("%.1f시간", it) } ?: "-",
+                    value = uiState.averageSleepHours?.let { String.format("%.1f", it) } ?: "-",
                     modifier = Modifier.weight(1f),
-                    backgroundColor = HomeColors.Primary,
+                    backgroundColor = themeColors.accent,
                     highlight = true
                 )
                 IndicatorCard(
                     title = "하루 평균 걸음 수",
-                    value = uiState.averageSteps?.let { "%,d걸음".replace(" ", "").format(it) } ?: "-",
+                    value = uiState.averageSteps?.let { "%,d".format(it) } ?: "-",
                     modifier = Modifier.weight(1f),
                     backgroundColor = HomeColors.CardBg,
                     isDashedBorder = true
@@ -318,7 +323,7 @@ private fun KeyIndicatorsSection(
                     title = uiState.mostVisitedLabel,
                     value = uiState.mostVisitedPlace,
                     modifier = Modifier.weight(1f),
-                    backgroundColor = HomeColors.Primary,
+                    backgroundColor = themeColors.accent,
                     highlight = true
                 )
                 IndicatorCard(
@@ -412,8 +417,8 @@ private fun IndicatorCard(
                 )
             } else {
                 // 3글자 초과 시 3글자까지만 표시하고 ... 추가
-                val displayValue = if (value.length > 3) {
-                    value.take(3) + "..."
+                val displayValue = if (value.length > 6) {
+                    value.take(6) + "..."
                 } else {
                     value
                 }
