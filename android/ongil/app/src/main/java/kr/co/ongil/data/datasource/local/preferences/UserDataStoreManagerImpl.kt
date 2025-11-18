@@ -62,6 +62,7 @@ class UserDataStoreManagerImpl @Inject constructor(
     override suspend fun saveFcmToken(token: String) {
         dataStore.edit { preferences ->
             preferences[DataStoreKeys.FCM_TOKEN_KEY] = token
+            preferences[DataStoreKeys.FCM_TOKEN_SYNCED_KEY] = false
         }
     }
 
@@ -74,6 +75,18 @@ class UserDataStoreManagerImpl @Inject constructor(
     override fun getLoginUserId(): Flow<String?> {
         return dataStore.data.map { preferences ->
             preferences[DataStoreKeys.LOGIN_USER_ID_KEY]
+        }
+    }
+
+    override suspend fun setFcmTokenSynced(synced: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[DataStoreKeys.FCM_TOKEN_SYNCED_KEY] = synced
+        }
+    }
+
+    override fun isFcmTokenSynced(): Flow<Boolean> {
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreKeys.FCM_TOKEN_SYNCED_KEY] ?: false  // 기본값: false
         }
     }
 

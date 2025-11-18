@@ -32,6 +32,7 @@ class PhoneDataSyncManager @Inject constructor(
         // 폰과 워치가 동일한 경로 사용해야 함
         const val LOGIN_DATA_PATH = "/login_data"
         const val NAVIGATION_ROUTE_PATH = "/navigation_route"
+        const val HELP_REQUEST_PATH = "/help_request_to_watch"
 
         // Login Data Map Keys (폰과 동일해야 함)
         const val KEY_ACCESS_TOKEN = "access_token"
@@ -47,6 +48,10 @@ class PhoneDataSyncManager @Inject constructor(
         const val KEY_TOTAL_DISTANCE = "total_distance"
         const val KEY_TOTAL_TIME = "total_time"
         const val KEY_ROUTE_PATH = "route_path"
+
+        // Help Request Data Map Keys (폰과 동일해야 함)
+        const val KEY_HELP_MESSAGE = "help_message"
+        const val KEY_TIMESTAMP = "timestamp"
     }
 
     private val dataClient: DataClient = Wearable.getDataClient(context)
@@ -54,6 +59,7 @@ class PhoneDataSyncManager @Inject constructor(
     // 데이터 변경 리스너 (외부에서 설정)
     private var onLoginDataReceived: ((WearLoginData) -> Unit)? = null
     private var onNavigationRouteReceived: ((WearNavigationData) -> Unit)? = null
+    private var onHelpRequestReceived: ((String) -> Unit)? = null
 
     /**
      * 데이터 수신 리스너 시작
@@ -89,6 +95,15 @@ class PhoneDataSyncManager @Inject constructor(
      */
     fun setOnNavigationRouteReceivedListener(listener: (WearNavigationData) -> Unit) {
         onNavigationRouteReceived = listener
+    }
+
+    /**
+     * 도움 요청 수신 콜백 설정 (Phone → Watch)
+     *
+     * @param listener 도움 요청 메시지 받았을 때 실행할 함수
+     */
+    fun setOnHelpRequestReceivedListener(listener: (String) -> Unit) {
+        onHelpRequestReceived = listener
     }
 
     /**
@@ -167,6 +182,25 @@ class PhoneDataSyncManager @Inject constructor(
 
                     } catch (e: Exception) {
                         Log.e(TAG, "네비게이션 데이터 파싱 에러", e)
+                    }
+                }
+                // HELP_REQUEST_PATH 경로의 데이터 처리 (Phone → Watch)
+                else if (dataItem.uri.path == HELP_REQUEST_PATH) {
+                    try {
+                        // DataItem → DataMap 변환
+                        val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+
+                        // DataMap에서 값 추출
+                        val helpMessage = dataMap.getString(KEY_HELP_MESSAGE) ?: "도와주세요!"
+                        val timestamp = dataMap.getLong(KEY_TIMESTAMP, System.currentTimeMillis())
+
+                        Log.d(TAG, "도움 요청 수신 (Phone → Watch): message=$helpMessage, timestamp=$timestamp")
+
+                        // 콜백 실행 (HelpRequestViewModel에서 TTS 재생)
+                        onHelpRequestReceived?.invoke(helpMessage)
+
+                    } catch (e: Exception) {
+                        Log.e(TAG, "도움 요청 데이터 파싱 에러", e)
                     }
                 }
             }

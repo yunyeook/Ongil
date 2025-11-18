@@ -107,6 +107,11 @@ class NotificationHelper @Inject constructor() {
             putExtra("notification_type", message.type.name)
             putExtra("notification_id", message.notificationId)
             putExtra("related_table_id", message.relatedTableId)
+
+            // CALL_MISSED일 때 통화목록으로 이동
+            if (message.type == MessageType.CALL_MISSED) {
+                putExtra("navigate_to", "call_history")
+            }
         }
     }
 }

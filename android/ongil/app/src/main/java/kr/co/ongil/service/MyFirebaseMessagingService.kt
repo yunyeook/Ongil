@@ -19,6 +19,7 @@ import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,6 +37,7 @@ import kr.co.ongil.domain.usecase.fcm.HandleNavigationEndUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleAbnormalDetectedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleCallRequestUseCase
 import kr.co.ongil.domain.helper.NotificationHelper
+import kr.co.ongil.domain.usecase.fcm.HandleCallMissedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleSafezoneUpdateUseCase
 import kr.co.ongil.presentation.MainActivity
 import kr.co.ongil.presentation.ui.call.IncomingCallActivity
@@ -82,6 +84,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var handleCallRequestUseCase: HandleCallRequestUseCase
 
     @Inject
+    lateinit var handleCallMissedUseCase: HandleCallMissedUseCase
+
+
+    @Inject
     lateinit var notificationHelper: NotificationHelper
 
     // ✅ Wake Lock 관리
@@ -96,21 +102,32 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         notificationHelper.createNotificationChannels(this)
     }
 
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d("FCM", "🔄 FCM 토큰 갱신됨: $token")
 
-        // ✅ 이 부분을 추가
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val accessToken = userDataStoreManager.getAccessToken().firstOrNull()
+                // 로컬에 먼저 저장
+                userDataStoreManager.saveFcmToken(token)
+
+                // AccessToken 가져오기 (재시도 로직)
+                var accessToken: String? = null
+                repeat(3) { attempt ->
+                    accessToken = userDataStoreManager.getAccessToken().firstOrNull()
+                    if (accessToken != null) {
+                        Log.d("FCM", "✓ AccessToken 확인됨 (attempt ${attempt + 1})")
+                        return@repeat
+                    }
+                    Log.d("FCM", "⏳ AccessToken 대기 중... (attempt ${attempt + 1})")
+                    delay(1000)
+                }
+
                 if (accessToken != null) {
-                    // 로그인 상태라면 서버로 전송
-                    sendTokenToServer(token, accessToken)
+                    sendTokenToServer(token, accessToken!!)
                 } else {
-                    // 로그인 안 됐으면 로컬에만 저장
-                    userDataStoreManager.saveFcmToken(token)
-                    Log.d("FCM", "📝 로그인 전이므로 로컬에만 저장")
+                    Log.w("FCM", "⚠️ AccessToken 없음, 다음 로그인 시 전송 예정")
                 }
             } catch (e: Exception) {
                 Log.e("FCM", "토큰 갱신 처리 실패", e)
@@ -201,6 +218,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 MessageType.CALL_REQUEST -> {
                     handleCallRequestUseCase(this, fcmMessage)
                 }
+
+                MessageType.CALL_MISSED -> {
+                    handleCallMissedUseCase(this, fcmMessage)
+                }
             }
         }
     }
@@ -240,6 +261,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 )
 
                 enableVibration(true)
+                setBypassDnd(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -266,15 +288,28 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setSmallIcon(android.R.drawable.ic_menu_call)
             .setContentTitle("수신 전화")
             .setContentText(callerName)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setFullScreenIntent(fullScreenPendingIntent, true) // ✅ 핵심!
-            .setAutoCancel(true)
+            .setContentIntent(fullScreenPendingIntent)  // 👈 추가! 알림 탭 시에도 실행
+            .setAutoCancel(true)  // 👈 변경! 자동 제거 안 됨
+            .setOngoing(false)
             .setSound(ringtonUri)
             .build()
 
+        Log.d("FCM_NOTI", "✓ 알림 객체 생성 완료")
+
+        // Full-Screen Intent 권한 확인 (Android 14+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val canUse = notificationManager.canUseFullScreenIntent()
+            Log.d("FCM_NOTI", "Full-Screen Intent 권한: $canUse")
+            if (!canUse) {
+                Log.w("FCM_NOTI", "⚠️ Full-Screen Intent 권한 없음!")
+            }
+        }
 
         notificationManager.notify(callId.toInt(), notification)
+        Log.d("FCM_NOTI", "✅ 알림 표시 완료: notificationId=${callId.toInt()}")
     }
 
     // MyFirebaseMessagingService.kt
@@ -293,39 +328,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         Log.d("FCM", "callId: $callId, sessionId: $sessionId, caller: $callerName")
 
-        // ✅ 현재 화면/잠금 상태 확인
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        val keyguardManager = getSystemService(android.app.KeyguardManager::class.java)
 
-        // 화면 켜져 있는지
-        val isScreenOn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-            powerManager.isInteractive
-        } else {
-            @Suppress("DEPRECATION")
-            powerManager.isScreenOn
+        // 🔒 화면 꺼져 있거나 잠금 상태면 → 풀스크린 알림으로 깨우기
+        showIncomingCallNotification(callId, sessionId, callerName, callerPhone, userType)
         }
-
-        // 잠금 상태인지
-        val isLocked = keyguardManager.isKeyguardLocked
-
-        Log.d("FCM", "📱 screenOn=$isScreenOn, locked=$isLocked")
-
-        if (isScreenOn && !isLocked) {
-            // 🔵 화면 켜져 있고 잠금도 풀려있으면 → 바로 수락 화면 띄우기 (알림 X)
-            val intent = Intent(this, IncomingCallActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("callId", callId)
-                putExtra("sessionId", sessionId)
-                putExtra("callerName", callerName)
-                putExtra("callerPhone", callerPhone)
-                putExtra("userType", userType)
-            }
-            startActivity(intent)
-        } else {
-            // 🔒 화면 꺼져 있거나 잠금 상태면 → 풀스크린 알림으로 깨우기
-            showIncomingCallNotification(callId, sessionId, callerName, callerPhone, userType)
-        }
-    }
 
 
     /**

@@ -22,6 +22,8 @@ object FcmPayloadMapper {
                 "SOS_STOP", "SOS_END" -> MessageType.SOS_STOP
                 "SOS_ACK" -> MessageType.SOS_ACK
                 "INCOMING_CALL" -> MessageType.INCOMING_CALL
+                "CALL_MISSED" -> MessageType.CALL_MISSED
+
                 else -> throw IllegalArgumentException("Unknown type: ${dto.type}")
             },
             title = dto.title ?: "",

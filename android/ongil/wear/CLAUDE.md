@@ -188,8 +188,9 @@ Watch (Bluetooth)          Phone App              Server
 - [x] Phone ↔ Watch 경로 데이터 동기화 ✅
 
 #### 5. 도움 요청 기능
-- [ ] 음성 재생 (TTS)
-- [ ] 주변 도움 요청 신호 전송
+- [x] 음성 재생 (TTS) ✅
+- [x] 도움 요청 신호 전송 (Watch → Phone → Server) ✅
+- [x] Phone → Watch 도움 요청 수신 및 TTS 재생 ✅
 
 #### 6. 네트워크 레이어
 - [ ] Retrofit API 클라이언트
@@ -228,7 +229,7 @@ kr.co.ongil.wear/
 │   │   │   └── component/
 │   │   │       └── CallControls.kt                   [✅ 완료 - Phase 3]
 │   │   ├── help/
-│   │   │   └── HelpRequestScreen.kt                  [TODO]
+│   │   │   └── HelpRequestScreen.kt                  [✅ 완료 - Phase 5]
 │   │   └── common/
 │   │       ├── LoadingIndicator.kt
 │   │       └── ErrorScreen.kt
@@ -237,7 +238,7 @@ kr.co.ongil.wear/
 │   │   ├── MapViewModel.kt                           [✅ 완료 - Phase 2]
 │   │   ├── CallViewModel.kt                          [✅ 완료 - Phase 3]
 │   │   ├── NavigationViewModel.kt                    [✅ 완료 - Phase 4]
-│   │   └── HelpRequestViewModel.kt                   [TODO]
+│   │   └── HelpRequestViewModel.kt                   [✅ 완료 - Phase 5]
 │   ├── navigation/
 │   │   ├── WearNavGraph.kt                           [✅ 완료 - Phase 1]
 │   │   └── WearRoute.kt                              [✅ 완료 - Phase 1]
@@ -264,10 +265,8 @@ kr.co.ongil.wear/
 │   └── usecase/
 │   │   ├── SyncLoginDataUseCase.kt                   [✅ 완료]
 │   │   ├── TrackLocationUseCase.kt                   [✅ 완료 - Phase 2]
-│   │   ├── StartCallUseCase.kt                       [TODO]
 │   │   ├── MonitorSafeZoneUseCase.kt                 [✅ 완료 - Phase 2]
-│   │   ├── NavigateToDestinationUseCase.kt           [TODO]
-│   │   └── RequestHelpUseCase.kt                     [TODO]
+│   │   └── RequestHelpUseCase.kt                     [✅ 완료 - Phase 5]
 ├── data/
 │   ├── datasource/
 │   │   ├── local/
@@ -791,51 +790,123 @@ private fun calculateBearing(
 - 5분 이상 이탈 시 응급 상황 알림
 - RouteDeviationMonitor 콜백을 통한 실시간 감지
 
-### Phase 5: 도움 요청 및 SOS (1주)
+### Phase 5: 도움 요청 및 SOS (✅ 완료 - 2025-11-19)
 **목표**: 주변 도움 요청 및 긴급 알림
 
-#### 5.1 도움 요청 기능
-- [ ] HelpRequestScreen
-- [ ] TTS 음성 재생 ("도와주세요" 등)
-- [ ] 서버로 도움 요청 전송
-- [ ] 주변 앱 사용자에게 알림
+#### 5.1 도움 요청 기능 (환자 → 보호자)
+- [x] HelpRequestScreen ✅
+- [x] TTS 음성 재생 ("도와주세요!" 등) ✅
+- [x] Watch → Phone → Server 도움 요청 전송 ✅
+- [x] RequestHelpUseCase 구현 ✅
+- [x] HelpRequestViewModel 구현 ✅
+- [x] Navigation 연결 ✅
 
-**구현 계획**:
+**구현 완료**:
 ```kotlin
 // RequestHelpUseCase.kt
 class RequestHelpUseCase @Inject constructor(
-    private val textToSpeech: TextToSpeech,
     private val sosRepository: SosRepository,
-    private val locationStreamBus: LocationStreamBus
+    private val locationStreamBus: LocationStreamBus,
+    private val dataStoreManager: WearDataStoreManager
 ) {
-    suspend operator fun invoke(message: String) {
-        // 1. 음성 재생
-        textToSpeech.speak(
-            message,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            null
+    suspend operator fun invoke(message: String): Result<Unit> {
+        // 1. 현재 위치 가져오기
+        val location = locationStreamBus.lastKnownLocation ?:
+            return Result.failure(Exception("Location not available"))
+
+        // 2. 환자 ID 가져오기
+        val userId = dataStoreManager.getUserId().first()
+        val patientId = userId?.toIntOrNull() ?:
+            return Result.failure(Exception("Patient ID not available"))
+
+        // 3. SOS 알림 전송 (Watch → Phone → Server)
+        return sosRepository.sendSosAlert(
+            patientId = patientId,
+            latitude = location.latitude,
+            longitude = location.longitude,
+            message = message
         )
+    }
+}
 
-        // 2. 현재 위치 가져오기
-        val location = locationStreamBus.lastValue
+// HelpRequestViewModel.kt - TTS 음성 재생
+class HelpRequestViewModel @Inject constructor(
+    application: Application,
+    private val requestHelpUseCase: RequestHelpUseCase,
+    private val phoneDataSyncManager: PhoneDataSyncManager
+) : AndroidViewModel(application) {
 
-        // 3. 서버로 도움 요청 전송
-        if (location != null) {
-            sosRepository.sendHelpRequest(
-                latitude = location.latitude,
-                longitude = location.longitude,
-                message = message
-            )
-        }
+    private var textToSpeech: TextToSpeech? = null
+
+    fun requestHelp(message: String = "도와주세요! 길을 잃었습니다.") {
+        // 1. TTS 음성 재생
+        speakMessage(message)
+
+        // 2. Phone으로 SOS 알림 전송
+        requestHelpUseCase(message)
     }
 }
 ```
 
-#### 5.2 SOS 알림
-- [ ] 자동 SOS 전송 (특정 조건 충족 시)
-- [ ] 보호자 앱으로 긴급 알림
-- [ ] SOS 버튼 UI
+**참고 파일**:
+- `wear/presentation/ui/help/HelpRequestScreen.kt`
+- `wear/presentation/viewmodel/HelpRequestViewModel.kt`
+- `wear/domain/usecase/RequestHelpUseCase.kt`
+
+#### 5.2 도움 요청 기능 (보호자 → 환자)
+- [x] Phone → Watch 도움 요청 전송 ✅
+- [x] PhoneDataSyncManager 수신 처리 ✅
+- [x] HelpRequestViewModel TTS 자동 재생 ✅
+
+**동작 흐름**:
+1. 보호자가 Phone 앱에서 "도움 요청" 버튼 클릭
+2. Phone → Watch로 DataLayer 전송 (`/help_request_to_watch`)
+3. Watch의 PhoneDataSyncManager가 수신
+4. HelpRequestViewModel에서 자동으로 TTS 재생: "도와주세요!"
+5. 환자 Watch에서 음성 출력
+
+**구현 세부사항**:
+```kotlin
+// PhoneDataSyncManager.kt
+companion object {
+    const val HELP_REQUEST_PATH = "/help_request_to_watch"
+    const val KEY_HELP_MESSAGE = "help_message"
+    const val KEY_TIMESTAMP = "timestamp"
+}
+
+override fun onDataChanged(dataEvents: DataEventBuffer) {
+    dataEvents.forEach { event ->
+        if (event.dataItem.uri.path == HELP_REQUEST_PATH) {
+            val dataMap = DataMapItem.fromDataItem(event.dataItem).dataMap
+            val helpMessage = dataMap.getString(KEY_HELP_MESSAGE) ?: "도와주세요!"
+
+            // 콜백 실행 (HelpRequestViewModel에서 TTS 재생)
+            onHelpRequestReceived?.invoke(helpMessage)
+        }
+    }
+}
+
+// HelpRequestViewModel.kt
+private fun setupPhoneHelpRequestListener() {
+    phoneDataSyncManager.setOnHelpRequestReceivedListener { message ->
+        // 보호자로부터 도움 요청 수신 → TTS 음성 재생
+        speakMessage(message)
+    }
+}
+```
+
+#### 5.3 SOS 알림 (Watch → Phone → Server)
+- [x] WearDataClient의 sendSos(), sendHelpRequest() 메서드 ✅
+- [x] WearMessageListenerService에서 수신 처리 ✅
+- [x] SosAlertRepository를 통한 서버 전송 ✅
+
+**참고 파일 (Phone 앱)**:
+- `app/service/wear/WearMessageListenerService.kt`
+- `app/data/repository/SosAlertRepositoryImpl.kt`
+
+**참고 파일 (Watch 앱)**:
+- `wear/data/datasource/sync/WearDataClient.kt`
+- `wear/data/repository/SosRepositoryImpl.kt`
 
 ### Phase 6: 대시보드 및 환자 선택 (1주)
 **목표**: 메인 화면 및 환자 선택 기능
@@ -1532,7 +1603,7 @@ dependencies {
 - [x] VoIP 통화 (핫라인) ✅ (Phase 3 완료)
 - [x] 화살표 네비게이션 ✅ (Phase 4 완료)
 - [x] 경로 이탈 알림 ✅ (Phase 4 완료)
-- [ ] 도움 요청 (TTS)
+- [x] 도움 요청 (TTS + SOS) ✅ (Phase 5 완료)
 
 ### 3순위: 부가 기능
 - [ ] 환자 선택 (보호자용)
