@@ -71,7 +71,9 @@ class MainActivity : ComponentActivity() {
                      incomingCallData = incomingCallData,
                      onIncomingCallHandled = { incomingCallData = null },
                      emergencyCallData = emergencyCallData,
-                     onEmergencyCallHandled = { emergencyCallData = null }
+                     onEmergencyCallHandled = { emergencyCallData = null },
+                     notificationNavigation = notificationNavigation,
+                     onNotificationNavigationHandled = { notificationNavigation = null}
                  )
 //                PlayGroundMJ()
                 // PlayGroundSH()
@@ -84,8 +86,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // FCM 수신 통화 및 응급 전화 Intent 처리
         handleIncomingCallIntent(intent)
         handleEmergencyCallIntent(intent)
+        handleNotificationIntent(intent)
     }
 
     private fun handleIncomingCallIntent(intent: Intent?) {
@@ -132,6 +136,15 @@ class MainActivity : ComponentActivity() {
                 receiverId = receiverId,
                 isEmergency = isEmergency
             )
+        }
+    }
+
+    private var notificationNavigation by mutableStateOf<String?>(null)
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        val navigateTo = intent?.getStringExtra("navigate_to")
+        if (navigateTo == "call_history") {
+            notificationNavigation = "call_history"
         }
     }
 
