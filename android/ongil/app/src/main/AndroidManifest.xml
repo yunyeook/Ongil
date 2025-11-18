@@ -25,6 +25,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- ✅ 전체 화면 알림 권한 (Android 10+) -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- ✅ 알림 권한 (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -104,12 +105,11 @@
 
 
         <activity
-            android:name="kr.co.ongil.presentation.ui.call.IncomingCallActivity"
-            android:exported="false"
+            android:name=".presentation.ui.call.IncomingCallActivity"
             android:excludeFromRecents="true"
-            android:launchMode="singleTop"
             android:showWhenLocked="true"
-            android:turnScreenOn="true" />
+            android:turnScreenOn="true"
+            android:launchMode="singleTask" />
 
         <!-- Health Connect 연동을 위한 Activity Alias -->
         <activity-alias
