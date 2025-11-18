@@ -13,6 +13,7 @@ import kr.co.ongil.wear.presentation.ui.map.MapScreen
 import kr.co.ongil.wear.presentation.ui.call.CallScreen
 import kr.co.ongil.wear.presentation.ui.call.IncomingCallScreen
 import kr.co.ongil.wear.presentation.ui.navigation.NavigationScreen
+import kr.co.ongil.wear.presentation.ui.help.HelpRequestScreen
 
 /**
  * Wear OS 네비게이션 그래프
@@ -140,8 +141,11 @@ fun WearNavGraph(
 
         // 도움 요청 화면
         composable(WearRoute.HelpRequest.route) {
-            // TODO: HelpRequestScreen 구현
-            MainScreen() // 임시
+            HelpRequestScreen(
+                onBackPressed = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         // 환자 선택 화면
