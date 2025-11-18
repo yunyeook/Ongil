@@ -12,6 +12,7 @@ import kr.co.ongil.wear.presentation.ui.MainScreen
 import kr.co.ongil.wear.presentation.ui.map.MapScreen
 import kr.co.ongil.wear.presentation.ui.call.CallScreen
 import kr.co.ongil.wear.presentation.ui.call.IncomingCallScreen
+import kr.co.ongil.wear.presentation.ui.navigation.NavigationScreen
 
 /**
  * Wear OS 네비게이션 그래프
@@ -55,7 +56,7 @@ fun WearNavGraph(
             MapScreen()
         }
 
-        // 네비게이션 화면
+        // 네비게이션 화면 (경로 안내)
         composable(
             route = WearRoute.Navigation.route,
             arguments = listOf(
@@ -63,8 +64,13 @@ fun WearNavGraph(
             )
         ) { backStackEntry ->
             val navigationId = backStackEntry.arguments?.getLong("navigationId") ?: 0L
-            // TODO: NavigationScreen 구현
-            MainScreen() // 임시
+
+            NavigationScreen(
+                navigationId = navigationId,
+                onNavigationEnded = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         // 통화 화면 (발신/통화 중)

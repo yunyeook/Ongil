@@ -9,6 +9,7 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.tasks.await
 import kr.co.ongil.wear.data.model.WearLoginData
+import kr.co.ongil.wear.data.model.WearNavigationData
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,19 +31,29 @@ class PhoneDataSyncManager @Inject constructor(
         // Data Layer에서 사용할 경로 (Key)
         // 폰과 워치가 동일한 경로 사용해야 함
         const val LOGIN_DATA_PATH = "/login_data"
+        const val NAVIGATION_ROUTE_PATH = "/navigation_route"
 
-        // Data Map Keys (폰과 동일해야 함)
+        // Login Data Map Keys (폰과 동일해야 함)
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_USER_ID = "user_id"
         const val KEY_USER_TYPE = "user_type"
         const val KEY_SELECTED_PATIENT_ID = "selected_patient_id"
+
+        // Navigation Route Data Map Keys (폰과 동일해야 함)
+        const val KEY_NAVIGATION_ID = "navigation_id"
+        const val KEY_START_NAME = "start_name"
+        const val KEY_END_NAME = "end_name"
+        const val KEY_TOTAL_DISTANCE = "total_distance"
+        const val KEY_TOTAL_TIME = "total_time"
+        const val KEY_ROUTE_PATH = "route_path"
     }
 
     private val dataClient: DataClient = Wearable.getDataClient(context)
 
     // 데이터 변경 리스너 (외부에서 설정)
     private var onLoginDataReceived: ((WearLoginData) -> Unit)? = null
+    private var onNavigationRouteReceived: ((WearNavigationData) -> Unit)? = null
 
     /**
      * 데이터 수신 리스너 시작
@@ -72,6 +83,15 @@ class PhoneDataSyncManager @Inject constructor(
     }
 
     /**
+     * 네비게이션 경로 데이터 수신 콜백 설정
+     *
+     * @param listener 경로 데이터 받았을 때 실행할 함수
+     */
+    fun setOnNavigationRouteReceivedListener(listener: (WearNavigationData) -> Unit) {
+        onNavigationRouteReceived = listener
+    }
+
+    /**
      * DataClient.OnDataChangedListener 구현
      *
      * 폰에서 데이터가 변경되면 자동으로 호출됨
@@ -85,7 +105,7 @@ class PhoneDataSyncManager @Inject constructor(
             if (event.type == DataEvent.TYPE_CHANGED) {
                 val dataItem = event.dataItem
 
-                // LOGIN_DATA_PATH 경로의 데이터만 처리
+                // LOGIN_DATA_PATH 경로의 데이터 처리
                 if (dataItem.uri.path == LOGIN_DATA_PATH) {
                     try {
                         // DataItem → DataMap 변환
@@ -114,6 +134,39 @@ class PhoneDataSyncManager @Inject constructor(
 
                     } catch (e: Exception) {
                         Log.e(TAG, "데이터 파싱 에러", e)
+                    }
+                }
+                // NAVIGATION_ROUTE_PATH 경로의 데이터 처리
+                else if (dataItem.uri.path == NAVIGATION_ROUTE_PATH) {
+                    try {
+                        // DataItem → DataMap 변환
+                        val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+
+                        // DataMap에서 값 추출
+                        val navigationId = dataMap.getString(KEY_NAVIGATION_ID) ?: ""
+                        val startName = dataMap.getString(KEY_START_NAME) ?: ""
+                        val endName = dataMap.getString(KEY_END_NAME) ?: ""
+                        val totalDistance = dataMap.getInt(KEY_TOTAL_DISTANCE, 0)
+                        val totalTime = dataMap.getInt(KEY_TOTAL_TIME, 0)
+                        val routePath = dataMap.getString(KEY_ROUTE_PATH) ?: ""
+
+                        // WearNavigationData 객체 생성
+                        val navigationData = WearNavigationData(
+                            navigationId = navigationId,
+                            startLocationName = startName,
+                            endLocationName = endName,
+                            totalDistanceMeters = totalDistance,
+                            totalTimeMinutes = totalTime,
+                            routePath = routePath
+                        )
+
+                        Log.d(TAG, "네비게이션 경로 수신: $navigationId, $startName → $endName")
+
+                        // 콜백 실행
+                        onNavigationRouteReceived?.invoke(navigationData)
+
+                    } catch (e: Exception) {
+                        Log.e(TAG, "네비게이션 데이터 파싱 에러", e)
                     }
                 }
             }

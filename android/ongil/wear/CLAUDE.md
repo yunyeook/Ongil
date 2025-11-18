@@ -163,9 +163,10 @@ Watch (Bluetooth)          Phone App              Server
 - [ ] 환자 선택 화면 (보호자용)
 - [ ] 메인 대시보드 (전화/지도/도움 아이콘)
 - [x] 지도 화면 (환자 위치 + 안전 범위) ✅
-- [ ] 통화 화면 (통화 중 UI)
+- [x] 통화 화면 (통화 중 UI) ✅
+- [x] 수신 통화 화면 ✅
 - [ ] 도움 요청 화면
-- [ ] 네비게이션 경로 안내 화면
+- [x] 네비게이션 경로 안내 화면 ✅
 
 #### 2. 위치 추적 기능
 - [x] Foreground Service 기반 위치 추적 ✅
@@ -174,15 +175,17 @@ Watch (Bluetooth)          Phone App              Server
 - [x] 안전 범위 모니터링 ✅
 
 #### 3. 통화 기능
-- [ ] WebRTC 기반 VoIP 통화
-- [ ] 핫라인 통화 시작
-- [ ] 통화 중 UI 표시
-- [ ] 통화 종료 처리
+- [x] WebRTC 기반 VoIP 통화 (Phone 앱에서 처리) ✅
+- [x] 핫라인 통화 시작 ✅
+- [x] 통화 중 UI 표시 ✅
+- [x] 통화 종료 처리 ✅
+- [x] Watch ↔ Phone DataLayer 통신 ✅
 
 #### 4. 네비게이션 기능
-- [ ] 화살표 기반 방향 표시
-- [ ] 경로 이탈 감지 및 알림
-- [ ] 목적지 도착 알림
+- [x] 화살표 기반 방향 표시 ✅
+- [x] 경로 이탈 감지 및 알림 ✅
+- [x] 목적지 도착 알림 ✅
+- [x] Phone ↔ Watch 경로 데이터 동기화 ✅
 
 #### 5. 도움 요청 기능
 - [ ] 음성 재생 (TTS)
@@ -213,15 +216,17 @@ kr.co.ongil.wear/
 │   │   ├── map/
 │   │   │   ├── WearTMapComposable.kt                 [✅ 완료]
 │   │   │   ├── MapScreen.kt                          [✅ 완료 - Phase 2]
-│   │   │   ├── NavigationScreen.kt                   [TODO]
 │   │   │   └── component/
-│   │   │       ├── ArrowNavigationIndicator.kt       [TODO]
 │   │   │       └── SafeZoneOverlay.kt                [✅ 완료 - WearTMapComposable에 포함]
-│   │   ├── call/
-│   │   │   ├── CallScreen.kt                         [TODO]
-│   │   │   ├── IncomingCallScreen.kt                 [TODO]
+│   │   ├── navigation/
+│   │   │   ├── NavigationScreen.kt                   [✅ 완료 - Phase 4]
 │   │   │   └── component/
-│   │   │       └── CallControls.kt                   [TODO]
+│   │   │       └── ArrowNavigationIndicator.kt       [✅ 완료 - Phase 4]
+│   │   ├── call/
+│   │   │   ├── CallScreen.kt                         [✅ 완료 - Phase 3]
+│   │   │   ├── IncomingCallScreen.kt                 [✅ 완료 - Phase 3]
+│   │   │   └── component/
+│   │   │       └── CallControls.kt                   [✅ 완료 - Phase 3]
 │   │   ├── help/
 │   │   │   └── HelpRequestScreen.kt                  [TODO]
 │   │   └── common/
@@ -230,8 +235,8 @@ kr.co.ongil.wear/
 │   ├── viewmodel/
 │   │   ├── WearAuthViewModel.kt                      [✅ 완료]
 │   │   ├── MapViewModel.kt                           [✅ 완료 - Phase 2]
-│   │   ├── CallViewModel.kt                          [TODO]
-│   │   ├── NavigationViewModel.kt                    [TODO]
+│   │   ├── CallViewModel.kt                          [✅ 완료 - Phase 3]
+│   │   ├── NavigationViewModel.kt                    [✅ 완료 - Phase 4]
 │   │   └── HelpRequestViewModel.kt                   [TODO]
 │   ├── navigation/
 │   │   ├── WearNavGraph.kt                           [✅ 완료 - Phase 1]
@@ -288,6 +293,7 @@ kr.co.ongil.wear/
 │   │       └── LocationSyncManager.kt                [TODO]
 │   ├── model/
 │   │   ├── WearLoginData.kt                          [✅ 완료]
+│   │   ├── WearNavigationData.kt                     [✅ 완료 - Phase 4]
 │   │   ├── LocationDto.kt                            [TODO]
 │   │   ├── CallDto.kt                                [TODO]
 │   │   └── NavigationDto.kt                          [TODO]
@@ -527,7 +533,7 @@ fun SafeZoneOverlay(
 }
 ```
 
-### Phase 3: VoIP 통화 기능 (🔄 재설계 - Phone Relay 방식)
+### Phase 3: VoIP 통화 기능 (✅ 완료 - 2025-11-18)
 **목표**: Phone 앱이 WebRTC 처리, Watch는 UI + 오디오 입출력만
 
 **이전 방식 (❌ 삭제)**:
@@ -626,11 +632,11 @@ fun syncCallStateToWatch(state: String) {
 - ❌ WearWebSocketManager.kt
 - ❌ WearVoipSignalingService.kt
 
-#### 3.2 통화 UI
-- [ ] IncomingCallScreen (수신 화면)
-- [ ] CallScreen (통화 중 화면)
-- [ ] CallControls Composable (종료 버튼)
-- [ ] 통화 상태 표시 (연결 중, 통화 중, 종료)
+#### 3.3 통화 UI (중복 - 상단 3.1 참조)
+- [x] IncomingCallScreen (수신 화면) ✅
+- [x] CallScreen (통화 중 화면) ✅
+- [x] CallControls Composable (종료 버튼) ✅
+- [x] 통화 상태 표시 (연결 중, 통화 중, 종료) ✅
 
 **UI 컴포넌트**:
 ```kotlin
@@ -672,32 +678,43 @@ fun CallScreen(
 }
 ```
 
-#### 3.3 WebSocket 신호 처리
-- [ ] CallSignalingService
-- [ ] STOMP 메시지 수신/발신
-- [ ] 신호 타입별 처리 (OFFER, ANSWER, ICE, HANGUP)
+#### 3.4 WebSocket 신호 처리
+- [x] Phone 앱에서 처리 (Watch는 DataLayer로만 통신) ✅
+- [x] VoipSignalingService (Phone 앱 재사용) ✅
+- [x] WebRtcCallClient (Phone 앱 재사용) ✅
 
 **참고 파일**:
-- `app/data/datasource/websocket/VoipSignalingService.kt`
+- `app/data/datasource/websocket/VoipSignalingService.kt` (Phone 앱)
+- `app/core/webrtc/WebRtcCallClient.kt` (Phone 앱)
 
-### Phase 4: 네비게이션 및 길찾기 (2주)
+### Phase 4: 네비게이션 및 길찾기 (✅ 완료 - 2025-11-18)
 **목표**: 화살표 기반 간단한 경로 안내
 
 #### 4.1 네비게이션 데이터 관리
-- [ ] NavigationRouteManager 통합 (Common 모듈)
-- [ ] RouteDeviationMonitor 통합 (Common 모듈)
-- [ ] 경로 시작/종료 API 호출
-- [ ] 실시간 경로 이탈 감지
+- [x] NavigationRouteManager 통합 (Common 모듈) ✅
+- [x] RouteDeviationMonitor 통합 (Common 모듈) ✅
+- [x] 경로 시작/종료 API 호출 ✅
+- [x] 실시간 경로 이탈 감지 ✅
+- [x] Phone ↔ Watch 경로 데이터 동기화 (DataLayer) ✅
 
 **참고 파일**:
 - `common/location/NavigationRouteManager.kt`
 - `common/location/RouteDeviationMonitor.kt`
+- `app/presentation/ui/map/MapViewModel.kt` (Phone - Watch 경로 전송)
+- `wear/data/datasource/sync/PhoneDataSyncManager.kt` (Watch - 경로 수신)
+
+**구현 세부사항**:
+- Phone의 MapViewModel에서 네비게이션 시작 시 Watch로 경로 데이터 자동 전송
+- Watch의 NavigationViewModel이 경로 수신 → 자동 네비게이션 시작
+- JSON 형식으로 경로 좌표 전송: `[{"lat":37.5,"lon":127.0},...]`
+- 경로 종료 시 Watch 경로 데이터 자동 초기화
 
 #### 4.2 화살표 네비게이션 UI
-- [ ] NavigationScreen
-- [ ] ArrowNavigationIndicator Composable
-- [ ] 방향 계산 로직 (Bearing 기반)
-- [ ] 남은 거리 표시
+- [x] NavigationScreen ✅
+- [x] ArrowNavigationIndicator Composable ✅
+- [x] 방향 계산 로직 (Bearing 기반) ✅
+- [x] 남은 거리 표시 ✅
+- [x] 경로 이탈/도착/응급 상태 UI ✅
 
 **구현 계획**:
 ```kotlin
@@ -762,9 +779,17 @@ private fun calculateBearing(
 ```
 
 #### 4.3 경로 이탈 알림
-- [ ] 경로 이탈 감지 (RouteDeviationMonitor)
-- [ ] Notification 알림
-- [ ] 경로 재탐색 옵션
+- [x] 경로 이탈 감지 (RouteDeviationMonitor) ✅
+- [x] UI 경고 표시 ✅
+- [x] 응급상황 감지 (5분 이상 이탈) ✅
+- [ ] Notification 알림 (TODO)
+- [ ] 경로 재탐색 옵션 (TODO)
+
+**구현 세부사항**:
+- NavigationScreen에 경로 이탈 상태 UI 구현
+- 50m 이상 이탈 시 경고 화면 표시
+- 5분 이상 이탈 시 응급 상황 알림
+- RouteDeviationMonitor 콜백을 통한 실시간 감지
 
 ### Phase 5: 도움 요청 및 SOS (1주)
 **목표**: 주변 도움 요청 및 긴급 알림
@@ -1168,7 +1193,8 @@ init {
 **동기화 데이터**:
 
 #### Phone → Watch
-- **로그인 정보** (`/login_data`): 이미 구현됨
+- **로그인 정보** (`/login_data`): ✅ 구현 완료
+- **네비게이션 경로** (`/navigation_route`): ✅ 구현 완료 (Phase 4)
 - **선택된 환자 정보** (`/selected_patient`): TODO
 - **안전 범위 설정** (`/safe_zone_config`): TODO
 - **긴급 연락처** (`/emergency_contacts`): TODO
@@ -1503,9 +1529,9 @@ dependencies {
 - [ ] 메인 대시보드 (3개 버튼 - 실제 UI)
 
 ### 2순위: 주요 기능
-- [ ] VoIP 통화 (핫라인)
-- [ ] 화살표 네비게이션
-- [ ] 경로 이탈 알림
+- [x] VoIP 통화 (핫라인) ✅ (Phase 3 완료)
+- [x] 화살표 네비게이션 ✅ (Phase 4 완료)
+- [x] 경로 이탈 알림 ✅ (Phase 4 완료)
 - [ ] 도움 요청 (TTS)
 
 ### 3순위: 부가 기능

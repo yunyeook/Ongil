@@ -37,6 +37,9 @@ import kr.co.ongil.data.websocket.GpsWebSocketManager
 import kr.co.ongil.domain.usecase.sosalert.SendSosAlertUseCase
 import kr.co.ongil.domain.usecase.sosalert.StopSosAlertUseCase
 import kr.co.ongil.common.location.SafetyZoneStateManager
+import kr.co.ongil.data.datasource.wear.WearDataClient
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * 지도 화면 ViewModel
@@ -54,7 +57,8 @@ class MapViewModel @Inject constructor(
     private val favoriteRepository: kr.co.ongil.domain.repository.FavoriteRepository,
     private val sendSosAlertUseCase: SendSosAlertUseCase,
     private val stopSosAlertUseCase: StopSosAlertUseCase,
-    val safetyZoneStateManager: SafetyZoneStateManager
+    val safetyZoneStateManager: SafetyZoneStateManager,
+    private val wearDataClient: WearDataClient
 ) : ViewModel() {
 
     companion object {
@@ -846,6 +850,36 @@ class MapViewModel @Inject constructor(
                 if (userType == "PATIENT") {
                     _isNavigationMode.value = true
                     Log.d("MapViewModel", "네비게이션 모드 활성화 (환자)")
+
+                    // Watch로 경로 데이터 전송
+                    viewModelScope.launch {
+                        try {
+                            // 경로 좌표를 JSON으로 변환
+                            @kotlinx.serialization.Serializable
+                            data class RouteCoord(val lat: Double, val lon: Double)
+
+                            val routeJson = Json.encodeToString(
+                                routePath.map { RouteCoord(it.latitude, it.longitude) }
+                            )
+
+                            val success = wearDataClient.syncNavigationRoute(
+                                navigationId = result.navigationId,
+                                startLocationName = startAddress,
+                                endLocationName = endName,
+                                totalDistanceMeters = result.route.totalDistanceMeters,
+                                totalTimeMinutes = result.route.totalTimeMinutes,
+                                routePath = routeJson
+                            )
+
+                            if (success) {
+                                Log.d("MapViewModel", "✓ Watch로 경로 데이터 전송 성공")
+                            } else {
+                                Log.e("MapViewModel", "Watch로 경로 데이터 전송 실패")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("MapViewModel", "Watch 경로 전송 중 오류", e)
+                        }
+                    }
                 } else {
                     Log.d("MapViewModel", "보호자는 네비게이션 모드 비활성화")
                 }
@@ -992,6 +1026,18 @@ class MapViewModel @Inject constructor(
         // 경로 정보 초기화
         navigationRouteManager.clearRoute()
         Log.d("MapViewModel", "경로 정보 초기화 완료")
+
+        // Watch 경로 데이터 초기화
+        try {
+            val clearSuccess = wearDataClient.clearNavigationRoute()
+            if (clearSuccess) {
+                Log.d("MapViewModel", "✓ Watch 경로 데이터 초기화 성공")
+            } else {
+                Log.e("MapViewModel", "Watch 경로 데이터 초기화 실패")
+            }
+        } catch (e: Exception) {
+            Log.e("MapViewModel", "Watch 경로 초기화 중 오류", e)
+        }
 
         _isNavigationMode.value = false
         Log.d("MapViewModel", "네비게이션 모드 비활성화")
