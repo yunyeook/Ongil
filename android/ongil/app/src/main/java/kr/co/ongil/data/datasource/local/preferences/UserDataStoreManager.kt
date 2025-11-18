@@ -6,6 +6,18 @@ import kotlinx.coroutines.flow.Flow
  * 사용자 정보 관리 인터페이스
  */
 interface UserDataStoreManager {
+    // ✅ ===== 새로 추가 =====
+
+    /**
+     * FCM 토큰 서버 동기화 완료 여부 저장
+     */
+    suspend fun setFcmTokenSynced(synced: Boolean)
+
+    /**
+     * FCM 토큰 서버 동기화 완료 여부 조회
+     */
+    fun isFcmTokenSynced(): Flow<Boolean>
+
     /**
      * AccessToken 저장
      */

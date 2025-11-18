@@ -19,6 +19,7 @@ import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -101,21 +102,32 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         notificationHelper.createNotificationChannels(this)
     }
 
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d("FCM", "🔄 FCM 토큰 갱신됨: $token")
 
-        // ✅ 이 부분을 추가
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val accessToken = userDataStoreManager.getAccessToken().firstOrNull()
+                // 로컬에 먼저 저장
+                userDataStoreManager.saveFcmToken(token)
+
+                // AccessToken 가져오기 (재시도 로직)
+                var accessToken: String? = null
+                repeat(3) { attempt ->
+                    accessToken = userDataStoreManager.getAccessToken().firstOrNull()
+                    if (accessToken != null) {
+                        Log.d("FCM", "✓ AccessToken 확인됨 (attempt ${attempt + 1})")
+                        return@repeat
+                    }
+                    Log.d("FCM", "⏳ AccessToken 대기 중... (attempt ${attempt + 1})")
+                    delay(1000)
+                }
+
                 if (accessToken != null) {
-                    // 로그인 상태라면 서버로 전송
-                    sendTokenToServer(token, accessToken)
+                    sendTokenToServer(token, accessToken!!)
                 } else {
-                    // 로그인 안 됐으면 로컬에만 저장
-                    userDataStoreManager.saveFcmToken(token)
-                    Log.d("FCM", "📝 로그인 전이므로 로컬에만 저장")
+                    Log.w("FCM", "⚠️ AccessToken 없음, 다음 로그인 시 전송 예정")
                 }
             } catch (e: Exception) {
                 Log.e("FCM", "토큰 갱신 처리 실패", e)
