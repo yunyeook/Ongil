@@ -44,6 +44,7 @@ import androidx.core.content.ContextCompat
 
 import kr.co.ongil.domain.model.PlaceDetail
 import kr.co.ongil.domain.model.Route
+import kr.co.ongil.presentation.theme.ongilColors
 
 /**
  * 지도 위 플로팅 패널. 장소 상세 정보와 길안내 정보를 모두 표시.
@@ -92,7 +93,7 @@ fun MapFloatingPanel(
             modifier = Modifier
                 .padding(start = 16.dp, end = 16.dp, bottom = 100.dp) // 하단 네비게이션 바 위로 오도록 패딩 조절
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF8A9A8A).copy(alpha = 0.9f)) // 이미지의 녹색 계열, 약간 투명하게
+                .background(ongilColors.accent.copy(alpha = 0.9f)) // 테마 색상 적용
                 .clickable(
                     onClick = { /* 패널 내부 클릭 시 이벤트 전파 방지 */ },
                     indication = null,
@@ -253,6 +254,7 @@ private fun NavigatingContent(
     onDismiss: () -> Unit,
     onStopNavigationClick: () -> Unit
 ) {
+
     // 상단: 목적지 아이콘 + 목적지까지 텍스트 + 닫기 버튼 + 안내중지 버튼
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -370,7 +372,7 @@ private fun ConfirmationDialog(
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF8A9A8A),
+                            containerColor = ongilColors.accent,
                             contentColor = Color.White
                         )
                     ) {
@@ -427,7 +429,7 @@ private fun CallConfirmationDialog(
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF8A9A8A),
+                            containerColor = ongilColors.accent,
                             contentColor = Color.White
                         )
                     ) {

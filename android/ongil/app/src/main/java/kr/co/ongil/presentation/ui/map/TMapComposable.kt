@@ -47,6 +47,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.content.Context as AndroidContext
+import kr.co.ongil.presentation.theme.ongilColors
 
 
 /**
@@ -854,8 +855,11 @@ fun TMapComposable(
         }
     }
 
+    // 테마 색상 미리 가져오기 (Composable 컨텍스트)
+    val themeAccentColor = ongilColors.accent
+
     // 길안내 경로 그리기
-    LaunchedEffect(mapView, isMapInitialized, route) {
+    LaunchedEffect(mapView, isMapInitialized, route, themeAccentColor) {
         Log.d("TMapComposable", "경로 그리기 LaunchedEffect 트리거 - route: ${route != null}")
         if (!isMapInitialized) {
             Log.d("TMapComposable", "지도가 초기화되지 않음")
@@ -886,7 +890,7 @@ fun TMapComposable(
                     // TMapPolyLine 생성 (ID와 pointList를 생성자에 전달)
                     val polyLine = TMapPolyLine("route_line", pointList)
                     polyLine.lineWidth = 10f
-                    polyLine.lineColor = Color.parseColor("#5C7165")
+                    polyLine.lineColor = themeAccentColor.toArgb()  // 테마 색상 사용
                     polyLine.outLineWidth = 2f
                     polyLine.outLineColor = Color.WHITE
 
@@ -910,7 +914,7 @@ fun TMapComposable(
                         val startMarker = TMapMarkerItem().apply {
                             id = "start_marker"
                             tMapPoint = TMapPoint(startPoint.latitude, startPoint.longitude)
-                            icon = createStartMarkerBitmap(context, Color.parseColor("#4CAF50"))
+                            icon = createStartMarkerBitmap(context, themeAccentColor.toArgb())  // 테마 색상 (타입별)
                         }
                         try {
                             tmap.addTMapMarkerItem(startMarker)
@@ -926,7 +930,7 @@ fun TMapComposable(
                         val endMarker = TMapMarkerItem().apply {
                             id = "end_marker"
                             tMapPoint = TMapPoint(endPoint.latitude, endPoint.longitude)
-                            icon = createEndMarkerBitmap(context, Color.parseColor("#F44336"))
+                            icon = createEndMarkerBitmap(context, themeAccentColor.toArgb())  // 테마 색상 (타입별)
                         }
                         try {
                             tmap.addTMapMarkerItem(endMarker)
@@ -1391,40 +1395,34 @@ private fun createEndMarkerBitmap(
     }
     canvas.drawCircle(centerX, pinHeadCenterY, pinHeadRadius, bgPaint)
 
-    // 내부 흰색 깃발 아이콘
-    val iconSize = pinHeadRadius * 0.8f
-    val flagLeft = centerX - iconSize * 0.35f
-    val flagTop = pinHeadCenterY - iconSize * 0.4f
+    // 내부 흰색 별 아이콘 (5각 별)
+    val starRadius = pinHeadRadius * 0.6f
 
-    // 깃대
-    val polePaint = Paint().apply {
-        color = Color.WHITE
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-        isAntiAlias = true
-    }
-    canvas.drawLine(
-        flagLeft,
-        flagTop,
-        flagLeft,
-        flagTop + iconSize * 0.8f,
-        polePaint
-    )
-
-    // 깃발
-    val flagPath = android.graphics.Path().apply {
-        moveTo(flagLeft, flagTop)
-        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.15f)
-        lineTo(flagLeft + iconSize * 0.5f, flagTop + iconSize * 0.45f)
-        lineTo(flagLeft, flagTop + iconSize * 0.3f)
-        close()
-    }
-    val flagPaint = Paint().apply {
+    val iconPaint = Paint().apply {
         color = Color.WHITE
         style = Paint.Style.FILL
         isAntiAlias = true
     }
-    canvas.drawPath(flagPath, flagPaint)
+
+    // 5각 별 그리기
+    val starPath = android.graphics.Path()
+    val innerRadius = starRadius * 0.4f
+
+    for (i in 0 until 10) {
+        val angle = Math.PI / 2 + (i * Math.PI / 5)
+        val radius = if (i % 2 == 0) starRadius else innerRadius
+        val x = centerX + (radius * Math.cos(angle)).toFloat()
+        val y = pinHeadCenterY - (radius * Math.sin(angle)).toFloat()
+
+        if (i == 0) {
+            starPath.moveTo(x, y)
+        } else {
+            starPath.lineTo(x, y)
+        }
+    }
+    starPath.close()
+
+    canvas.drawPath(starPath, iconPaint)
 
     return bitmap
 }
