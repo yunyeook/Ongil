@@ -61,8 +61,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import kr.co.ongil.presentation.ui.common.patientinfo.InfoCard
 import kr.co.ongil.presentation.ui.common.patientinfo.StatValue
+import kr.co.ongil.presentation.theme.GuardianColors
+import kr.co.ongil.presentation.theme.PatientColors
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.DirectionsWalk
 
 
 private object OnGilColors {
@@ -280,7 +283,8 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                     InfoCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = "가장 많이 찾은 목적지",
-                        stats = stats
+                        stats = stats,
+                        userType = uiState.userType
                     )
                 }
 
@@ -298,7 +302,8 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                     InfoCard(
                         modifier = Modifier.fillMaxWidth(),
                         title = "안전구역 이탈 이력",
-                        stats = safezoneStats
+                        stats = safezoneStats,
+                        userType = uiState.userType
                     )
                 }
 
@@ -311,7 +316,8 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                             "합계" to StatValue.Text("${activityLog.routeLost}회"),
                             "저번주 대비" to StatValue.Text("${activityLog.routeLostDiff}회"),
                             "추이" to getTrendIcon(activityLog.routeTransition)
-                        )
+                        ),
+                        userType = uiState.userType
                     )
                 }
 
@@ -324,7 +330,8 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                             "합계" to StatValue.Text("${activityLog.safezoneEmer}회"),
                             "저번주 대비" to StatValue.Text("${activityLog.safezoneEmerDiff}회"),
                             "추이" to getTrendIcon(activityLog.safezoneTransition)
-                        )
+                        ),
+                        userType = uiState.userType
                     )
                 }
 
@@ -337,7 +344,8 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                             "합계" to StatValue.Text("${activityLog.sosSign}회"),
                             "저번주 대비" to StatValue.Text("${activityLog.sosSignDiff}회"),
                             "추이" to getTrendIcon(activityLog.sosSignTransition)
-                        )
+                        ),
+                        userType = uiState.userType
                     )
                 }
 
@@ -350,7 +358,8 @@ private fun ActivityLogTab(uiState: PatientInfoUiState) {
                             "합계" to StatValue.Text("${activityLog.emerCall}회"),
                             "저번주 대비" to StatValue.Text("${activityLog.emerCallDiff}회"),
                             "추이" to getTrendIcon(activityLog.emerCallTransition)
-                        )
+                        ),
+                        userType = uiState.userType
                     )
                 }
             }
@@ -439,12 +448,13 @@ private fun HealthInfoTab(
 
                 // 건강정보 불러오기 버튼
                 if (uiState.healthPermissionGranted) {
+                    val themeColors = if (uiState.userType == "PATIENT") PatientColors else GuardianColors
                     Button(
                         onClick = {
                             viewModel.syncHealthDataToServer()
                         },
                         enabled = !uiState.isLoadingHealthData,
-                        colors = ButtonDefaults.buttonColors(containerColor = OnGilColors.Primary),
+                        colors = ButtonDefaults.buttonColors(containerColor = themeColors.accent),
                         modifier = Modifier.height(36.dp)
                     ) {
                         if (uiState.isLoadingHealthData) {
@@ -509,7 +519,8 @@ private fun HealthInfoTab(
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
                     title = "심박수 (최근 30일)",
-                    stats = stats
+                    stats = stats,
+                    userType = uiState.userType
                 )
             }
 
@@ -529,7 +540,8 @@ private fun HealthInfoTab(
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
                     title = "혈중산소포화도 (최근 30일)",
-                    stats = stats
+                    stats = stats,
+                    userType = uiState.userType
                 )
             }
 
@@ -549,7 +561,8 @@ private fun HealthInfoTab(
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
                     title = "수면 (최근 30일)",
-                    stats = stats
+                    stats = stats,
+                    userType = uiState.userType
                 )
             }
 
@@ -559,9 +572,9 @@ private fun HealthInfoTab(
                 val stats = if (stepsRecords.isNotEmpty()) {
                     val values = stepsRecords.map { it.count }
                     listOf(
-                        "평균" to StatValue.Text("${String.format("%,d", values.average().toLong())}걸음"),
-                        "최대" to StatValue.Text("${String.format("%,d", values.maxOrNull() ?: 0)}걸음"),
-                        "최소" to StatValue.Text("${String.format("%,d", values.minOrNull() ?: 0)}걸음")
+                        "평균" to StatValue.Text("${String.format("%,d", values.average().toLong())}"),
+                        "최대" to StatValue.Text("${String.format("%,d", values.maxOrNull() ?: 0)}"),
+                        "최소" to StatValue.Text("${String.format("%,d", values.minOrNull() ?: 0)}")
                     )
                 } else {
                     listOf("" to StatValue.Text("Samsung Health에서\n걸음수를 측정해주세요"))
@@ -569,7 +582,8 @@ private fun HealthInfoTab(
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
                     title = "걸음수 (최근 30일)",
-                    stats = stats
+                    stats = stats,
+                    userType = uiState.userType
                 )
             }
         } else {
