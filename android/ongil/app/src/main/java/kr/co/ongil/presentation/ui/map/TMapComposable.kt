@@ -80,6 +80,26 @@ fun TMapComposable(
     isHomeScreen: Boolean = false  // 홈 화면 여부
 ) {
     val context = LocalContext.current
+
+    // 테마 색상 미리 가져오기 (Composable 컨텍스트)
+    val themeAccentColor = ongilColors.accent
+
+    // 마커용 진한 색상 (테마 색상을 30% 어둡게)
+    val darkerMarkerColor = androidx.compose.ui.graphics.Color(
+        red = themeAccentColor.red * 0.7f,
+        green = themeAccentColor.green * 0.7f,
+        blue = themeAccentColor.blue * 0.7f,
+        alpha = themeAccentColor.alpha
+    )
+
+    // 경로 선용 색상 (테마 색상을 약간만 밝게)
+    val lighterLineColor = androidx.compose.ui.graphics.Color(
+        red = themeAccentColor.red + (1f - themeAccentColor.red) * 0.15f,
+        green = themeAccentColor.green + (1f - themeAccentColor.green) * 0.15f,
+        blue = themeAccentColor.blue + (1f - themeAccentColor.blue) * 0.15f,
+        alpha = themeAccentColor.alpha
+    )
+
     var mapView by remember { mutableStateOf<TMapView?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isMapInitialized by remember { mutableStateOf(false) }
@@ -103,9 +123,9 @@ fun TMapComposable(
     // 홈 위치 마커 (안전 범위 기준점)
     var homeMarker by remember { mutableStateOf<TMapMarkerItem?>(null) }
 
-    // 펄스 애니메이션 프레임 생성 (녹색)
-    val pulseFrames = remember {
-        createPulseFrames(context, color = "#5C7165")
+    // 펄스 애니메이션 프레임 생성 (테마 색상)
+    val pulseFrames = remember(themeAccentColor) {
+        createPulseFrames(context, color = String.format("#%06X", 0xFFFFFF and themeAccentColor.toArgb()))
     }
 
     // 방위각 센서 (네비게이션 모드용)
@@ -855,11 +875,8 @@ fun TMapComposable(
         }
     }
 
-    // 테마 색상 미리 가져오기 (Composable 컨텍스트)
-    val themeAccentColor = ongilColors.accent
-
     // 길안내 경로 그리기
-    LaunchedEffect(mapView, isMapInitialized, route, themeAccentColor) {
+    LaunchedEffect(mapView, isMapInitialized, route, lighterLineColor) {
         Log.d("TMapComposable", "경로 그리기 LaunchedEffect 트리거 - route: ${route != null}")
         if (!isMapInitialized) {
             Log.d("TMapComposable", "지도가 초기화되지 않음")
@@ -890,7 +907,7 @@ fun TMapComposable(
                     // TMapPolyLine 생성 (ID와 pointList를 생성자에 전달)
                     val polyLine = TMapPolyLine("route_line", pointList)
                     polyLine.lineWidth = 10f
-                    polyLine.lineColor = themeAccentColor.toArgb()  // 테마 색상 사용
+                    polyLine.lineColor = lighterLineColor.toArgb()  // 연한 테마 색상 사용
                     polyLine.outLineWidth = 2f
                     polyLine.outLineColor = Color.WHITE
 
@@ -914,7 +931,7 @@ fun TMapComposable(
                         val startMarker = TMapMarkerItem().apply {
                             id = "start_marker"
                             tMapPoint = TMapPoint(startPoint.latitude, startPoint.longitude)
-                            icon = createStartMarkerBitmap(context, themeAccentColor.toArgb())  // 테마 색상 (타입별)
+                            icon = createStartMarkerBitmap(context, darkerMarkerColor.toArgb())  // 진한 테마 색상
                         }
                         try {
                             tmap.addTMapMarkerItem(startMarker)
@@ -930,7 +947,7 @@ fun TMapComposable(
                         val endMarker = TMapMarkerItem().apply {
                             id = "end_marker"
                             tMapPoint = TMapPoint(endPoint.latitude, endPoint.longitude)
-                            icon = createEndMarkerBitmap(context, themeAccentColor.toArgb())  // 테마 색상 (타입별)
+                            icon = createEndMarkerBitmap(context, darkerMarkerColor.toArgb())  // 진한 테마 색상
                         }
                         try {
                             tmap.addTMapMarkerItem(endMarker)
