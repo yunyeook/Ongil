@@ -76,4 +76,19 @@ public class HealthData extends BaseEntity {
      */
     @Column(name = "measured_at", nullable = false)
     private LocalDateTime measuredAt;
+
+    /**
+     * 기존 데이터를 새 데이터로 업데이트 (Upsert 용)
+     * 같은 (patient_id, type, measured_at)에 대해 값이 갱신될 때 사용
+     *
+     * @param newData 새로운 건강 데이터
+     */
+    public void updateFrom(HealthData newData) {
+        this.average = newData.getAverage();
+        this.min = newData.getMin();
+        this.max = newData.getMax();
+        this.unit = newData.getUnit();
+        // measuredAt는 유니크 제약의 일부이므로 변경하지 않음
+        // patientId, type도 동일하게 유지
+    }
 }
