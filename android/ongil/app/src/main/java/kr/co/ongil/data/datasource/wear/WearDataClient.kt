@@ -36,6 +36,15 @@ class WearDataClient @Inject constructor(
         private const val LOCATION_DATA_PATH = "/location_data"
         private const val KEY_LATITUDE = "latitude"
         private const val KEY_LONGITUDE = "longitude"
+
+        // 네비게이션 경로 데이터
+        private const val NAVIGATION_ROUTE_PATH = "/navigation_route"
+        private const val KEY_NAVIGATION_ID = "navigation_id"
+        private const val KEY_START_NAME = "start_name"
+        private const val KEY_END_NAME = "end_name"
+        private const val KEY_TOTAL_DISTANCE = "total_distance"
+        private const val KEY_TOTAL_TIME = "total_time"
+        private const val KEY_ROUTE_PATH = "route_path" // JSON 문자열
     }
 
     private val dataClient: DataClient = Wearable.getDataClient(context)
@@ -154,5 +163,79 @@ class WearDataClient @Inject constructor(
         }
     }
 
+    /**
+     * 네비게이션 경로 데이터를 워치로 전송
+     *
+     * @param navigationId 네비게이션 ID
+     * @param startLocationName 출발지 이름
+     * @param endLocationName 목적지 이름
+     * @param totalDistanceMeters 총 거리 (미터)
+     * @param totalTimeMinutes 예상 소요 시간 (분)
+     * @param routePath 경로 좌표 리스트 (JSON 문자열)
+     */
+    suspend fun syncNavigationRoute(
+        navigationId: String,
+        startLocationName: String,
+        endLocationName: String,
+        totalDistanceMeters: Int,
+        totalTimeMinutes: Int,
+        routePath: String // JSON 형식: [{"lat":37.5,"lon":127.0},...]
+    ): Boolean {
+        return try {
+            Log.d(TAG, "워치로 경로 데이터 전송 시작: $endLocationName")
 
+            val putDataReq = PutDataMapRequest.create(NAVIGATION_ROUTE_PATH).apply {
+                dataMap.apply {
+                    putString(KEY_NAVIGATION_ID, navigationId)
+                    putString(KEY_START_NAME, startLocationName)
+                    putString(KEY_END_NAME, endLocationName)
+                    putInt(KEY_TOTAL_DISTANCE, totalDistanceMeters)
+                    putInt(KEY_TOTAL_TIME, totalTimeMinutes)
+                    putString(KEY_ROUTE_PATH, routePath)
+                    putLong("timestamp", System.currentTimeMillis())
+                }
+            }
+
+            val putDataTask = dataClient.putDataItem(putDataReq.asPutDataRequest())
+            putDataTask.await()
+
+            Log.d(TAG, "워치로 경로 데이터 전송 성공: $endLocationName")
+            true
+
+        } catch (e: Exception) {
+            Log.e(TAG, "워치로 경로 데이터 전송 실패", e)
+            false
+        }
+    }
+
+    /**
+     * 네비게이션 경로 초기화 (워치)
+     */
+    suspend fun clearNavigationRoute(): Boolean {
+        return try {
+            Log.d(TAG, "워치 경로 데이터 삭제 시작")
+
+            val putDataReq = PutDataMapRequest.create(NAVIGATION_ROUTE_PATH).apply {
+                dataMap.apply {
+                    putString(KEY_NAVIGATION_ID, "")
+                    putString(KEY_START_NAME, "")
+                    putString(KEY_END_NAME, "")
+                    putInt(KEY_TOTAL_DISTANCE, 0)
+                    putInt(KEY_TOTAL_TIME, 0)
+                    putString(KEY_ROUTE_PATH, "[]")
+                    putLong("timestamp", System.currentTimeMillis())
+                }
+            }
+
+            val putDataTask = dataClient.putDataItem(putDataReq.asPutDataRequest())
+            putDataTask.await()
+
+            Log.d(TAG, "워치 경로 데이터 삭제 성공")
+            true
+
+        } catch (e: Exception) {
+            Log.e(TAG, "워치 경로 데이터 삭제 실패", e)
+            false
+        }
+    }
 }
