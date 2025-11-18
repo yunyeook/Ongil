@@ -43,6 +43,16 @@ public interface HealthDataRepository extends JpaRepository<HealthData, Integer>
     );
 
     /**
+     * 중복 체크용: 환자 ID, 데이터 타입, 측정 시각으로 조회
+     * (patient_id, type, measured_at) 유니크 제약에 대응
+     */
+    java.util.Optional<HealthData> findByPatientIdAndTypeAndMeasuredAt(
+        Integer patientId,
+        HealthDataType type,
+        LocalDateTime measuredAt
+    );
+
+    /**
      * 환자 ID로 모든 건강 데이터 삭제 (환자 삭제 시)
      */
     void deleteAllByPatientId(Integer patientId);

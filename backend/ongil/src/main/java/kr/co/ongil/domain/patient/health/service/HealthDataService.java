@@ -40,6 +40,7 @@ public class HealthDataService {
     /**
      * 생체 데이터 업로드
      * Samsung Health에서 수집한 데이터를 일괄 저장
+     * 중복된 (patient_id, type, measured_at) 조합이 있으면 업데이트 (Upsert)
      *
      * @param patientId 환자 ID
      * @param request 업로드 요청 (여러 개의 건강 데이터)
@@ -56,24 +57,55 @@ public class HealthDataService {
         // 2. 날짜 범위 검증
         validateDateRange(request);
 
-        // 3. Entity 변환 및 저장
-        List<HealthData> entities = request.records().stream()
-            .map(r -> HealthData.builder()
-                .patientId(patientId)
-                .type(r.type())
-                .average(r.average())
-                .max(r.max())
-                .min(r.min())
-                .unit(r.unit())
-                .measuredAt(r.measuredAt())
-                .build()
-            )
-            .toList();
+        // 3. Upsert 로직: 기존 데이터가 있으면 업데이트, 없으면 신규 저장
+        int insertCount = 0;
+        int updateCount = 0;
 
-        List<HealthData> savedEntities = healthDataRepository.saveAll(entities);
-        log.info("생체 데이터 {}개 저장 완료", savedEntities.size());
+        for (var record : request.records()) {
+            // 3-1. 중복 체크 (patient_id, type, measured_at 조합)
+            var existingOpt = healthDataRepository.findByPatientIdAndTypeAndMeasuredAt(
+                patientId,
+                record.type(),
+                record.measuredAt()
+            );
 
-        return savedEntities.size();
+            if (existingOpt.isPresent()) {
+                // 3-2. 이미 있는 경우: 값만 업데이트
+                HealthData existing = existingOpt.get();
+                HealthData newData = HealthData.builder()
+                    .average(record.average())
+                    .max(record.max())
+                    .min(record.min())
+                    .unit(record.unit())
+                    .build();
+
+                existing.updateFrom(newData);
+                updateCount++;
+                log.debug("기존 데이터 업데이트: patientId={}, type={}, measuredAt={}",
+                    patientId, record.type(), record.measuredAt());
+            } else {
+                // 3-3. 없는 경우: 새로 저장
+                HealthData newEntity = HealthData.builder()
+                    .patientId(patientId)
+                    .type(record.type())
+                    .average(record.average())
+                    .max(record.max())
+                    .min(record.min())
+                    .unit(record.unit())
+                    .measuredAt(record.measuredAt())
+                    .build();
+
+                healthDataRepository.save(newEntity);
+                insertCount++;
+                log.debug("신규 데이터 저장: patientId={}, type={}, measuredAt={}",
+                    patientId, record.type(), record.measuredAt());
+            }
+        }
+
+        int totalCount = insertCount + updateCount;
+        log.info("생체 데이터 처리 완료: total={}, insert={}, update={}", totalCount, insertCount, updateCount);
+
+        return totalCount;
     }
 
     /**
