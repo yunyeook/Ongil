@@ -98,7 +98,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Void> handleSseWriteError(HttpMessageNotWritableException e) {
         if (Optional.ofNullable(e.getMessage()).orElse("")
             .toLowerCase().contains("text/event-stream")) {
-            log.debug("SSE 연결 종료 중 HttpMessageNotWritableException");
+            log.debug("SSE 연결 종료 중 HttpMessageNotWritableException 예외 발생");
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
@@ -106,9 +106,20 @@ public class GlobalExceptionHandler {
 
     // 그 외 모든 예외
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<String>> handleException(Exception e) {
+    public ResponseEntity<?> handleException(Exception e, jakarta.servlet.http.HttpServletRequest request) {
+
+        String accept = Optional.ofNullable(request.getHeader("Accept")).orElse("");
+
+        //  SSE 요청이라면 절대 JSON 응답 시도하지 않음
+        if (accept.contains("text/event-stream")) {
+            log.warn("SSE 요청 중 예외 발생 → JSON 응답 생략 (연결만 종료): {}", e.getMessage());
+            return null; // 아무 응답도 하지 않음 → SSE 연결만 종료됨
+        }
+
+        //  일반 REST 요청은 기존대로 JSON 반환
         log.error("Unexpected error occurred: ", e);
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
+
         return ResponseEntity
             .status(code.getStatus())
             .body(ApiResponse.fail(code));
