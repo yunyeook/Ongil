@@ -297,14 +297,14 @@ private fun KeyIndicatorsSection(
             if (hasHealthData) {
                 IndicatorCard(
                     title = "수면 시간",
-                    value = uiState.averageSleepHours?.let { String.format("%.1f시간", it) } ?: "-",
+                    value = uiState.averageSleepHours?.let { String.format("%.1f", it) } ?: "-",
                     modifier = Modifier.weight(1f),
                     backgroundColor = themeColors.accent,
                     highlight = true
                 )
                 IndicatorCard(
                     title = "하루 평균 걸음 수",
-                    value = uiState.averageSteps?.let { "%,d걸음".replace(" ", "").format(it) } ?: "-",
+                    value = uiState.averageSteps?.let { "%,d".format(it) } ?: "-",
                     modifier = Modifier.weight(1f),
                     backgroundColor = HomeColors.CardBg,
                     isDashedBorder = true
@@ -415,8 +415,8 @@ private fun IndicatorCard(
                 )
             } else {
                 // 3글자 초과 시 3글자까지만 표시하고 ... 추가
-                val displayValue = if (value.length > 3) {
-                    value.take(3) + "..."
+                val displayValue = if (value.length > 6) {
+                    value.take(6) + "..."
                 } else {
                     value
                 }
