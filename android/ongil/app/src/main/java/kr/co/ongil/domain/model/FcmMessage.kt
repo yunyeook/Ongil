@@ -12,7 +12,8 @@ enum class MessageType {
     SOS_STOP,
     SOS_ACK,
     INCOMING_CALL,
-    SAFEZONE_UPDATE
+    SAFEZONE_UPDATE,
+    CALL_MISSED
 }
 
 data class FcmMessage(
