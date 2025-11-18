@@ -67,14 +67,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OngilTheme {
-                 MainScreen(
-                     incomingCallData = incomingCallData,
-                     onIncomingCallHandled = { incomingCallData = null },
-                     emergencyCallData = emergencyCallData,
-                     onEmergencyCallHandled = { emergencyCallData = null },
-                     notificationNavigation = notificationNavigation,
-                     onNotificationNavigationHandled = { notificationNavigation = null}
-                 )
+                MainScreen(
+                    incomingCallData = incomingCallData,
+                    onIncomingCallHandled = { incomingCallData = null },
+                    emergencyCallData = emergencyCallData,
+                    onEmergencyCallHandled = { emergencyCallData = null },
+                    notificationNavigation = notificationNavigation,
+                    onNotificationNavigationHandled = { notificationNavigation = null}
+                )
 //                PlayGroundMJ()
                 // PlayGroundSH()
                 // PlayGroundGK()
