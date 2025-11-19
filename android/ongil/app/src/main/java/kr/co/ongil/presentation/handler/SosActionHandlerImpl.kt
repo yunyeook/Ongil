@@ -1,11 +1,13 @@
 package kr.co.ongil.presentation.handler
 
 import android.content.Context
+import android.content.Intent
 import android.media.MediaPlayer
 import android.util.Log
 import kr.co.ongil.R
 import kr.co.ongil.domain.handler.SosActionHandler
 import kr.co.ongil.domain.model.FcmMessage
+import kr.co.ongil.presentation.ui.sos.SosAlertActivity
 import javax.inject.Inject
 
 class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
@@ -20,6 +22,27 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
 
         // SOS 사운드 무한 재생
         playSosSound(context)
+
+        // SOS 알림 모달 표시
+        showSosAlertModal(context, message)
+    }
+
+    /**
+     * SOS 알림 모달 Activity 표시
+     */
+    private fun showSosAlertModal(context: Context, message: FcmMessage) {
+        try {
+            val intent = Intent(context, SosAlertActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("sosId", message.relatedTableId?.toLongOrNull() ?: 0L)
+                // title이나 content를 사용하여 보호자 이름 전달
+                putExtra("senderName", message.title ?: message.content ?: "보호자")
+            }
+            context.startActivity(intent)
+            Log.d("SosActionHandlerImpl", "✅ SOS 알림 모달 표시 완료")
+        } catch (e: Exception) {
+            Log.e("SosActionHandlerImpl", "❌ SOS 알림 모달 표시 실패: ${e.message}", e)
+        }
     }
 
     override fun stopSosAction() {
