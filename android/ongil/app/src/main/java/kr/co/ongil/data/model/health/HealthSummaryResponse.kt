@@ -14,8 +14,8 @@ data class HealthSummaryResponse(
 @Serializable
 data class HealthSummaryData(
     val patientId: Long,
-    val type: String,
-    val unit: String,
+    val type: String?, // null 가능 (전체 타입 조회 시)
+    val unit: String?, // null 가능 (데이터가 없을 때)
     val summary: List<HealthSummaryRecord>
 )
 
