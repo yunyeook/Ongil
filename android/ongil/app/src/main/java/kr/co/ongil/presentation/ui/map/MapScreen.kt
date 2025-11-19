@@ -663,12 +663,27 @@ fun MapScreen(
                     )
 
                     // 내 위치로 이동 버튼
-                    CircleFloatingButton(
-                        icon = Icons.Default.MyLocation,
-                        onClick = {
-                            myLocationTrigger++  // 값을 증가시켜 TMapComposable에서 감지
-                        }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(
+                                color = Color.White,
+                                shape = CircleShape
+                            )
+                            .clickable(
+                                onClick = { myLocationTrigger++ },
+                                indication = null,
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MyLocation,
+                            contentDescription = "내 위치로 이동",
+                            tint = Color.Black,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
 
