@@ -160,7 +160,7 @@ fun OngilBrandHeaderCard(
                         painter = painterResource(id = R.drawable.logosymbol),
                         contentDescription = "온길 로고",
                         modifier = Modifier
-                            .size(50.dp)
+                            .size(45.dp)
                             .padding(start = 15.dp)
                     )
                 },
@@ -207,7 +207,7 @@ fun OngilBrandHeaderCard(
                                     text = profileName,
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
+                                        fontSize = 15.sp
                                     ),
                                     color = OngilGray,
                                     maxLines = 1,
