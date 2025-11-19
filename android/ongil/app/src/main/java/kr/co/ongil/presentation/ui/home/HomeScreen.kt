@@ -199,7 +199,7 @@ fun HomeScreen(
 
             // 3. 이상변동 강조 카드
             AbnormalChangeSpotlightCard(activityLog = activityLog)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(5.dp))
 
             // 4. 시간대별 위험도
             TimeBasedHeatmapCard(activityLog = activityLog)
@@ -740,7 +740,7 @@ private fun RadarChartWithLabels(
             val y = centerY + distance * sin(angle)
             drawCircle(
                 color = HomeColors.Primary,
-                radius = 4.dp.toPx(),
+                radius = 2.dp.toPx(),
                 center = Offset(x, y)
             )
         }

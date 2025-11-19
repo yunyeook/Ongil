@@ -192,12 +192,12 @@ fun OngilBrandHeaderCard(
                                     )
                                 } else {
                                     // 프로필 이미지가 없을 때 기본 아이콘 표시
-                                    Icon(
-                                        imageVector = Icons.Outlined.Person,
-                                        contentDescription = "프로필",
-                                        tint = accentColor,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+//                                    Icon(
+//                                        imageVector = Icons.Outlined.Person,
+//                                        contentDescription = "프로필",
+//                                        tint = accentColor,
+//                                        modifier = Modifier.size(20.dp)
+//                                    )
                                 }
                             }
 
