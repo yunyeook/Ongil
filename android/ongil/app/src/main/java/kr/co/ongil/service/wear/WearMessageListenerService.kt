@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.wear.WearDataClient
 import kr.co.ongil.domain.repository.CallRepository
 import kr.co.ongil.domain.repository.LocationRepository
@@ -36,6 +37,7 @@ class WearMessageListenerService : WearableListenerService() {
         private const val PATH_CALL_REJECT = "/call/reject"
         private const val PATH_SOS_ALERT = "/sos/alert"
         private const val PATH_HELP_REQUEST = "/help/request"
+        private const val PATH_SELECTED_PATIENT = "/selected_patient"
     }
 
     @Inject
@@ -49,6 +51,9 @@ class WearMessageListenerService : WearableListenerService() {
 
     @Inject
     lateinit var wearDataClient: WearDataClient
+
+    @Inject
+    lateinit var userDataStoreManager: UserDataStoreManager
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -68,6 +73,7 @@ class WearMessageListenerService : WearableListenerService() {
             PATH_CALL_REJECT -> handleCallReject(data)
             PATH_SOS_ALERT -> handleSosAlert(data)
             PATH_HELP_REQUEST -> handleHelpRequest(data)
+            PATH_SELECTED_PATIENT -> handleSelectedPatient(data)
             else -> Log.w(TAG, "Unknown message path: $path")
         }
     }
@@ -215,6 +221,26 @@ class WearMessageListenerService : WearableListenerService() {
                 Log.d(TAG, "도움 요청 처리 완료: $message")
             } catch (e: Exception) {
                 Log.e(TAG, "도움 요청 처리 실패", e)
+            }
+        }
+    }
+
+    /**
+     * Watch로부터 선택한 환자 ID 수신 → DataStore 저장
+     *
+     * @param data "환자ID" 형식
+     */
+    private fun handleSelectedPatient(data: String) {
+        serviceScope.launch {
+            try {
+                val patientId = data.toLong()
+
+                // DataStore에 선택한 환자 ID 저장
+                userDataStoreManager.saveSelectedPatientId(patientId.toString())
+
+                Log.d(TAG, "선택한 환자 ID 저장 완료: $patientId")
+            } catch (e: Exception) {
+                Log.e(TAG, "선택한 환자 ID 저장 실패", e)
             }
         }
     }

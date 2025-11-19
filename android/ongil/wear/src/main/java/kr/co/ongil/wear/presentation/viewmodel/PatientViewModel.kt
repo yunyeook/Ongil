@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.wear.data.datasource.local.WearDataStoreManager
+import kr.co.ongil.wear.data.datasource.sync.PhoneDataSyncManager
+import kr.co.ongil.wear.data.datasource.sync.WatchDataClient
 import kr.co.ongil.wear.domain.model.PatientInfo
 import javax.inject.Inject
 
@@ -18,15 +20,16 @@ import javax.inject.Inject
  * 환자 선택 ViewModel (보호자용)
  *
  * 주요 기능:
- * 1. 환자 목록 관리
+ * 1. 환자 목록 관리 (Phone 앱에서 동기화)
  * 2. 환자 선택/변경
  * 3. 선택한 환자 ID DataStore 저장
- *
- * TODO: Phone 앱과 환자 목록 동기화 구현 필요
+ * 4. Phone 앱으로 선택 정보 전송
  */
 @HiltViewModel
 class PatientViewModel @Inject constructor(
-    private val dataStoreManager: WearDataStoreManager
+    private val dataStoreManager: WearDataStoreManager,
+    private val phoneDataSyncManager: PhoneDataSyncManager,
+    private val watchDataClient: WatchDataClient
 ) : ViewModel() {
 
     companion object {
@@ -46,43 +49,23 @@ class PatientViewModel @Inject constructor(
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     init {
-        loadPatients()
+        setupPhoneDataListener()
         loadSelectedPatient()
     }
 
     /**
-     * 환자 목록 로드
-     *
-     * TODO: 실제로는 Phone 앱에서 DataLayer로 받아와야 함
-     * 현재는 임시로 빈 목록 사용
+     * Phone 앱에서 환자 목록 수신 리스너 설정
      */
-    private fun loadPatients() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+    private fun setupPhoneDataListener() {
+        phoneDataSyncManager.setOnPatientListReceivedListener { patients ->
+            Log.d(TAG, "Phone 앱으로부터 환자 목록 수신: ${patients.size}명")
 
-            try {
-                // TODO: Phone 앱에서 환자 목록 가져오기
-                // 현재는 빈 목록
-                val patients = emptyList<PatientInfo>()
-
-                _uiState.update {
-                    it.copy(
-                        patients = patients,
-                        isLoading = false,
-                        errorMessage = if (patients.isEmpty()) "등록된 환자가 없습니다" else null
-                    )
-                }
-
-                Log.d(TAG, "환자 목록 로드 완료: ${patients.size}명")
-
-            } catch (e: Exception) {
-                Log.e(TAG, "환자 목록 로드 실패", e)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "환자 목록을 불러올 수 없습니다"
-                    )
-                }
+            _uiState.update {
+                it.copy(
+                    patients = patients,
+                    isLoading = false,
+                    errorMessage = if (patients.isEmpty()) "등록된 환자가 없습니다" else null
+                )
             }
         }
     }
@@ -108,17 +91,23 @@ class PatientViewModel @Inject constructor(
     fun selectPatient(patientId: Long) {
         viewModelScope.launch {
             try {
-                // DataStore에 저장
+                // 1. DataStore에 저장
                 dataStoreManager.saveSelectedPatientId(patientId.toString())
 
-                // UI 상태 업데이트
+                // 2. UI 상태 업데이트
                 _uiState.update {
                     it.copy(selectedPatientId = patientId)
                 }
 
                 Log.d(TAG, "환자 선택: $patientId")
 
-                // TODO: Phone 앱으로 선택 정보 전송 (DataLayer)
+                // 3. Phone 앱으로 선택 정보 전송
+                val sent = watchDataClient.sendSelectedPatientId(patientId)
+                if (sent) {
+                    Log.d(TAG, "Phone 앱으로 환자 선택 정보 전송 성공")
+                } else {
+                    Log.w(TAG, "Phone 앱으로 환자 선택 정보 전송 실패")
+                }
 
             } catch (e: Exception) {
                 Log.e(TAG, "환자 선택 실패", e)

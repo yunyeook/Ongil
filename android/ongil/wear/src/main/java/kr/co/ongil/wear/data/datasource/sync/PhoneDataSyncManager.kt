@@ -8,10 +8,24 @@ import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kr.co.ongil.wear.data.model.WearLoginData
 import kr.co.ongil.wear.data.model.WearNavigationData
+import kr.co.ongil.wear.domain.model.PatientInfo
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * 환자 정보 (워치 수신용)
+ */
+@Serializable
+data class WearPatientInfo(
+    val patientId: Long,
+    val name: String,
+    val relationship: String? = null,
+    val phoneNumber: String? = null
+)
 
 /**
  * 폰에서 워치로 데이터 수신 관리자
@@ -33,6 +47,7 @@ class PhoneDataSyncManager @Inject constructor(
         const val LOGIN_DATA_PATH = "/login_data"
         const val NAVIGATION_ROUTE_PATH = "/navigation_route"
         const val HELP_REQUEST_PATH = "/help_request_to_watch"
+        const val PATIENT_LIST_PATH = "/patient_list"
 
         // Login Data Map Keys (폰과 동일해야 함)
         const val KEY_ACCESS_TOKEN = "access_token"
@@ -52,6 +67,9 @@ class PhoneDataSyncManager @Inject constructor(
         // Help Request Data Map Keys (폰과 동일해야 함)
         const val KEY_HELP_MESSAGE = "help_message"
         const val KEY_TIMESTAMP = "timestamp"
+
+        // Patient List Data Map Keys (폰과 동일해야 함)
+        const val KEY_PATIENT_LIST = "patient_list"
     }
 
     private val dataClient: DataClient = Wearable.getDataClient(context)
@@ -60,6 +78,7 @@ class PhoneDataSyncManager @Inject constructor(
     private var onLoginDataReceived: ((WearLoginData) -> Unit)? = null
     private var onNavigationRouteReceived: ((WearNavigationData) -> Unit)? = null
     private var onHelpRequestReceived: ((String) -> Unit)? = null
+    private var onPatientListReceived: ((List<PatientInfo>) -> Unit)? = null
 
     /**
      * 데이터 수신 리스너 시작
@@ -104,6 +123,15 @@ class PhoneDataSyncManager @Inject constructor(
      */
     fun setOnHelpRequestReceivedListener(listener: (String) -> Unit) {
         onHelpRequestReceived = listener
+    }
+
+    /**
+     * 환자 목록 수신 콜백 설정 (Phone → Watch)
+     *
+     * @param listener 환자 목록 받았을 때 실행할 함수
+     */
+    fun setOnPatientListReceivedListener(listener: (List<PatientInfo>) -> Unit) {
+        onPatientListReceived = listener
     }
 
     /**
@@ -201,6 +229,37 @@ class PhoneDataSyncManager @Inject constructor(
 
                     } catch (e: Exception) {
                         Log.e(TAG, "도움 요청 데이터 파싱 에러", e)
+                    }
+                }
+                // PATIENT_LIST_PATH 경로의 데이터 처리 (Phone → Watch)
+                else if (dataItem.uri.path == PATIENT_LIST_PATH) {
+                    try {
+                        // DataItem → DataMap 변환
+                        val dataMap = DataMapItem.fromDataItem(dataItem).dataMap
+
+                        // DataMap에서 JSON 문자열 추출
+                        val patientListJson = dataMap.getString(KEY_PATIENT_LIST) ?: "[]"
+
+                        // JSON 문자열을 List<WearPatientInfo>로 역직렬화
+                        val wearPatients = Json.decodeFromString<List<WearPatientInfo>>(patientListJson)
+
+                        // WearPatientInfo를 PatientInfo로 변환
+                        val patients = wearPatients.map { wearPatient ->
+                            PatientInfo(
+                                patientId = wearPatient.patientId,
+                                name = wearPatient.name,
+                                relationship = wearPatient.relationship,
+                                phoneNumber = wearPatient.phoneNumber
+                            )
+                        }
+
+                        Log.d(TAG, "환자 목록 수신 (Phone → Watch): ${patients.size}명")
+
+                        // 콜백 실행
+                        onPatientListReceived?.invoke(patients)
+
+                    } catch (e: Exception) {
+                        Log.e(TAG, "환자 목록 데이터 파싱 에러", e)
                     }
                 }
             }

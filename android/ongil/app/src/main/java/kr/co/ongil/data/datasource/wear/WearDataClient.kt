@@ -6,8 +6,22 @@ import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * 환자 정보 (워치 전송용)
+ */
+@Serializable
+data class WearPatientInfo(
+    val patientId: Long,
+    val name: String,
+    val relationship: String? = null,
+    val phoneNumber: String? = null
+)
 
 /**
  * 앱(폰)에서 워치로 데이터 전송 클라이언트
@@ -45,6 +59,10 @@ class WearDataClient @Inject constructor(
         private const val KEY_TOTAL_DISTANCE = "total_distance"
         private const val KEY_TOTAL_TIME = "total_time"
         private const val KEY_ROUTE_PATH = "route_path" // JSON 문자열
+
+        // 환자 목록 데이터 (보호자용)
+        private const val PATIENT_LIST_PATH = "/patient_list"
+        private const val KEY_PATIENT_LIST = "patient_list" // JSON 문자열
     }
 
     private val dataClient: DataClient = Wearable.getDataClient(context)
@@ -235,6 +253,63 @@ class WearDataClient @Inject constructor(
 
         } catch (e: Exception) {
             Log.e(TAG, "워치 경로 데이터 삭제 실패", e)
+            false
+        }
+    }
+
+    /**
+     * 환자 목록을 워치로 전송 (보호자용)
+     *
+     * @param patients 환자 목록
+     */
+    suspend fun syncPatientList(patients: List<WearPatientInfo>): Boolean {
+        return try {
+            Log.d(TAG, "워치로 환자 목록 전송 시작: ${patients.size}명")
+
+            // 환자 목록을 JSON 문자열로 직렬화
+            val patientListJson = Json.encodeToString(patients)
+
+            val putDataReq = PutDataMapRequest.create(PATIENT_LIST_PATH).apply {
+                dataMap.apply {
+                    putString(KEY_PATIENT_LIST, patientListJson)
+                    putLong("timestamp", System.currentTimeMillis())
+                }
+            }
+
+            val putDataTask = dataClient.putDataItem(putDataReq.asPutDataRequest())
+            putDataTask.await()
+
+            Log.d(TAG, "워치로 환자 목록 전송 성공: ${patients.size}명")
+            true
+
+        } catch (e: Exception) {
+            Log.e(TAG, "워치로 환자 목록 전송 실패", e)
+            false
+        }
+    }
+
+    /**
+     * 환자 목록 초기화 (워치)
+     */
+    suspend fun clearPatientList(): Boolean {
+        return try {
+            Log.d(TAG, "워치 환자 목록 삭제 시작")
+
+            val putDataReq = PutDataMapRequest.create(PATIENT_LIST_PATH).apply {
+                dataMap.apply {
+                    putString(KEY_PATIENT_LIST, "[]")
+                    putLong("timestamp", System.currentTimeMillis())
+                }
+            }
+
+            val putDataTask = dataClient.putDataItem(putDataReq.asPutDataRequest())
+            putDataTask.await()
+
+            Log.d(TAG, "워치 환자 목록 삭제 성공")
+            true
+
+        } catch (e: Exception) {
+            Log.e(TAG, "워치 환자 목록 삭제 실패", e)
             false
         }
     }
