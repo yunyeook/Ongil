@@ -957,15 +957,15 @@ fun TMapComposable(
                         }
                     }
 
-                    // 경로의 초기 방향 계산 (첫 2개 점)
-                    if (route.path.size >= 2) {
-                        val start = route.path[0]
-                        val next = route.path[1]
-                        routeBearing = calculateBearing(start.latitude, start.longitude, next.latitude, next.longitude)
-                        Log.d("TMapComposable", "📐 경로 초기 방향: ${routeBearing}°")
-                    } else {
-                        routeBearing = 0f
-                    }
+//                    // 경로의 초기 방향 계산 (첫 2개 점)
+//                    if (route.path.size >= 2) {
+//                        val start = route.path[0]
+//                        val next = route.path[1]
+//                        routeBearing = calculateBearing(start.latitude, start.longitude, next.latitude, next.longitude)
+//                        Log.d("TMapComposable", "📐 경로 초기 방향: ${routeBearing}°")
+//                    } else {
+//                        routeBearing = 0f
+//                    }
 
                     // 홈 화면에서 경로 전체가 보이도록 자동 줌 조정
                     if (isHomeScreen && route.path.isNotEmpty()) {
