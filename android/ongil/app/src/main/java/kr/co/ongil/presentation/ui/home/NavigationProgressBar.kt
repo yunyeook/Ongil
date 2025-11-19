@@ -33,45 +33,58 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
+import kr.co.ongil.presentation.theme.ongilColors
 import kotlin.math.roundToInt
 
 /**
  * 길안내 진행 상황을 보여주는 프로그레스 바
  *
- * @param startLocation 출발지 이름
+
  * @param endLocation 목적지 이름
  * @param time 소요 시간
  * @param progress 진행률 (0.0 ~ 1.0)
+ * @param userType 사용자 타입 (PATIENT or GUARDIAN)
  * @param modifier Modifier
  */
 @Composable
 fun NavigationProgressBar(
-    startLocation: String,
     endLocation: String,
     time: String,
     progress: Float,
+    userType: String = "GUARDIAN",
     modifier: Modifier = Modifier
 ) {
+    // 사용자 타입에 따라 색상 결정
+    val backgroundColor = if (userType.uppercase() == "PATIENT") {
+        Color(0xFFB8B9D4)  // 환자용 연한 보라색
+    } else {
+        Color(0xFFADC1B2)  // 보호자용 초록색
+    }
+
+    val progressColor = if (userType.uppercase() == "PATIENT") {
+        Color(0xFF5F71CE)  // 환자용 진한 보라색
+    } else {
+        Color(0xFF5C7165)  // 보호자용 진한 초록색
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                color = Color(0xFFADC1B2),
+                color = backgroundColor,
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        InfoColumn(
-            title = "출발지",
-            value = startLocation,
-            modifier = Modifier.weight(1f)
-        )
 
         InfoColumn(
             title = "목적지",
-            value = endLocation,
+            value = if (endLocation.length > 5) {
+                endLocation.take(5)
+            } else {
+                endLocation
+            },
             modifier = Modifier.weight(1f)
         )
 
@@ -82,7 +95,7 @@ fun NavigationProgressBar(
         )
 
         Column(
-            modifier = Modifier.weight(1.5f),
+            modifier = Modifier.weight(2f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -104,7 +117,7 @@ fun NavigationProgressBar(
                     )
                     if (progress > 0f) {
                         drawRoundRect(
-                            color = Color(0xFF5C7165),
+                            color = progressColor,
                             size = Size(size.width * progress.coerceIn(0f, 1f), barHeight),
                             cornerRadius = CornerRadius(barHeight / 2f)
                         )
@@ -133,6 +146,7 @@ fun NavigationProgressBar(
                         .size(20.dp)
                         .align(iconAlignment)
                 )
+
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -157,27 +171,18 @@ private fun InfoColumn(title: String, value: String, modifier: Modifier = Modifi
     ) {
         Text(
             text = title,
-            fontSize = 12.sp,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
             color = Color.White
         )
         Spacer(modifier = Modifier.height(4.dp))
-        Box(
-            modifier = Modifier.fillMaxWidth(0.8f),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = value,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1,
-                modifier = Modifier.basicMarquee(
-                    animationMode = MarqueeAnimationMode.Immediately,
-                    repeatDelayMillis = 1000,
-                    initialDelayMillis = 2000,
-                    velocity = 30.dp
-                )
-            )
-        }
+        Text(
+            text = value,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            maxLines = 1,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }

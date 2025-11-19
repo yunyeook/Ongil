@@ -14,7 +14,7 @@ data class HealthDataResponse(
 @Serializable
 data class HealthData(
     val patientId: Long,
-    val type: String,
+    val type: String?, // null 가능 (전체 타입 조회 시)
     val records: List<HealthRecord>
 )
 

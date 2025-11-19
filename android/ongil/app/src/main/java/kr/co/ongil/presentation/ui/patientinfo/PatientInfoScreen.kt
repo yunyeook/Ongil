@@ -480,16 +480,16 @@ private fun HealthInfoTab(
             bottom = bottomInset + 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // 섹션 제목과 버튼
+        // 섹션 제목과 버튼 (환자만 표시)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 건강정보 불러오기 버튼
-                if (uiState.healthPermissionGranted) {
-                    val themeColors = if (uiState.userType == "PATIENT") PatientColors else GuardianColors
+                // 건강정보 불러오기 버튼 (환자만)
+                if (uiState.userType == "PATIENT" && uiState.healthPermissionGranted) {
+                    val themeColors = PatientColors
                     Button(
                         onClick = {
                             viewModel.syncHealthDataToServer()
@@ -540,22 +540,37 @@ private fun HealthInfoTab(
             }
         }
 
-        val healthData = uiState.healthData
+        // 보호자와 환자에 따라 다른 데이터 소스 사용
+        val isGuardian = uiState.userType == "GUARDIAN"
+        val hasData = if (isGuardian) {
+            uiState.serverHealthData != null
+        } else {
+            uiState.healthPermissionGranted && uiState.healthData != null
+        }
 
-        // 권한이 있으면 항상 4개 카드 표시
-        if (uiState.healthPermissionGranted) {
+        if (hasData) {
             // 심박수
             item {
-                val heartRateRecords = healthData?.heartRateRecords ?: emptyList()
-                val stats = if (heartRateRecords.isNotEmpty()) {
-                    val values = heartRateRecords.map { it.beatsPerMinute }
-                    listOf(
-                        "평균" to StatValue.Text("${values.average().toLong()} BPM"),
-                        "최대" to StatValue.Text("${values.maxOrNull() ?: 0} BPM"),
-                        "최소" to StatValue.Text("${values.minOrNull() ?: 0} BPM")
-                    )
+                val stats = if (isGuardian) {
+                    uiState.serverHealthData?.heartRate?.let { stat ->
+                        listOf(
+                            "평균" to StatValue.Text("${stat.average.toLong()} ${stat.unit}"),
+                            "최대" to StatValue.Text("${stat.max.toLong()} ${stat.unit}"),
+                            "최소" to StatValue.Text("${stat.min.toLong()} ${stat.unit}")
+                        )
+                    } ?: listOf("" to StatValue.Text("건강 데이터가 없습니다"))
                 } else {
-                    listOf("" to StatValue.Text("Samsung Health에서\n심박수를 측정해주세요"))
+                    val heartRateRecords = uiState.healthData?.heartRateRecords ?: emptyList()
+                    if (heartRateRecords.isNotEmpty()) {
+                        val values = heartRateRecords.map { it.beatsPerMinute }
+                        listOf(
+                            "평균" to StatValue.Text("${values.average().toLong()} BPM"),
+                            "최대" to StatValue.Text("${values.maxOrNull() ?: 0} BPM"),
+                            "최소" to StatValue.Text("${values.minOrNull() ?: 0} BPM")
+                        )
+                    } else {
+                        listOf("" to StatValue.Text("Samsung Health에서\n심박수를 측정해주세요"))
+                    }
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -567,16 +582,26 @@ private fun HealthInfoTab(
 
             // 혈중산소포화도
             item {
-                val oxygenRecords = healthData?.oxygenSaturationRecords ?: emptyList()
-                val stats = if (oxygenRecords.isNotEmpty()) {
-                    val values = oxygenRecords.map { it.percentage }
-                    listOf(
-                        "평균" to StatValue.Text("${String.format("%.1f", values.average())}%"),
-                        "최대" to StatValue.Text("${String.format("%.1f", values.maxOrNull() ?: 0.0)}%"),
-                        "최소" to StatValue.Text("${String.format("%.1f", values.minOrNull() ?: 0.0)}%")
-                    )
+                val stats = if (isGuardian) {
+                    uiState.serverHealthData?.oxygenSaturation?.let { stat ->
+                        listOf(
+                            "평균" to StatValue.Text("${String.format("%.1f", stat.average)}${stat.unit}"),
+                            "최대" to StatValue.Text("${String.format("%.1f", stat.max)}${stat.unit}"),
+                            "최소" to StatValue.Text("${String.format("%.1f", stat.min)}${stat.unit}")
+                        )
+                    } ?: listOf("" to StatValue.Text("건강 데이터가 없습니다"))
                 } else {
-                    listOf("" to StatValue.Text("Samsung Health에서\n혈중산소포화도를 측정해주세요"))
+                    val oxygenRecords = uiState.healthData?.oxygenSaturationRecords ?: emptyList()
+                    if (oxygenRecords.isNotEmpty()) {
+                        val values = oxygenRecords.map { it.percentage }
+                        listOf(
+                            "평균" to StatValue.Text("${String.format("%.1f", values.average())}%"),
+                            "최대" to StatValue.Text("${String.format("%.1f", values.maxOrNull() ?: 0.0)}%"),
+                            "최소" to StatValue.Text("${String.format("%.1f", values.minOrNull() ?: 0.0)}%")
+                        )
+                    } else {
+                        listOf("" to StatValue.Text("Samsung Health에서\n혈중산소포화도를 측정해주세요"))
+                    }
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -588,16 +613,26 @@ private fun HealthInfoTab(
 
             // 수면
             item {
-                val sleepRecords = healthData?.sleepRecords ?: emptyList()
-                val stats = if (sleepRecords.isNotEmpty()) {
-                    val values = sleepRecords.map { it.durationHours }
-                    listOf(
-                        "평균" to StatValue.Text("${String.format("%.1f", values.average())}시간"),
-                        "최대" to StatValue.Text("${String.format("%.1f", values.maxOrNull() ?: 0.0)}시간"),
-                        "최소" to StatValue.Text("${String.format("%.1f", values.minOrNull() ?: 0.0)}시간")
-                    )
+                val stats = if (isGuardian) {
+                    uiState.serverHealthData?.sleep?.let { stat ->
+                        listOf(
+                            "평균" to StatValue.Text("${String.format("%.1f", stat.average)}${stat.unit}"),
+                            "최대" to StatValue.Text("${String.format("%.1f", stat.max)}${stat.unit}"),
+                            "최소" to StatValue.Text("${String.format("%.1f", stat.min)}${stat.unit}")
+                        )
+                    } ?: listOf("" to StatValue.Text("건강 데이터가 없습니다"))
                 } else {
-                    listOf("" to StatValue.Text("Samsung Health에서\n수면 기록을 측정해주세요"))
+                    val sleepRecords = uiState.healthData?.sleepRecords ?: emptyList()
+                    if (sleepRecords.isNotEmpty()) {
+                        val values = sleepRecords.map { it.durationHours }
+                        listOf(
+                            "평균" to StatValue.Text("${String.format("%.1f", values.average())}시간"),
+                            "최대" to StatValue.Text("${String.format("%.1f", values.maxOrNull() ?: 0.0)}시간"),
+                            "최소" to StatValue.Text("${String.format("%.1f", values.minOrNull() ?: 0.0)}시간")
+                        )
+                    } else {
+                        listOf("" to StatValue.Text("Samsung Health에서\n수면 기록을 측정해주세요"))
+                    }
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -609,16 +644,26 @@ private fun HealthInfoTab(
 
             // 걸음수
             item {
-                val stepsRecords = healthData?.stepsRecords ?: emptyList()
-                val stats = if (stepsRecords.isNotEmpty()) {
-                    val values = stepsRecords.map { it.count }
-                    listOf(
-                        "평균" to StatValue.Text("${String.format("%,d", values.average().toLong())}"),
-                        "최대" to StatValue.Text("${String.format("%,d", values.maxOrNull() ?: 0)}"),
-                        "최소" to StatValue.Text("${String.format("%,d", values.minOrNull() ?: 0)}")
-                    )
+                val stats = if (isGuardian) {
+                    uiState.serverHealthData?.steps?.let { stat ->
+                        listOf(
+                            "평균" to StatValue.Text("${String.format("%,d", stat.average.toLong())} ${stat.unit}"),
+                            "최대" to StatValue.Text("${String.format("%,d", stat.max.toLong())} ${stat.unit}"),
+                            "최소" to StatValue.Text("${String.format("%,d", stat.min.toLong())} ${stat.unit}")
+                        )
+                    } ?: listOf("" to StatValue.Text("건강 데이터가 없습니다"))
                 } else {
-                    listOf("" to StatValue.Text("Samsung Health에서\n걸음수를 측정해주세요"))
+                    val stepsRecords = uiState.healthData?.stepsRecords ?: emptyList()
+                    if (stepsRecords.isNotEmpty()) {
+                        val values = stepsRecords.map { it.count }
+                        listOf(
+                            "평균" to StatValue.Text("${String.format("%,d", values.average().toLong())}"),
+                            "최대" to StatValue.Text("${String.format("%,d", values.maxOrNull() ?: 0)}"),
+                            "최소" to StatValue.Text("${String.format("%,d", values.minOrNull() ?: 0)}")
+                        )
+                    } else {
+                        listOf("" to StatValue.Text("Samsung Health에서\n걸음수를 측정해주세요"))
+                    }
                 }
                 InfoCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -637,8 +682,15 @@ private fun HealthInfoTab(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (!uiState.healthPermissionGranted) {
-                        // 권한이 없는 경우
+                    if (isGuardian) {
+                        // 보호자: 환자가 데이터를 업로드하지 않았을 때
+                        Text(
+                            text = "환자가 아직 건강 데이터를\n업로드하지 않았습니다.",
+                            color = OnGilColors.Label,
+                            textAlign = TextAlign.Center
+                        )
+                    } else if (!uiState.healthPermissionGranted) {
+                        // 환자: 권한이 없는 경우
                         Text(
                             text = "건강 데이터를 확인하려면\nHealth Connect 권한이 필요합니다.",
                             color = OnGilColors.Label,
@@ -651,10 +703,19 @@ private fun HealthInfoTab(
                                     permissionLauncher.launch(permissions)
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = OnGilColors.Primary)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PatientColors.accent
+                            )
                         ) {
                             Text("권한 요청하기")
                         }
+                    } else {
+                        // 환자: 권한은 있지만 데이터가 없는 경우
+                        Text(
+                            text = "Samsung Health에서\n건강 데이터를 측정해주세요.",
+                            color = OnGilColors.Label,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
             }

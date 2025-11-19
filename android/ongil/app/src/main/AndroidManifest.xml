@@ -111,6 +111,13 @@
             android:turnScreenOn="true"
             android:launchMode="singleTask" />
 
+        <activity
+            android:name=".presentation.ui.sos.SosAlertActivity"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleTask" />
+
         <!-- Health Connect 연동을 위한 Activity Alias -->
         <activity-alias
             android:name="ViewPermissionUsageActivity"

@@ -20,6 +20,7 @@ import kr.co.ongil.data.model.call.TurnCredentialsDto
 import kr.co.ongil.data.model.call.VoipCallDto
 import kr.co.ongil.data.model.websocket.SignalMessage
 import kr.co.ongil.domain.repository.CallRepository
+import kr.co.ongil.domain.repository.SosAlertRepository
 import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 
@@ -28,6 +29,7 @@ class VoipCallViewModel @Inject constructor(
     private val callRepository: CallRepository,
     private val webRtcCallClient: WebRtcCallClient,
     private val voipSignalingService: VoipSignalingService,
+    private val sosRepository: SosAlertRepository,
     private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
     private val pendingIceCandidates = mutableListOf<IceCandidateInfo>()
@@ -45,6 +47,9 @@ class VoipCallViewModel @Inject constructor(
     private var currentCall: VoipCallDto? = null
     private var currentUserId: Long? = null
     private var callTimerJob: Job? = null
+    // 현재 통화 중인 환자 ID 상태
+    private val _currentPatientId = MutableStateFlow<Long?>(null)
+    val currentPatientId = _currentPatientId.asStateFlow()
 
     init {
         // 로그인 사용자 ID 구독
@@ -67,9 +72,50 @@ class VoipCallViewModel @Inject constructor(
     // 📞 발신자 플로우
     // =========================================================
 
+    /**
+     * SOS 알림 전송
+     */
+    fun sendSosAlert(patientId: Int) {
+        viewModelScope.launch {
+            try {
+                Log.d("VoipCallViewModel", "🚨 SOS 알림 전송 시작 - 환자 ID: $patientId")
+                sosRepository.sendSosAlert(patientId, "도움 요청 발신")
+                Log.d("VoipCallViewModel", "✅ SOS 알림 전송 완료")
+            } catch (e: Exception) {
+                Log.e("VoipCallViewModel", "❌ SOS 알림 전송 실패: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * SOS 알림 종료
+     */
+    fun stopSosAlert(patientId: Int) {
+        viewModelScope.launch {
+            try {
+                Log.d("VoipCallViewModel", "🛑 SOS 알림 종료 - 환자 ID: $patientId")
+                sosRepository.stopSosAlert(patientId)
+                Log.d("VoipCallViewModel", "✅ SOS 알림 종료 완료")
+            } catch (e: Exception) {
+                Log.e("VoipCallViewModel", "❌ SOS 알림 종료 실패: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * 5초간 SOS 알림 전송 (자동 종료)
+     */
+    fun sendTemporarySosAlert(patientId: Int, durationMillis: Long = 5000) {
+        viewModelScope.launch {
+            sendSosAlert(patientId)
+            delay(durationMillis)
+            stopSosAlert(patientId)
+        }
+    }
+
     fun startVoipCall(receiverId: Long, userType: String, callType: String = "NORMAL") {
         Log.d(TAG, "=== [CALLER] startVoipCall: to=$receiverId")
-
+        _currentPatientId.value = receiverId
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, message = "연결 준비 중...", error = null) }
 

@@ -16,7 +16,8 @@ class SafetyZoneMonitor(
     private val level2Dwell: Int = DEFAULT_STAGE_2_THRESHOLD_MINUTES,
     private val level3Distance: Int = DEFAULT_STAGE_3_RADIUS,
     private val level3Dwell: Int = DEFAULT_STAGE_3_THRESHOLD_MINUTES,
-    private val onAbnormalDetected: (stage: Int, durationMinutes: Long) -> Unit
+    private val onAbnormalDetected: (stage: Int, durationMinutes: Long) -> Unit,
+    private val onSafeZoneExit: (stage: Int, distance: Double) -> Unit  // ⭐ 새 파라미터
 ) {
     companion object {
         // 기본 안전 범위 반경 (미터)
@@ -75,6 +76,7 @@ class SafetyZoneMonitor(
                 // 처음 범위 밖으로 나감
                 stage1OutsideStartTime = currentTimeMillis
                 stage1Alerted = false
+                onSafeZoneExit(1, distance)
             } else {
                 // 이미 범위 밖 - 연속 체류 시간 계산
                 val durationMillis = currentTimeMillis - stage1OutsideStartTime!!
@@ -101,6 +103,7 @@ class SafetyZoneMonitor(
                 // 처음 범위 밖으로 나감
                 stage2OutsideStartTime = currentTimeMillis
                 stage2Alerted = false
+                onSafeZoneExit(2, distance)
             } else {
                 // 이미 범위 밖 - 연속 체류 시간 계산
                 val durationMillis = currentTimeMillis - stage2OutsideStartTime!!
@@ -127,6 +130,7 @@ class SafetyZoneMonitor(
                 // 처음 범위 밖으로 나감
                 stage3OutsideStartTime = currentTimeMillis
                 stage3Alerted = false
+                onSafeZoneExit(3, distance)
             } else {
                 // 이미 범위 밖 - 연속 체류 시간 계산
                 val durationMillis = currentTimeMillis - stage3OutsideStartTime!!
