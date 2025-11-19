@@ -56,10 +56,11 @@ import kr.co.ongil.presentation.ui.common.selection.SelectPatientModal
 // ---- 헤더 타입 ----
 enum class OngilHeaderType { BackTitleBell, BrandCard }
 
-/** 공통 컨테이너: 아래쪽 1px 가이드라인(디바이더) 옵션 */
+/** 공통 컨테이너: 위/아래쪽 1px 가이드라인(디바이더) 옵션 */
 @Composable
 private fun HeaderContainer(
     containerColor: Color = Color.White,
+    topDivider: Boolean = false,
     bottomDivider: Boolean = true,
     dividerColor: Color = Color(0xFFEAEAEA),
     content: @Composable ColumnScope.() -> Unit
@@ -69,10 +70,13 @@ private fun HeaderContainer(
             .fillMaxWidth()
             .background(containerColor)
     ) {
+//        if (topDivider) {
+//            HorizontalDivider(thickness = 1.dp, color = dividerColor)
+//        }
         content()
-        if (bottomDivider) {
-            HorizontalDivider(thickness = 1.dp, color = dividerColor)
-        }
+//        if (bottomDivider) {
+//            HorizontalDivider(thickness = 1.dp, color = dividerColor)
+//        }
     }
 }
 
@@ -147,16 +151,16 @@ fun OngilBrandHeaderCard(
     val beigeColor = if (userType.uppercase() == "PATIENT") OngilBeigePatient else OngilBeige
 
     Box {
-        HeaderContainer(bottomDivider = bottomDivider) {
+        HeaderContainer(topDivider = true, bottomDivider = bottomDivider) {
             TopAppBar(
                 windowInsets = TopAppBarDefaults.windowInsets,
                 modifier = modifier,
                 navigationIcon = {
                     Image(
-                        painter = painterResource(id = R.drawable.ongillogo),
+                        painter = painterResource(id = R.drawable.logosymbol),
                         contentDescription = "온길 로고",
                         modifier = Modifier
-                            .size(100.dp)
+                            .size(50.dp)
                             .padding(start = 15.dp)
                     )
                 },
@@ -173,7 +177,7 @@ fun OngilBrandHeaderCard(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(28.dp)
                                     .clip(CircleShape)
                                     .background(beigeColor),
                                 contentAlignment = Alignment.Center
@@ -203,7 +207,7 @@ fun OngilBrandHeaderCard(
                                     text = profileName,
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
+                                        fontSize = 13.sp
                                     ),
                                     color = OngilGray,
                                     maxLines = 1,
@@ -211,7 +215,7 @@ fun OngilBrandHeaderCard(
                                 )
                             }
                         }
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(3.dp))
                     }
 
                     IconButton(onClick = onBellClick) {
