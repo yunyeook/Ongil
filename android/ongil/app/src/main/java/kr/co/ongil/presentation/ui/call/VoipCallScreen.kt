@@ -28,7 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun VoipCallScreen(
@@ -44,6 +46,7 @@ fun VoipCallScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val currentPatientId by viewModel.currentPatientId.collectAsState()
 
     // 🎤 마이크 권한 상태
     var hasAudioPermission by remember {
@@ -192,7 +195,16 @@ fun VoipCallScreen(
                     icon = Icons.Default.Sos,
                     label = "도움 요청",
                     onClick = {
-                        // TODO: SOS / 보호자 호출 등 연결
+                        currentPatientId?.let { patientId ->
+                            // SOS 시작
+                            viewModel.sendSosAlert(patientId.toInt())
+
+                            // 5초 후 자동 종료
+                            viewModel.viewModelScope.launch {
+                                delay(5000)
+                                viewModel.stopSosAlert(patientId.toInt())
+                            }
+                        }
                     }
                 )
             }
