@@ -147,10 +147,10 @@ fun HomeScreen(
             }
 
             NavigationProgressBar(
-                startLocation = navigationRoute.startLocationName,
                 endLocation = navigationRoute.endLocationName,
                 time = timeText,
                 progress = navigationProgress,
+                userType = userType,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -320,8 +320,12 @@ private fun KeyIndicatorsSection(
                 )
             } else {
                 IndicatorCard(
-                    title = uiState.mostVisitedLabel,
-                    value = uiState.mostVisitedPlace,
+                    title = "자주 방문한 장소",
+                    value = if (uiState.mostVisitedPlace.length > 5) {
+                        uiState.mostVisitedPlace.take(5)
+                    } else {
+                        uiState.mostVisitedPlace
+                    },
                     modifier = Modifier.weight(1f),
                     backgroundColor = themeColors.accent,
                     highlight = true
@@ -416,18 +420,13 @@ private fun IndicatorCard(
                     }
                 )
             } else {
-                // 3글자 초과 시 3글자까지만 표시하고 ... 추가
-                val displayValue = if (value.length > 6) {
-                    value.take(6) + "..."
-                } else {
-                    value
-                }
                 Text(
-                    text = displayValue,
-                    fontSize = contentFontSize,
+                    text = value,
+                    fontSize = 18.sp,
                     color = valueTextColor,
                     lineHeight = labelSpacing,
                     textAlign = TextAlign.Center,
+                    maxLines = 1,
                     modifier = if (textBackgroundColor != null) {
                         Modifier
                             .background(textBackgroundColor, RoundedCornerShape(8.dp))
@@ -447,7 +446,8 @@ private fun IndicatorCard(
                 letterSpacing = titleLetterSpacing,
                 color = labelTextColor,
                 lineHeight = labelSpacing,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1
             )
         }
     }
@@ -500,6 +500,7 @@ private fun RiskGaugeCard(
             )
             Spacer(Modifier.height(20.dp))
 
+            @Suppress("UnusedBoxWithConstraintsScope")
             // 원형 게이지 (반응형)
             BoxWithConstraints(
                 contentAlignment = Alignment.Center,
@@ -623,6 +624,7 @@ private fun BehaviorRadarCard(
             )
             Spacer(Modifier.height(28.dp))
 
+            @Suppress("UnusedBoxWithConstraintsScope")
             // 레이더 차트 (라벨 포함)
             BoxWithConstraints(
                 modifier = Modifier.fillMaxWidth(),

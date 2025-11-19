@@ -80,7 +80,11 @@ fun NavigationProgressBar(
 
         InfoColumn(
             title = "목적지",
-            value = endLocation,
+            value = if (endLocation.length > 5) {
+                endLocation.take(5)
+            } else {
+                endLocation
+            },
             modifier = Modifier.weight(1f)
         )
 
@@ -91,7 +95,7 @@ fun NavigationProgressBar(
         )
 
         Column(
-            modifier = Modifier.weight(1.5f),
+            modifier = Modifier.weight(2f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -142,6 +146,7 @@ fun NavigationProgressBar(
                         .size(20.dp)
                         .align(iconAlignment)
                 )
+
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -166,27 +171,18 @@ private fun InfoColumn(title: String, value: String, modifier: Modifier = Modifi
     ) {
         Text(
             text = title,
-            fontSize = 10.sp,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
             color = Color.White
         )
         Spacer(modifier = Modifier.height(4.dp))
-        Box(
-            modifier = Modifier.fillMaxWidth(0.9f),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = value,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1,
-                modifier = Modifier.basicMarquee(
-                    animationMode = MarqueeAnimationMode.Immediately,
-                    repeatDelayMillis = 1000,
-                    initialDelayMillis = 2000,
-                    velocity = 30.dp
-                )
-            )
-        }
+        Text(
+            text = value,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            maxLines = 1,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
