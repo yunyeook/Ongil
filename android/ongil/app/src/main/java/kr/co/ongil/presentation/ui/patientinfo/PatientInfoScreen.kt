@@ -651,7 +651,9 @@ private fun HealthInfoTab(
                                     permissionLauncher.launch(permissions)
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = OnGilColors.Primary)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (uiState.userType == "PATIENT") PatientColors.accent else GuardianColors.accent
+                            )
                         ) {
                             Text("권한 요청하기")
                         }
