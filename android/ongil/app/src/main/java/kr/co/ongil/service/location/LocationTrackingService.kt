@@ -240,10 +240,17 @@ class LocationTrackingService : Service() {
                 level3Distance = settings.level3Distance,
                 level3Dwell = settings.level3Dwell,
                 onAbnormalDetected = { stage, durationMinutes ->
-                    // 이상 판정 콜백
+                    // 체류 시간 경과 콜백
                     Log.w(TAG, "⚠️ 이상 상황 감지: ${stage}단계, ${durationMinutes}분 경과")
                     serviceScope.launch {
                         handleAbnormalDetection(stage, durationMinutes)
+                    }
+                },
+                onSafeZoneExit = { stage, distance ->
+                    // ⭐ 범위 이탈 즉시 콜백 (새로 추가)
+                    Log.w(TAG, "🚨 안전범위 이탈 감지: ${stage}단계, 거리 ${String.format("%.1f", distance)}m")
+                    serviceScope.launch {
+                        handleSafeZoneExit(stage, distance)
                     }
                 }
             )
@@ -358,7 +365,7 @@ class LocationTrackingService : Service() {
         override fun onLocationResult(result: LocationResult) {
             result.lastLocation?.let { loc ->
                 // 정확도 20m 초과하는 위치 무시
-                if (loc.accuracy > 20.0f) {
+                if (loc.accuracy > 40.0f) {
                     Log.w(TAG, " 부정확한 위치 수신 (정확도: ${loc.accuracy}m) - 무시")
                     return
                 }
@@ -574,6 +581,68 @@ class LocationTrackingService : Service() {
 
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return earthRadius * c
+    }
+
+    private suspend fun handleSafeZoneExit(stage: Int, distance: Double) {
+        try {
+            val userType = userDataStoreManager.getUserType().first()
+            if (userType != "PATIENT") return
+
+            val patientId = userDataStoreManager.getLoginUserId().first()?.toLongOrNull()
+            if (patientId == null) {
+                Log.w(TAG, "patientId를 가져올 수 없습니다")
+                return
+            }
+
+            val currentLocation = locationBus.lastValue
+            if (currentLocation == null) {
+                Log.w(TAG, "현재 위치를 가져올 수 없습니다")
+                return
+            }
+
+            val homeLatitude = defaultDestinationLatitude ?: return
+            val homeLongitude = defaultDestinationLongitude ?: return
+
+            val settings = currentSafeZoneSettings
+            val (safeZoneLevel, boundaryRadius) = when (stage) {
+                1 -> Pair("FIRST", (settings?.level1Distance ?: SafetyZoneMonitor.DEFAULT_STAGE_1_RADIUS).toDouble())
+                2 -> Pair("SECOND", (settings?.level2Distance ?: SafetyZoneMonitor.DEFAULT_STAGE_2_RADIUS).toDouble())
+                3 -> Pair("THIRD", (settings?.level3Distance ?: SafetyZoneMonitor.DEFAULT_STAGE_3_RADIUS).toDouble())
+                else -> {
+                    Log.e(TAG, "알 수 없는 단계: $stage")
+                    return
+                }
+            }
+
+            // ⭐ 백엔드에 즉시 알림 요청 (체류 시간 0으로 전송)
+            val request = ReportAbnormalRequest(
+                abnormalType = "SAFEZONE_EXIT", // 배회 감지
+                latitude = currentLocation.latitude,
+                longitude = currentLocation.longitude,
+                safeZoneLevel = safeZoneLevel,
+                centerLatitude = homeLatitude,
+                centerLongitude = homeLongitude,
+                distanceFromCenter = distance,
+                boundaryRadius = boundaryRadius,
+                elapsedTime = 0, // ⭐ 이탈 즉시이므로 0초
+                thresholdTime = 0 // ⭐ 즉시 알림이므로 0초
+            )
+
+            Log.w(TAG, """
+            🚨 안전범위 이탈 즉시 알림 - 백엔드로 전송
+            - 환자 ID: $patientId
+            - 단계: $safeZoneLevel ($boundaryRadius m)
+            - 현재 위치: ${currentLocation.latitude}, ${currentLocation.longitude}
+            - 중심으로부터 거리: ${String.format("%.1f", distance)}m
+        """.trimIndent())
+
+            mapApi.reportAbnormal(patientId, request)
+
+            Log.d(TAG, "✅ 안전범위 이탈 알림 전송 완료")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 안전범위 이탈 알림 실패", e)
+        }
     }
 
     private suspend fun handleAbnormalDetection(stage: Int, durationMinutes: Long) {
