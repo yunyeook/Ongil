@@ -36,7 +36,7 @@ class LocationSseDataSource @Inject constructor(
     }
 
     private val sseClient = OkHttpClient.Builder()
-        .readTimeout(60, TimeUnit.SECONDS) // 60초 타임아웃 (서버 heartbeat 간격보다 길게)
+        .readTimeout(0, TimeUnit.SECONDS) // 60초 타임아웃 (서버 heartbeat 간격보다 길게)
         .connectTimeout(30, TimeUnit.SECONDS)
         .pingInterval(20, TimeUnit.SECONDS)  // 20초마다 ping (연결 유지)
         .retryOnConnectionFailure(true)  // 연결 실패 시 재시도
@@ -117,7 +117,7 @@ class LocationSseDataSource @Inject constructor(
                                 "gps-update" -> {
                                     try {
                                         val gpsUpdate = json.decodeFromString<GpsUpdateEvent>(data)
-//                                        Log.d(TAG, "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}")
+                                        Log.d(TAG, "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}")
                                         trySend(SseEvent.GpsUpdate(gpsUpdate))
                                     } catch (e: Exception) {
                                         Log.e(TAG, "GPS 데이터 파싱 실패: $data", e)

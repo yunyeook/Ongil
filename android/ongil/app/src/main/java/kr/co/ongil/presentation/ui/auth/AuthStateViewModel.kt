@@ -159,11 +159,39 @@ class AuthStateViewModel @Inject constructor(
     private var retryCount = 0
     private val maxRetryDelay = 30000L // 최대 30초
 
+    private suspend fun loadInitialPatientLocations() {
+        try {
+            val relationships = favoriteRepository.getMyRelationships().getOrNull() ?: return
+
+            android.util.Log.d("AuthStateViewModel", "📍 초기 위치 로드 시작: ${relationships.size}명")
+
+            relationships.forEach { patient ->
+                try {
+                    // ✅ 같은 Repository 사용
+                    val location = locationSseRepository.getPatientLocation(patient.id.toLong())
+                        .getOrNull()
+
+                    if (location != null) {
+                        _patientLocations.update { currentMap ->
+                            currentMap + (patient.id.toLong() to location)
+                        }
+                        android.util.Log.d("AuthStateViewModel", "✅ 초기 위치: patientId=${patient.id}")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("AuthStateViewModel", "위치 로드 실패: ${patient.id}", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AuthStateViewModel", "전체 로드 실패", e)
+        }
+    }
+
     private fun startSseConnection() {
         // 기존 연결이 있으면 취소
         sseConnectionJob?.cancel()
 
         sseConnectionJob = viewModelScope.launch {
+            loadInitialPatientLocations()
             while (true) {  // 무한 재연결 루프
                 try {
                     // android.util.Log.d("AuthStateViewModel", "SSE 연결 시작 중... (재시도 ${retryCount}회)")
@@ -178,10 +206,10 @@ class AuthStateViewModel @Inject constructor(
 
                             is SseEvent.GpsUpdate -> {
                                 val gpsUpdate = event.data
-//                                android.util.Log.d(
-//                                    "AuthStateViewModel",
-//                                    "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}"
-//                                )
+                                android.util.Log.d(
+                                   "AuthStateViewModel",
+                                    "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}"
+                                )
                                 _patientLocations.update { currentMap ->
                                     val updated =
                                         currentMap + (gpsUpdate.patientId to gpsUpdate.coordinate)
