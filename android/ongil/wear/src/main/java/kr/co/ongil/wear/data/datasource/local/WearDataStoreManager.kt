@@ -55,6 +55,11 @@ interface WearDataStoreManager {
     fun getSelectedPatientId(): Flow<String?>
 
     /**
+     * 선택된 환자 ID 저장
+     */
+    suspend fun saveSelectedPatientId(patientId: String)
+
+    /**
      * 로그인 정보 전체 삭제 (로그아웃)
      */
     suspend fun clearLoginData()

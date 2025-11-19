@@ -156,6 +156,15 @@ class WearDataStoreManagerImpl @Inject constructor(
     }
 
     /**
+     * 선택된 환자 ID 저장
+     */
+    override suspend fun saveSelectedPatientId(patientId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[DataStoreKeys.SELECTED_PATIENT_ID_KEY] = patientId
+        }
+    }
+
+    /**
      * 로그인 정보 전체 삭제 (로그아웃)
      */
     override suspend fun clearLoginData() {

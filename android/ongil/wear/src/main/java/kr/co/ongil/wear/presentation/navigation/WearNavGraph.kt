@@ -14,6 +14,8 @@ import kr.co.ongil.wear.presentation.ui.call.CallScreen
 import kr.co.ongil.wear.presentation.ui.call.IncomingCallScreen
 import kr.co.ongil.wear.presentation.ui.navigation.NavigationScreen
 import kr.co.ongil.wear.presentation.ui.help.HelpRequestScreen
+import kr.co.ongil.wear.presentation.ui.dashboard.DashboardScreen
+import kr.co.ongil.wear.presentation.ui.patient.PatientSelectionScreen
 
 /**
  * Wear OS 네비게이션 그래프
@@ -148,10 +150,16 @@ fun WearNavGraph(
             )
         }
 
-        // 환자 선택 화면
+        // 환자 선택 화면 (보호자용)
         composable(WearRoute.PatientSelection.route) {
-            // TODO: PatientSelectionScreen 구현
-            MainScreen() // 임시
+            PatientSelectionScreen(
+                onPatientSelected = {
+                    navController.popBackStack()
+                },
+                onBackPressed = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         // 설정 화면
@@ -160,18 +168,4 @@ fun WearNavGraph(
             MainScreen() // 임시
         }
     }
-}
-
-/**
- * 대시보드 화면 (임시 구현)
- * TODO: 별도 파일로 분리
- */
-@Composable
-fun DashboardScreen(
-    onNavigateToMap: () -> Unit,
-    onNavigateToCall: () -> Unit,
-    onNavigateToHelp: () -> Unit
-) {
-    // TODO: 실제 대시보드 UI 구현
-    MainScreen() // 임시로 MainScreen 사용
 }
