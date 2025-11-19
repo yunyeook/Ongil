@@ -27,6 +27,7 @@ import kr.co.ongil.data.datasource.remote.api.SosAlertApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.datasource.remote.interceptor.AuthInterceptor
 import kr.co.ongil.BuildConfig
+import kr.co.ongil.data.datasource.remote.api.LocationApi
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -189,6 +190,12 @@ object NetworkModule {
     @Singleton
     fun provideSosAlertApi(retrofit: Retrofit): SosAlertApi =
         retrofit.create(SosAlertApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideLocationApi(retrofit: Retrofit): LocationApi {
+        return retrofit.create(LocationApi::class.java)
+    }
 
     @Provides
     @Singleton
