@@ -15,7 +15,24 @@ data class PatientInfoUiState(
     val healthData: LocalHealthData? = null,
     val healthPermissionGranted: Boolean = false,
     val isLoadingHealthData: Boolean = false,
-    val healthSyncMessage: String? = null
+    val healthSyncMessage: String? = null,
+    // 서버에서 가져온 건강 데이터 (보호자용)
+    val serverHealthData: ServerHealthData? = null
+)
+
+// 서버에서 가져온 건강 데이터
+data class ServerHealthData(
+    val heartRate: HealthStat? = null,
+    val oxygenSaturation: HealthStat? = null,
+    val sleep: HealthStat? = null,
+    val steps: HealthStat? = null
+)
+
+data class HealthStat(
+    val average: Double,
+    val max: Double,
+    val min: Double,
+    val unit: String
 )
 
 // 활동 기록

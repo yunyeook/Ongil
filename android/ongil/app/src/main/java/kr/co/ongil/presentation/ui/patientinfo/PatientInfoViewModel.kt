@@ -55,7 +55,6 @@ class PatientInfoViewModel @Inject constructor(
 
     init {
         observePatientIdChanges()
-        checkHealthPermissions()
         observeUserTypeAndPatientId()
     }
 
@@ -342,42 +341,109 @@ class PatientInfoViewModel @Inject constructor(
                     it.measuredAt !in serverMeasuredTimes
                 }
 
-                val newData = kr.co.ongil.domain.model.HealthData(
-                    heartRateRecords = newHeartRateRecords,
-                    oxygenSaturationRecords = newOxygenRecords,
-                    sleepRecords = newSleepRecords,
-                    stepsRecords = newStepsRecords
-                )
-
                 val totalNewRecords = newHeartRateRecords.size + newOxygenRecords.size +
                         newSleepRecords.size + newStepsRecords.size
 
                 Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 새로운 데이터: 심박수=${newHeartRateRecords.size}, 산소=${newOxygenRecords.size}, 수면=${newSleepRecords.size}, 걸음수=${newStepsRecords.size}")
 
-                // 5. 새로운 데이터가 있으면 업로드
+                // 5. 새로운 데이터가 있으면 배치로 업로드 (500개씩)
                 if (totalNewRecords > 0) {
-                    uploadHealthDataUseCase(patientId, newData)
-                        .onSuccess { message ->
-                            Log.d(TAG, "HealthData 서버 업로드 성공: $message (${totalNewRecords}개 레코드)")
+                    val batchSize = 500
+                    var uploadedCount = 0
+
+                    // 타입별로 배치 분할 및 업로드
+                    val heartRateBatches = newHeartRateRecords.chunked(batchSize)
+                    val oxygenBatches = newOxygenRecords.chunked(batchSize)
+                    val sleepBatches = newSleepRecords.chunked(batchSize)
+                    val stepsBatches = newStepsRecords.chunked(batchSize)
+
+                    val maxBatches = maxOf(
+                        heartRateBatches.size,
+                        oxygenBatches.size,
+                        sleepBatches.size,
+                        stepsBatches.size
+                    )
+
+                    for (i in 0 until maxBatches) {
+                        val batchData = kr.co.ongil.domain.model.HealthData(
+                            heartRateRecords = heartRateBatches.getOrNull(i) ?: emptyList(),
+                            oxygenSaturationRecords = oxygenBatches.getOrNull(i) ?: emptyList(),
+                            sleepRecords = sleepBatches.getOrNull(i) ?: emptyList(),
+                            stepsRecords = stepsBatches.getOrNull(i) ?: emptyList()
+                        )
+
+                        val batchCount = batchData.heartRateRecords.size +
+                                batchData.oxygenSaturationRecords.size +
+                                batchData.sleepRecords.size +
+                                batchData.stepsRecords.size
+
+                        if (batchCount > 0) {
+                            uploadHealthDataUseCase(patientId, batchData)
+                                .onSuccess { message ->
+                                    uploadedCount += batchCount
+                                    Log.d(TAG, "HealthData 배치 ${i + 1}/${maxBatches} 업로드 성공: ${batchCount}개 (총 ${uploadedCount}/${totalNewRecords})")
+                                }
+                                .onFailure { e ->
+                                    Log.e(TAG, "HealthData 배치 ${i + 1} 업로드 실패", e)
+                                }
                         }
-                        .onFailure { e ->
-                            Log.e(TAG, "HealthData 서버 업로드 실패", e)
-                        }
+                    }
+
+                    Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 전체 업로드 완료: ${uploadedCount}개 레코드")
                 } else {
                     Log.d(TAG, "syncHealthDataWithDuplicateCheck() - 업로드할 새로운 데이터가 없습니다")
                 }
             }.onFailure { e ->
-                Log.w(TAG, "syncHealthDataWithDuplicateCheck() - 서버 데이터 조회 실패, 전체 데이터 업로드 시도", e)
+                Log.w(TAG, "syncHealthDataWithDuplicateCheck() - 서버 데이터 조회 실패, 배치 업로드 시도", e)
 
-                // 서버 조회 실패 시 전체 데이터 업로드 (중복 가능성 있음)
+                // 서버 조회 실패 시 전체 데이터를 배치로 업로드 (중복 가능성 있음)
                 val domainData = localHealthData.toDomain()
-                uploadHealthDataUseCase(patientId, domainData)
-                    .onSuccess { message ->
-                        Log.d(TAG, "HealthData 서버 업로드 성공 (전체): $message")
+                val batchSize = 500
+
+                val heartRateBatches = domainData.heartRateRecords.chunked(batchSize)
+                val oxygenBatches = domainData.oxygenSaturationRecords.chunked(batchSize)
+                val sleepBatches = domainData.sleepRecords.chunked(batchSize)
+                val stepsBatches = domainData.stepsRecords.chunked(batchSize)
+
+                val maxBatches = maxOf(
+                    heartRateBatches.size,
+                    oxygenBatches.size,
+                    sleepBatches.size,
+                    stepsBatches.size
+                )
+
+                var uploadedCount = 0
+                val totalRecords = domainData.heartRateRecords.size +
+                        domainData.oxygenSaturationRecords.size +
+                        domainData.sleepRecords.size +
+                        domainData.stepsRecords.size
+
+                for (i in 0 until maxBatches) {
+                    val batchData = kr.co.ongil.domain.model.HealthData(
+                        heartRateRecords = heartRateBatches.getOrNull(i) ?: emptyList(),
+                        oxygenSaturationRecords = oxygenBatches.getOrNull(i) ?: emptyList(),
+                        sleepRecords = sleepBatches.getOrNull(i) ?: emptyList(),
+                        stepsRecords = stepsBatches.getOrNull(i) ?: emptyList()
+                    )
+
+                    val batchCount = batchData.heartRateRecords.size +
+                            batchData.oxygenSaturationRecords.size +
+                            batchData.sleepRecords.size +
+                            batchData.stepsRecords.size
+
+                    if (batchCount > 0) {
+                        uploadHealthDataUseCase(patientId, batchData)
+                            .onSuccess { message ->
+                                uploadedCount += batchCount
+                                Log.d(TAG, "HealthData 배치 ${i + 1}/${maxBatches} 업로드 성공: ${batchCount}개 (총 ${uploadedCount}/${totalRecords})")
+                            }
+                            .onFailure { uploadError ->
+                                Log.e(TAG, "HealthData 배치 ${i + 1} 업로드 실패", uploadError)
+                            }
                     }
-                    .onFailure { uploadError ->
-                        Log.e(TAG, "HealthData 서버 업로드 실패", uploadError)
-                    }
+                }
+
+                Log.d(TAG, "HealthData 전체 배치 업로드 완료: ${uploadedCount}개 레코드")
             }
         } catch (e: Exception) {
             Log.e(TAG, "syncHealthDataWithDuplicateCheck() - 예외 발생", e)
@@ -395,15 +461,20 @@ class PatientInfoViewModel @Inject constructor(
 
                     // userType에 따라 적절한 환자 ID로 인사이트 로드
                     if (userType == "PATIENT") {
+                        // 환자: Health Connect 권한 체크 및 로컬 데이터 로드
+                        checkHealthPermissions()
+
                         userDataStoreManager.getLoginUserId().firstOrNull()?.let { patientIdStr ->
                             if (patientIdStr.isNotEmpty()) {
                                 loadInsightData(patientIdStr)
                             }
                         }
                     } else {
+                        // 보호자: 서버에서 건강 데이터 로드
                         userDataStoreManager.getSelectedPatientId().firstOrNull()?.let { patientIdStr ->
                             if (patientIdStr.isNotEmpty()) {
                                 loadInsightData(patientIdStr)
+                                loadHealthDataFromServer()
                             }
                         }
                     }
@@ -620,6 +691,104 @@ class PatientInfoViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "deleteHealthData() - 예외 발생", e)
             }
+        }
+    }
+
+    /**
+     * 서버에서 건강 데이터 로드 (보호자용)
+     * 최근 30일 데이터를 가져와서 평균/최대/최소 계산
+     */
+    private fun loadHealthDataFromServer() {
+        viewModelScope.launch {
+            val pid = currentPatientId
+            if (pid == null) {
+                Log.w(TAG, "loadHealthDataFromServer() - 환자 ID가 없습니다")
+                return@launch
+            }
+
+            try {
+                _uiState.value = _uiState.value.copy(isLoadingHealthData = true)
+                Log.d(TAG, "loadHealthDataFromServer() - 서버에서 건강 데이터 조회 시작 (patientId: $pid)")
+
+                // 최근 30일 데이터를 타입별로 가져오기
+                val today = java.time.LocalDate.now()
+                val from = today.minusDays(30).format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"))
+                val to = today.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"))
+
+                // 각 타입별로 요약 데이터 조회
+                val heartRateStat = getHealthStatFromServer(pid, HealthDataType.HEART_RATE, from, to)
+                val oxygenStat = getHealthStatFromServer(pid, HealthDataType.OXYGEN_SATURATION, from, to)
+                val sleepStat = getHealthStatFromServer(pid, HealthDataType.SLEEP, from, to)
+                val stepsStat = getHealthStatFromServer(pid, HealthDataType.STEP_COUNT, from, to)
+
+                val serverHealthData = ServerHealthData(
+                    heartRate = heartRateStat,
+                    oxygenSaturation = oxygenStat,
+                    sleep = sleepStat,
+                    steps = stepsStat
+                )
+
+                _uiState.value = _uiState.value.copy(
+                    serverHealthData = serverHealthData,
+                    isLoadingHealthData = false
+                )
+
+                Log.d(TAG, "loadHealthDataFromServer() - 서버 건강 데이터 로드 완료")
+            } catch (e: Exception) {
+                Log.e(TAG, "loadHealthDataFromServer() - 예외 발생", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingHealthData = false,
+                    error = "건강 데이터를 불러오는데 실패했습니다: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * 특정 타입의 건강 데이터 통계를 서버에서 가져오기
+     */
+    private suspend fun getHealthStatFromServer(
+        patientId: Long,
+        type: HealthDataType,
+        from: String,
+        to: String
+    ): HealthStat? {
+        return try {
+            val result = getHealthDataSummaryUseCase(
+                patientId = patientId,
+                type = type,
+                from = from,
+                to = to
+            )
+
+            result.getOrNull()?.let { response ->
+                val summaries = response.data.summary
+                if (summaries.isEmpty()) {
+                    Log.d(TAG, "getHealthStatFromServer() - ${type.name} 데이터 없음")
+                    return null
+                }
+
+                // 전체 기간의 평균/최대/최소 계산
+                val allAverages = summaries.map { it.average }
+                val allMaxes = summaries.map { it.max }
+                val allMins = summaries.map { it.min }
+
+                val overallAverage = allAverages.average()
+                val overallMax = allMaxes.maxOrNull() ?: 0.0
+                val overallMin = allMins.minOrNull() ?: 0.0
+
+                Log.d(TAG, "getHealthStatFromServer() - ${type.name}: avg=$overallAverage, max=$overallMax, min=$overallMin")
+
+                HealthStat(
+                    average = overallAverage,
+                    max = overallMax,
+                    min = overallMin,
+                    unit = response.data.unit ?: ""
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getHealthStatFromServer() - ${type.name} 조회 실패", e)
+            null
         }
     }
 }
