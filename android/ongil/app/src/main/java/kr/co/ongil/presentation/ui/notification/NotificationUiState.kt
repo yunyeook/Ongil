@@ -50,7 +50,9 @@ data class NotificationUiState(
     val notifications: List<NotificationUi> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val hasUnread: Boolean = false
+    val hasUnread: Boolean = false,
+    val deletingIds: Set<Long> = emptySet(),
+    val requiresReauth: Boolean = false
 )
 
 /**

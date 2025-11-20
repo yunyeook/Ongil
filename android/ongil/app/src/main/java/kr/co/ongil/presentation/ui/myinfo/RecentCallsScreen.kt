@@ -19,12 +19,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
 import kr.co.ongil.presentation.uistate.RecentCallsEvent
 import kr.co.ongil.presentation.viewmodel.RecentCallsViewModel
-
-private val RecentAccent = Color(0xFF8CA898)
 
 /**
  * 최근 통화 목록 화면 (ViewModel 기반)
@@ -34,7 +33,8 @@ fun RecentCallsScreen(
     modifier: Modifier = Modifier,
     viewModel: RecentCallsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToCallDetail: (Long) -> Unit = {}
+    onNavigateToCallDetail: (Long) -> Unit = {},
+    onNavigateToVoipCall: (targetName: String, targetPhone: String, receiverId: Long) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -45,6 +45,7 @@ fun RecentCallsScreen(
         error = uiState.error,
         onEvent = viewModel::onEvent,
         onNavigateToCallDetail = onNavigateToCallDetail,
+        onNavigateToVoipCall = onNavigateToVoipCall,
         modifier = modifier
     )
 }
@@ -60,6 +61,7 @@ private fun RecentCallsContent(
     error: String?,
     onEvent: (RecentCallsEvent) -> Unit,
     onNavigateToCallDetail: (Long) -> Unit,
+    onNavigateToVoipCall: (targetName: String, targetPhone: String, receiverId: Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -91,7 +93,7 @@ private fun RecentCallsContent(
                         .padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = RecentAccent)
+                    CircularProgressIndicator(color = ongilColors.accent)
                 }
             }
 
@@ -116,7 +118,8 @@ private fun RecentCallsContent(
                 CallList(
                     calls = calls,
                     onEvent = onEvent,
-                    onNavigateToCallDetail = onNavigateToCallDetail
+                    onNavigateToCallDetail = onNavigateToCallDetail,
+                    onNavigateToVoipCall = onNavigateToVoipCall
                 )
             }
         }
@@ -152,7 +155,7 @@ private fun SearchBar(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color(0xFFE6EBE9),
             unfocusedBorderColor = Color(0xFFF1F3F2),
-            cursorColor = RecentAccent,
+            cursorColor = ongilColors.accent,
             focusedContainerColor = Color.White,
             unfocusedContainerColor = Color.White
         )
@@ -167,6 +170,7 @@ private fun CallList(
     calls: List<RecentCallUi>,
     onEvent: (RecentCallsEvent) -> Unit,
     onNavigateToCallDetail: (Long) -> Unit,
+    onNavigateToVoipCall: (targetName: String, targetPhone: String, receiverId: Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -180,6 +184,9 @@ private fun CallList(
                 onInfoClick = {
                     onEvent(RecentCallsEvent.OnInfoClick(call))
                     onNavigateToCallDetail(call.id)
+                },
+                onCallClick = {
+                    onNavigateToVoipCall(call.nameOrNumber, call.receiverPhone, call.receiverId)
                 }
             )
         }
@@ -194,11 +201,11 @@ private fun CallList(
 private fun PreviewRecentCallsScreen() {
     MaterialTheme(colorScheme = lightColorScheme()) {
         val sampleCalls = listOf(
-            RecentCallUi(1, "이지현", CallType.VOIP, "오늘 오후 3:24 · 통화시간 5분 12초"),
-            RecentCallUi(2, "박민수", CallType.NORMAL, "오늘 오후 1:02 · 통화시간 1분 03초"),
-            RecentCallUi(3, "김수진", CallType.EMERGENCY, "오늘 오후 12:10 · 통화시간 20초"),
-            RecentCallUi(4, "02-1234-5678", CallType.NORMAL, "어제 오후 9:50 · 통화시간 2분 11초"),
-            RecentCallUi(5, "이지현", CallType.VOIP, "어제 오후 8:30 · 통화시간 30초")
+            RecentCallUi(1, "이지현", CallType.VOIP, "오늘 오후 3:24 · 통화시간 5분 12초", 2, "010-1234-5678"),
+            RecentCallUi(2, "박민수", CallType.NORMAL, "오늘 오후 1:02 · 통화시간 1분 03초", 3, "010-2345-6789"),
+            RecentCallUi(3, "김수진", CallType.EMERGENCY, "오늘 오후 12:10 · 통화시간 20초", 4, "010-3456-7890"),
+            RecentCallUi(4, "최영희", CallType.NORMAL, "어제 오후 9:50 · 통화시간 2분 11초", 5, "010-4567-8901"),
+            RecentCallUi(5, "이지현", CallType.VOIP, "어제 오후 8:30 · 통화시간 30초", 2, "010-1234-5678")
         )
 
         RecentCallsContent(
@@ -207,7 +214,8 @@ private fun PreviewRecentCallsScreen() {
             isLoading = false,
             error = null,
             onEvent = {},
-            onNavigateToCallDetail = {}
+            onNavigateToCallDetail = {},
+            onNavigateToVoipCall = { _, _, _ -> }
         )
     }
 }

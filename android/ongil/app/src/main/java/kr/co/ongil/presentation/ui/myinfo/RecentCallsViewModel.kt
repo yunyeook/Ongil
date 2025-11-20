@@ -6,8 +6,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.mapper.toRecentCallUi
 import kr.co.ongil.domain.repository.CallRepository
 import kr.co.ongil.presentation.uistate.RecentCallUi
@@ -20,7 +22,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class RecentCallsViewModel @Inject constructor(
-    private val callRepository: CallRepository
+    private val callRepository: CallRepository,
+    private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecentCallsUiState())
@@ -78,8 +81,9 @@ class RecentCallsViewModel @Inject constructor(
                 val result = callRepository.getCallLogs()
 
                 result.onSuccess { callLogs ->
-                    // TODO: 현재 로그인된 사용자 ID 가져오기 (UserRepository 또는 TokenManager에서)
-                    val currentUserId = 1L
+                    // 현재 로그인된 사용자 ID 가져오기
+                    val currentUserIdStr = userDataStoreManager.getLoginUserId().firstOrNull()
+                    val currentUserId = currentUserIdStr?.toLongOrNull() ?: 0L
 
                     // CallLogDto → RecentCallUi 변환
                     val calls = callLogs.map { it.toRecentCallUi(currentUserId) }

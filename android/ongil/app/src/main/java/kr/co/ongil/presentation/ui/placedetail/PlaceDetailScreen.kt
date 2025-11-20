@@ -34,13 +34,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kr.co.ongil.presentation.ui.common.GreenButton
 import kr.co.ongil.presentation.ui.common.InputBox
+import kr.co.ongil.presentation.theme.OngilThemeProvider
+import kr.co.ongil.presentation.theme.ongilColors
 
 
 
 @Composable
 fun PlaceDetailScreen(
     viewModel: PlaceDetailViewModel,
-    onBackClick: () -> Unit
+    userType: String,
+    modifier: Modifier = Modifier,
+    onBackClick: () -> Unit,
+    onSavedSuccess: () -> Unit,
+    onDeletedSuccess: () -> Unit
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
 
@@ -49,10 +55,21 @@ fun PlaceDetailScreen(
         placeName = uiState.placeName,
         address = uiState.address,
         isDefault = uiState.isDefault,
+        initialIsDefault = uiState.initialIsDefault,
+        userType = userType,
         onBackClick = onBackClick,
         onSetDefaultClick = { viewModel.setAsDefault() },
-        onSaveClick = { name, addr -> viewModel.updatePlaceInfo(name, addr) },
-        onDeleteClick = { viewModel.deletePlace { onBackClick() } },
+        onSaveClick = { name, addr, isDefault ->
+            viewModel.updatePlaceInfo(name, addr, isDefault) {
+                onSavedSuccess()
+            }
+        },
+        onDeleteClick = {
+            viewModel.deletePlace {
+                onDeletedSuccess()
+            }
+        },
+        modifier = modifier,
         isLoading = uiState.isLoading,
         error = uiState.error,
         successMessage = uiState.successMessage
@@ -65,9 +82,11 @@ fun PlaceDetailScreen(
     placeName: String,
     address: String,
     isDefault: Boolean,
+    initialIsDefault: Boolean?,
+    userType: String,
     onBackClick: () -> Unit,
     onSetDefaultClick: () -> Unit,
-    onSaveClick: (String, String) -> Unit,
+    onSaveClick: (String, String, Boolean?) -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -77,8 +96,17 @@ fun PlaceDetailScreen(
     var editedPlaceName by remember { mutableStateOf(placeName) }
     var editedAddress by remember { mutableStateOf(address) }
 
-    val hasChanges = remember(placeName, address, editedPlaceName, editedAddress) {
-        editedPlaceName.trim() != placeName || editedAddress.trim() != address
+    // API에서 데이터를 새로 받으면 편집 필드도 업데이트
+    LaunchedEffect(placeName, address) {
+        editedPlaceName = placeName
+        editedAddress = address
+    }
+
+    val hasChanges = remember(placeName, address, isDefault, editedPlaceName, editedAddress, initialIsDefault) {
+        val nameChanged = editedPlaceName.trim() != placeName
+        val addressChanged = editedAddress.trim() != address
+        val defaultChanged = initialIsDefault?.let { it != isDefault } ?: false
+        nameChanged || addressChanged || defaultChanged
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -89,16 +117,18 @@ fun PlaceDetailScreen(
         successMessage?.let { scope.launch { snackbarHostState.showSnackbar(it) } }
     }
 
+    val colors = ongilColors
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
             Surface(
-                modifier = modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 color = Color(0xFFF9FAFB) // 배경 연한 그레이 톤 (즐겨찾기 화면과 동일)
             ) {
                 Column(
@@ -134,14 +164,12 @@ fun PlaceDetailScreen(
 
             // ===== 버튼 영역 =====
             GreenButton(
-                text = "기본 목적지로 설정",
-                onClick = {
-                    if (!isDefault) onSetDefaultClick()
-                },
+                text = if (isDefault) "기본 목적지 설정됨" else "기본 목적지로 설정",
+                onClick = onSetDefaultClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                containerColor = if (isDefault) Color(0xFF87A293) else Color(0xFFD1D5DB)
+                containerColor = if (isDefault) colors.accent else Color(0xFFD1D5DB)
             )
 
             GreenButton(
@@ -150,18 +178,24 @@ fun PlaceDetailScreen(
                     val name = editedPlaceName.trim()
                     val addr = editedAddress.trim()
                     if (name.isNotEmpty() && hasChanges) {
-                        onSaveClick(name, addr)
+                        // isDefault가 변경되었는지 확인
+                        val isDefaultChanged = initialIsDefault?.let { it != isDefault } ?: false
+                        // 변경되었고 true로 변경된 경우에만 true 전달, 아니면 null
+                        val isDefaultToSend = if (isDefaultChanged && isDefault) true else null
+                        android.util.Log.d("PlaceDetailScreen", "저장 버튼 클릭 - name=$name, addr=$addr, isDefault=$isDefault, initialIsDefault=$initialIsDefault, isDefaultChanged=$isDefaultChanged, isDefaultToSend=$isDefaultToSend")
+                        onSaveClick(name, addr, isDefaultToSend)
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                containerColor = if (hasChanges) Color(0xFF87A293) else Color(0xFFD1D5DB)
+                containerColor = if (hasChanges) colors.accent else Color(0xFFD1D5DB)
             )
 
             GreenButton(
                 text = "삭제하기",
                 onClick = onDeleteClick,
+                containerColor = colors.accent,
                 modifier = Modifier
                     .fillMaxWidth()
             )
@@ -196,9 +230,11 @@ private fun PlaceDetailScreenPreview() {
         placeName = "뭐라고할까요",
         address = "주소가어디게",
         isDefault = false,
+        initialIsDefault = false,
+        userType = "GUARDIAN",
         onBackClick = {},
         onSetDefaultClick = {},
-        onSaveClick = { _, _ -> },
+        onSaveClick = { _: String, _: String, _: Boolean? -> },
         onDeleteClick = {}
     )
 }

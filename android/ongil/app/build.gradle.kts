@@ -19,7 +19,7 @@ val localProperties = Properties().apply {
 
 android {
     namespace = "kr.co.ongil"
-    compileSdk = 35  // Android 15 기준
+    compileSdk = 36  // Health Connect 요구사항
 
     defaultConfig {
         applicationId = "kr.co.ongil"
@@ -31,7 +31,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // local.properties의 BASE_URL을 BuildConfig 필드로 추가
-        buildConfigField("String", "BASE_URL", "\"${localProperties.getProperty("BASE_URL") ?: "https://staging.on-gil.co.kr/"}\"")
+        buildConfigField(
+            "String",
+            "BASE_URL",
+            "\"${localProperties.getProperty("BASE_URL") ?: ""}\""
+        )
+        buildConfigField("String", "SSE_URL", "\"${localProperties.getProperty("SSE_URL") ?: ""}\"")
     }
 
     buildTypes {
@@ -43,10 +48,7 @@ android {
             )
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+
     kotlinOptions {
         jvmTarget = "17"
     }
@@ -54,6 +56,12 @@ android {
         compose = true
         buildConfig = true
     }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+    }
+
 }
 
 dependencies {
@@ -70,6 +78,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.compose.material3)
+    implementation(libs.gms.play.services.wearable)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -118,4 +128,19 @@ dependencies {
     // viewModelScope 지원
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.4.0")
     // lifecycleScope 및 flow 지원
+
+    // WebRTC
+    implementation("com.github.webrtc-sdk:android:104.5112.09")
+
+    // STOMP over WebSocket
+    implementation("com.github.NaikSoftware:StompProtocolAndroid:1.6.6")
+    implementation("io.reactivex.rxjava2:rxjava:2.2.21")
+    implementation("io.reactivex.rxjava2:rxandroid:2.1.1")
+
+    // 삼성헬스
+
+    implementation(libs.health.connect)
+    coreLibraryDesugaring(libs.desugarJdk)
+
+
 }

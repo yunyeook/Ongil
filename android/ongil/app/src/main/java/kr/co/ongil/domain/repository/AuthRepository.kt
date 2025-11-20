@@ -22,6 +22,7 @@ interface AuthRepository {
 
     /**
      * 회원가입
+     * @return 서버 응답 메시지
      */
     suspend fun registerUser(
         name: String,
@@ -31,5 +32,5 @@ interface AuthRepository {
         password: String,
         userType: String,
         profileImagePath: String?
-    ): Result<Unit>
+    ): Result<String>
 }

@@ -8,7 +8,12 @@ enum class MessageType {
     NAVIGATION_END,
     ABNORMAL_DETECTED,
     CALL_REQUEST,
-    SOS
+    SOS,
+    SOS_STOP,
+    SOS_ACK,
+    INCOMING_CALL,
+    SAFEZONE_UPDATE,
+    CALL_MISSED
 }
 
 data class FcmMessage(
@@ -16,5 +21,7 @@ data class FcmMessage(
     val title: String,
     val senderId: String,
     val receiverId: String,
-    val content: String?
+    val content: String?,
+    val notificationId: String?,
+    val relatedTableId: String?
 )

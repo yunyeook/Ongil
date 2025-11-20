@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,10 +19,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
-
-val CallListAccent = Color(0xFF8CA898)
 
 
 /**
@@ -31,11 +31,12 @@ val CallListAccent = Color(0xFF8CA898)
 fun CallListItem(
     item: RecentCallUi,
     onInfoClick: () -> Unit,
+    onCallClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val containerColor = when (item.type) {
         CallType.EMERGENCY -> Color(0xFFF6F4F0)  // 긴급 통화 연한 강조
-        CallType.VOIP -> Color(0xFFF2F6F4)       // 살짝 민트 톤
+        CallType.VOIP -> ongilColors.accent.copy(alpha = 0.08f)  // 타입별 테마 색상
         CallType.NORMAL -> Color(0xFFF7F9F8)
     }
 
@@ -63,6 +64,7 @@ fun CallListItem(
 
             // 우측 아이콘
             CallActions(
+                onCallClick = onCallClick,
                 onInfoClick = onInfoClick
             )
         }
@@ -85,7 +87,7 @@ private fun CallAvatar(
         modifier = modifier
             .size(52.dp)
             .clip(CircleShape)
-            .background(Color(0xFF7E8C87)),
+            .background(ongilColors.accent),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -141,19 +143,37 @@ private fun CallInfo(
 }
 
 /**
- * 통화 액션 버튼 (상세)
+ * 통화 액션 버튼 (전화, 상세)
  */
 @Composable
 private fun CallActions(
+    onCallClick: () -> Unit,
     onInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Icon(
-        imageVector = Icons.Outlined.Info,
-        contentDescription = "상세",
-        tint = Color(0xFF8F9A9E),
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .size(20.dp)
-            .clickable(onClick = onInfoClick)
-    )
+    ) {
+        // 전화 버튼
+        Icon(
+            imageVector = Icons.Outlined.Phone,
+            contentDescription = "전화",
+            tint = ongilColors.accent,
+            modifier = Modifier
+                .size(22.dp)
+                .clickable(onClick = onCallClick)
+        )
+
+        // 상세 버튼
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = "상세",
+            tint = Color(0xFF8F9A9E),
+            modifier = Modifier
+                .size(20.dp)
+                .clickable(onClick = onInfoClick)
+        )
+    }
 }

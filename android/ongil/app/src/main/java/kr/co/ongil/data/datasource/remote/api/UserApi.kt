@@ -2,10 +2,15 @@ package kr.co.ongil.data.datasource.remote.api
 
 import kr.co.ongil.data.model.auth.ChangePasswordRequest
 import kr.co.ongil.data.model.auth.ChangePasswordResponse
+import kr.co.ongil.data.model.user.CreateRelationshipRequest
+import kr.co.ongil.data.model.user.CreateRelationshipResponse
 import kr.co.ongil.data.model.user.UpdateUserResponse
 import kr.co.ongil.data.model.user.UserResponse
+import kr.co.ongil.data.model.user.UserSearchRequest
+import kr.co.ongil.data.model.user.UserSearchResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import retrofit2.Response
 import retrofit2.http.*
 
 /**
@@ -44,4 +49,22 @@ interface UserApi {
     suspend fun changePassword(
         @Body request: ChangePasswordRequest
     ): ChangePasswordResponse
+
+    /**
+     * 사용자 검색 (전화번호로 검색)
+     * POST /api/v1/users/searches
+     */
+    @POST("/api/v1/users/searches")
+    suspend fun searchUser(
+        @Body request: UserSearchRequest
+    ): Response<UserSearchResponse>
+
+    /**
+     * 관계 생성
+     * POST /api/v1/relationships/me
+     */
+    @POST("/api/v1/relationships/me")
+    suspend fun createRelationship(
+        @Body request: CreateRelationshipRequest
+    ): Response<CreateRelationshipResponse>
 }

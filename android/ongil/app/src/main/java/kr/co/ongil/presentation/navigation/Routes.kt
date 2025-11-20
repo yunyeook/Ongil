@@ -38,7 +38,14 @@ sealed class Routes(val route: String) {
     object SearchUser : Routes("search_user")
 
     // 비밀번호 변경
-    object ChangePassword : Routes("change_password")
+    object ChangePassword : Routes("change_password?isResetMode={isResetMode}&verificationToken={verificationToken}") {
+        fun createRoute(isResetMode: Boolean = false, verificationToken: String? = null): String {
+            return "change_password?isResetMode=$isResetMode&verificationToken=${verificationToken ?: ""}"
+        }
+    }
+
+    // 비밀번호 찾기
+    object FindPassword : Routes("find_password")
 
     // 알림
     object Notifications : Routes("notifications")
@@ -48,36 +55,66 @@ sealed class Routes(val route: String) {
         fun createRoute(callLogId: Long): String = "call_detail/$callLogId"
     }
 
-    // 환자 상세
-    // MOVED: PatientDetailRoutes.kt 참조
-    object PatientDetail : Routes("patient_detail/{patientId}/{name}/{phoneNumber}") {
-        fun createRoute(
-            patientId: Long,
-            name: String,
-            phoneNumber: String
-        ): String {
-            val encodedName = Uri.encode(name)
-            val encodedPhone = Uri.encode(phoneNumber)
-            return "patient_detail/$patientId/$encodedName/$encodedPhone"
+    // 사용자 상세
+    // MOVED: UserDetailRoutes.kt 참조
+    object UserDetail : Routes("user_detail/{relationshipId}") {
+        fun createRoute(relationshipId: Long): String {
+            return "user_detail/$relationshipId"
         }
 
         val arguments = listOf(
-            navArgument("patientId") { type = NavType.LongType },
-            navArgument("name") { type = NavType.StringType },
-            navArgument("phoneNumber") { type = NavType.StringType }
+            navArgument("relationshipId") { type = NavType.LongType }
         )
     }
 
     // 장소 상세
     // MOVED: PlaceDetailRoutes.kt 참조
-    object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}") {
-        fun createRoute(patientId: Long, favoriteId: Long): String {
-            return "place_detail/$patientId/$favoriteId"
+    object PlaceDetail : Routes("place_detail/{patientId}/{favoriteId}/{userType}") {
+        fun createRoute(patientId: Long, favoriteId: Long, userType: String = "GUARDIAN"): String {
+            return "place_detail/$patientId/$favoriteId/$userType"
         }
 
         val arguments = listOf(
             navArgument("patientId") { type = NavType.LongType },
-            navArgument("favoriteId") { type = NavType.LongType }
+            navArgument("favoriteId") { type = NavType.LongType },
+            navArgument("userType") { type = NavType.StringType; defaultValue = "GUARDIAN" }
         )
     }
+
+    // VoIP 통화 테스트 화면
+    object VoipCallTest : Routes("voip_call_test")
+
+    // VoIP 수신 화면
+    object VoipIncomingCall : Routes("voip_incoming_call/{callId}/{callerName}/{callerPhone}/{userType}?sessionId={sessionId}") {
+        fun createRoute(
+            callId: Long,
+            callerName: String,
+            callerPhone: String,
+            userType: String,
+            sessionId: String? = null
+        ): String {
+            val encodedName = Uri.encode(callerName)
+            val encodedPhone = Uri.encode(callerPhone)
+            val base = "voip_incoming_call/$callId/$encodedName/$encodedPhone/$userType"
+            return if (sessionId != null) "$base?sessionId=$sessionId" else base
+        }
+    }
+
+    // VoIP 통화 중 화면
+    object VoipCall : Routes("voip_call/{targetName}/{targetPhone}/{isCaller}/{userType}/{callId}/{receiverId}") {
+        fun createRoute(
+            targetName: String,
+            targetPhone: String,
+            isCaller: Boolean,
+            userType: String,
+            callId: Long? = null,
+            receiverId: Long? = null
+        ): String {
+            return "voip_call/$targetName/$targetPhone/$isCaller/$userType/${callId ?: 0}/${receiverId ?: 0}"
+        }
+    }
+
+    // 안전구역 설정 (deprecated - SafeZoneRoutes 사용)
+    @Deprecated("Use SafeZoneRoutes instead")
+    object SafeZoneSetting : Routes("safe_zone_setting")
 }

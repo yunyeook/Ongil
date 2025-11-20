@@ -21,8 +21,6 @@ fun PlayGroundGK() {
 
     Box(modifier = Modifier.fillMaxSize()) {
         TMapComposable(
-            latitude = 37.5665,  // 서울 시청
-            longitude = 126.9780,
             zoomLevel = 15
         )
 
@@ -42,7 +40,9 @@ fun PlayGroundGK() {
                         title = "테스트 SOS",
                         senderId = "1",
                         receiverId = "2",
-                        content = null
+                        content = null,
+                        notificationId = null,
+                        relatedTableId = null
                     )
                     sosHandler.startSosAction(context, testMessage)
                 }

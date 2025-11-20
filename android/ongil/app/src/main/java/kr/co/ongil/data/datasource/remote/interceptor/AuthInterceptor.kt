@@ -3,7 +3,7 @@ package kr.co.ongil.data.datasource.remote.interceptor
 import android.util.Log
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
-import kr.co.ongil.data.datasource.local.preferences.TokenManager
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.model.auth.RefreshTokenRequest
 import kr.co.ongil.data.model.auth.RefreshTokenResponse
@@ -41,7 +41,7 @@ private sealed class RefreshResult {
  */
 @Singleton
 class AuthInterceptor @Inject constructor(
-    private val tokenManager: TokenManager,
+    private val tokenManager: UserDataStoreManager,
     private val authApi: AuthApi
 ) : Interceptor {
 

@@ -1,5 +1,6 @@
 package kr.co.ongil.presentation.ui.placedetail
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ class PlaceDetailViewModel @Inject constructor(
     private val initialAddress: String = savedStateHandle["address"] ?: ""
     private val initialIsDefault: Boolean = savedStateHandle["isDefault"] ?: false
     private val initialPatientId: Long = savedStateHandle["patientId"] ?: 0L
+    private val initialUserType: String = savedStateHandle["userType"] ?: "GUARDIAN"
 
     private val _uiState = MutableStateFlow(
         PlaceDetailUiState(
@@ -32,26 +34,32 @@ class PlaceDetailViewModel @Inject constructor(
             placeName = initialPlaceName,
             address = initialAddress,
             isDefault = initialIsDefault,
-            patientId = initialPatientId
+            patientId = initialPatientId,
+            userType = initialUserType
         )
     )
     val uiState: StateFlow<PlaceDetailUiState> = _uiState.asStateFlow()
 
     init {
+        Log.d("PlaceDetailVM", "초기화: patientId=$initialPatientId, favoriteId=$initialFavoriteId")
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, error = null, successMessage = null) }
             val current = _uiState.value
+            Log.d("PlaceDetailVM", "API 호출: patientId=${current.patientId}, favoriteId=${current.favoriteId}")
             val result = repository.getPlaceDetail(
                 patientId = current.patientId,
                 favoriteId = current.favoriteId
             )
             result.fold(
                 onSuccess = { detail ->
+                    Log.d("PlaceDetailVM", "API 성공: placeName=${detail.placeName}, placeAlias=${detail.placeAlias}, isDefault=${detail.isDefault}")
                     _uiState.update {
                         it.copy(
-                            placeName = detail.placeName,
+                            // placeAlias가 있으면 placeAlias를, 없으면 placeName을 표시
+                            placeName = if (detail.placeAlias.isNullOrBlank()) detail.placeName else detail.placeAlias,
                             address = detail.address,
                             isDefault = detail.isDefault,
+                            initialIsDefault = detail.isDefault, // API에서 받은 초기값 저장
                             favoriteId = detail.favoriteId,
                             patientId = detail.patientId,
                             isLoading = false
@@ -59,6 +67,7 @@ class PlaceDetailViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
+                    Log.e("PlaceDetailVM", "API 실패", error)
                     _uiState.update { it.copy(isLoading = false, error = error.message ?: "상세 조회 실패") }
                 }
             )
@@ -68,42 +77,66 @@ class PlaceDetailViewModel @Inject constructor(
     // 기본목적지 설정
     fun setAsDefault() {
         if (_uiState.value.isLoading) return
-        viewModelScope.launch {
-            _uiState.update { current ->
-                current.copy(
-                    isDefault = !current.isDefault,
-                    successMessage = if (!current.isDefault) "기본 목적지로 설정되었습니다." else null
-                )
-            }
-        }
-    }
+        val currentState = _uiState.value
+        val newIsDefault = !currentState.isDefault
 
-    // 저장하기
-    fun updatePlaceInfo(newName: String, newAddress: String) {
-        if (_uiState.value.isLoading) return
-        val prev = _uiState.value
         _uiState.update { it.copy(isLoading = true, error = null, successMessage = null) }
-        _uiState.update { current ->
-            current.copy(
-                placeName = newName,
-                address = newAddress
-            )
-        }
 
         viewModelScope.launch(Dispatchers.IO) {
             val result = repository.updatePlaceDetail(
-                patientId = prev.patientId,
-                favoriteId = prev.favoriteId,
+                patientId = currentState.patientId,
+                favoriteId = currentState.favoriteId,
                 update = PlaceDetailUpdate(
-                    placeName = newName,
-                    address = newAddress
+                    isDefault = if (newIsDefault) true else null // true일 때만 보내고, false일 때는 null
                 )
             )
             result.fold(
                 onSuccess = { updated ->
                     _uiState.update {
                         it.copy(
-                            placeName = updated.placeName,
+                            placeName = if (updated.placeAlias.isNullOrBlank()) updated.placeName else updated.placeAlias,
+                            address = updated.address,
+                            isDefault = updated.isDefault,
+                            isLoading = false,
+                            successMessage = if (newIsDefault) "기본 목적지로 설정되었습니다." else "기본 목적지 설정이 해제되었습니다."
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = error.message ?: "기본 목적지 설정 실패"
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    // 저장하기 (장소명은 placeAlias로 저장)
+    fun updatePlaceInfo(newName: String, newAddress: String, newIsDefault: Boolean?, onSuccess: () -> Unit = {}) {
+        if (_uiState.value.isLoading) return
+        val prev = _uiState.value
+        Log.d("PlaceDetailVM", "저장: patientId=${prev.patientId}, favoriteId=${prev.favoriteId}, placeAlias=$newName, isDefault=$newIsDefault")
+        _uiState.update { it.copy(isLoading = true, error = null, successMessage = null) }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = repository.updatePlaceDetail(
+                patientId = prev.patientId,
+                favoriteId = prev.favoriteId,
+                update = PlaceDetailUpdate(
+                    placeAlias = newName, // 사용자가 입력한 이름은 placeAlias로 저장
+                    address = newAddress,
+                    isDefault = newIsDefault // 변경되었을 때만 true, 아니면 null
+                )
+            )
+            result.fold(
+                onSuccess = { updated ->
+                    _uiState.update {
+                        it.copy(
+                            // placeAlias가 있으면 placeAlias를, 없으면 placeName을 표시
+                            placeName = if (updated.placeAlias.isNullOrBlank()) updated.placeName else updated.placeAlias,
                             address = updated.address,
                             isDefault = updated.isDefault,
                             // 서버가 다른 필드를 갱신했을 수 있으므로 동기화
@@ -112,6 +145,10 @@ class PlaceDetailViewModel @Inject constructor(
                             isLoading = false,
                             successMessage = "장소 정보가 수정되었습니다."
                         )
+                    }
+                    // 네비게이션은 메인 스레드에서 실행
+                    viewModelScope.launch(Dispatchers.Main) {
+                        onSuccess()
                     }
                 },
                 onFailure = { error ->
@@ -136,7 +173,10 @@ class PlaceDetailViewModel @Inject constructor(
             result.fold(
                 onSuccess = {
                     _uiState.update { it.copy(isLoading = false, successMessage = "삭제되었습니다.") }
-                    onSuccess()
+                    // 네비게이션은 메인 스레드에서 실행
+                    viewModelScope.launch(Dispatchers.Main) {
+                        onSuccess()
+                    }
                 },
                 onFailure = { error ->
                     _uiState.update { it.copy(isLoading = false, error = error.message ?: "삭제 실패") }

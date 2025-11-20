@@ -1,18 +1,18 @@
 package kr.co.ongil.presentation.handler
 
 import android.content.Context
+import android.content.Intent
 import android.media.MediaPlayer
 import android.util.Log
 import kr.co.ongil.R
 import kr.co.ongil.domain.handler.SosActionHandler
 import kr.co.ongil.domain.model.FcmMessage
+import kr.co.ongil.presentation.ui.sos.SosAlertActivity
 import javax.inject.Inject
 
 class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
 
     private var mediaPlayer: MediaPlayer? = null
-    private var playCount = 0
-    private val maxPlayCount = 100
 
     override fun startSosAction(context: Context, message: FcmMessage) {
         Log.d("SosActionHandlerImpl", "🚨 SOS 액션 시작: ${message.type}")
@@ -20,13 +20,34 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
         // 기존 사운드가 재생 중이면 중지
         stopSound()
 
-        // 재생 카운트 초기화
-        playCount = 0
-
-        // SOS 사운드 재생
+        // SOS 사운드 무한 재생
         playSosSound(context)
 
-        // TODO: 추가 SOS 액션 (진동, 화면 표시 등)
+        // SOS 알림 모달 표시
+        showSosAlertModal(context, message)
+    }
+
+    /**
+     * SOS 알림 모달 Activity 표시
+     */
+    private fun showSosAlertModal(context: Context, message: FcmMessage) {
+        try {
+            val intent = Intent(context, SosAlertActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("sosId", message.relatedTableId?.toLongOrNull() ?: 0L)
+                // title이나 content를 사용하여 보호자 이름 전달
+                putExtra("senderName", message.title ?: message.content ?: "보호자")
+            }
+            context.startActivity(intent)
+            Log.d("SosActionHandlerImpl", "✅ SOS 알림 모달 표시 완료")
+        } catch (e: Exception) {
+            Log.e("SosActionHandlerImpl", "❌ SOS 알림 모달 표시 실패: ${e.message}", e)
+        }
+    }
+
+    override fun stopSosAction() {
+        Log.d("SosActionHandlerImpl", "🛑 SOS 액션 중지")
+        stopSound()
     }
 
     /**
@@ -46,21 +67,7 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
             }
 
             mediaPlayer = MediaPlayer.create(context, soundResId).apply {
-                setOnCompletionListener {
-                    playCount++
-                    Log.d("SosActionHandlerImpl", "🔊 SOS 사운드 재생 완료 ($playCount/$maxPlayCount)")
-
-                    if (playCount < maxPlayCount) {
-                        // 다시 재생
-                        seekTo(0)
-                        start()
-                    } else {
-                        // 100번 재생 완료
-                        Log.d("SosActionHandlerImpl", "✅ SOS 사운드 100번 재생 완료")
-                        release()
-                        mediaPlayer = null
-                    }
-                }
+                isLooping = true // 무한 반복
 
                 setOnErrorListener { _, what, extra ->
                     Log.e("SosActionHandlerImpl", "❌ 사운드 재생 오류: what=$what, extra=$extra")
@@ -74,7 +81,7 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
 
                 // 재생 시작
                 start()
-                Log.d("SosActionHandlerImpl", "🔊 SOS 사운드 재생 시작")
+                Log.d("SosActionHandlerImpl", "🔊 SOS 사운드 무한 재생 시작")
             }
         } catch (e: Exception) {
             Log.e("SosActionHandlerImpl", "❌ 사운드 재생 실패: ${e.message}", e)
@@ -102,12 +109,31 @@ class SosActionHandlerImpl @Inject constructor() : SosActionHandler {
      */
     private fun stopSound() {
         mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
-                Log.d("SosActionHandlerImpl", "🛑 기존 사운드 중지")
+            try {
+                Log.d("SosActionHandlerImpl", "🛑 사운드 중지 시작 - isPlaying: ${it.isPlaying}, isLooping: ${it.isLooping}")
+
+                // 루프 먼저 중지
+                it.isLooping = false
+
+                if (it.isPlaying) {
+                    it.stop()
+                    Log.d("SosActionHandlerImpl", "✅ 사운드 stop() 호출 완료")
+                }
+
+                it.reset()
+                Log.d("SosActionHandlerImpl", "✅ 사운드 reset() 호출 완료")
+
+                it.release()
+                Log.d("SosActionHandlerImpl", "✅ 사운드 release() 호출 완료")
+
+                mediaPlayer = null
+                Log.d("SosActionHandlerImpl", "✅ mediaPlayer null 설정 완료")
+            } catch (e: Exception) {
+                Log.e("SosActionHandlerImpl", "❌ 사운드 중지 실패: ${e.message}", e)
+                mediaPlayer = null
             }
-            it.release()
-            mediaPlayer = null
+        } ?: run {
+            Log.w("SosActionHandlerImpl", "⚠️ mediaPlayer가 null이어서 중지할 수 없습니다.")
         }
     }
 }

@@ -5,4 +5,5 @@ import kr.co.ongil.domain.model.FcmMessage
 
 interface SosActionHandler {
     fun startSosAction(context: Context, message: FcmMessage)
+    fun stopSosAction()
 }

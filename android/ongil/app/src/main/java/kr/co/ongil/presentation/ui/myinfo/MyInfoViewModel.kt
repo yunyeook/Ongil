@@ -10,8 +10,13 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kr.co.ongil.core.utils.formatPhoneNumber
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 import kr.co.ongil.domain.repository.AuthRepository
 import kr.co.ongil.domain.usecase.user.GetUserUseCase
 import kr.co.ongil.presentation.ui.myinfo.MyInfoUiState
@@ -36,7 +41,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MyInfoViewModel @Inject constructor(
     private val getUserUseCase: GetUserUseCase,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyInfoUiState())
@@ -58,26 +64,45 @@ class MyInfoViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             Log.d(TAG, "Starting getUserUseCase call")
 
-            // GetUserUseCase를 통한 사용자 정보 조회
+            // DataStore에서 userId 가져오기
+            val userId = userDataStoreManager.getLoginUserId().first()
+
+            // DataStore에서 캐시된 프로필 이미지 먼저 로드
+            if (userId != null) {
+                val cachedProfileImage = userDataStoreManager.getProfileImage(userId).first()
+                if (cachedProfileImage != null) {
+                    _uiState.update { it.copy(profileImage = cachedProfileImage) }
+                    Log.d(TAG, "Loaded cached profile image from DataStore")
+                }
+            }
+
+            // GetUserUseCase를 통한 사용자 정보 조회 (API)
             getUserUseCase()
-                .onSuccess { userDto ->
-                    // DTO → UiState 변환
-                    Log.d(TAG, "getUserUseCase success: $userDto")
-                    _uiState.value = MyInfoUiState(
-                        name = userDto.name,
-                        phoneNumber = formatPhoneNumber(userDto.phoneNumber),
-                        profileImage = userDto.profileImage,
-                        isLoading = false
-                    )
-                    Log.d(TAG, "UiState updated: ${_uiState.value}")
+                .onEach { result ->
+                    result.onSuccess { userDto ->
+                        // DTO → UiState 변환
+                        Log.d(TAG, "getUserUseCase success: $userDto")
+                        _uiState.value = MyInfoUiState(
+                            name = userDto.name,
+                            phoneNumber = formatPhoneNumber(userDto.phoneNumber),
+                            profileImage = userDto.profileImage,
+                            isLoading = false
+                        )
+                        Log.d(TAG, "UiState updated: ${_uiState.value}")
+
+                        // API 응답의 프로필 이미지를 DataStore에 저장
+                        if (userId != null && userDto.profileImage != null) {
+                            userDataStoreManager.saveProfileImage(userId, userDto.profileImage)
+                        }
+                    }.onFailure { exception ->
+                        Log.e(TAG, "getUserUseCase failed", exception)
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
+                        )
+                    }
                 }
-                .onFailure { exception ->
-                    Log.e(TAG, "getUserUseCase failed", exception)
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
-                    )
-                }
+                .collect()
         }
     }
 

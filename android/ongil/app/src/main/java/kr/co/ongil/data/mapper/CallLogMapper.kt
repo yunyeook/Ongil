@@ -10,31 +10,33 @@ import java.time.format.DateTimeFormatter
  * CallLogDto를 RecentCallUi로 변환
  */
 fun CallLogDto.toRecentCallUi(currentUserId: Long): RecentCallUi {
-    // 발신자/수신자 이름 또는 번호 (실제로는 User API에서 가져와야 함)
-    val nameOrNumber = if (senderId == currentUserId) {
-        "수신자 $receiverId"  // TODO: User 정보로 교체
+    // 상대방 정보 추출
+    val otherUser = if (caller.id == currentUserId) {
+        receiver
     } else {
-        "발신자 $senderId"    // TODO: User 정보로 교체
+        caller
     }
 
     // CallType 매핑
     // callType: NORMAL/EMERGENCY, source: APP(VoIP)/SYSTEM_DIALER(일반전화)
     val uiCallType = when {
         callType.uppercase() == "EMERGENCY" -> CallType.EMERGENCY
-        source?.uppercase() == "APP" -> CallType.VOIP
-        source?.uppercase() == "SYSTEM_DIALER" -> CallType.NORMAL
+        source.uppercase() == "APP" -> CallType.VOIP
+        source.uppercase() == "SYSTEM_DIALER" -> CallType.NORMAL
         callType.uppercase() == "VOIP" -> CallType.VOIP  // 기존 스펙 호환
         else -> CallType.NORMAL
     }
 
     // Subtitle 생성
-    val subtitle = formatSubtitle(startedAt, duration)
+    val subtitle = formatSubtitle(startedAt, duration ?: 0)
 
     return RecentCallUi(
-        id = callLogId,
-        nameOrNumber = nameOrNumber,
+        id = id,
+        nameOrNumber = otherUser.name,
         type = uiCallType,
-        subtitle = subtitle
+        subtitle = subtitle,
+        receiverId = otherUser.id,
+        receiverPhone = otherUser.phoneNumber
     )
 }
 
@@ -76,7 +78,7 @@ private fun formatSubtitle(startedAt: String, duration: Int): String {
  * 예: "5분 12초", "20초", "1시간 5분"
  */
 private fun formatDuration(seconds: Int): String {
-    if (seconds == 0) return "통화 실패"
+    if (seconds == 0) return "부재중"
 
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60

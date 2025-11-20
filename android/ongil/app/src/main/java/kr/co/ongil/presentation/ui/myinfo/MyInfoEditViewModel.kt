@@ -9,6 +9,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kr.co.ongil.domain.repository.UserRepository
@@ -51,26 +53,28 @@ class MyInfoEditViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             getUserUseCase()
-                .onSuccess { userDto ->
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            name = userDto.name,
-                            birth = userDto.birth,
-                            phone = kr.co.ongil.core.utils.formatPhoneNumber(userDto.phoneNumber),
-                            profileImageUrl = userDto.profileImage,
-                            roleLabel = if (userDto.userType == "PATIENT") "환자" else "보호자",
-                            isLoading = false
-                        )
+                .onEach { result ->
+                    result.onSuccess { userDto ->
+                        _uiState.update { currentState ->
+                            currentState.copy(
+                                name = userDto.name,
+                                birth = userDto.birth,
+                                phone = kr.co.ongil.core.utils.formatPhoneNumber(userDto.phoneNumber),
+                                profileImageUrl = userDto.profileImage,
+                                roleLabel = if (userDto.userType == "PATIENT") "환자" else "보호자",
+                                isLoading = false
+                            )
+                        }
+                    }.onFailure { exception ->
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
+                            )
+                        }
                     }
                 }
-                .onFailure { exception ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = exception.message ?: "사용자 정보를 불러오는데 실패했습니다."
-                        )
-                    }
-                }
+                .collect()
         }
     }
 

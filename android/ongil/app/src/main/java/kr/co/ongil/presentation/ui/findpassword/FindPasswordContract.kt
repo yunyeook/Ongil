@@ -11,7 +11,8 @@ data class FindPasswordUiState(
     val codeLength: Int = 6,
     val remainingSec: Int = 0,
     val codeVerifyStatus: CodeVerifyStatus = CodeVerifyStatus.Idle,
-    val isResetEnabled: Boolean = false
+    val isResetEnabled: Boolean = false,
+    val verificationToken: String? = null
 )
 
 enum class CodeVerifyStatus {

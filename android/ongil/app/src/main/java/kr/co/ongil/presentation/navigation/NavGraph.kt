@@ -1,7 +1,12 @@
 package kr.co.ongil.presentation.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -10,15 +15,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,40 +34,87 @@ import kr.co.ongil.presentation.ui.notification.NotificationScreen
 import kr.co.ongil.presentation.viewmodel.MyInfoSideEffect
 import kr.co.ongil.presentation.ui.home.HomeScreen
 import kr.co.ongil.presentation.ui.favorite.favoriteGraph
-//import kr.co.ongil.presentation.ui.patientdetail.patientGraph
+import kr.co.ongil.presentation.ui.userdetail.userDetailGraph
 import kr.co.ongil.presentation.ui.placedetail.placeDetailGraph
 import kr.co.ongil.presentation.ui.auth.loginGraph
 import kotlinx.coroutines.flow.collectLatest
 import kr.co.ongil.presentation.ui.auth.register.registerGraph
 import kr.co.ongil.presentation.ui.myinfo.ChangePasswordScreen
-
+import kr.co.ongil.presentation.ui.map.MapScreen
+import kr.co.ongil.presentation.ui.safezonesetting.safeZoneGraph
+import kr.co.ongil.presentation.ui.home.homeGraph
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: String = Routes.Login.route
+    paddingValues: PaddingValues = PaddingValues(),
+    startDestination: String = Routes.Login.route,
+    authViewModel: kr.co.ongil.presentation.ui.auth.AuthStateViewModel? = null,
+    onMapShowBarsChange: (Boolean) -> Unit = {}
 ) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier = modifier.background(Color.White),
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
         // 홈
-        composable(Routes.Home.route) {
-            HomeScreen(
-                onGoSearchUserClick = { navController.navigate(Routes.SearchUser.route) },
-                onGoSignupClick = { navController.navigate(Routes.Register.route) }
+        homeGraph(navController, paddingValues, authViewModel)
+
+        // 위치 - 지도 화면
+        composable(Routes.Location.route) { backStackEntry ->
+            val previousEntry = navController.previousBackStackEntry
+            val searchPlaceholder = remember {
+                val placeholder = previousEntry?.savedStateHandle?.get<String>("search_placeholder") ?: "장소를 검색해주세요"
+                previousEntry?.savedStateHandle?.remove<String>("search_placeholder")
+                placeholder
+            }
+            val requestSearchFocus = remember {
+                val shouldFocus = previousEntry?.savedStateHandle?.get<Boolean>("request_search_focus") ?: false
+                previousEntry?.savedStateHandle?.remove<Boolean>("request_search_focus")
+                shouldFocus
+            }
+
+            MapScreen(
+                navController = navController,
+                paddingValues = paddingValues,
+                authViewModel = authViewModel ?: hiltViewModel(),
+                onShowBarsChange = onMapShowBarsChange,
+                searchPlaceholder = searchPlaceholder,
+                requestSearchFocus = requestSearchFocus,
+                onNavigateToCall = { targetName, targetPhone, targetId, userType ->
+                    // VoipCall 화면으로 이동
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = targetName,
+                            targetPhone = targetPhone,
+                            isCaller = true,
+                            userType = userType,
+                            callId = 0L,
+                            receiverId = targetId
+                        )
+                    )
+                }
             )
         }
-        // 위치 - 아마도 지도
-        composable(Routes.Location.route) { PlaceholderScreen("위치") }
+
+        // 환자 정보
+        composable(Routes.PatientList.route) {
+            kr.co.ongil.presentation.ui.patientinfo.PatientInfoScreen(
+                modifier = Modifier,
+                paddingValues = paddingValues
+            )
+        }
 
 
         // 사용자 검색 - 친구추가 화면
         composable(Routes.SearchUser.route) {
-            val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel =
-                androidx.lifecycle.viewmodel.compose.viewModel()
+            val vm: kr.co.ongil.presentation.ui.searchuser.SearchUserViewModel = hiltViewModel()
             kr.co.ongil.presentation.ui.searchuser.SearchUserScreen(
+                modifier = Modifier.padding(paddingValues),
                 navController = navController,
                 viewModel = vm
             )
@@ -75,19 +124,24 @@ fun AppNavGraph(
         registerGraph(navController)
 
         // 즐겨찾기
-        favoriteGraph(navController)
-        // 환자
-//        patientGraph(navController)
+        favoriteGraph(navController, paddingValues)
+        // 사용자(환자/보호자) 상세
+        userDetailGraph(navController, paddingValues)
         // 장소
-        placeDetailGraph(navController)
-
-        // 회원가입
-        registerGraph(navController)
+        placeDetailGraph(navController, paddingValues)
 
 
         // 알림
         composable(Routes.Notifications.route) {
-            NotificationScreen(onNavigateBack = { navController.navigate(Routes.MyInfo.route) })
+            NotificationScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToLogin = {
+                    navController.navigate(Routes.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
 
 
@@ -129,7 +183,8 @@ fun AppNavGraph(
                 uiState = uiState,
                 onEditInfo = { navController.navigate(Routes.EditInfo.route) },
                 onRecentCalls = { navController.navigate(Routes.CallHistory.route) },
-                onLogout = { viewModel.logout() }
+                onLogout = { viewModel.logout() },
+                modifier = Modifier.padding(paddingValues)
             )
         }
 
@@ -143,29 +198,128 @@ fun AppNavGraph(
                     // 내정보 화면으로 명시적으로 이동 (EditInfo 화면 제거)
                     navController.popBackStack(Routes.MyInfo.route, inclusive = false)
                 },
-                onChangePasswordClick = { navController.navigate(Routes.ChangePassword.route) }
+                onChangePasswordClick = { navController.navigate(Routes.ChangePassword.route) },
+                paddingValues = paddingValues
             )
         }
 
         // 비밀번호 변경
-        composable(Routes.ChangePassword.route) {
+        composable(
+            route = Routes.ChangePassword.route,
+            arguments = listOf(
+                navArgument("isResetMode") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+                navArgument("verificationToken") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val isResetMode = backStackEntry.arguments?.getBoolean("isResetMode") ?: false
+            val verificationToken = backStackEntry.arguments?.getString("verificationToken")
             val changePasswordViewModel: kr.co.ongil.presentation.viewmodel.ChangePasswordViewModel = hiltViewModel()
+
+            // verificationToken이 있으면 ViewModel에 설정
+            LaunchedEffect(verificationToken) {
+                verificationToken?.takeIf { it.isNotBlank() }?.let { token ->
+                    changePasswordViewModel.onEvent(
+                        kr.co.ongil.presentation.uistate.ChangePasswordEvent.SetVerificationToken(token)
+                    )
+                }
+            }
+
             ChangePasswordScreen(
+                modifier = Modifier.padding(paddingValues),
                 viewModel = changePasswordViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onPasswordChanged = {
-                    // 비밀번호 변경 성공 시 내정보 화면으로 이동 (EditInfo 화면 건너뛰기)
-                    navController.popBackStack(Routes.MyInfo.route, inclusive = false)
+                    // 비밀번호 변경 성공 시
+                    if (isResetMode) {
+                        // 재설정 모드: 로그인 화면으로 이동
+                        navController.navigate(Routes.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    } else {
+                        // 변경 모드: 내정보 화면으로 이동
+                        navController.popBackStack(Routes.MyInfo.route, inclusive = false)
+                    }
+                },
+                isResetMode = isResetMode
+            )
+        }
+
+        // 비밀번호 찾기
+        composable(Routes.FindPassword.route) {
+            val findPasswordViewModel: kr.co.ongil.presentation.ui.findpassword.FindPasswordViewModel = hiltViewModel()
+            val uiState by findPasswordViewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                findPasswordViewModel.effect.collectLatest { effect ->
+                    when (effect) {
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.NavigateBack -> {
+                            navController.popBackStack()
+                        }
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.NavigateLogin -> {
+                            navController.navigate(Routes.Login.route) {
+                                popUpTo(Routes.Login.route) { inclusive = true }
+                            }
+                        }
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.NavigateResetPassword -> {
+                            // 비밀번호 재설정 화면으로 이동 (verificationToken 전달)
+                            val verificationToken = uiState.verificationToken
+                            navController.navigate(
+                                Routes.ChangePassword.createRoute(
+                                    isResetMode = true,
+                                    verificationToken = verificationToken
+                                )
+                            )
+                        }
+                        is kr.co.ongil.presentation.ui.findpassword.FindPasswordUiSideEffect.ShowToast -> {
+                            // 토스트 메시지 표시 (필요시 SnackbarHost 사용)
+                        }
+                    }
+                }
+            }
+
+            kr.co.ongil.presentation.ui.findpassword.FindPasswordScreen(
+                uiState = uiState,
+                onEvent = findPasswordViewModel::onEvent,
+                formatPhone = { phone ->
+                    val digits = phone.filter { it.isDigit() }
+                    when {
+                        digits.length <= 3 -> digits
+                        digits.length <= 7 -> "${digits.substring(0, 3)}-${digits.substring(3)}"
+                        else -> "${digits.substring(0, 3)}-${digits.substring(3, 7)}-${digits.substring(7).take(4)}"
+                    }
                 }
             )
         }
 
         // 통화 내역
         composable(Routes.CallHistory.route) {
+            val currentUserInfo by (authViewModel?.currentUserInfo ?: kotlinx.coroutines.flow.flowOf(null)).collectAsState(initial = null)
+            val userType = currentUserInfo?.getOrNull()?.userType ?: "PATIENT"  // 기본값
+
             RecentCallsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCallDetail = { callId ->
                     navController.navigate(Routes.CallDetail.createRoute(callId))
+                },
+                onNavigateToVoipCall = { targetName, targetPhone, receiverId ->
+                    // 재통화: isCaller = true, callId는 새로 생성됨
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = targetName,
+                            targetPhone = targetPhone,
+                            isCaller = true,
+                            userType = userType,
+                            callId = null,
+                            receiverId = receiverId
+                        )
+                    )
                 }
             )
         }
@@ -178,8 +332,81 @@ fun AppNavGraph(
             CallDetailScreen(callLogId = callLogId)
         }
 
+        // VoIP 수신 화면
+        composable(
+            route = Routes.VoipIncomingCall.route,
+            arguments = listOf(
+                navArgument("callId") { type = NavType.StringType },
+                navArgument("callerName") { type = NavType.StringType },
+                navArgument("callerPhone") { type = NavType.StringType },
+                navArgument("userType") { type = NavType.StringType },
+                navArgument("sessionId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val callId = backStackEntry.arguments?.getString("callId")?.toLongOrNull() ?: 0L
+            val callerName = backStackEntry.arguments?.getString("callerName") ?: ""
+            val callerPhone = backStackEntry.arguments?.getString("callerPhone") ?: ""
+            val userType = backStackEntry.arguments?.getString("userType") ?: "PATIENT"
+            val sessionId = backStackEntry.arguments?.getString("sessionId")
 
+            kr.co.ongil.presentation.ui.call.VoipIncomingCallScreen(
+                callerName = callerName,
+                callerPhone = callerPhone,
+                callId = callId,
+                userType = userType,
+                sessionId = sessionId,
+                onAccepted = {
+                    // 수락 시 통화 중 화면으로 이동
+                    navController.navigate(
+                        Routes.VoipCall.createRoute(
+                            targetName = callerName,
+                            targetPhone = callerPhone,
+                            isCaller = false,
+                            userType = userType,
+                            callId = callId,
+                            receiverId = null
+                        )
+                    ) {
+                        popUpTo(Routes.VoipIncomingCall.route) { inclusive = true }
+                    }
+                },
+                onDeclined = {
+                    // 거절 시 이전 화면으로
+                    navController.popBackStack()
+                }
+            )
+        }
 
+        // 안전구역 설정 (새로운 구조)
+        authViewModel?.let { viewModel ->
+            safeZoneGraph(navController, paddingValues, viewModel)
+        }
+        // VoIP 통화 중 화면
+        composable(Routes.VoipCall.route) { backStackEntry ->
+            val targetName = backStackEntry.arguments?.getString("targetName") ?: ""
+            val targetPhone = backStackEntry.arguments?.getString("targetPhone") ?: ""
+            val isCaller = backStackEntry.arguments?.getString("isCaller")?.toBoolean() ?: false
+            val userType = backStackEntry.arguments?.getString("userType") ?: "PATIENT"
+            val callId = backStackEntry.arguments?.getString("callId")?.toLongOrNull()
+            val receiverId = backStackEntry.arguments?.getString("receiverId")?.toLongOrNull()
+
+            kr.co.ongil.presentation.ui.call.VoipCallScreen(
+                targetName = targetName,
+                targetPhone = targetPhone,
+                isCaller = isCaller,
+                userType = userType,
+                callId = callId?.takeIf { it > 0 },
+                receiverId = receiverId?.takeIf { it > 0 },
+                onCallEnded = {
+                    // 통화 종료 시 이전 화면으로
+                    navController.popBackStack()
+                }
+            )
+        }
 
     }
 }

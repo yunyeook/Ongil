@@ -1,9 +1,11 @@
 package kr.co.ongil.presentation.ui.auth
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -36,14 +38,16 @@ fun LoginRoute(
     // ✅ Scaffold 추가 (SnackbarHost가 포함됨)
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = host) }
-    ) { _ ->
+    ) { paddingValues ->
+        // paddingValues는 Scaffold의 inset을 처리하기 위해 사용
         LoginScreen(
             state = state,
             onPhoneChange = viewModel::onPhoneChange,
             onPasswordChange = viewModel::onPasswordChange,
             onLoginClick = viewModel::onClickLogin,
             onClickFindPw = onClickFindPw,
-            onClickSignup = onClickSignup
+            onClickSignup = onClickSignup,
+            modifier = Modifier.padding(paddingValues)
         )
     }
 

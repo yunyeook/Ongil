@@ -50,9 +50,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.border
+import kr.co.ongil.presentation.theme.ongilColors
 
 @Composable
 fun SearchUserScreen(
+    modifier: Modifier = Modifier,
     navController: NavController,
     viewModel: SearchUserViewModel
 ) {
@@ -95,6 +97,7 @@ fun SearchUserScreen(
     }
 
     SearchUserScreenContent(
+        modifier = modifier,
         uiState = uiState,
         onEvent = { evt -> viewModel.onEvent(evt) },
         onGoHome = {
@@ -108,12 +111,13 @@ fun SearchUserScreen(
 
 @Composable
 private fun SearchUserScreenContent(
+    modifier: Modifier = Modifier,
     uiState: SearchUserUiState,
     onEvent: (SearchUserUiEvent) -> Unit,
     onGoHome: () -> Unit,
 ) {
     Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .background(Color(0xFFFFFFFF))
         ) {
@@ -155,9 +159,11 @@ private fun SearchUserScreenContent(
 
                 SearchUserMode.REGISTER -> {
                     RegisterSection(
+                        foundUserPhone = uiState.foundUser?.phoneNumber ?: "",
                         name = uiState.relationshipName,
                         relationshipType = uiState.relationshipType,
                         relationshipTypeOptions = uiState.relationshipTypeOptions,
+                        isCodeRequested = uiState.isCodeRequested,
                         code = uiState.verificationCodeInput,
                         isCodeVerified = uiState.isVerificationValid,
                         remainSeconds = uiState.verificationCountdownSec,
@@ -169,6 +175,9 @@ private fun SearchUserScreenContent(
                         },
                         onRelationshipTypeSelect = {
                             onEvent(SearchUserUiEvent.OnRelationshipTypeSelect(it))
+                        },
+                        onRequestVerification = {
+                            onEvent(SearchUserUiEvent.OnClickRequestVerification)
                         },
                         onCodeChange = {
                             onEvent(SearchUserUiEvent.OnVerificationCodeChange(it))
@@ -215,7 +224,7 @@ private fun SearchHeader() {
             modifier = Modifier
                 .size(96.dp)
                 .clip(RoundedCornerShape(35.dp))
-                .background(Color(0xFF7D9686)),
+                .background(ongilColors.accent),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -268,8 +277,10 @@ private fun SearchInputSection(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .padding(top = 24.dp),
+            .padding(top = 24.dp)
+            .imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
@@ -557,9 +568,11 @@ private fun SearchNotFoundSection(
 
 @Composable
 private fun RegisterSection(
+    foundUserPhone: String,
     name: String,
     relationshipType: String,
     relationshipTypeOptions: List<String>,
+    isCodeRequested: Boolean,
     code: String,
     isCodeVerified: Boolean,
     remainSeconds: Int,
@@ -568,6 +581,7 @@ private fun RegisterSection(
     canSubmit: Boolean,
     onNameChange: (String) -> Unit,
     onRelationshipTypeSelect: (String) -> Unit,
+    onRequestVerification: () -> Unit,
     onCodeChange: (String) -> Unit,
     onVerifyCode: () -> Unit,
     onMemoChange: (String) -> Unit,
@@ -658,53 +672,97 @@ private fun RegisterSection(
                         onTypeSelect = onRelationshipTypeSelect
                     )
 
-                    // 인증번호 + 확인 버튼 + 남은 시간
+                    // 휴대폰 번호 + 인증번호 발송 / 재발송
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        Text(
+                            text = "휴대폰 번호",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color(0xFF374151)
+                        )
+
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.Bottom,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             InputBox(
-                                value = code,
-                                onValueChange = onCodeChange,
-                                label = "인증번호",
-                                placeholder = "인증번호 6자리",
-                                modifier = Modifier.weight(1f)
+                                value = foundUserPhone,
+                                onValueChange = {},
+                                label = "",
+                                placeholder = "010-0000-0000",
+                                modifier = Modifier.weight(1f),
+                                enabled = false
                             )
 
                             GreenButton(
-                                text = if (isCodeVerified) "확인됨" else "확인",
-                                enabled = !isCodeVerified,
-                                onClick = onVerifyCode,
+                                text = if (isCodeRequested) "재발송" else "발송",
+                                enabled = true,
+                                onClick = onRequestVerification,
                                 modifier = Modifier
                                     .weight(0.6f)
                                     .height(56.dp)
                             )
                         }
+                    }
 
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                    // 인증번호 입력/확인/타이머/결과 메시지
+                    if (isCodeRequested) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = "남은 시간: ${formatSeconds(remainSeconds)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (remainSeconds <= 30)
-                                    MaterialTheme.colorScheme.error
-                                else
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                            if (isCodeVerified) {
-                                Text(
-                                    text = "인증 완료",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Bottom,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                InputBox(
+                                    value = code,
+                                    onValueChange = onCodeChange,
+                                    label = "인증번호",
+                                    placeholder = "인증번호 6자리",
+                                    modifier = Modifier.weight(1f)
                                 )
+
+                                GreenButton(
+                                    text = if (isCodeVerified) "확인됨" else "확인",
+                                    enabled = !isCodeVerified,
+                                    onClick = onVerifyCode,
+                                    modifier = Modifier
+                                        .weight(0.6f)
+                                        .height(56.dp)
+                                )
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                // 남은 시간
+                                if (remainSeconds > 0) {
+                                    Text(
+                                        text = "남은 시간: ${formatSeconds(remainSeconds)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFFD32F2F)
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(1.dp))
+                                }
+
+                                // 성공 메시지
+                                if (isCodeVerified) {
+                                    Text(
+                                        text = "인증 완료",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFF2E7D32),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(1.dp))
+                                }
                             }
                         }
                     }
