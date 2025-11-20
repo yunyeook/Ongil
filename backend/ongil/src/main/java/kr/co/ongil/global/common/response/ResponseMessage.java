@@ -36,6 +36,12 @@ public enum ResponseMessage {
     SAFEZONE_RESET("안전범위가 기본값으로 복원되었습니다."),
     SAFEZONE_FOUND("환자의 안전 범위와 시간이 성공적으로 조회되었습니다."),
 
+    // Abnormal
+    ABNORMAL_LIST_FOUND("이상탐지 기록이 조회되었습니다."),
+    ABNORMAL_DETAIL_FOUND("이상탐지 상세 정보가 조회되었습니다."),
+    ABNORMAL_CREATED("이상탐지 이벤트가 등록되었습니다."),
+
+
     // Relationship
     RELATIONSHIP_CREATED("관계가 성공적으로 생성되었습니다."),
     RELATIONSHIP_LIST_FOUND("관계 목록 조회가 성공적으로 완료되었습니다."),
@@ -73,6 +79,7 @@ public enum ResponseMessage {
     CALL_REQUESTED("통화 요청이 전송되었습니다."),
     CALL_ACCEPTED("통화가 연결되었습니다."),
     CALL_ENDED("통화가 정상적으로 종료되었습니다."),
+    CALL_REQUIRED("통화 발신자가 준비되었습니다."),
 
     // Call Log
     CALL_LOG_CREATED("통화 로그가 성공적으로 저장되었습니다."),
@@ -103,11 +110,26 @@ public enum ResponseMessage {
     SOS_ACK_PROCESSED("워치 재생 완료 콜백이 정상적으로 처리되었습니다."),
     SOS_STOPPED("도움 요청 음성 재생이 성공적으로 종료되었습니다."),
 
-
+    // Location
+    LOCATION_UPDATE("위치 정보가 정상적으로 업데이트되었습니다."),
     // Common
     INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
     INVALID_INPUT("입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."),
-    REQUEST_SUCCESS("요청이 성공적으로 처리되었습니다.");
+    REQUEST_SUCCESS("요청이 성공적으로 처리되었습니다."),
+    // Dashboard
+    DASHBOARD_SUCCESS("대쉬보드가 성공적으로 조회되었습니다."),
+    DASHBOARD_FAIL("대쉬보드 정보가 없습니다"),
+
+    // Health Data
+    HEALTH_DATA_UPLOADED("생체 데이터가 성공적으로 업로드되었습니다."),
+    HEALTH_DATA_FOUND("생체 데이터 조회가 완료되었습니다."),
+    HEALTH_DATA_SUMMARY_FOUND("생체 데이터 요약 통계 조회가 완료되었습니다."),
+    HEALTH_DATA_DELETED("생체 데이터가 성공적으로 삭제되었습니다."),
+
+    // Patient Insight
+    PATIENT_INSIGHT_GENERATED("환자 인사이트가 성공적으로 생성되었습니다."),
+    PATIENT_INSIGHT_FOUND("환자 인사이트 조회가 완료되었습니다."),
+    PATIENT_INSIGHT_LIST_FOUND("환자 인사이트 목록 조회가 완료되었습니다.");
 
     private final String message;
 }

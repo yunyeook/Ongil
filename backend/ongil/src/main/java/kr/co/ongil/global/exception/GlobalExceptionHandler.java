@@ -1,10 +1,12 @@
 package kr.co.ongil.global.exception;
 
+import java.util.Optional;
 import kr.co.ongil.global.common.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -82,11 +84,42 @@ public class GlobalExceptionHandler {
             .body(new ApiResponse<>("지원하지 않는 HTTP 메서드입니다.", ""));
     }
 
+    // 지원하지 않는 Content-Type
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<String>> handleHttpMediaTypeNotSupportedException(
+        org.springframework.web.HttpMediaTypeNotSupportedException e) {
+        log.warn("Unsupported Media Type: {}", e.getContentType());
+        return ResponseEntity
+            .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE) // 415
+            .body(ApiResponse.fail(ErrorCode.UNSUPPORTED_MEDIA_TYPE));
+    }
+    // SSE 응답 중단 시 발생
+    @ExceptionHandler(HttpMessageNotWritableException.class)
+    public ResponseEntity<Void> handleSseWriteError(HttpMessageNotWritableException e) {
+        if (Optional.ofNullable(e.getMessage()).orElse("")
+            .toLowerCase().contains("text/event-stream")) {
+            log.debug("SSE 연결 종료 중 HttpMessageNotWritableException 예외 발생");
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
+    }
+
     // 그 외 모든 예외
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<String>> handleException(Exception e) {
+    public ResponseEntity<?> handleException(Exception e, jakarta.servlet.http.HttpServletRequest request) {
+
+        String accept = Optional.ofNullable(request.getHeader("Accept")).orElse("");
+
+        //  SSE 요청이라면 절대 JSON 응답 시도하지 않음
+        if (accept.contains("text/event-stream")) {
+            log.warn("SSE 요청 중 예외 발생 → JSON 응답 생략 (연결만 종료): {}", e.getMessage());
+            return null; // 아무 응답도 하지 않음 → SSE 연결만 종료됨
+        }
+
+        //  일반 REST 요청은 기존대로 JSON 반환
         log.error("Unexpected error occurred: ", e);
         ErrorCode code = ErrorCode.INTERNAL_ERROR;
+
         return ResponseEntity
             .status(code.getStatus())
             .body(ApiResponse.fail(code));

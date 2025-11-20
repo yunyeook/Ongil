@@ -17,6 +17,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         configurer.addPathPrefix("/api/v1",
             // kr.co.ongil.domain 패키지의 모든 컨트롤러에 /api/v1 prefix 추가
             c -> c.getPackageName().startsWith("kr.co.ongil.domain")
+                || c.getPackageName().startsWith("kr.co.ongil.global.sse")
         );
     }
 }

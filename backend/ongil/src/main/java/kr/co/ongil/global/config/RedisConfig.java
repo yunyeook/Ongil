@@ -1,5 +1,8 @@
 package kr.co.ongil.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import kr.co.ongil.global.sse.publisher.LocationRedisMessageSubscriber;
+import kr.co.ongil.global.sse.publisher.NavigationRedisMessageSubscriber;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,7 +11,11 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -20,41 +27,132 @@ public class RedisConfig {
     @Value("${spring.data.redis.port:6379}")
     private int redisPort;
 
-    @Value("${spring.data.redis.password:redis}")  // 환경변수 주입 (없으면 빈 문자열)
+    @Value("${spring.data.redis.password:}")
     private String redisPassword;
 
     @Value("${REDIS_SSL_ENABLED:false}")
     private boolean sslEnabled;
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Redis 연결 설정
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(redisHost);
         config.setPort(redisPort);
-        if (redisPassword != null && !redisPassword.isEmpty()) {
-            config.setPassword(redisPassword); // 여기서 비밀번호 설정
+        if (redisPassword != null && !redisPassword.trim().isEmpty()) {
+            config.setPassword(redisPassword);
         }
+
         LettuceClientConfiguration.LettuceClientConfigurationBuilder builder =
-                LettuceClientConfiguration.builder();
+            LettuceClientConfiguration.builder();
         if (sslEnabled) {
-            builder.useSsl();  // ← 이게 호출되고 있나?
+            builder.useSsl();
         }
+
         return new LettuceConnectionFactory(config, builder.build());
     }
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Redis Template (Key-Value 저장용)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
     @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, Object> redisTemplate(
+        RedisConnectionFactory connectionFactory
+    ) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // Key는 String으로 직렬화
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-
-        // Value는 JSON으로 직렬화
         template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
 
         return template;
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Redis Pub/Sub 공통 설정
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * Redis Template (Pub/Sub 발행용)
+     */
+    @Bean
+    public RedisTemplate<String, Object> pubSubRedisTemplate(
+        RedisConnectionFactory connectionFactory,
+        ObjectMapper objectMapper
+    ) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+
+        Jackson2JsonRedisSerializer<Object> serializer =
+            new Jackson2JsonRedisSerializer<>(objectMapper, Object.class);
+
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(serializer);
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(serializer);
+
+        return template;
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Location 관련 Pub/Sub 설정
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    @Bean
+    public ChannelTopic locationUpdateTopic() {
+        return new ChannelTopic("location-updates");
+    }
+
+    @Bean
+    public MessageListenerAdapter locationMessageListener(
+        LocationRedisMessageSubscriber subscriber
+    ) {
+        return new MessageListenerAdapter(subscriber, "onMessage");
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Navigation 관련 Pub/Sub 설정
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    @Bean
+    public ChannelTopic navigationUpdateTopic() {
+        return new ChannelTopic("navigation-updates");
+    }
+
+    @Bean
+    public MessageListenerAdapter navigationMessageListener(
+        NavigationRedisMessageSubscriber subscriber
+    ) {
+        return new MessageListenerAdapter(subscriber, "onMessage");
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Redis 메시지 리스너 컨테이너 (통합)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    @Bean
+    public RedisMessageListenerContainer redisMessageListenerContainer(
+        RedisConnectionFactory connectionFactory,
+        MessageListenerAdapter locationMessageListener,
+        MessageListenerAdapter navigationMessageListener,
+        ChannelTopic locationUpdateTopic,
+        ChannelTopic navigationUpdateTopic
+    ) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+
+        // Location 채널 구독
+        container.addMessageListener(locationMessageListener, locationUpdateTopic);
+
+        // Navigation 채널 구독
+        container.addMessageListener(navigationMessageListener, navigationUpdateTopic);
+
+        return container;
     }
 }

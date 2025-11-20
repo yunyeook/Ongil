@@ -9,6 +9,8 @@ import kr.co.ongil.domain.user.entity.User;
 import kr.co.ongil.domain.user.entity.Provider;
 import kr.co.ongil.domain.user.entity.UserType;
 import kr.co.ongil.domain.user.repository.UserRepository;
+import kr.co.ongil.domain.patient.safezone.entity.SafeZone;
+import kr.co.ongil.domain.patient.safezone.repository.SafeZoneRepository;
 import kr.co.ongil.global.util.FileUtil;
 import kr.co.ongil.global.security.jwt.JwtUtil;
 import kr.co.ongil.global.repository.RefreshTokenRepository;
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -29,7 +32,9 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SafeZoneRepository safeZoneRepository;
 
+    @Transactional
     public void register(RegisterRequest request) {
 
         // 전화번호 인증 토큰 검증
@@ -65,6 +70,15 @@ public class AuthService {
 
         // 사용자 저장
         User savedUser = userRepository.save(user);
+
+        // 환자로 회원가입 시 안전범위 기본값 자동 생성
+        if (savedUser.getUserType() == UserType.PATIENT) {
+            SafeZone safeZone = SafeZone.builder()
+                    .patient(savedUser)
+                    .build();
+            safeZoneRepository.save(safeZone);
+            log.info("환자 안전범위 기본값 생성 완료: patientId={}", savedUser.getId());
+        }
 
         log.info("회원가입 완료: phoneNumber={}, userType={}", request.getPhoneNumber(), request.getUserType());
     }

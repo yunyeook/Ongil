@@ -6,8 +6,10 @@ import kr.co.ongil.domain.auth.dto.request.LoginRequest;
 import kr.co.ongil.domain.auth.dto.request.RefreshRequest;
 import kr.co.ongil.domain.auth.dto.response.LoginResponse;
 import kr.co.ongil.domain.auth.dto.response.RefreshResponse;
+import kr.co.ongil.domain.fcm.service.FcmService;
 import kr.co.ongil.global.common.response.ApiResponse;
 import kr.co.ongil.global.common.response.ResponseMessage;
+import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -27,11 +30,14 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final FcmService fcmService;
 
     @PostMapping("/register")
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
-    public ApiResponse<String> register(@Valid @ModelAttribute RegisterRequest request) {
-
+    public ApiResponse<String> register(@Valid @ModelAttribute RegisterRequest request,
+                                        @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
+        log.info("프로필 이미지: {}", profileImage);
+        request.setProfileImage(profileImage);
         authService.register(request);
         return ApiResponse.success(ResponseMessage.SIGNUP_SUCCESS);
     }
@@ -39,8 +45,11 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "전화번호와 비밀번호로 로그인하여 액세스 토큰과 리프레시 토큰을 발급받습니다.")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-
         LoginResponse loginResponse = authService.login(request);
+        if (request.getFcmToken() != null) {
+            fcmService.registerFcmToken(loginResponse.getUser().getId(),request.getFcmToken());
+        }
+
         return ApiResponse.success(ResponseMessage.LOGIN_SUCCESS, loginResponse);
     }
 
@@ -59,6 +68,8 @@ public class AuthController {
         // "Bearer " 접두사 제거
         String accessToken = authorizationHeader.replace("Bearer ", "");
 
+        Integer userId = SecurityUtil.getCurrentUserId();
+        fcmService.deleteFcmToken(userId);
         authService.logout(accessToken);
         return ApiResponse.success(ResponseMessage.LOGOUT_SUCCESS);
     }

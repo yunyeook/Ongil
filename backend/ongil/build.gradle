@@ -52,6 +52,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis' // Lettuce + auto-config
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.session:spring-session-data-redis'
+    implementation 'org.redisson:redisson-spring-boot-starter:3.23.4'
 
     // --- S3 ---
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.4.0'
@@ -65,12 +66,16 @@ dependencies {
     // --- FCM ---
     implementation 'com.google.firebase:firebase-admin:9.2.0'
 
+    // --- RabbitMQ ---
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
     // --- 기타 ---
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+    implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
 
     // --- Test ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

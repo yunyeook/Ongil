@@ -2,6 +2,7 @@ package kr.co.ongil.domain.call.repository;
 
 import kr.co.ongil.domain.call.entity.CallLog;
 import kr.co.ongil.domain.call.entity.CallType;
+import kr.co.ongil.domain.patient.dashboard.dto.CallStatisticsDto;
 import kr.co.ongil.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -49,6 +51,15 @@ public interface CallLogRepository extends JpaRepository<CallLog, Integer> {
            "WHERE ((cl.caller = :user1 AND cl.receiver = :user2) OR (cl.caller = :user2 AND cl.receiver = :user1)) " +
            "ORDER BY cl.startedAt DESC")
     List<CallLog> findCallLogsBetweenUsers(@Param("user1") User user1, @Param("user2") User user2);
+
+    @Query("SELECT new kr.co.ongil.domain.patient.dashboard.dto.CallStatisticsDto(" +
+            "CAST(cl.caller.id AS Long), COUNT(cl)) " +
+            "FROM CallLog cl " +
+            "WHERE cl.createdAt >= :startDate " +
+            "AND cl.callType = :callType " +
+            "GROUP BY cl.caller")
+    List<CallStatisticsDto> findCallStatisticsByUser(@Param("startDate") LocalDateTime startDate,
+    @Param("callType") CallType callType);
 
     /**
      * 긴급 통화 기록 조회 (전체, 최신순)

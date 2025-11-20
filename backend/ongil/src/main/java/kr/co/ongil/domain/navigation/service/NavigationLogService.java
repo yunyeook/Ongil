@@ -24,7 +24,7 @@ public class NavigationLogService {
      * 길안내 로그 생성
      */
     @Transactional
-    public NavigationLog createLog(Long patientId, RouteResponse route, LocalDateTime startedAt, String initiatedBy
+    public NavigationLog createLog(Integer patientId, RouteResponse route, LocalDateTime startedAt, String initiatedBy
     ) {
         NavigationLog navigationLog = NavigationLog.of(patientId, route, startedAt, initiatedBy);
 
@@ -37,7 +37,7 @@ public class NavigationLogService {
      * 로그 완료 처리
      */
     @Transactional
-    public NavigationLog completeLog(Long navigationId, Boolean isSuccessful) {
+    public NavigationLog completeLog(Integer navigationId, Boolean isSuccessful) {
         NavigationLog navigationLog = logRepository.findById(navigationId)
             .orElseThrow(() -> new BusinessException(ErrorCode.NAVIGATION_LOG_NOT_FOUND));
 

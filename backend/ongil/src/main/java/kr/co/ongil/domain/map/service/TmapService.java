@@ -2,11 +2,10 @@ package kr.co.ongil.domain.map.service;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import kr.co.ongil.domain.map.dto.response.AddressResponse;
 import kr.co.ongil.domain.map.dto.response.BusinessInfo;
 import kr.co.ongil.domain.map.dto.response.CategoryInfo;
-import kr.co.ongil.domain.map.dto.response.CoordinateResponse;
+import kr.co.ongil.domain.map.dto.response.CoordinateInfo;
 import kr.co.ongil.domain.map.dto.response.PlaceDetailResponse;
 import kr.co.ongil.domain.map.dto.response.RouteResponse;
 import kr.co.ongil.domain.map.dto.response.SearchPlaceListResponse;
@@ -74,7 +73,7 @@ public class TmapService {
     /**
      * 주소 → 좌표 변환 (Geocoding)
      */
-    public CoordinateResponse getCoordinateFromAddress(String cityDo, String guGun, String dong, String bunji) {
+    public CoordinateInfo getCoordinateFromAddress(String cityDo, String guGun, String dong, String bunji) {
         try {
             TmapGeocodeResponse response = tmapWebClient.get()
                 .uri(uriBuilder -> {
@@ -124,7 +123,7 @@ public class TmapService {
                 throw new BusinessException(ErrorCode.COORDINATE_NOT_FOUND);
             }
 
-            return CoordinateResponse.parse(latitude, longitude);
+            return CoordinateInfo.parse(latitude, longitude);
 
         } catch (WebClientResponseException.TooManyRequests e) {
             log.error("Tmap API 호출 제한 초과", e);
@@ -232,7 +231,7 @@ public class TmapService {
                 poi.id(),
                 poi.name(),
                 AddressResponse.fromPoiDetail(poi),
-                CoordinateResponse.ofWithFallback(poi.frontLat(), poi.lat(), poi.frontLon(), poi.lon()),
+                CoordinateInfo.ofWithFallback(poi.frontLat(), poi.lat(), poi.frontLon(), poi.lon()),
                 CategoryInfo.of(poi.bizCatName(), null, null),
                 poi.tel(),
                 poi.desc(),

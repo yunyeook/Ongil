@@ -12,6 +12,7 @@ import kr.co.ongil.global.common.response.ResponseMessage;
 import kr.co.ongil.global.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -42,7 +43,21 @@ public class CallLogController {
      * 기본 전화 통화 로그 생성 (클라이언트 콜백)
      */
     @PostMapping
-    @Operation(summary = "통화 로그 생성", description = "기본 전화 통화 종료 후 클라이언트가 통화 로그를 등록합니다.")
+    @Operation(
+        summary = "통화 로그 생성",
+        description = """
+            기본 전화 통화 종료 후 클라이언트가 통화 로그를 등록합니다.
+
+            **수신자 지정 방법:**
+            - 앱 내 사용자와 통화: `receiverId` 사용
+            - 시스템 다이얼러로 외부 번호 통화: `receiverPhoneNumber` 사용
+            - `receiverId`와 `receiverPhoneNumber` 중 **하나는 필수**입니다.
+
+            **전화번호 자동 매칭:**
+            - `receiverPhoneNumber`로 전화번호를 보내면, 해당 번호가 앱에 가입되어 있는지 자동으로 확인합니다.
+            - 가입된 사용자면 자동으로 연결되고, 미가입자면 전화번호만 저장됩니다.
+            """
+    )
     public ApiResponse<CallLogResponse> createCallLog(
         @Valid @RequestBody CreateCallLogRequest request
     ) {
@@ -56,8 +71,12 @@ public class CallLogController {
      * 내 통화 로그 목록 조회 (페이징)
      */
     @GetMapping
-    @Operation(summary = "통화 로그 목록 조회", description = "사용자의 통화 로그 목록을 페이징하여 조회합니다.")
+    @Operation(
+        summary = "통화 로그 목록 조회",
+        description = "사용자의 통화 로그 목록을 페이징하여 조회합니다. 기본값: 페이지 크기 20, 최신순 정렬"
+    )
     public ApiResponse<List<CallLogResponse>> getCallLogs(
+        @ParameterObject
         @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         Integer userId = SecurityUtil.getCurrentUserId();

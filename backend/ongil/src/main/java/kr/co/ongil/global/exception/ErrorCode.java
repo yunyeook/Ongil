@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 public enum ErrorCode {
 
     // AUTH
+    USER_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 회원에 대한 접근 권한이 없습니다."),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않거나 만료된 토큰입니다."),
     EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 만료되었습니다."),
@@ -53,6 +54,14 @@ public enum ErrorCode {
     NO_GUARDIAN_FOUND(HttpStatus.NOT_FOUND, "관계 등록된 보호자가 없습니다."),
     PATIENT_ALREADY_LINKED(HttpStatus.CONFLICT, "이미 보호자와 연결된 환자입니다."),
 
+    // HEALTH DATA
+    HEALTH_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "생체 데이터를 찾을 수 없습니다."),
+    INVALID_HEALTH_DATA_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 생체 데이터 유형입니다."),
+    HEALTH_DATA_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자의 생체 데이터에 접근할 권한이 없습니다."),
+    DUPLICATE_HEALTH_DATA(HttpStatus.CONFLICT, "중복된 생체 데이터가 존재합니다."),
+    INVALID_DATE_FORMAT(HttpStatus.BAD_REQUEST, "유효하지 않은 날짜 형식입니다. (yyyyMMdd 형식을 사용해주세요)"),
+    INVALID_DATE_RANGE(HttpStatus.BAD_REQUEST, "잘못된 날짜 범위입니다. 시작 날짜는 종료 날짜보다 이전이어야 합니다."),
+
     // RELATIONSHIP
     RELATIONSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 관계를 찾을 수 없습니다."),
     RELATIONSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 관계입니다."),
@@ -68,7 +77,6 @@ public enum ErrorCode {
     // FAVORITE
     FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "즐겨찾기를 찾을 수 없습니다."),
     FAVORITE_ALREADY_EXISTS(HttpStatus.CONFLICT, "동일한 즐겨찾기가 이미 존재합니다."),
-    FAVORITE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 환자에 대한 접근 권한이 없습니다."),
     FAVORITE_DEFAULT_NOT_CANCELED(HttpStatus.FORBIDDEN, "기본 길찾기를 해제할 수 없습니다."),
 
     // LOCATION / SAFEZONE / ABNORMAL DETECTION
@@ -82,6 +90,8 @@ public enum ErrorCode {
     ROUTE_GUIDE_FAILED(HttpStatus.BAD_GATEWAY, "길찾기 안내 중 오류가 발생했습니다."),
     ABNORMAL_EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 이상탐지 이벤트를 찾을 수 없습니다."),
     LOCATION_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "위치 서비스가 일시적으로 사용 불가능합니다."),
+    ABNORMAL_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 이상탐지 로그를 찾을 수 없습니다."),
+
 
     // CALL / VOICE / SOS
     CALL_NOT_FOUND(HttpStatus.NOT_FOUND, "통화 세션을 찾을 수 없습니다."),
@@ -122,15 +132,6 @@ public enum ErrorCode {
     ALERT_TYPE_INVALID(HttpStatus.BAD_REQUEST, "올바르지 않은 알림 유형입니다."),
     INVALID_NOTIFICATION_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 알림 유형입니다."),
 
-
-    //SYSTEM / REQUEST / COMMON
-    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 형식이 올바르지 않습니다."),
-    INVALID_INPUT(HttpStatus.UNPROCESSABLE_ENTITY, "입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."),
-    JSON_PARSING_ERROR(HttpStatus.BAD_REQUEST, "요청 본문 파싱 중 오류가 발생했습니다."),
-    EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 연동 중 오류가 발생했습니다."),
-    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "현재 서비스를 이용할 수 없습니다."),
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
-    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED,"지원하지 않는 HTTP 메서드입니다."),
     // MAP / GEOCODING / ADDRESS
     INVALID_COORDINATE(HttpStatus.BAD_REQUEST, "유효하지 않은 좌표입니다."),
     INVALID_LATITUDE(HttpStatus.BAD_REQUEST, "유효하지 않은 위도입니다. (대한민국 범위: 33~43)"),
@@ -153,7 +154,27 @@ public enum ErrorCode {
 
     // REDIS
     REDIS_DESERIALIZATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR,"Redis 데이터 역직렬화에 실패했습니다." ),
-    REDIS_SESSION_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 세션 저장에 실패했습니다.");
+    REDIS_SESSION_SAVE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 세션 저장에 실패했습니다."),
+
+    //SYSTEM / REQUEST / COMMON
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청 형식이 올바르지 않습니다."),
+    INVALID_INPUT(HttpStatus.UNPROCESSABLE_ENTITY, "입력값이 유효하지 않습니다. 형식을 다시 확인해주세요."),
+    JSON_PARSING_ERROR(HttpStatus.BAD_REQUEST, "요청 본문 파싱 중 오류가 발생했습니다."),
+    EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 연동 중 오류가 발생했습니다."),
+    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "현재 서비스를 이용할 수 없습니다."),
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED,"지원하지 않는 HTTP 메서드입니다."),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 Content-Type입니다."),
+
+    //DASHBOARD
+    DASHBOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "대쉬보드가 존재하지 않습니다."),
+
+    // PATIENT INSIGHT
+    PATIENT_INSIGHT_NOT_FOUND(HttpStatus.NOT_FOUND, "환자 인사이트를 찾을 수 없습니다."),
+    INSUFFICIENT_DATA_FOR_ANALYSIS(HttpStatus.BAD_REQUEST, "분석할 데이터가 부족합니다. 더 많은 활동 데이터가 필요합니다."),
+    INSIGHT_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "인사이트 생성 중 오류가 발생했습니다."),
+    LLM_API_ERROR(HttpStatus.BAD_GATEWAY, "AI 모델 호출 중 오류가 발생했습니다.");
+
     private final HttpStatus status;
     private final String message;
 

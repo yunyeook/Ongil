@@ -13,21 +13,21 @@ import java.util.Optional;
 
 public interface NavigationLogRepository extends JpaRepository<NavigationLog, Long> {
 
-    Optional<NavigationLog> findById(Long id);
+    Optional<NavigationLog> findById(Integer navigationId);
 
-    Page<NavigationLog> findByPatientIdOrderByStartedAtDesc(Long patientId, Pageable pageable);
+    Page<NavigationLog> findByPatientIdOrderByStartedAtDesc(Integer patientId, Pageable pageable);
 
     List<NavigationLog> findByPatientIdAndStartedAtBetween(
-        Long patientId,
+        Integer patientId,
         LocalDateTime startDate,
         LocalDateTime endDate
     );
 
     // 성공한 길안내 수
     @Query("SELECT COUNT(l) FROM NavigationLog l WHERE l.patientId = :patientId AND l.isSuccessful = true")
-    Long countSuccessfulNavigationsByPatient(@Param("patientId") Long patientId);
+    Long countSuccessfulNavigationsByPatient(@Param("patientId") Integer patientId);
 
     // 전체 길안내 수
     @Query("SELECT COUNT(l) FROM NavigationLog l WHERE l.patientId = :patientId")
-    Long countTotalNavigationsByPatient(@Param("patientId") Long patientId);
+    Long countTotalNavigationsByPatient(@Param("patientId") Integer patientId);
 }

@@ -3,6 +3,7 @@ package kr.co.ongil.domain.call.controller;
 import kr.co.ongil.domain.call.dto.signal.SignalMessage;
 import kr.co.ongil.domain.call.entity.Call;
 import kr.co.ongil.domain.call.repository.CallRepository;
+import kr.co.ongil.domain.user.repository.UserRepository;
 import kr.co.ongil.global.exception.BusinessException;
 import kr.co.ongil.global.exception.ErrorCode;
 import kr.co.ongil.global.security.userdetails.CustomUserDetails;
@@ -12,8 +13,10 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+
+import java.security.Principal;
 
 /**
  * VoIP 통화 시그널링 컨트롤러 (WebSocket)
@@ -26,6 +29,7 @@ public class CallSignalController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final CallRepository callRepository;
+    private final UserRepository userRepository;
 
     /**
      * 시그널링 메시지 중계
@@ -36,48 +40,73 @@ public class CallSignalController {
      */
     @MessageMapping("/calls/{callId}/signal")
     public void relaySignal(
-        @DestinationVariable Integer callId,
-        @Payload SignalMessage message,
-        @AuthenticationPrincipal CustomUserDetails userDetails
+            @DestinationVariable Integer callId,
+            @Payload SignalMessage message,
+            Principal principal
     ) {
-        Integer fromUserId = userDetails.getUserId();
-        log.info("시그널링 메시지 수신: type={}, callId={}, from={}, to={}",
-            message.type(), callId, fromUserId, message.toUserId());
+        // 1) 발신자 ID 추출
+        Integer fromUserId = extractUserId(principal);
 
-        // 1. 통화 세션 존재 여부 확인
+        // 2) 통화 세션 확인
         Call call = callRepository.findById(callId)
-            .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CALL_NOT_FOUND));
 
-        // 2. 권한 검증 (발신자 또는 수신자인지 확인)
+        // 3) 권한 확인
         boolean isAuthorized = call.getCaller().getId().equals(fromUserId)
-            || call.getReceiver().getId().equals(fromUserId);
+                || call.getReceiver().getId().equals(fromUserId);
 
         if (!isAuthorized) {
             log.warn("시그널링 권한 없음: callId={}, userId={}", callId, fromUserId);
             throw new BusinessException(ErrorCode.CALL_PERMISSION_DENIED);
         }
 
-        // 3. 대상 사용자 ID 계산 (toUserId가 null이면 자동 계산)
+        // 4) 수신 대상 사용자 ID 계산
         Integer toUserId = message.toUserId();
         if (toUserId == null) {
-            // fromUserId가 caller면 receiver에게, receiver면 caller에게 전송
             toUserId = call.getCaller().getId().equals(fromUserId)
-                ? call.getReceiver().getId()
-                : call.getCaller().getId();
-            log.info("toUserId가 null이어서 자동 계산: from={}, to={}", fromUserId, toUserId);
+                    ? call.getReceiver().getId()
+                    : call.getCaller().getId();
         }
 
-        // 4. 대상 사용자에게 메시지 전달
-        String destination = "/queue/calls";  // 통합 destination 사용
+        // ✅ 5) fromUserId와 toUserId가 설정된 새 메시지 생성
+        SignalMessage enrichedMessage = message.withUserIds(fromUserId, toUserId);
+
+        // 6) 개인 큐로 전송
+        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         messagingTemplate.convertAndSendToUser(
-            toUserId.toString(),
-            destination,
-            message
+                targetPrincipalName,
+                "/queue/calls",
+                enrichedMessage  // ✅ fromUserId가 설정된 메시지
         );
 
-        log.info("시그널링 메시지 전달 완료: type={}, from={}, to={}, destination={}",
-            message.type(), fromUserId, toUserId, destination);
+        log.info("시그널 전달: type={}, callId={}, fromUserId={}, toUserId={}, toPrincipalName={}",
+                enrichedMessage.type(), callId, fromUserId, toUserId, targetPrincipalName);
+
+        // ✅ 7) WebRTC 시그널은 토픽으로도 브로드캐스트
+        if ("OFFER".equals(enrichedMessage.type()) ||
+                "ANSWER".equals(enrichedMessage.type()) ||
+                "ICE".equals(enrichedMessage.type())) {
+
+            messagingTemplate.convertAndSend(
+                    "/topic/calls." + callId,
+                    enrichedMessage  // ✅ fromUserId가 설정된 메시지
+            );
+
+            log.info("📡 WebRTC 시그널 브로드캐스트: /topic/calls/{}", callId);
+        }
+    }
+
+    private Integer extractUserId(Principal principal) {
+        if (principal instanceof Authentication auth) {
+            Object p = auth.getPrincipal();
+            if (p instanceof CustomUserDetails cud) {
+                return cud.getUserId();
+            }
+        }
+        // 혹시 모를 Fallback (하지만 현재 구조에선 phoneNumber가 들어오므로 거의 안 탑니다)
+        return Integer.parseInt(principal.getName());
     }
 
     /**
@@ -87,8 +116,17 @@ public class CallSignalController {
     public void sendIncomingCall(Integer callId, Integer fromUserId, Integer toUserId) {
         SignalMessage message = SignalMessage.incoming(callId, fromUserId, toUserId);
 
+//        messagingTemplate.convertAndSendToUser(
+//            toUserId.toString(),
+//            "/queue/calls",  // 통합 destination 사용
+//            message
+//        );
+
+        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         messagingTemplate.convertAndSendToUser(
-            toUserId.toString(),
+            targetPrincipalName,
             "/queue/calls",  // 통합 destination 사용
             message
         );
@@ -105,9 +143,18 @@ public class CallSignalController {
     public void sendHangup(Integer callId, Integer fromUserId, Integer toUserId) {
         SignalMessage message = SignalMessage.hangup(callId, fromUserId, toUserId);
 
+//        messagingTemplate.convertAndSendToUser(
+//            toUserId.toString(),
+//            "/queue/calls",  // 통합 destination 사용
+//            message
+//        );
+
+        String targetPrincipalName = userRepository.findPhoneNumberById(toUserId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         messagingTemplate.convertAndSendToUser(
-            toUserId.toString(),
-            "/queue/calls",  // 통합 destination 사용
+            targetPrincipalName,
+            "/queue/calls",
             message
         );
 
