@@ -1,0 +1,161 @@
+package kr.co.ongil.data.datasource.remote
+
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kr.co.ongil.BuildConfig
+import kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
+import kr.co.ongil.data.model.location.GpsUpdateEvent
+import kr.co.ongil.data.model.location.NavigationUpdateEvent
+import kr.co.ongil.data.model.location.SseEvent
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okio.BufferedSource
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
+
+
+
+/**
+ * SSE로 환자들의 실시간 위치를 수신하는 DataSource
+ */
+@Singleton
+class LocationSseDataSource @Inject constructor(
+    private val userDataStoreManager: UserDataStoreManager,
+    private val json: Json
+) {
+    companion object {
+        private const val TAG = "LocationSseDataSource"
+    }
+
+    private val sseClient = OkHttpClient.Builder()
+        .readTimeout(0, TimeUnit.SECONDS) // 60초 타임아웃 (서버 heartbeat 간격보다 길게)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .pingInterval(20, TimeUnit.SECONDS)  // 20초마다 ping (연결 유지)
+        .retryOnConnectionFailure(true)  // 연결 실패 시 재시도
+        .build()
+
+    /**
+     * SSE 스트림 연결 (통합)
+     * @return Flow<SseEvent> - SSE 이벤트 스트림
+     */
+    fun connectSseStream(): Flow<SseEvent> = callbackFlow {
+        var response: Response? = null
+
+        try {
+            withContext(Dispatchers.IO) {
+                // Access Token 가져오기
+                val accessToken = userDataStoreManager.getAccessToken().first()
+
+                if (accessToken.isNullOrBlank()) {
+                    Log.e(TAG, "Access Token이 없습니다")
+                    return@withContext
+                }
+
+                // SSE 요청
+                val request = Request.Builder()
+                    .url(BuildConfig.SSE_URL)
+                    .header("Authorization", "Bearer $accessToken")
+                    .header("Accept", "text/event-stream")
+                    .get()
+                    .build()
+
+                Log.d(TAG, "SSE 연결 시작: ${BuildConfig.SSE_URL}")
+
+                response = sseClient.newCall(request).execute()
+
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "SSE 연결 실패: ${response.code}")
+                    return@withContext
+                }
+
+                Log.d(TAG, "SSE 연결 성공")
+                trySend(SseEvent.Connected)  // 연결 성공 이벤트 먼저 전송
+
+                val source: BufferedSource? = response.body?.source()
+                if (source == null) {
+                    Log.e(TAG, "Response body가 null입니다")
+                    return@withContext
+                }
+
+                var currentEvent: String? = null
+
+                // SSE 스트림 읽기
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: break
+
+                    // 모든 SSE 라인 로그 (디버깅용)
+                    if (line.isNotEmpty()) {
+//                        Log.d(TAG, "📩 SSE 라인: $line")
+                    }
+
+                    when {
+                        line.startsWith("event:") -> {
+                            currentEvent = line.removePrefix("event:").trim()
+//                            Log.d(TAG, "🎯 이벤트 타입: $currentEvent")
+                        }
+                        line.startsWith(":") -> {
+                            // SSE 주석 (heartbeat/keep-alive) - 무시
+//                            Log.v(TAG, "💓 SSE heartbeat 수신")
+                        }
+                        line.startsWith("data:") -> {
+                            val data = line.removePrefix("data:").trim()
+//                            Log.d(TAG, "📦 데이터 수신 (이벤트=$currentEvent): $data")
+
+                            when (currentEvent) {
+                                "connected" -> {
+//                                    Log.d(TAG, "SSE 연결 확인: $data")
+                                    // connected 이벤트는 이미 위에서 전송했으므로 중복 전송하지 않음
+                                }
+                                "gps-update" -> {
+                                    try {
+                                        val gpsUpdate = json.decodeFromString<GpsUpdateEvent>(data)
+                                        Log.d(TAG, "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}")
+                                        trySend(SseEvent.GpsUpdate(gpsUpdate))
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "GPS 데이터 파싱 실패: $data", e)
+                                    }
+                                }
+                                "navigation-update" -> {
+                                    try {
+                                        val navUpdate = json.decodeFromString<NavigationUpdateEvent>(data)
+                                        Log.d(TAG, "길찾기 업데이트 수신: patientId=${navUpdate.patientId}, status=${navUpdate.status}, route=${navUpdate.route != null}")
+                                        trySend(SseEvent.NavigationUpdate(navUpdate))
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "길찾기 데이터 파싱 실패: $data", e)
+                                    }
+                                }
+                                else -> {
+//                                    Log.d(TAG, "알 수 없는 이벤트: $currentEvent, data: $data")
+                                }
+                            }
+                        }
+                        line.isEmpty() -> {
+                            // 빈 줄은 이벤트 구분자
+                            currentEvent = null
+                        }
+                    }
+                }
+
+                Log.d(TAG, "SSE 스트림 종료")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "SSE 연결 중 오류", e)
+        } finally {
+            response?.close()
+            close()
+        }
+
+        awaitClose {
+            Log.d(TAG, "SSE Flow 닫힘")
+            response?.close()
+        }
+    }
+}

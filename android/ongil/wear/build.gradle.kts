@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.dagger.hilt.android)
+    kotlin("kapt")
+    kotlin("plugin.serialization") version "1.9.22"
 }
 
 android {
@@ -14,7 +17,6 @@ android {
         targetSdk = 36  // Wear OS 6 (One UI Watch 8)
         versionCode = 1
         versionName = "1.0"
-
     }
 
     buildTypes {
@@ -33,15 +35,20 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    useLibrary("wear-sdk")
     buildFeatures {
         compose = true
     }
 }
 
 dependencies {
-
+    // Wear OS
+    compileOnly("com.google.android.wearable:wearable:2.9.0")
     implementation(libs.play.services.wearable)
+
+    // Coroutines Play Services ← 중요!
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -51,12 +58,46 @@ dependencies {
     implementation(libs.androidx.wear.tooling.preview)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
+
+    // Tiles & Complications
     implementation(libs.androidx.tiles)
     implementation(libs.androidx.tiles.material)
     implementation(libs.androidx.tiles.tooling.preview)
     implementation(libs.horologist.compose.tools)
     implementation(libs.horologist.tiles)
     implementation(libs.androidx.watchface.complications.data.source.ktx)
+
+    // Hilt (의존성 주입)
+    implementation(libs.dagger.hilt.android)
+    kapt(libs.dagger.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+    kapt(libs.androidx.hilt.compiler)
+
+    //DataStore (로그인 정보 등 저장)
+    implementation(libs.androidx.datastore.preferences)
+
+    //Common 모듈 : 워치에서도 앱과 공통 코드 사용
+    implementation(project(":common"))
+
+    // Lifecycle & ViewModel (화면 로직 관리)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    // Network - Retrofit & OkHttp
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Kotlinx Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
+
+    // Navigation (Compose)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.wear.compose:compose-navigation:1.3.1")
+
+    // Test
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

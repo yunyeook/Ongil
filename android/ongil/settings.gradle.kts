@@ -16,9 +16,12 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("${rootDir}/local-maven-repo") }
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
 rootProject.name = "ongil"
 include(":app")
 include(":wear")
+include(":common")

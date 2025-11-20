@@ -1,0 +1,25 @@
+{
+  "groups": [
+    {
+      "name": "tmap",
+      "type": "kr.co.ongil.global.config.TmapConfig",
+      "sourceType": "kr.co.ongil.global.config.TmapConfig"
+    }
+  ],
+  "properties": [
+    {
+      "name": "tmap.app-key",
+      "type": "java.lang.String",
+      "sourceType": "kr.co.ongil.global.config.TmapConfig"
+    },
+    {
+      "name": "tmap.base-url",
+      "type": "java.lang.String",
+      "sourceType": "kr.co.ongil.global.config.TmapConfig"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}

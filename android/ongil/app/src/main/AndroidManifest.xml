@@ -2,17 +2,97 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- TMap 사용을 위한 권한 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- 백그라운드 위치(길찾기 지속용, Android 10+) -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- 포그라운드 서비스 권한 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Android 13+ 알림 권한(포그라운드 서비스 알림 표시) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- VOIP 음성 통화 권한 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- ✅ 전체 화면 알림 권한 (Android 10+) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- ✅ 알림 권한 (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 시스템 전화 걸기 권한 -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
+    <!-- Health Connect 권한 -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+
     <application
+        android:name=".OngilApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ongil_icon"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ongil_icon"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Ongil">
+        android:theme="@style/Theme.Ongil"
+        android:enableOnBackInvokedCallback="true"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
+        <service
+            android:name=".service.MyFirebaseMessagingService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+<!--        &lt;!&ndash; 길찾기용 위치 포그라운드 서비스 &ndash;&gt;-->
+<!--        <service-->
+<!--            android:name="kr.co.ongil.presentation.service.NavigationLocationService"-->
+<!--            android:exported="false"-->
+<!--            android:enabled="true"-->
+<!--            android:foregroundServiceType="location" />-->
+
+
+        <!--  내 위치 확인용 코드  -->
+        <service
+            android:name="kr.co.ongil.service.location.LocationTrackingService"
+            android:exported="false"
+            android:enabled="true"
+            android:foregroundServiceType="location" />
+
+        <!-- Watch 메시지 수신 서비스 (블루투스 모델) -->
+        <service
+            android:name="kr.co.ongil.service.wear.WearMessageListenerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" />
+            </intent-filter>
+        </service>
+
         <activity
-            android:name=".MainActivity"
+
+            android:windowSoftInputMode="adjustResize"
+            android:name="kr.co.ongil.presentation.MainActivity"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="false"
+            android:launchMode="singleTop"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Ongil">
@@ -22,6 +102,33 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
+        <activity
+            android:name=".presentation.ui.call.IncomingCallActivity"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleTask" />
+
+        <activity
+            android:name=".presentation.ui.sos.SosAlertActivity"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleTask" />
+
+        <!-- Health Connect 연동을 위한 Activity Alias -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity="kr.co.ongil.presentation.MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
     </application>
 
 </manifest>
