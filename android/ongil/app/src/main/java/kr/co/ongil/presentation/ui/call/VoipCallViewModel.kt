@@ -20,6 +20,7 @@ import kr.co.ongil.data.model.call.TurnCredentialsDto
 import kr.co.ongil.data.model.call.VoipCallDto
 import kr.co.ongil.data.model.websocket.SignalMessage
 import kr.co.ongil.domain.repository.CallRepository
+import kr.co.ongil.domain.repository.SosAlertRepository
 import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 
@@ -28,15 +29,27 @@ class VoipCallViewModel @Inject constructor(
     private val callRepository: CallRepository,
     private val webRtcCallClient: WebRtcCallClient,
     private val voipSignalingService: VoipSignalingService,
+    private val sosRepository: SosAlertRepository,
     private val userDataStoreManager: UserDataStoreManager
 ) : ViewModel() {
+    private val pendingIceCandidates = mutableListOf<IceCandidateInfo>()
+    private var isRemoteDescriptionSet = false
+    private var isWebRtcInitialized = false
 
+    data class IceCandidateInfo(
+        val candidate: String,
+        val sdpMid: String?,
+        val sdpMLineIndex: Int
+    )
     private val _uiState = MutableStateFlow(VoipCallUiState())
     val uiState: StateFlow<VoipCallUiState> = _uiState.asStateFlow()
 
     private var currentCall: VoipCallDto? = null
     private var currentUserId: Long? = null
     private var callTimerJob: Job? = null
+    // 현재 통화 중인 환자 ID 상태
+    private val _currentPatientId = MutableStateFlow<Long?>(null)
+    val currentPatientId = _currentPatientId.asStateFlow()
 
     init {
         // 로그인 사용자 ID 구독
@@ -59,106 +72,90 @@ class VoipCallViewModel @Inject constructor(
     // 📞 발신자 플로우
     // =========================================================
 
-    fun startVoipCall(
-        receiverId: Long,
-        userType: String,
-        callType: String = "NORMAL"
-    ) {
-        Log.d(TAG, "=== [CALLER] startVoipCall: to=$receiverId, userType=$userType, type=$callType")
-
+    /**
+     * SOS 알림 전송
+     */
+    fun sendSosAlert(patientId: Int) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, message = null, error = null) }
+            try {
+                Log.d("VoipCallViewModel", "🚨 SOS 알림 전송 시작 - 환자 ID: $patientId")
+                sosRepository.sendSosAlert(patientId, "도움 요청 발신")
+                Log.d("VoipCallViewModel", "✅ SOS 알림 전송 완료")
+            } catch (e: Exception) {
+                Log.e("VoipCallViewModel", "❌ SOS 알림 전송 실패: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * SOS 알림 종료
+     */
+    fun stopSosAlert(patientId: Int) {
+        viewModelScope.launch {
+            try {
+                Log.d("VoipCallViewModel", "🛑 SOS 알림 종료 - 환자 ID: $patientId")
+                sosRepository.stopSosAlert(patientId)
+                Log.d("VoipCallViewModel", "✅ SOS 알림 종료 완료")
+            } catch (e: Exception) {
+                Log.e("VoipCallViewModel", "❌ SOS 알림 종료 실패: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * 5초간 SOS 알림 전송 (자동 종료)
+     */
+    fun sendTemporarySosAlert(patientId: Int, durationMillis: Long = 5000) {
+        viewModelScope.launch {
+            sendSosAlert(patientId)
+            delay(durationMillis)
+            stopSosAlert(patientId)
+        }
+    }
+
+    fun startVoipCall(receiverId: Long, userType: String, callType: String = "NORMAL") {
+        Log.d(TAG, "=== [CALLER] startVoipCall: to=$receiverId")
+        _currentPatientId.value = receiverId
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, message = "연결 준비 중...", error = null) }
 
             try {
-                // 1. 통화 세션 생성
+                // 1. 통화 생성 (상태: CREATED, FCM 발송 안 됨)
                 val call = callRepository.createVoipCall(receiverId, callType).getOrThrow()
                 currentCall = call
+                Log.d(TAG, "✓ Call created: id=${call.id}, status=CREATED")
 
-                Log.d(TAG, "createVoipCall success: callId=${call.id}, sessionId=${call.sessionId}")
+                // 2. WebSocket 연결 & 구독
+                val token = userDataStoreManager.getAccessToken().first()
+                voipSignalingService.connectAndWait(token!!)
+                voipSignalingService.subscribeToCall(call.id)
+                Log.d(TAG, "✓ WebSocket connected and subscribed")
+
+                // 3. TURN 조회 & WebRTC 초기화
+                val turn = callRepository.getTurnCredentials().getOrThrow()
+                val iceServers = turn.toIceServers()
+
+                webRtcCallClient.init(iceServers)
+                setupPeerConnectionStateMonitoring()
+                setupIceCandidateListener(call.id, call.sessionId, currentUserId!!, receiverId)
+                isWebRtcInitialized = true
+                Log.d(TAG, "✓ WebRTC initialized")
+
+                // ✅ 4. 발신자 준비 완료 알림 → 이제 FCM 발송됨!
+                callRepository.notifyCallerReady(call.id).getOrThrow()
+                Log.d(TAG, "✅ Caller ready notification sent - FCM will be sent now")
 
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         call = call,
-                        message = "통화 생성 완료"
+                        message = "상대방 응답 대기 중..."
                     )
-                }
-
-                // 2. WebSocket 연결
-                val token = userDataStoreManager.getAccessToken().first()
-                if (token.isNullOrBlank()) {
-                    Log.e(TAG, "Access token is null")
-                    _uiState.update { it.copy(error = "인증 토큰 없음") }
-                    return@launch
-                }
-
-                val connected = voipSignalingService.connectAndWait(token)
-                if (!connected) {
-                    Log.e(TAG, "WebSocket 연결 실패")
-                    _uiState.update { it.copy(error = "시그널링 서버 연결 실패") }
-                    return@launch
-                }
-                Log.d(TAG, "✓ WebSocket 연결 성공")
-
-                // 3. 통화방 구독
-                val subscribed = voipSignalingService.subscribeToCall(call.id)
-                if (!subscribed) {
-                    Log.e(TAG, "통화방 구독 실패")
-                    _uiState.update { it.copy(error = "통화방 구독 실패") }
-                    return@launch
-                }
-                Log.d(TAG, "✓ Subscribed to /topic/calls/${call.id}")
-
-                // 4. TURN 조회 & WebRTC 초기화
-                val turn = callRepository.getTurnCredentials().getOrThrow()
-                Log.d(TAG, "getTurnCredentials success: uris=${turn.uris}")
-
-                val iceServers = turn.toIceServers()
-                webRtcCallClient.init(iceServers)
-
-                // 4-1. PeerConnection 상태 모니터링 설정
-                setupPeerConnectionStateMonitoring()
-
-                // 4-2. Offer 생성 전 사용자 ID 확인
-                val fromUserId = currentUserId
-                if (fromUserId == null) {
-                    Log.e(TAG, "currentUserId is null → Offer 전송 불가")
-                    _uiState.update { it.copy(error = "로그인 정보 없음 (UserId)") }
-                    return@launch
-                }
-
-                // 4-3. ICE candidate 리스너 설정
-                setupIceCandidateListener(call.id, call.sessionId, fromUserId, receiverId)
-
-                // 5. Offer 생성 및 전송
-                webRtcCallClient.createOffer { sdp ->
-                    Log.d(TAG, "Offer SDP created")
-
-                    voipSignalingService.sendOffer(
-                        callId = call.id,
-                        sessionId = call.sessionId,
-                        fromUserId = fromUserId,
-                        toUserId = receiverId,
-                        sdp = sdp.description
-                    )
-
-                    Log.d(
-                        TAG,
-                        "Offer sent via signaling: callId=${call.id}, sessionId=${call.sessionId}"
-                    )
-                    _uiState.update {
-                        it.copy(message = "통화 요청 전송 완료 (Offer)")
-                    }
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "startVoipCall failed: ${e.message}", e)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "통화 시작 실패"
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "통화 시작 실패") }
             }
         }
     }
@@ -239,7 +236,9 @@ class VoipCallViewModel @Inject constructor(
                     // ⏱️ 타이머 시작
                     startTimer()
 
-                    setupWebRtcAsCallee()
+                    if (callerId != null) {
+                        ensureWebRtcInitializedForCallee(call.id, callerId)
+                    }
                 }
                 .onFailure { e ->
                     Log.e(TAG, "acceptCall failed: ${e.message}", e)
@@ -299,9 +298,7 @@ class VoipCallViewModel @Inject constructor(
             callRepository.updateVoipCallStatus(call.id, "ENDED")
                 .onSuccess { updated ->
                     currentCall = updated
-                    webRtcCallClient.endCall()
-                    voipSignalingService.disconnect()
-
+                    Log.d(TAG, "✓ Call status updated to ENDED")
                     _uiState.update {
                         it.copy(
                             call = updated,
@@ -310,13 +307,21 @@ class VoipCallViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    Log.e(TAG, "endCall failed: ${e.message}", e)
+                    Log.e(TAG, "endCall failed: ${e.message}, but cleaning up anyway", e)
+                    // 409 에러 등으로 이미 종료된 경우에도 로컬 상태 업데이트
+                    currentCall = call.copy(status = "ENDED")
                     _uiState.update {
                         it.copy(
-                            error = e.message ?: "통화 종료 실패"
+                            call = call.copy(status = "ENDED"),
+                            message = "통화 종료됨"
                         )
                     }
                 }
+
+            // 3. 성공/실패 관계없이 항상 리소스 정리
+            webRtcCallClient.endCall()
+            voipSignalingService.disconnect()
+            Log.d(TAG, "✓ WebRTC and signaling cleaned up")
         }
     }
 
@@ -386,26 +391,79 @@ class VoipCallViewModel @Inject constructor(
     }
 
     private fun handleSignalMessage(signal: SignalMessage) {
-        Log.d(TAG, "Received signal: type=${signal.type}, callId=${signal.callId}")
+        // ✅ actualSenderId 사용
+        val actualSenderId = signal.actualSenderId
+
+        Log.d(TAG, "Received signal: type=${signal.type}, callId=${signal.callId}, senderId=$actualSenderId")
+
+        val myUserId = currentUserId
+        val call = currentCall
+
+        if (myUserId != null && actualSenderId == myUserId) {
+            Log.d(TAG, "⏭️ Ignoring own signal: type=${signal.type} (senderId=$actualSenderId)")
+            return
+        }
 
         when (signal.type) {
             "INCOMING" -> {
                 Log.d(TAG, "INCOMING signal (이미 FCM에서 화면 전환 처리됨)")
             }
+
             "OFFER" -> {
-                signal.sdp?.let { sdp ->
-                    val callId = signal.callId ?: return
-                    val senderId = signal.senderId ?: return
-                    handleOffer(sdp, callId, senderId)
+                if (call?.receiverId == myUserId) {
+                    signal.sdp?.let { sdp ->
+                        val callId = signal.callId ?: run {
+                            Log.e(TAG, "OFFER received but callId is null")
+                            return
+                        }
+
+                        val senderId = actualSenderId ?: run {  // ✅ actualSenderId 사용
+                            Log.e(TAG, "OFFER received but senderId is null")
+                            return
+                        }
+
+                        Log.d(TAG, "📥 Processing OFFER from senderId=$senderId")
+
+                        if (!isWebRtcInitialized) {
+                            Log.d(TAG, "📦 Buffering OFFER until WebRTC is ready")
+                            bufferedOffer = sdp to senderId
+
+                            viewModelScope.launch {
+                                ensureWebRtcInitializedForCallee(callId, senderId)
+                            }
+                        } else {
+                            Log.d(TAG, "✅ Processing OFFER immediately")
+                            viewModelScope.launch {
+                                handleOffer(sdp, callId, senderId)
+                            }
+                        }
+                    } ?: run {
+                        Log.e(TAG, "OFFER received but SDP is null")
+                    }
+                } else {
+                    Log.d(TAG, "⏭️ Ignoring OFFER (I'm the caller, receiverId=${call?.receiverId}, myId=$myUserId)")
                 }
             }
+
             "ANSWER" -> {
-                signal.sdp?.let { sdp ->
-                    handleAnswer(sdp)
+                // ✅ currentCall이 없어도 ANSWER 처리 가능하도록 수정
+                val isCallerRole = call?.callerId == myUserId
+
+                if (isCallerRole || call == null) {  // call이 null이면 일단 처리 시도
+                    signal.sdp?.let { sdp ->
+                        Log.d(TAG, "📥 Processing ANSWER from senderId=$actualSenderId")
+                        handleAnswer(sdp)
+                    } ?: run {
+                        Log.e(TAG, "ANSWER received but SDP is null")
+                    }
+                } else {
+                    Log.d(TAG, "⏭️ Ignoring ANSWER (I'm the callee, callerId=${call?.callerId}, myId=$myUserId)")
                 }
             }
+
             "ICE" -> {
                 signal.candidate?.let { candidate ->
+                    Log.d(TAG, "📥 Processing ICE from senderId=$actualSenderId")  // ✅
                     handleIceCandidate(
                         candidate = candidate,
                         sdpMid = signal.sdpMid,
@@ -413,50 +471,55 @@ class VoipCallViewModel @Inject constructor(
                     )
                 }
             }
+
             "ACCEPT" -> {
                 Log.d(TAG, "✅ Remote user accepted the call")
-                val call = currentCall ?: run {
-                    Log.w(TAG, "currentCall is null when receiving ACCEPT")
-                    return
-                }
+                val currentCall = currentCall ?: return
 
-                Log.d(
-                    TAG,
-                    "[CALLER] Received ACCEPT for callId=${call.id}, current status=${call.status}"
-                )
+                // ✅ 발신자: 수락 받았으니 이제 Offer 생성!
+                if (call?.callerId == currentUserId) {
+                    Log.d(TAG, "[CALLER] Creating offer after ACCEPT")
 
-                viewModelScope.launch {
-                    callRepository.updateVoipCallStatus(call.id, "CONNECTED")
-                        .onSuccess { updated ->
-                            currentCall = updated
-                            Log.d(TAG, "✓ [CALLER] Call status updated to CONNECTED after ACCEPT")
-                            Log.d(
-                                TAG,
-                                "✓ [CALLER] Updated call: id=${updated.id}, status=${updated.status}"
-                            )
-                            _uiState.update {
-                                it.copy(
-                                    call = updated,
-                                    message = "상대방이 통화를 수락했습니다."
-                                )
+                    viewModelScope.launch {
+                        // 서버 상태 업데이트
+                        callRepository.updateVoipCallStatus(currentCall.id, "CONNECTED")
+                            .onSuccess { updated ->
+                                this@VoipCallViewModel.currentCall = updated
+
+                                // ✅ 이제 Offer 생성 및 전송
+                                webRtcCallClient.createOffer { sdp ->
+                                    val receiverId = updated.receiverId ?: return@createOffer
+
+                                    voipSignalingService.sendOffer(
+                                        callId = updated.id,
+                                        sessionId = updated.sessionId,
+                                        fromUserId = currentUserId!!,
+                                        toUserId = receiverId,
+                                        sdp = sdp.description
+                                    )
+
+                                    Log.d(TAG, "✅ Offer sent after acceptance")
+                                }
+
+                                startTimer()
+
+                                _uiState.update {
+                                    it.copy(
+                                        call = updated,
+                                        message = "상대방이 통화를 수락했습니다."
+                                    )
+                                }
                             }
-
-                            // ⏱️ 타이머 시작
-                            startTimer()
-
-                            Log.d(TAG, "✓ [CALLER] UI state updated with CONNECTED call")
-                        }
-                        .onFailure { e ->
-                            Log.e(
-                                TAG,
-                                "Failed to update call status on ACCEPT: ${e.message}",
-                                e
-                            )
-                        }
+                    }
+                }
+                // 수신자는 기존 로직 유지
+                else {
+                    Log.d(TAG, "[CALLEE] Received ACCEPT confirmation")
                 }
             }
+
             "REJECT" -> {
-                Log.d(TAG, "❌ Remote user rejected the call")
+                Log.d(TAG, "❌ Remote user rejected the call (senderId=$actualSenderId)")  // ✅
                 _uiState.update {
                     it.copy(
                         call = currentCall?.copy(status = "REJECTED"),
@@ -466,18 +529,18 @@ class VoipCallViewModel @Inject constructor(
                 webRtcCallClient.endCall()
                 voipSignalingService.disconnect()
             }
-            "HANGUP" -> {
-                Log.d(TAG, "📞 Remote user hung up: ${signal.reason}")
 
-                // ⏱️ 타이머 정지
+            "HANGUP" -> {
+                Log.d(TAG, "📞 Remote user hung up (senderId=$actualSenderId): ${signal.reason}")  // ✅
+
                 stopTimer()
 
-                val call = currentCall
-                if (call != null && call.status != "ENDED") {
+                val currentCall = currentCall
+                if (currentCall != null && currentCall.status != "ENDED") {
                     viewModelScope.launch {
-                        callRepository.updateVoipCallStatus(call.id, "ENDED")
+                        callRepository.updateVoipCallStatus(currentCall.id, "ENDED")
                             .onSuccess { updated ->
-                                currentCall = updated
+                                this@VoipCallViewModel.currentCall = updated
                                 Log.d(TAG, "✓ Call status updated to ENDED")
                                 _uiState.update {
                                     it.copy(
@@ -488,18 +551,20 @@ class VoipCallViewModel @Inject constructor(
                                 }
                             }
                             .onFailure { e ->
-                                Log.e(
-                                    TAG,
-                                    "Failed to update call status on HANGUP: ${e.message}",
-                                    e
-                                )
+                                Log.e(TAG, "Failed to update call status on HANGUP: ${e.message}, but cleaning up anyway", e)
+                                this@VoipCallViewModel.currentCall = currentCall.copy(status = "ENDED")
                                 _uiState.update {
                                     it.copy(
+                                        call = currentCall.copy(status = "ENDED"),
                                         message = "상대방이 통화를 종료했습니다.",
                                         shouldFinish = true
                                     )
                                 }
                             }
+
+                        webRtcCallClient.endCall()
+                        voipSignalingService.disconnect()
+                        Log.d(TAG, "✓ WebRTC and signaling cleaned up on HANGUP")
                     }
                 } else {
                     _uiState.update {
@@ -508,10 +573,9 @@ class VoipCallViewModel @Inject constructor(
                             shouldFinish = true
                         )
                     }
+                    webRtcCallClient.endCall()
+                    voipSignalingService.disconnect()
                 }
-
-                webRtcCallClient.endCall()
-                voipSignalingService.disconnect()
             }
         }
     }
@@ -521,182 +585,189 @@ class VoipCallViewModel @Inject constructor(
      * TURN + WebRTC + ICE 리스너까지 준비해두는 함수
      */
     private suspend fun ensureWebRtcInitializedForCallee(callId: Long, senderId: Long) {
-        // 이미 currentCall이 있고 id도 맞으면 그대로 사용
+        if (isWebRtcInitialized) {
+            Log.d(TAG, "WebRTC already initialized, skipping")
+            return
+        }
+
+        // 1. currentCall 확인
         if (currentCall == null || currentCall?.id != callId) {
             callRepository.getVoipCall(callId)
                 .onSuccess { call ->
                     currentCall = call
                     _uiState.update { it.copy(call = call) }
-                    Log.d(TAG, "[CALLEE] ensureWebRtcInitializedForCallee: call loaded id=${call.id}")
+                    Log.d(TAG, "[CALLEE] Call loaded: id=${call.id}, status=${call.status}")
                 }
                 .onFailure { e ->
-                    Log.e(
-                        TAG,
-                        "[CALLEE] getVoipCall failed in ensureWebRtcInitializedForCallee: ${e.message}",
-                        e
-                    )
+                    Log.e(TAG, "[CALLEE] Failed to load call", e)
+                    return
                 }
         }
 
-        val call = currentCall
-        if (call == null) {
-            Log.e(TAG, "[CALLEE] currentCall is still null in ensureWebRtcInitializedForCallee")
-            return
+        val call = currentCall ?: return
+
+        // 2. TURN 조회 & WebRTC 초기화
+        try {
+            val turn = callRepository.getTurnCredentials().getOrThrow()
+            val iceServers = turn.toIceServers()
+
+            webRtcCallClient.init(iceServers)
+            Log.d(TAG, "[CALLEE] WebRTC init done")
+
+            // 3. PeerConnection 상태 모니터링
+            setupPeerConnectionStateMonitoring()
+
+            // 4. ICE candidate 리스너 설정
+            val myUserId = currentUserId
+            val callerId = call.callerId
+
+            if (myUserId != null && callerId != null) {
+                setupIceCandidateListener(call.id, call.sessionId, myUserId, callerId)
+                Log.d(TAG, "[CALLEE] ICE candidate listener set up")
+            } else {
+                Log.w(TAG, "[CALLEE] Cannot set ICE listener: myUserId=$myUserId, callerId=$callerId")
+            }
+
+            isWebRtcInitialized = true
+
+            // ✅ 5. 초기화 후 버퍼링된 OFFER 처리
+            processBufferedOffer()
+
+        } catch (e: Exception) {
+            Log.e(TAG, "[CALLEE] WebRTC init failed", e)
+            _uiState.update { it.copy(error = "WebRTC 초기화 실패: ${e.message}") }
         }
+    }
 
-        val turn = callRepository.getTurnCredentials().getOrThrow()
-        val iceServers = turn.toIceServers()
-        webRtcCallClient.init(iceServers)
-        Log.d(TAG, "[CALLEE] WebRTC init done in ensureWebRtcInitializedForCallee()")
+    private var bufferedOffer: Pair<String, Long>? = null // (sdp, senderId)
 
-        // PeerConnection 상태 모니터링
-        setupPeerConnectionStateMonitoring()
-
-        // ICE candidate 리스너 설정 (수신자 입장에서 상대는 발신자)
-        val myUserId = currentUserId
-        val callerId = call.callerId
-
-        if (myUserId != null && callerId != null) {
-            setupIceCandidateListener(
-                call.id,
-                call.sessionId,
-                myUserId,
-                callerId
-            )
-        } else {
-            Log.w(
-                TAG,
-                "[CALLEE] ensureWebRtcInitializedForCallee: myUserId=$myUserId, callerId=$callerId → ICE 전송 설정 못함"
-            )
+    private fun processBufferedOffer() {
+        bufferedOffer?.let { (sdp, senderId) ->
+            Log.d(TAG, "📦 Processing buffered OFFER from $senderId")
+            val call = currentCall ?: return
+            handleOffer(sdp, call.id, senderId)
+            bufferedOffer = null
         }
     }
 
     private fun handleOffer(sdp: String, callId: Long, senderId: Long) {
-        Log.d(TAG, "Handling OFFER from $senderId for callId=$callId")
+        Log.d(TAG, "📥 Handling OFFER from $senderId for callId=$callId")
 
         viewModelScope.launch {
-            // 0. 수신자 WebRTC 초기화 먼저
             try {
+                // 1. 수신자 WebRTC 초기화
                 ensureWebRtcInitializedForCallee(callId, senderId)
-            } catch (e: Exception) {
-                Log.e(TAG, "ensureWebRtcInitializedForCallee failed: ${e.message}", e)
-                _uiState.update { it.copy(error = "수신자 WebRTC 초기화 실패: ${e.message}") }
-                return@launch
-            }
 
-            // 1. Remote Offer SDP 설정
-            webRtcCallClient.setRemoteDescription(
-                type = SessionDescription.Type.OFFER,
-                sdp = sdp
-            )
-            Log.d(TAG, "Remote Offer SDP set (callee)")
+                // ✅ 짧은 지연으로 초기화 안정화
+                delay(100)
 
-            // 2. Answer 생성 및 전송
-            webRtcCallClient.createAnswer { answerSdp ->
-                val myUserId = currentUserId
-                if (myUserId == null) {
-                    Log.e(TAG, "currentUserId is null, cannot send Answer")
-                    return@createAnswer
-                }
-
-                voipSignalingService.sendAnswer(
-                    callId = callId,
-                    sessionId = currentCall?.sessionId,
-                    fromUserId = myUserId,
-                    toUserId = senderId,
-                    sdp = answerSdp.description
+                // 2. Remote Description 설정
+                webRtcCallClient.setRemoteDescription(
+                    type = SessionDescription.Type.OFFER,
+                    sdp = sdp
                 )
-                Log.d(TAG, "Answer sent to caller $senderId")
+                isRemoteDescriptionSet = true
+                Log.d(TAG, "✅ Remote OFFER set")
+
+                // 3. 버퍼링된 ICE candidate 처리
+                processPendingIceCandidates()
+
+                // ✅ 짧은 지연 후 Answer 생성
+                delay(100)
+
+                // 4. Answer 생성 및 전송
+                webRtcCallClient.createAnswer { answerSdp ->
+                    val myUserId = currentUserId
+                    if (myUserId == null) {
+                        Log.e(TAG, "❌ currentUserId is null, cannot send Answer")
+                        return@createAnswer
+                    }
+
+                    voipSignalingService.sendAnswer(
+                        callId = callId,
+                        sessionId = currentCall?.sessionId,
+                        fromUserId = myUserId,
+                        toUserId = senderId,
+                        sdp = answerSdp.description
+                    )
+                    Log.d(TAG, "✅ Answer sent to caller $senderId")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error handling OFFER", e)
+                _uiState.update { it.copy(error = "OFFER 처리 실패: ${e.message}") }
             }
         }
     }
 
     private fun handleAnswer(sdp: String) {
-        Log.d(TAG, "Handling ANSWER")
+        Log.d(TAG, "📥 Handling ANSWER")
 
-        // 1. Remote Answer SDP 설정
-        webRtcCallClient.setRemoteDescription(
-            type = SessionDescription.Type.ANSWER,
-            sdp = sdp
-        )
-        Log.d(TAG, "Remote Answer SDP set")
+        try {
+            // 1. Remote Answer SDP 설정
+            webRtcCallClient.setRemoteDescription(
+                type = SessionDescription.Type.ANSWER,
+                sdp = sdp
+            )
+            isRemoteDescriptionSet = true
+            Log.d(TAG, "✅ Remote ANSWER set")
 
-        // 2. 발신자 측: Answer를 받았으므로 통화 상태를 CONNECTED로 업데이트
-        val call = currentCall
-        if (call == null) {
-            Log.w(TAG, "currentCall is null, cannot update status to CONNECTED")
-            return
-        }
+            // 2. 버퍼링된 ICE candidate 처리
+            processPendingIceCandidates()
 
-        viewModelScope.launch {
-            callRepository.updateVoipCallStatus(call.id, "CONNECTED")
-                .onSuccess { updated ->
-                    currentCall = updated
-                    Log.d(TAG, "✓ [CALLER] Call status updated to CONNECTED")
-                    _uiState.update {
-                        it.copy(
-                            call = updated,
-                            message = "통화 연결됨"
-                        )
-                    }
+            // 3. 발신자 측: Answer를 받았으므로 통화 상태 업데이트
+            val call = currentCall
+            if (call != null && call.status != "CONNECTED") {
+                viewModelScope.launch {
+                    callRepository.updateVoipCallStatus(call.id, "CONNECTED")
+                        .onSuccess { updated ->
+                            currentCall = updated
+                            Log.d(TAG, "✅ [CALLER] Call status updated to CONNECTED")
+                            _uiState.update {
+                                it.copy(
+                                    call = updated,
+                                    message = "통화 연결됨"
+                                )
+                            }
+                        }
+                        .onFailure { e ->
+                            Log.e(TAG, "❌ Failed to update call status", e)
+                        }
                 }
-                .onFailure { e ->
-                    Log.e(TAG, "Failed to update call status: ${e.message}", e)
-                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error handling ANSWER", e)
+            _uiState.update { it.copy(error = "ANSWER 처리 실패: ${e.message}") }
         }
     }
 
     private fun handleIceCandidate(candidate: String, sdpMid: String?, sdpMLineIndex: Int) {
-        Log.d(TAG, "Handling ICE candidate")
+        if (!isRemoteDescriptionSet) {
+            Log.d(TAG, "Remote description not set yet, buffering ICE candidate")
+            pendingIceCandidates.add(
+                IceCandidateInfo(candidate, sdpMid, sdpMLineIndex)
+            )
+            return
+        }
+
+        Log.d(TAG, "Adding remote ICE candidate")
         webRtcCallClient.addRemoteIceCandidate(sdpMid, sdpMLineIndex, candidate)
+    }
+
+    private fun processPendingIceCandidates() {
+        Log.d(TAG, "Processing ${pendingIceCandidates.size} buffered ICE candidates")
+        pendingIceCandidates.forEach { ice ->
+            webRtcCallClient.addRemoteIceCandidate(
+                ice.sdpMid,
+                ice.sdpMLineIndex,
+                ice.candidate
+            )
+        }
+        pendingIceCandidates.clear()
     }
 
     // =========================================================
     // 🔧 수신자 WebRTC 초기화 (accept 이후 호출)
     // =========================================================
-
-    private fun setupWebRtcAsCallee() {
-        val call = currentCall ?: run {
-            Log.w(TAG, "setupWebRtcAsCallee: currentCall is null")
-            return
-        }
-
-        viewModelScope.launch {
-            runCatching { callRepository.getTurnCredentials().getOrThrow() }
-                .onSuccess { turn ->
-                    val iceServers = turn.toIceServers()
-                    webRtcCallClient.init(iceServers)
-                    Log.d(TAG, "[CALLEE] WebRTC init 완료 in setupWebRtcAsCallee()")
-
-                    // PeerConnection 상태 모니터링 설정
-                    setupPeerConnectionStateMonitoring()
-
-                    // ICE candidate 리스너 설정
-                    val myUserId = currentUserId
-                    val callerId = call.callerId
-
-                    if (myUserId != null && callerId != null) {
-                        setupIceCandidateListener(
-                            call.id,
-                            call.sessionId,
-                            myUserId,
-                            callerId  // 수신자 입장에서 상대방은 발신자
-                        )
-                    } else {
-                        Log.w(
-                            TAG,
-                            "[CALLEE] setupWebRtcAsCallee: currentUserId=$myUserId, callerId=$callerId - ICE candidate 전송 불가"
-                        )
-                    }
-                }
-                .onFailure { e ->
-                    Log.e(TAG, "setupWebRtcAsCallee TURN 실패: ${e.message}", e)
-                    _uiState.update {
-                        it.copy(error = "TURN 정보 조회 실패: ${e.message}")
-                    }
-                }
-        }
-    }
 
     // =========================================================
 
@@ -772,24 +843,30 @@ class VoipCallViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        Log.d(TAG, "VoipCallViewModel onCleared")
+        Log.d(TAG, "🧹 VoipCallViewModel onCleared")
 
         val currentStatus = currentCall?.status
-        Log.d(TAG, "onCleared called with call status: $currentStatus")
+        Log.d(TAG, "Current call status: $currentStatus")
 
-        // 통화 중(CONNECTED)이거나 연결 중(RINGING)일 때는 리소스를 정리하지 않음
-        // Activity 재생성 등으로 인한 의도치 않은 종료 방지
-        if (currentStatus == "CONNECTED" || currentStatus == "RINGING") {
-            Log.w(TAG, "⚠️ Call is active ($currentStatus), skipping resource cleanup to prevent premature termination")
-            // 타이머는 정리하지 않고, WebSocket/WebRTC도 유지
-            return
+        // ✅ CONNECTED 상태가 아닐 때만 정리
+        if (currentStatus != "CONNECTED") {
+            Log.d(TAG, "Cleaning up resources (status: $currentStatus)")
+            stopTimer()
+
+            // ✅ 비동기로 정리하여 블로킹 방지
+            viewModelScope.launch {
+                try {
+                    voipSignalingService.disconnect()
+                    delay(100)  // WebSocket 종료 대기
+                    webRtcCallClient.endCall()
+                    Log.d(TAG, "✅ Cleanup complete")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error during cleanup", e)
+                }
+            }
+        } else {
+            Log.w(TAG, "⚠️ Skipping cleanup (call is CONNECTED)")
         }
-
-        // 통화가 종료되었거나 시작되지 않은 경우에만 리소스 정리
-        Log.d(TAG, "✓ Cleaning up resources (status: $currentStatus)")
-        stopTimer()
-        voipSignalingService.disconnect()
-        webRtcCallClient.endCall()
     }
 
     companion object {

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(del \"C:\\SSAFY\\pjt\\S13P31A305\\backend\\ongil\\src\\main\\java\\kr\\co\\ongil\\global\\config\\WebSocketConfig.java\")",
+      "Bash(./gradlew build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

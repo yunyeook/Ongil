@@ -20,7 +20,7 @@ fun RelationshipDto.toPatientData(): PatientData {
     return PatientData(
         id = counterpartUserId,
         relationshipId = relationshipId,
-        name = relationshipName,
+        name = relationshipName ?: counterpartUser.name, // relationshipName이 null이면 실제 이름 사용
         phoneNumber = counterpartUser.phoneNumber,
         relationshipType = relationshipType,
         profileImage = counterpartUser.profileImage,

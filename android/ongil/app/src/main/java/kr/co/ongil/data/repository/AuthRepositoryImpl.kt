@@ -9,6 +9,8 @@ import kr.co.ongil.data.model.auth.LogoutRequest
 import kr.co.ongil.data.util.ErrorHandler
 import kr.co.ongil.domain.repository.AuthRepository
 import javax.inject.Inject
+import kr.co.ongil.data.datasource.wear.WearDataClient
+
 // 회원가입 관련
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -23,7 +25,8 @@ import java.io.File
  */
 class AuthRepositoryImpl @Inject constructor(
     private val authApi: AuthApi,
-    private val userDataStoreManager: UserDataStoreManager
+    private val userDataStoreManager: UserDataStoreManager,
+    private val wearDataClient: WearDataClient
 ) : AuthRepository {
 
     override suspend fun login(phoneNumber: String, password: String): Result<LoginResponse> {
@@ -71,6 +74,7 @@ class AuthRepositoryImpl @Inject constructor(
             // 4) 정상/스킵 모두 여기로: 로컬 세션 정리
             userDataStoreManager.clearTokens()
             userDataStoreManager.clearLoginUserId()
+            userDataStoreManager.setFcmTokenSynced(false)
             Result.success("로그아웃되었습니다.")
         } catch (e: Exception) {
             // 5) 서버 4xx/5xx, 네트워크 오류 → 소프트 처리
@@ -80,6 +84,15 @@ class AuthRepositoryImpl @Inject constructor(
             // 그래도 로컬 세션은 반드시 종료
             userDataStoreManager.clearTokens()
             userDataStoreManager.clearLoginUserId()
+            userDataStoreManager.setFcmTokenSynced(false)
+
+            // 워치 로그인 정보 삭제
+            try {
+                wearDataClient.clearLoginData()
+            } catch (e2: Exception) {
+                android.util.Log.e("AuthRepositoryImpl", "워치 로그아웃 실패 (무시)", e2)
+            }
+
             // UX 일관성을 위해 성공으로 취급(원하면 failure 반환으로 바꿔도 됨)
             Result.success("로그아웃되었습니다. (서버와 동기화 실패)")
         }

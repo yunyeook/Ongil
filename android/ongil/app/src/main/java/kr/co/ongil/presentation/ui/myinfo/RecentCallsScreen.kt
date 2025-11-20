@@ -19,12 +19,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kr.co.ongil.presentation.theme.ongilColors
 import kr.co.ongil.presentation.uistate.CallType
 import kr.co.ongil.presentation.uistate.RecentCallUi
 import kr.co.ongil.presentation.uistate.RecentCallsEvent
 import kr.co.ongil.presentation.viewmodel.RecentCallsViewModel
-
-private val RecentAccent = Color(0xFF8CA898)
 
 /**
  * 최근 통화 목록 화면 (ViewModel 기반)
@@ -94,7 +93,7 @@ private fun RecentCallsContent(
                         .padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = RecentAccent)
+                    CircularProgressIndicator(color = ongilColors.accent)
                 }
             }
 
@@ -156,7 +155,7 @@ private fun SearchBar(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Color(0xFFE6EBE9),
             unfocusedBorderColor = Color(0xFFF1F3F2),
-            cursorColor = RecentAccent,
+            cursorColor = ongilColors.accent,
             focusedContainerColor = Color.White,
             unfocusedContainerColor = Color.White
         )

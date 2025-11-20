@@ -78,7 +78,7 @@ private fun formatSubtitle(startedAt: String, duration: Int): String {
  * 예: "5분 12초", "20초", "1시간 5분"
  */
 private fun formatDuration(seconds: Int): String {
-    if (seconds == 0) return "통화 실패"
+    if (seconds == 0) return "부재중"
 
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60

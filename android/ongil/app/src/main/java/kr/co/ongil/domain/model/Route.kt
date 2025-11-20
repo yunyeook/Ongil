@@ -7,9 +7,15 @@ package kr.co.ongil.domain.model
  * @param totalTimeMinutes 총 소요 시간 (분)
  * @param totalDistanceMeters 총 거리 (미터)
  * @param path 경로를 구성하는 위도/경도 좌표 리스트
+ * @param navigationId 길찾기 ID (종료 시 필요, 선택적)
+ * @param startLocationName 출발지 이름 (선택적)
+ * @param endLocationName 도착지 이름 (선택적)
  */
 data class Route(
     val totalTimeMinutes: Int,
     val totalDistanceMeters: Int,
-    val path: List<LatLng>
+    val path: List<LatLng>,
+    val navigationId: String? = null,
+    val startLocationName: String? = null,
+    val endLocationName: String? = null
 )

@@ -1,5 +1,12 @@
 package kr.co.ongil.presentation.ui.map
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
@@ -25,14 +34,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 
 import kr.co.ongil.domain.model.PlaceDetail
 import kr.co.ongil.domain.model.Route
+import kr.co.ongil.presentation.theme.ongilColors
 
 /**
  * 지도 위 플로팅 패널. 장소 상세 정보와 길안내 정보를 모두 표시.
@@ -81,7 +93,7 @@ fun MapFloatingPanel(
             modifier = Modifier
                 .padding(start = 16.dp, end = 16.dp, bottom = 100.dp) // 하단 네비게이션 바 위로 오도록 패딩 조절
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF8A9A8A).copy(alpha = 0.9f)) // 이미지의 녹색 계열, 약간 투명하게
+                .background(ongilColors.accent.copy(alpha = 0.9f)) // 테마 색상 적용
                 .clickable(
                     onClick = { /* 패널 내부 클릭 시 이벤트 전파 방지 */ },
                     indication = null,
@@ -120,13 +132,67 @@ private fun PlaceDetailContent(
     onCallClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    var showCallDialog by remember { mutableStateOf(false) }
+
+    // 전화 권한 요청 런처
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted && !placeDetail.phoneNumber.isNullOrEmpty()) {
+                // 권한이 승인되면 통화 로그 기록 후 전화 걸기
+                onCallClick()
+                val intent = Intent(Intent.ACTION_CALL).apply {
+                    data = Uri.parse("tel:${placeDetail.phoneNumber}")
+                }
+                context.startActivity(intent)
+            } else {
+                // 권한 거부 시 토스트 표시
+                Toast.makeText(context, "전화 권한이 필요합니다", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    // 전화 확인 다이얼로그
+    if (showCallDialog && !placeDetail.phoneNumber.isNullOrEmpty()) {
+        CallConfirmationDialog(
+            phoneNumber = placeDetail.phoneNumber!!,
+            onDismissRequest = { showCallDialog = false },
+            onConfirm = {
+                showCallDialog = false
+
+                // 권한 체크
+                val hasPermission = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CALL_PHONE
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (hasPermission) {
+                    // 권한이 있으면 통화 로그 기록 후 전화 걸기
+                    onCallClick()
+                    val intent = Intent(Intent.ACTION_CALL).apply {
+                        data = Uri.parse("tel:${placeDetail.phoneNumber}")
+                    }
+                    context.startActivity(intent)
+                } else {
+                    // 권한이 없으면 권한 요청 (승인 시 callPermissionLauncher에서 로그 기록 & 전화 걸기)
+                    callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+                }
+            }
+        )
+    }
+
     // 상단 정보 섹션 (장소명, 주소, 즐겨찾기)
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 장소명, 주소
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 6.dp)
+        ) {
             Text(
                 text = placeDetail.name,
                 color = Color.White,
@@ -172,7 +238,7 @@ private fun PlaceDetailContent(
             FloatingButton(
                 text = placeDetail.phoneNumber,
                 icon = Icons.Default.Call,
-                onClick = onCallClick,
+                onClick = { showCallDialog = true }, // 시스템 전화 다이얼로그 띄우기
                 modifier = Modifier.weight(1f)
             )
         }
@@ -188,20 +254,24 @@ private fun NavigatingContent(
     onDismiss: () -> Unit,
     onStopNavigationClick: () -> Unit
 ) {
+
+    // 상단: 목적지 아이콘 + 목적지까지 텍스트 + 닫기 버튼 + 안내중지 버튼
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // X 아이콘 버튼
-        IconButton(onClick = onDismiss) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "닫기",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        // 목적지 아이콘 (Navigation - 45도 회전된 화살표)
+        Icon(
+            imageVector = Icons.Default.Navigation,
+            contentDescription = "목적지",
+            tint = Color.White,
+            modifier = Modifier
+                .size(28.dp)
+                .padding(start = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Text(
             text = "목적지까지",
             color = Color.White,
@@ -210,13 +280,25 @@ private fun NavigatingContent(
             modifier = Modifier.weight(1f)
         )
 
+        // 닫기 버튼
+        SmallFloatingButton(text = "닫기", onClick = onDismiss)
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         // 안내중지 버튼
         SmallFloatingButton(text = "안내중지", onClick = onStopNavigationClick)
     }
-    Spacer(modifier = Modifier.height(12.dp))
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // 하단: 경로 정보 (시간, 거리, 최단경로) - 왼쪽 정렬
     Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 시간
         Icon(imageVector = Icons.Default.Schedule, contentDescription = "시간", tint = Color.White)
         Spacer(modifier = Modifier.width(4.dp))
         Text(
@@ -224,7 +306,10 @@ private fun NavigatingContent(
             color = Color.White,
             fontSize = 14.sp
         )
+
         Spacer(modifier = Modifier.width(16.dp))
+
+        // 거리
         Icon(imageVector = Icons.Default.DirectionsWalk, contentDescription = "거리", tint = Color.White)
         Spacer(modifier = Modifier.width(4.dp))
         Text(
@@ -232,8 +317,11 @@ private fun NavigatingContent(
             color = Color.White,
             fontSize = 14.sp
         )
+
         Spacer(modifier = Modifier.width(16.dp))
-        Icon(imageVector = Icons.Default.Send, contentDescription = "경로", tint = Color.White)
+
+        // 최단경로 (LocationOn 아이콘으로 변경)
+        Icon(imageVector = Icons.Default.LocationOn, contentDescription = "경로", tint = Color.White)
         Spacer(modifier = Modifier.width(4.dp))
         Text(text = "최단경로", color = Color.White, fontSize = 14.sp)
     }
@@ -261,6 +349,64 @@ private fun ConfirmationDialog(
                     text = "해당 목적지로\n길찾기를 시작하시겠습니까?",
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Medium
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onDismissRequest,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Text("취소", fontSize = 18.sp)
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ongilColors.accent,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text("확인", fontSize = 18.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 전화 확인 다이얼로그
+ */
+@Composable
+private fun CallConfirmationDialog(
+    phoneNumber: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "다음 번호로 전화하시겠습니까?\n$phoneNumber",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
                     color = Color.Black
                 )
                 Row(
@@ -273,7 +419,7 @@ private fun ConfirmationDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.surfaceVariant
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
                         Text("취소")
@@ -283,11 +429,11 @@ private fun ConfirmationDialog(
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF8A9A8A),
+                            containerColor = ongilColors.accent,
                             contentColor = Color.White
                         )
                     ) {
-                        Text("확인")
+                        Text("전화")
                     }
                 }
             }
@@ -312,16 +458,21 @@ private fun FloatingButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Black.copy(alpha = 0.2f),
             contentColor = Color.White
-        )
+        ),
+        contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
                 contentDescription = text,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = text, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp
+            )
         }
     }
 }

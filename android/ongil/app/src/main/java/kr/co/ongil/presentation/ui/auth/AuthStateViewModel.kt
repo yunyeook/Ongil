@@ -97,6 +97,43 @@ class AuthStateViewModel @Inject constructor(
     val selectedPatientId: StateFlow<String?> = userDataStoreManager.getSelectedPatientId()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    // DataStore에서 로그인한 사용자의 프로필 이미지 가져오기
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val currentUserProfileImage: StateFlow<String?> = currentUserId.flatMapLatest { userId ->
+        if (userId != null) {
+            userDataStoreManager.getProfileImage(userId)
+        } else {
+            flowOf(null)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // DataStore에서 선택된 환자의 프로필 이미지 가져오기
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val selectedPatientProfileImage: StateFlow<String?> = selectedPatientId.flatMapLatest { patientId ->
+        if (patientId != null) {
+            userDataStoreManager.getProfileImage(patientId)
+        } else {
+            flowOf(null)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // 모든 환자들의 프로필 이미지 (Map<patientId, profileImageUrl>)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val patientProfileImages: StateFlow<Map<String, String?>> = patientList.flatMapLatest { patients ->
+        if (patients.isEmpty()) {
+            flowOf(emptyMap())
+        } else {
+            kotlinx.coroutines.flow.combine(
+                patients.map { patient ->
+                    userDataStoreManager.getProfileImage(patient.id.toString())
+                        .map { patient.id.toString() to it }
+                }
+            ) { results ->
+                results.toMap()
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     // 환자들의 실시간 위치 (Map<patientId, Coordinate>)
     private val _patientLocations = MutableStateFlow<Map<Long, Coordinate>>(emptyMap())
     val patientLocations: StateFlow<Map<Long, Coordinate>> = _patientLocations.asStateFlow()
@@ -122,36 +159,64 @@ class AuthStateViewModel @Inject constructor(
     private var retryCount = 0
     private val maxRetryDelay = 30000L // 최대 30초
 
+    private suspend fun loadInitialPatientLocations() {
+        try {
+            val relationships = favoriteRepository.getMyRelationships().getOrNull() ?: return
+
+            android.util.Log.d("AuthStateViewModel", "📍 초기 위치 로드 시작: ${relationships.size}명")
+
+            relationships.forEach { patient ->
+                try {
+                    // ✅ 같은 Repository 사용
+                    val location = locationSseRepository.getPatientLocation(patient.id.toLong())
+                        .getOrNull()
+
+                    if (location != null) {
+                        _patientLocations.update { currentMap ->
+                            currentMap + (patient.id.toLong() to location)
+                        }
+                        android.util.Log.d("AuthStateViewModel", "✅ 초기 위치: patientId=${patient.id}")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("AuthStateViewModel", "위치 로드 실패: ${patient.id}", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AuthStateViewModel", "전체 로드 실패", e)
+        }
+    }
+
     private fun startSseConnection() {
         // 기존 연결이 있으면 취소
         sseConnectionJob?.cancel()
 
         sseConnectionJob = viewModelScope.launch {
+            loadInitialPatientLocations()
             while (true) {  // 무한 재연결 루프
                 try {
-                    android.util.Log.d("AuthStateViewModel", "SSE 연결 시작 중... (재시도 ${retryCount}회)")
+                    // android.util.Log.d("AuthStateViewModel", "SSE 연결 시작 중... (재시도 ${retryCount}회)")
                     locationSseRepository.subscribeSseEvents().collect { event ->
                         // 연결 성공 시 재시도 카운트 리셋
                         retryCount = 0
 
                         when (event) {
                             is SseEvent.Connected -> {
-                                android.util.Log.d("AuthStateViewModel", "✅ SSE 연결 완료")
+                                //android.util.Log.d("AuthStateViewModel", "✅ SSE 연결 완료")
                             }
 
                             is SseEvent.GpsUpdate -> {
                                 val gpsUpdate = event.data
                                 android.util.Log.d(
-                                    "AuthStateViewModel",
+                                   "AuthStateViewModel",
                                     "GPS 업데이트 수신: patientId=${gpsUpdate.patientId}, lat=${gpsUpdate.coordinate.latitude}, lon=${gpsUpdate.coordinate.longitude}"
                                 )
                                 _patientLocations.update { currentMap ->
                                     val updated =
                                         currentMap + (gpsUpdate.patientId to gpsUpdate.coordinate)
-                                    android.util.Log.d(
-                                        "AuthStateViewModel",
-                                        "patientLocations 업데이트: ${updated.keys}"
-                                    )
+//                                    android.util.Log.d(
+//                                        "AuthStateViewModel",
+//                                        "patientLocations 업데이트: ${updated.keys}"
+//                                    )
                                     updated
                                 }
                             }
@@ -175,7 +240,10 @@ class AuthStateViewModel @Inject constructor(
                                                         latitude = coord.latitude,
                                                         longitude = coord.longitude
                                                     )
-                                                }
+                                                },
+                                                navigationId = sseRoute.navigationId,
+                                                startLocationName = sseRoute.startLocation.name,
+                                                endLocationName = sseRoute.endLocation.name
                                             )
 
                                             _patientNavigationRoutes.update { currentMap ->
@@ -183,7 +251,7 @@ class AuthStateViewModel @Inject constructor(
                                             }
                                             android.util.Log.d(
                                                 "AuthStateViewModel",
-                                                "환자 ${navUpdate.patientId} 길찾기 시작: ${sseRoute.path.size}개 포인트"
+                                                "환자 ${navUpdate.patientId} 길찾기 시작: ${sseRoute.startLocation.name} → ${sseRoute.endLocation.name} (${sseRoute.path.size}개 포인트)"
                                             )
                                         }
                                     }
@@ -209,11 +277,11 @@ class AuthStateViewModel @Inject constructor(
                         maxRetryDelay
                     )
 
-                    android.util.Log.e(
-                        "AuthStateViewModel",
-                        "⚠️ SSE 연결 중 오류 (재시도 ${retryCount}회, ${delay/1000}초 후 재연결)",
-                        e
-                    )
+//                    android.util.Log.e(
+//                        "AuthStateViewModel",
+//                        "⚠️ SSE 연결 중 오류 (재시도 ${retryCount}회, ${delay/1000}초 후 재연결)",
+//                        e
+//                    )
 
                     // 재연결 대기
                     kotlinx.coroutines.delay(delay)
@@ -223,13 +291,13 @@ class AuthStateViewModel @Inject constructor(
     }
 
     init {
-        // 사용자 타입에 따라 SSE 연결 (보호자일 때만)
+        // 사용자 타입에 따라 SSE 연결 (보호자와 환자 모두)
         viewModelScope.launch {
             currentUserInfo.collect { userInfoResult ->
                 val userType = userInfoResult?.getOrNull()?.userType
                 android.util.Log.d("AuthStateViewModel", "사용자 타입: $userType")
-                if (userType == "GUARDIAN") {
-                    android.util.Log.d("AuthStateViewModel", "보호자 로그인 감지 - SSE 연결 시작")
+                if (userType == "GUARDIAN" || userType == "PATIENT") {
+                    android.util.Log.d("AuthStateViewModel", "$userType 로그인 감지 - SSE 연결 시작")
                     startSseConnection()
                 }
             }

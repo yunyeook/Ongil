@@ -1,11 +1,16 @@
 package kr.co.ongil.presentation.ui.map
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -25,16 +30,18 @@ fun SearchResultBottomSheet(
     onDismiss: () -> Unit,
     onPlaceClick: (SearchPlace) -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.8f)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             // 헤더
             Text(
@@ -42,21 +49,24 @@ fun SearchResultBottomSheet(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF101828),
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
             )
 
             // 결과 개수
             Text(
                 text = "${searchResults.size}개의 장소",
                 fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
                 color = Color(0xFF6B7280),
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier
+                    .padding(bottom = 12.dp)
             )
 
             Divider(
                 color = Color(0xFFE5E7EB),
                 thickness = 1.dp,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             // 검색 결과 리스트
@@ -65,7 +75,7 @@ fun SearchResultBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 32.dp),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "검색 결과가 없습니다",
@@ -75,17 +85,18 @@ fun SearchResultBottomSheet(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     items(searchResults) { place ->
                         SearchListItem(
                             placeName = place.name,
                             address = place.address,
                             etaText = place.distance?.let { "${it}m" } ?: "",
-                            onClick = {
-                                onPlaceClick(place)
-                            }
+                            onClick = { onPlaceClick(place) }
                         )
                     }
                 }

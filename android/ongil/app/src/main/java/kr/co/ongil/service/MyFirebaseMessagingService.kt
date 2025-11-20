@@ -1,11 +1,29 @@
 package kr.co.ongil.service
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.os.Build
+import android.os.PowerManager
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kr.co.ongil.data.model.fcm.FcmPayloadDto
 import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kr.co.ongil.BuildConfig
 import kr.co.ongil.data.mapper.FcmPayloadMapper
 import kr.co.ongil.domain.model.FcmMessage
 import kr.co.ongil.domain.model.MessageType
@@ -19,7 +37,18 @@ import kr.co.ongil.domain.usecase.fcm.HandleNavigationEndUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleAbnormalDetectedUseCase
 import kr.co.ongil.domain.usecase.fcm.HandleCallRequestUseCase
 import kr.co.ongil.domain.helper.NotificationHelper
+import kr.co.ongil.domain.usecase.fcm.HandleCallMissedUseCase
+import kr.co.ongil.domain.usecase.fcm.HandleSafezoneUpdateUseCase
+import kr.co.ongil.presentation.MainActivity
+import kr.co.ongil.presentation.ui.call.IncomingCallActivity
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import javax.inject.Inject
+
+
 
 @AndroidEntryPoint
 class MyFirebaseMessagingService : FirebaseMessagingService() {
@@ -40,6 +69,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var handleSafezoneExitUseCase: HandleSafezoneExitUseCase
 
     @Inject
+    lateinit var handleSafezoneUpdateUseCase: HandleSafezoneUpdateUseCase
+
+    @Inject
     lateinit var handleNavigationStartUseCase: HandleNavigationStartUseCase
 
     @Inject
@@ -52,7 +84,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var handleCallRequestUseCase: HandleCallRequestUseCase
 
     @Inject
+    lateinit var handleCallMissedUseCase: HandleCallMissedUseCase
+
+
+    @Inject
     lateinit var notificationHelper: NotificationHelper
+
+    // ✅ Wake Lock 관리
+    private var wakeLock: PowerManager.WakeLock? = null
+
+    @Inject
+    lateinit var userDataStoreManager: kr.co.ongil.data.datasource.local.preferences.UserDataStoreManager
 
     override fun onCreate() {
         super.onCreate()
@@ -60,11 +102,66 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         notificationHelper.createNotificationChannels(this)
     }
 
+
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d("FCM", "🔄 FCM 토큰 갱신됨: $token")
-        // 토큰은 로그인 시 서버로 전송됨 (LoginViewModel에서 처리)
-        // 필요시 로컬에 저장하여 다음 로그인 때 사용 가능
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // 로컬에 먼저 저장
+                userDataStoreManager.saveFcmToken(token)
+
+                // AccessToken 가져오기 (재시도 로직)
+                var accessToken: String? = null
+                repeat(3) { attempt ->
+                    accessToken = userDataStoreManager.getAccessToken().firstOrNull()
+                    if (accessToken != null) {
+                        Log.d("FCM", "✓ AccessToken 확인됨 (attempt ${attempt + 1})")
+                        return@repeat
+                    }
+                    Log.d("FCM", "⏳ AccessToken 대기 중... (attempt ${attempt + 1})")
+                    delay(1000)
+                }
+
+                if (accessToken != null) {
+                    sendTokenToServer(token, accessToken!!)
+                } else {
+                    Log.w("FCM", "⚠️ AccessToken 없음, 다음 로그인 시 전송 예정")
+                }
+            } catch (e: Exception) {
+                Log.e("FCM", "토큰 갱신 처리 실패", e)
+            }
+        }
+    }
+
+    // ✅ 이 메서드 추가
+    private suspend fun sendTokenToServer(fcmToken: String, accessToken: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val json = JSONObject().apply { put("token", fcmToken) }
+                val body = json.toString()
+                    .toRequestBody("application/json; charset=utf-8".toMediaType())
+
+                val request = Request.Builder()
+                    .url("${BuildConfig.BASE_URL}api/v1/fcm/register")
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .post(body)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        userDataStoreManager.saveFcmToken(fcmToken)
+                        Log.d("FCM", "✅ 토큰 서버 전송 성공")
+                    } else {
+                        Log.e("FCM", "❌ 토큰 서버 전송 실패: ${response.code}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FCM", "토큰 전송 중 오류", e)
+            }
+        }
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -102,6 +199,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     handleSafezoneExitUseCase(this, fcmMessage)
                 }
 
+                MessageType.SAFEZONE_UPDATE -> {
+                    handleSafezoneUpdateUseCase(this, fcmMessage)
+                }
+
                 MessageType.NAVIGATION_START -> {
                     handleNavigationStartUseCase(this, fcmMessage)
                 }
@@ -117,6 +218,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 MessageType.CALL_REQUEST -> {
                     handleCallRequestUseCase(this, fcmMessage)
                 }
+
+                MessageType.CALL_MISSED -> {
+                    handleCallMissedUseCase(this, fcmMessage)
+                }
             }
         }
     }
@@ -127,9 +232,87 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         return payloadDto
     }
 
-    /**
-     * VoIP 수신 통화 처리
-     */
+    val ringoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+    private fun showIncomingCallNotification(
+        callId: Long,
+        sessionId: String?,
+        callerName: String,
+        callerPhone: String,
+        userType: String
+    ) {
+        val notificationManager = getSystemService(NotificationManager::class.java)
+
+        val ringtonUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        // 채널 생성
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "voip_call",
+                "수신 전화",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+
+                setSound(
+                    ringtonUri,
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+
+                enableVibration(true)
+                setBypassDnd(true)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        // ✅ MainActivity → IncomingCallActivity 로 변경
+        val fullScreenIntent = Intent(this, IncomingCallActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("callId", callId)
+            putExtra("sessionId", sessionId)
+            putExtra("callerName", callerName)
+            putExtra("callerPhone", callerPhone)
+            putExtra("userType", userType)
+        }
+
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            this,
+            callId.toInt(),
+            fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 알림 생성
+        val notification = NotificationCompat.Builder(this, "voip_call")
+            .setSmallIcon(android.R.drawable.ic_menu_call)
+            .setContentTitle("수신 전화")
+            .setContentText(callerName)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setFullScreenIntent(fullScreenPendingIntent, true) // ✅ 핵심!
+            .setContentIntent(fullScreenPendingIntent)  // 👈 추가! 알림 탭 시에도 실행
+            .setAutoCancel(true)  // 👈 변경! 자동 제거 안 됨
+            .setOngoing(false)
+            .setSound(ringtonUri)
+            .build()
+
+        Log.d("FCM_NOTI", "✓ 알림 객체 생성 완료")
+
+        // Full-Screen Intent 권한 확인 (Android 14+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val canUse = notificationManager.canUseFullScreenIntent()
+            Log.d("FCM_NOTI", "Full-Screen Intent 권한: $canUse")
+            if (!canUse) {
+                Log.w("FCM_NOTI", "⚠️ Full-Screen Intent 권한 없음!")
+            }
+        }
+
+        notificationManager.notify(callId.toInt(), notification)
+        Log.d("FCM_NOTI", "✅ 알림 표시 완료: notificationId=${callId.toInt()}")
+    }
+
+    // MyFirebaseMessagingService.kt
     private fun handleIncomingCall(data: Map<String, String>) {
         Log.d("FCM", "📞 VoIP 수신 통화 처리")
 
@@ -141,30 +324,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val sessionId = data["sessionId"]
         val callerName = data["callerName"] ?: "알 수 없음"
         val callerPhone = data["callerPhone"] ?: ""
-        val userType = data["userType"] ?: "PATIENT"   // 👈 추가 (GUARDIAN이면 그 값 들어오게)
+        val userType = data["userType"] ?: "PATIENT"
 
         Log.d("FCM", "callId: $callId, sessionId: $sessionId, caller: $callerName")
 
-        val intent = android.content.Intent(
-            this,
-            kr.co.ongil.presentation.MainActivity::class.java
-        ).apply {
-            addFlags(
-                android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP // 👈 이거 추가
-            )
-            putExtra("type", "INCOMING_CALL")
-            putExtra("callId", callId)
-            putExtra("sessionId", sessionId)
-            putExtra("callerName", callerName)
-            putExtra("callerPhone", callerPhone)
-            putExtra("userType", userType) // 👈 이걸로 NavGraph 쪽 VoipIncomingCall로 전달
+
+        // 🔒 화면 꺼져 있거나 잠금 상태면 → 풀스크린 알림으로 깨우기
+        showIncomingCallNotification(callId, sessionId, callerName, callerPhone, userType)
         }
 
-        startActivity(intent)
-        Log.d("FCM", "✓ MainActivity로 이동 (INCOMING_CALL)")
-    }
 
     /**
      * 알림을 처리하고 타겟에 따라 분기

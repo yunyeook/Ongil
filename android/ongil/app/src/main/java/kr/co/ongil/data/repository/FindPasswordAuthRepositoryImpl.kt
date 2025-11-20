@@ -1,6 +1,7 @@
 package kr.co.ongil.data.repository
 
 import kr.co.ongil.data.datasource.remote.api.AuthApi
+import kr.co.ongil.data.model.auth.ResetPasswordRequest
 import kr.co.ongil.data.model.auth.SendVerificationRequest
 import kr.co.ongil.data.model.auth.VerifyCodeRequest
 import kr.co.ongil.data.util.ErrorHandler
@@ -29,7 +30,7 @@ class FindPasswordAuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun verifyCode(phone: String, code: String): Result<Boolean> {
+    override suspend fun verifyCode(phone: String, code: String): Result<String> {
         return try {
             val response = authApi.verifyCode(
                 request = VerifyCodeRequest(
@@ -38,8 +39,32 @@ class FindPasswordAuthRepositoryImpl @Inject constructor(
                     grants = "PASSWORD_RESET"  // 비밀번호 찾기용
                 )
             )
-            // verified 필드로 성공 여부 확인
-            Result.success(response.data.verified)
+            // verified가 true이면 verificationToken 반환, 아니면 실패
+            if (response.data.verified) {
+                Result.success(response.data.verificationToken)
+            } else {
+                Result.failure(Exception("인증번호가 올바르지 않습니다."))
+            }
+        } catch (e: Exception) {
+            val apiException = ErrorHandler.handleException(e)
+            Result.failure(apiException)
+        }
+    }
+
+    override suspend fun resetPassword(
+        verificationToken: String,
+        newPassword: String,
+        confirmPassword: String
+    ): Result<Unit> {
+        return try {
+            authApi.resetPassword(
+                request = ResetPasswordRequest(
+                    verificationToken = verificationToken,
+                    newPassword = newPassword,
+                    confirmPassword = confirmPassword
+                )
+            )
+            Result.success(Unit)
         } catch (e: Exception) {
             val apiException = ErrorHandler.handleException(e)
             Result.failure(apiException)

@@ -17,14 +17,17 @@ import kr.co.ongil.data.datasource.remote.api.AuthApi
 import kr.co.ongil.data.datasource.remote.api.CallApi
 import kr.co.ongil.data.datasource.remote.api.DashboardApi
 import kr.co.ongil.data.datasource.remote.api.FavoriteApi
+import kr.co.ongil.data.datasource.remote.api.HealthDataApi
 import kr.co.ongil.data.datasource.remote.api.MapApi
 import kr.co.ongil.data.datasource.remote.api.NotificationApi
 import kr.co.ongil.data.datasource.remote.api.PatientInfoApi
+import kr.co.ongil.data.datasource.remote.api.PatientInsightApi
 import kr.co.ongil.data.datasource.remote.api.SafeZoneApi
 import kr.co.ongil.data.datasource.remote.api.SosAlertApi
 import kr.co.ongil.data.datasource.remote.api.UserApi
 import kr.co.ongil.data.datasource.remote.interceptor.AuthInterceptor
 import kr.co.ongil.BuildConfig
+import kr.co.ongil.data.datasource.remote.api.LocationApi
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -74,7 +77,7 @@ object NetworkModule {
     @WebSocketOkHttpClient
     fun provideWebSocketOkHttpClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.NONE
         }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
@@ -89,7 +92,7 @@ object NetworkModule {
         @ForInterceptor authApi: AuthApi
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.NONE
         }
         val authInterceptor = AuthInterceptor(tokenManager, authApi)
 
@@ -187,4 +190,20 @@ object NetworkModule {
     @Singleton
     fun provideSosAlertApi(retrofit: Retrofit): SosAlertApi =
         retrofit.create(SosAlertApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideLocationApi(retrofit: Retrofit): LocationApi {
+        return retrofit.create(LocationApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun providePatientInsightApi(retrofit: Retrofit): PatientInsightApi =
+        retrofit.create(PatientInsightApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideHealthDataApi(retrofit: Retrofit): HealthDataApi =
+        retrofit.create(HealthDataApi::class.java)
 }
