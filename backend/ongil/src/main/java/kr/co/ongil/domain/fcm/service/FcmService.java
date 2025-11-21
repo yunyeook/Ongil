@@ -3,6 +3,7 @@ package kr.co.ongil.domain.fcm.service;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;
 
+import kr.co.ongil.domain.fcm.entity.FcmToken;
 import kr.co.ongil.domain.notification.entity.Notification;
 import kr.co.ongil.domain.relationship.entity.Relationship;
 import kr.co.ongil.domain.relationship.repository.RelationshipRepository;
@@ -45,7 +46,9 @@ public class FcmService {
             String token = fcmTokenRedisService.getToken(receiverId);
             // Redis에 없으면 DB 조회 & Redis 저장
             if(token==null){
-                token=fcmTokenService.getTokenByUserId(receiverId).getToken();
+                FcmToken tk=fcmTokenService.getTokenByUserId(receiverId);
+                if(tk!=null){token=tk.getToken();}
+                else token="";
                 if(token !=null){
                     fcmTokenRedisService.saveToken(receiverId, token);
                 }
