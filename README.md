@@ -27,6 +27,7 @@
 ## 🎯 프로젝트 개요
 
 **온길(OnGil)** 은 실시간 위치와 생체 데이터를 바탕으로 길안내, 신속한 대응부터 건강분석까지 제공하는 어르신 배회 감지 및 대응 서비스입니다.
+
 <img width="187" height="382" alt="ongil2" src="https://github.com/user-attachments/assets/d9d6372e-487c-4dd7-a658-21a8badaad86" /><img width="187" height="382" alt="ongil" src="https://github.com/user-attachments/assets/a9269ad5-f78f-4cf2-939b-3e2454211508" /><img width="187" height="382" alt="ongil4" src="https://github.com/user-attachments/assets/2676cd06-f1cd-4b06-aa66-13d2dd7711ed" />
 <img width="187" height="382" alt="ongil3" src="https://github.com/user-attachments/assets/0ea47ab1-078b-4bba-bf6f-3d9981267257" />
 
