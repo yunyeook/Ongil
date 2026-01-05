@@ -559,7 +559,7 @@ val displayName = place.alias?.takeIf { it.isNotBlank() }
 
 **SSAFY 13기 자율 프로젝트 - A305팀**
 
-- **프로젝트 기간**: 2025.01 - 2025.02 (6주)
+- **프로젝트 기간**: 2025.10 - 2025.11 (7주)
 - **팀원**: 6명
 - **역할 분담**:
   - Backend: Spring Boot API, 인프라 구축
