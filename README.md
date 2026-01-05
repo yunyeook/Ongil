@@ -6,6 +6,8 @@
 [![Platform](https://img.shields.io/badge/Platform-Android%2011+-brightgreen.svg)](https://www.android.com/)
 [![Backend](https://img.shields.io/badge/Backend-Spring%20Boot%203.5.7-green.svg)](https://spring.io/projects/spring-boot)
 
+
+
 ---
 
 ## 📋 목차
@@ -25,6 +27,8 @@
 ## 🎯 프로젝트 개요
 
 **온길(OnGil)** 은 실시간 위치와 생체 데이터를 바탕으로 길안내, 신속한 대응부터 건강분석까지 제공하는 어르신 배회 감지 및 대응 서비스입니다.
+<img width="187" height="382" alt="ongil2" src="https://github.com/user-attachments/assets/d9d6372e-487c-4dd7-a658-21a8badaad86" /><img width="187" height="382" alt="ongil" src="https://github.com/user-attachments/assets/a9269ad5-f78f-4cf2-939b-3e2454211508" /><img width="187" height="382" alt="ongil4" src="https://github.com/user-attachments/assets/2676cd06-f1cd-4b06-aa66-13d2dd7711ed" />
+<img width="187" height="382" alt="ongil3" src="https://github.com/user-attachments/assets/0ea47ab1-078b-4bba-bf6f-3d9981267257" />
 
 ### 목표
 
@@ -551,48 +555,6 @@ val displayName = place.alias?.takeIf { it.isNotBlank() }
 
 ---
 
-## 🔮 향후 확장 계획
-
-### 단기 계획 (6개월 이내)
-
-1. **머신러닝 기반 이상 행동 탐지**
-   - 좌표/속도/움직임 패턴 기반 ML 모델 훈련
-   - 비정상 행동 자동 분류 (배회, 급격한 이동 등)
-
-2. **장기 데이터 누적 분석**
-   - 위험도 자동 평가 시스템 구축
-   - 주간/월간 리포트 자동 생성
-
-3. **복합 센서 데이터 활용**
-   - 가속도계, 자이로스코프 기반 넘어짐 감지
-   - 심박수, 혈압 등 생체 데이터 연동
-
-### 중장기 계획 (1년 이상)
-
-1. **환자 맞춤형 AI 어시스턴트**
-   - 개인별 생활 패턴 학습
-   - 맞춤형 알림 및 케어 제안
-
-2. **의료 기관 연동**
-   - 병원 EMR 시스템과 데이터 공유
-   - 원격 진료 지원
-
-3. **커뮤니티 기능**
-   - 보호자 간 정보 공유 플랫폼
-   - 전문가 상담 서비스
-
-4. **글로벌 확장**
-   - 다국어 지원
-   - 각국 의료 시스템 연동
-
----
-
-## 📄 라이선스
-
-이 프로젝트는 **MIT 라이선스** 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
-
----
-
 ## 👥 팀 정보
 
 **SSAFY 13기 자율 프로젝트 - A305팀**
@@ -606,9 +568,5 @@ val displayName = place.alias?.takeIf { it.isNotBlank() }
 
 ---
 
-## 📞 문의
-
-
----
 
 **온길과 함께하는 안전한 돌봄의 시작** 🛤️
