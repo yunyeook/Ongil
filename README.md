@@ -563,9 +563,7 @@ val displayName = place.alias?.takeIf { it.isNotBlank() }
 - **팀원**: 6명
 - **역할 분담**:
   - Backend: Spring Boot API, 인프라 구축
-  - Android: 보호자 앱, 환자 앱, Wear OS 앱
-  - AI/ML: 이상 행동 탐지 모델
-
+  - Android: 보호자 앱, 환자 앱
 ---
 
 
