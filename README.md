@@ -1,6 +1,6 @@
 # 온길 (OnGil)
 
-> 치매 환자와 보호자를 위한 안전한 돌봄 솔루션
+> 어르신 배회 감지 및 대응 서비스
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Android%2011+-brightgreen.svg)](https://www.android.com/)
@@ -24,11 +24,7 @@
 
 ## 🎯 프로젝트 개요
 
-**온길(OnGil)**은 치매 환자 및 경도인지장애(MCI) 어르신의 안전한 이동과 실시간 소통을 돕기 위한 통합 모바일 케어 플랫폼입니다.
-
-### 배경
-
-대한민국은 이미 초고령 사회로 진입했으며, 노인 실종·배회 문제는 꾸준히 증가하고 있습니다. 보호자와 환자 간의 정보 단절은 긴급 상황 대응을 어렵게 만들고, 돌봄 부담을 가중시킵니다.
+**온길(OnGil)** 은 실시간 위치와 생체 데이터를 바탕으로 길안내, 신속한 대응부터 건강분석까지 제공하는 어르신 배회 감지 및 대응 서비스입니다.
 
 ### 목표
 
@@ -612,7 +608,6 @@ val displayName = place.alias?.takeIf { it.isNotBlank() }
 
 ## 📞 문의
 
-프로젝트 관련 문의사항이나 버그 리포트는 GitLab Issue를 통해 등록해주세요.
 
 ---
 
